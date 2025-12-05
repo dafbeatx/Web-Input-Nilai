@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koreksi Interaktif Pilihan Ganda</title>
+    <!-- Memuat Tailwind CSS untuk styling yang responsif -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Menggunakan font Inter yang bersih */
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Style untuk tombol radio custom */
+        .custom-radio-label {
+            transition: all 0.1s ease-in-out;
+            cursor: pointer;
+            @apply p-2 sm:p-3 w-10 h-10 flex items-center justify-center rounded-full border-2 text-sm font-bold;
+        }
+        
+        /* Style untuk opsi yang dipilih */
+        input[type="radio"]:checked + .custom-radio-label {
+            /* Warna latar belakang dan border untuk opsi yang dipilih */
+            @apply bg-indigo-600 border-indigo-600 text-white shadow-lg;
+        }
+        
+        /* Style untuk teks kunci jawaban agar mudah dibaca */
+        #keyInput {
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        /* Style untuk layar kalkulator */
+        .calculator-display {
+            @apply bg-gray-900 text-white p-3 text-right text-3xl rounded-lg mb-2 overflow-hidden whitespace-nowrap;
+        }
+
+        /* Style untuk tombol kalkulator */
+        .calc-button {
+            @apply p-3 rounded-xl font-bold text-lg shadow-md transition-all duration-100 ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 sm:p-8">
+
+    <div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-xl p-6 sm:p-10">
+        <h1 class="text-3xl font-extrabold text-purple-700 mb-2">Aplikasi Koreksi Interaktif</h1>
+        <p class="text-gray-600 mb-6">Alat bantu koreksi cepat untuk soal pilihan ganda (A, B, C, D) dan penilaian esai.</p>
+
+        <!-- KOTAK INPUT KUNCI JAWABAN DINAMIS -->
+        <div class="bg-yellow-50 p-6 rounded-xl border border-yellow-300 shadow-inner mb-8">
+            <h2 class="text-xl font-bold text-yellow-800 mb-2">1. Masukkan Kunci Jawaban Resmi (Pilihan Ganda)</h2>
+            <p class="text-sm text-gray-700 mb-3">Format bebas: gunakan `1. C 2. B...` atau hanya urutan karakter `CBCAAB...`. Jumlah soal PG akan mengikuti input Anda.</p>
+            <textarea 
+                id="keyInput" 
+                rows="3" 
+                placeholder="1. C 2. B 3. C 4. A 5. A 6. B..."
+                oninput="parseAndApplyKey()"
+                class="mt-1 block w-full rounded-lg border-gray-300 shadow-md p-3 text-sm border focus:border-yellow-500 focus:ring-yellow-500 transition resize-none"
+            ></textarea>
+            
+            <div class="flex justify-between items-center mt-3 flex-wrap">
+                <div id="keyStatus" class="text-sm font-bold text-red-600 mb-2 sm:mb-0">
+                    Mohon masukkan Kunci Jawaban (format: 1. A, 2. B, atau string AABB...).
+                </div>
+                <button onclick="resetKeyInput()" class="px-4 py-2 bg-gray-300 text-gray-800 text-sm font-semibold rounded-lg hover:bg-gray-400 transition duration-150 shadow-md">
+                    Reset Kunci Jawaban
+                </button>
+            </div>
+        </div>
+
+        
+        <!-- Kontainer Pilihan Ganda Interaktif -->
+        <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">2. Koreksi Jawaban Siswa (Pilihan Ganda)</h2>
+        <form id="correctionForm" class="grid grid-cols-1 gap-4">
+            <!-- Loop Soal akan dibuat di sini oleh JavaScript -->
+        </form>
+        
+        <!-- KOTAK INPUT NILAI ESAI -->
+        <h2 class="text-2xl font-bold text-gray-800 mt-8 mb-4 border-b pb-2">3. Penilaian Soal Esai</h2>
+        <div class="bg-blue-50 p-6 rounded-xl border border-blue-300 shadow-inner">
+            <p class="text-sm text-gray-700 mb-4">Masukkan nilai esai (Skor: 1 - 4) untuk setiap soal. Diasumsikan ada 5 soal esai.</p>
+            <div class="grid grid-cols-5 gap-3">
+                <div class="col-span-1">
+                    <label for="essayScore1" class="block text-sm font-medium text-gray-700">E1 (1-4)</label>
+                    <input type="number" id="essayScore1" min="1" max="4" value="0" oninput="updateScore()" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border text-center font-bold focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div class="col-span-1">
+                    <label for="essayScore2" class="block text-sm font-medium text-gray-700">E2 (1-4)</label>
+                    <input type="number" id="essayScore2" min="1" max="4" value="0" oninput="updateScore()" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border text-center font-bold focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div class="col-span-1">
+                    <label for="essayScore3" class="block text-sm font-medium text-gray-700">E3 (1-4)</label>
+                    <input type="number" id="essayScore3" min="1" max="4" value="0" oninput="updateScore()" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border text-center font-bold focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div class="col-span-1">
+                    <label for="essayScore4" class="block text-sm font-medium text-gray-700">E4 (1-4)</label>
+                    <input type="number" id="essayScore4" min="1" max="4" value="0" oninput="updateScore()" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border text-center font-bold focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div class="col-span-1">
+                    <label for="essayScore5" class="block text-sm font-medium text-gray-700">E5 (1-4)</label>
+                    <input type="number" id="essayScore5" min="1" max="4" value="0" oninput="updateScore()" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border text-center font-bold focus:border-blue-500 focus:ring-blue-500">
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">Total Nilai Esai: <span id="totalEssayScore" class="font-bold text-blue-600">0</span> / 20</p>
+        </div>
+
+
+        <!-- Bagian Ringkasan Skor Otomatis (DIPINDAH KE BAWAH) -->
+        <h2 class="text-2xl font-bold text-gray-800 mt-8 mb-4 border-b pb-2">4. Rekapitulasi Hasil</h2>
+        <div id="summary" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <!-- Summary Score (Akan diisi oleh JS) -->
+            
+            <div class="bg-green-100 p-6 rounded-xl border-4 border-green-400">
+                <p class="text-sm font-medium text-green-800">Total Benar (PG)</p>
+                <p id="correctCountDisplay" class="text-4xl font-extrabold text-green-600">0</p>
+                <p class="text-xs text-gray-500 mt-2">Skor PG = Benar x 2</p>
+            </div>
+            
+            <div class="bg-red-100 p-6 rounded-xl border-4 border-red-400">
+                <p class="text-sm font-medium text-red-800">Total Salah (PG)</p>
+                <p id="incorrectCountDisplay" class="text-4xl font-extrabold text-red-600">0</p>
+                <p class="text-xs text-gray-500 mt-2">Skor Maksimal PG: <span id="maxPgScore">0</span></p>
+            </div>
+
+            <!-- KOTAK NILAI AKHIR SISWA -->
+            <div class="bg-indigo-600 p-6 rounded-xl border-4 border-indigo-700 shadow-lg text-white">
+                <p class="text-sm font-medium text-indigo-200">NILAI AKHIR SISWA</p>
+                <p id="finalScoreDisplay" class="text-4xl font-extrabold text-yellow-300">0</p>
+                <p class="text-xs text-indigo-200 mt-2">Rumus: (Benar PG x 2) + Nilai Esai</p>
+            </div>
+        </div>
+
+        <!-- Tombol Reset Koreksi -->
+        <div class="mt-6 text-center">
+            <button onclick="resetCorrection()" class="px-8 py-3 bg-red-600 text-white font-extrabold rounded-lg shadow-lg hover:bg-red-700 transition duration-150 transform hover:scale-[1.01]">
+                RESET JAWABAN SISWA & ESAI
+            </button>
+        </div>
+
+    </div>
+    
+    <!-- Floating Calculator Container -->
+    <div class="fixed bottom-6 right-6 z-50">
+        <!-- Calculator UI (Hidden by default) -->
+        <div id="calculator-panel" class="absolute bottom-20 right-0 w-64 bg-gray-800 text-white rounded-xl shadow-2xl p-3 transform transition-all duration-300 ease-in-out scale-0 origin-bottom-right opacity-0">
+            <div class="calculator-display" id="display">0</div>
+            <div class="grid grid-cols-4 gap-2">
+                <!-- Row 1 -->
+                <button onclick="calc.clear()" class="calc-button col-span-2 bg-red-500 hover:bg-red-600 text-white">C</button>
+                <button onclick="calc.delete()" class="calc-button bg-gray-600 hover:bg-gray-700 text-white">DEL</button>
+                <button onclick="calc.chooseOperation('/')" class="calc-button bg-orange-500 hover:bg-orange-600 text-white">/</button>
+                
+                <!-- Row 2 -->
+                <button onclick="calc.appendNumber('7')" class="calc-button bg-gray-700 hover:bg-gray-600 text-white">7</button>
+                <button onclick="calc.appendNumber('8')" class="calc-button bg-gray-700 hover:bg-gray-600 text-white">8</button>
+                <button onclick="calc.appendNumber('9')" class="calc-button bg-gray-700 hover:bg-gray-600 text-white">9</button>
+                <button onclick="calc.chooseOperation('*')" class="calc-button bg-orange-500 hover:bg-orange-600 text-white">×</button>
+
+                <!-- Row 3 -->
+                <button onclick="calc.appendNumber('4')" class="calc-button bg-gray-700 hover:bg-gray-600 text-white">4</button>
+                <button onclick="calc.appendNumber('5')" class="calc-button bg-gray-700 hover:bg-gray-600 text-white">5</button>
+                <button onclick="calc.appendNumber('6')" class="calc-button bg-gray-700 hover:bg-gray-600 text-white">6</button>
+                <button onclick="calc.chooseOperation('-')" class="calc-button bg-orange-500 hover:bg-orange-600 text-white">-</button>
+
+                <!-- Row 4 -->
+                <button onclick="calc.appendNumber('1')" class="calc-button bg-gray-700 hover:bg-gray-600 text-white">1</button>
+                <button onclick="calc.appendNumber('2')" class="calc-button bg-gray-700 hover:bg-gray-600 text-white">2</button>
+                <button onclick="calc.appendNumber('3')" class="calc-button bg-gray-700 hover:bg-gray-600 text-white">3</button>
+                <button onclick="calc.chooseOperation('+')" class="calc-button bg-orange-500 hover:bg-orange-600 text-white">+</button>
+
+                <!-- Row 5 -->
+                <button onclick="calc.appendNumber('0')" class="calc-button col-span-2 bg-gray-700 hover:bg-gray-600 text-white">0</button>
+                <button onclick="calc.appendNumber('.')" class="calc-button bg-gray-700 hover:bg-gray-600 text-white">.</button>
+                <button onclick="calc.calculate()" class="calc-button bg-indigo-500 hover:bg-indigo-600 text-white">=</button>
+            </div>
+        </div>
+
+        <!-- Trigger Button -->
+        <button id="calculator-button" onclick="toggleCalculator()"
+                class="w-16 h-16 bg-indigo-600 rounded-full shadow-2xl flex items-center justify-center text-white 
+                       hover:bg-indigo-700 transform hover:scale-110 transition duration-300 ring-4 ring-white">
+            <!-- Ikon Kalkulator SVG -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calculator">
+                <rect width="16" height="20" x="4" y="2" rx="2" ry="2"/>
+                <line x1="8" x2="16" y1="6" y2="6"/>
+                <line x1="16" x2="16" y1="18" y2="18"/>
+                <line x1="16" x2="16" y1="14" y2="14"/>
+                <line x1="8" x2="8" y1="18" y2="18"/>
+                <line x1="8" x2="8" y1="14" y2="14"/>
+                <line x1="12" x2="12" y1="18" y2="18"/>
+                <line x1="12" x2="12" y1="14" y2="14"/>
+                <line x1="12" x2="12" y1="10" y2="10"/>
+            </svg>
+        </button>
+    </div>
+
+    <script>
+        // Kunci Jawaban asli yang digunakan sebagai default dan contoh format
+        const defaultAnswerKey = {
+            1: 'C', 2: 'B', 3: 'C', 4: 'A', 5: 'A',
+            6: 'B', 7: 'B', 8: 'A', 9: 'A', 10: 'B',
+            11: 'A', 12: 'B', 13: 'A', 14: 'B', 15: 'A',
+            16: 'A', 17: 'A', 18: 'B', 19: 'C', 20: 'B',
+            21: 'A', 22: 'B', 23: 'B', 24: 'B', 25: 'C',
+            26: 'B', 27: 'B', 28: 'B', 29: 'A', 30: 'A',
+            31: 'B', 32: 'A', 33: 'A', 34: 'A', 35: 'A',
+            36: 'B', 37: 'B', 38: 'C', 39: 'B', 40: 'A'
+        };
+
+        let currentAnswerKey = {}; // Kunci jawaban yang akan digunakan (dinamis)
+        let totalQuestionsRendered = 40; // Default: 40 soal
+        
+        const form = document.getElementById('correctionForm');
+        const correctCountDisplay = document.getElementById('correctCountDisplay');
+        const incorrectCountDisplay = document.getElementById('incorrectCountDisplay');
+        const keyInputTextarea = document.getElementById('keyInput');
+        const totalEssayScoreDisplay = document.getElementById('totalEssayScore');
+        const finalScoreDisplay = document.getElementById('finalScoreDisplay');
+        const maxPgScoreDisplay = document.getElementById('maxPgScore');
+        
+        const OPTIONS = ['A', 'B', 'C', 'D']; 
+        const ESSAY_COUNT = 5;
+        const PG_SCORE_MULTIPLIER = 2;
+
+        // ===================================
+        // LOGIKA APLIKASI KOREKSI
+        // ===================================
+
+        /**
+         * Mengubah kunci jawaban yang diklik menjadi tebal.
+         * @param {number} questionNumber - Nomor soal.
+         * @param {string} selectedOption - Opsi yang dipilih.
+         */
+        function handleAnswerChange(questionNumber, selectedOption) {
+            // 1. Hapus style bold dari semua label pada soal ini
+            OPTIONS.forEach(option => {
+                const label = document.querySelector(`label[for="q${questionNumber}opt${option}"]`);
+                if (label) {
+                    label.classList.remove('font-extrabold', 'shadow-xl');
+                }
+            });
+
+            // 2. Terapkan style bold ke label yang dipilih
+            const selectedLabel = document.querySelector(`label[for="q${questionNumber}opt${selectedOption}"]`);
+            if (selectedLabel) {
+                selectedLabel.classList.add('font-extrabold', 'shadow-xl');
+            }
+
+            // 3. Hitung ulang skor
+            updateScore();
+        }
+
+        /**
+         * Mengurai teks kunci jawaban dari textarea menjadi objek JavaScript.
+         */
+        function parseAndApplyKey() {
+            const keyInput = keyInputTextarea.value;
+            const newKey = {};
+            
+            // Coba parsing format: 1. A, 2. B, dst.
+            const keyPairs = keyInput.match(/(\d+)\.\s*([A-D])/g); 
+            if (keyPairs) {
+                keyPairs.forEach(pair => {
+                    const match = pair.match(/(\d+)\.\s*([A-D])/);
+                    if (match) {
+                        const questionNumber = parseInt(match[1]);
+                        const answer = match[2].toUpperCase();
+                        // Hanya tambahkan jika nomor soal masuk akal (di bawah 100)
+                        if (questionNumber >= 1 && questionNumber <= 100) { 
+                            newKey[questionNumber] = answer;
+                        }
+                    }
+                });
+            }
+
+            // Fallback: Coba parsing sebagai string karakter murni (misal: CBCAABA...)
+            if (Object.keys(newKey).length < 40) { // Jika kurang dari 40 diparse, coba string murni
+                const cleanString = keyInput.toUpperCase().replace(/[^A-D]/g, ''); 
+                if (cleanString.length > Object.keys(newKey).length) { // Gunakan string murni jika lebih banyak
+                     for (let i = 0; i < cleanString.length; i++) {
+                        if (i < 100) { // Batasi maksimal 100 soal
+                            newKey[i + 1] = cleanString[i];
+                        }
+                    }
+                }
+            }
+            
+            currentAnswerKey = newKey;
+            const count = Object.keys(currentAnswerKey).length;
+            
+            // UPDATE JUMLAH SOAL YANG DI-RENDER
+            totalQuestionsRendered = count > 0 ? count : 40; // Gunakan jumlah kunci, atau 40 jika kosong
+
+            // Rerender form dan update skor
+            renderQuestions(); 
+            updateScore(); 
+            
+            // Update status kunci
+            const keyStatusDiv = document.getElementById('keyStatus');
+            
+            if (count > 0) {
+                keyStatusDiv.className = 'text-sm font-bold text-green-600 mb-2 sm:mb-0';
+                keyStatusDiv.textContent = `Kunci Jawaban berhasil dimuat: ${count} soal.`;
+            } else {
+                 keyStatusDiv.className = 'text-sm font-bold text-red-600 mb-2 sm:mb-0';
+                keyStatusDiv.textContent = `Mohon masukkan Kunci Jawaban (format: 1. A, 2. B, atau string AABB...).`;
+            }
+        }
+
+        /**
+         * Membangun semua elemen input pilihan ganda untuk jumlah soal yang dinamis.
+         */
+        function renderQuestions() {
+            let htmlContent = '';
+            
+            if (totalQuestionsRendered === 0) {
+                 htmlContent = `<div class="p-6 bg-gray-100 text-gray-500 font-semibold rounded-lg text-center">Tidak ada soal yang ditampilkan. Harap masukkan Kunci Jawaban di atas.</div>`;
+            } else {
+                for (let i = 1; i <= totalQuestionsRendered; i++) {
+                    const optionsHtml = OPTIONS.map(option => {
+                        const isChecked = document.querySelector(`input[name="q${i}"]:checked`)?.value === option;
+                        const boldClass = isChecked ? 'font-extrabold shadow-xl' : '';
+                        
+                        return `
+                        <input 
+                            type="radio" 
+                            id="q${i}opt${option}" 
+                            name="q${i}" 
+                            value="${option}" 
+                            class="hidden" 
+                            onchange="handleAnswerChange(${i}, '${option}')"
+                            ${isChecked ? 'checked' : ''}
+                        >
+                        <label 
+                            for="q${i}opt${option}" 
+                            class="custom-radio-label border-indigo-300 text-indigo-700 hover:bg-indigo-100 ${boldClass}"
+                        >
+                            ${option}
+                        </label>
+                        `;
+                    }).join('');
+
+                    htmlContent += `
+                        <div class="flex items-center p-3 sm:p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-200">
+                            <!-- Nomor Soal -->
+                            <div class="w-16 flex-shrink-0 text-xl font-extrabold text-gray-800 mr-4">
+                                ${i}.
+                            </div>
+                            
+                            <!-- Pilihan Jawaban -->
+                            <div class="flex flex-grow gap-2 sm:gap-3">
+                                ${optionsHtml}
+                            </div>
+                            
+                            <!-- Status Benar/Salah -->
+                            <div id="statusQ${i}" class="w-24 sm:w-32 flex-shrink-0 text-sm font-semibold p-2 rounded-lg text-center transition-colors duration-200">
+                                Pilih
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            form.innerHTML = htmlContent;
+        }
+        
+        /**
+         * Mengambil dan memvalidasi nilai esai.
+         * @returns {number} Total nilai esai yang valid.
+         */
+        function getEssayScore() {
+            let totalScore = 0;
+            let maxEssayScore = 0;
+            for (let i = 1; i <= ESSAY_COUNT; i++) {
+                const input = document.getElementById(`essayScore${i}`);
+                if (input) {
+                    let value = parseInt(input.value) || 0;
+                    
+                    // Batasi nilai agar berada dalam range 1-4
+                    if (value < 1) value = 0; 
+                    if (value > 4) value = 4;
+
+                    // Set kembali nilai input yang divalidasi
+                    input.value = value;
+                    totalScore += value;
+                    maxEssayScore += 4; // Skor maksimal per soal esai adalah 4
+                }
+            }
+            
+            totalEssayScoreDisplay.textContent = `${totalScore} / ${maxEssayScore}`;
+            return totalScore;
+        }
+
+
+        /**
+         * Menghitung total skor dan memperbarui status untuk setiap soal secara instan.
+         */
+        function updateScore() {
+            let correctCount = 0;
+            let incorrectCount = 0;
+
+            // 1. Koreksi Pilihan Ganda (PG)
+            for (let i = 1; i <= totalQuestionsRendered; i++) {
+                const questionName = `q${i}`;
+                const selectedInput = document.querySelector(`input[name="${questionName}"]:checked`);
+                const statusDiv = document.getElementById(`statusQ${i}`);
+                const correctAnswer = currentAnswerKey[i]; // Menggunakan kunci dinamis
+                
+                // Reset kelas status
+                statusDiv.className = "w-24 sm:w-32 flex-shrink-0 text-sm font-semibold p-2 rounded-lg text-center transition-colors duration-200";
+
+                if (selectedInput) {
+                    const studentAnswer = selectedInput.value;
+                    
+                    if (!correctAnswer) {
+                        statusDiv.textContent = '❓ Kunci belum ada';
+                        statusDiv.classList.add('bg-yellow-100', 'text-yellow-700');
+                    } else if (studentAnswer === correctAnswer) {
+                        correctCount++;
+                        statusDiv.textContent = 'BENAR ✅';
+                        statusDiv.classList.add('bg-green-500', 'text-white');
+                    } else {
+                        incorrectCount++;
+                        statusDiv.textContent = `SALAH ❌ (Kunci: ${correctAnswer})`;
+                        statusDiv.classList.add('bg-red-500', 'text-white');
+                    }
+                } else {
+                    statusDiv.textContent = 'Pilih';
+                    statusDiv.classList.add('bg-gray-200', 'text-gray-600');
+                }
+            }
+            
+            // 2. Kalkulasi Skor Esai
+            const totalEssayScore = getEssayScore();
+
+            // 3. Kalkulasi Nilai Akhir
+            const pgScore = correctCount * PG_SCORE_MULTIPLIER;
+            const finalScore = pgScore + totalEssayScore;
+            
+            const maxPgScore = totalQuestionsRendered * PG_SCORE_MULTIPLIER;
+            
+            // 4. Perbarui Display
+            correctCountDisplay.textContent = correctCount;
+            incorrectCountDisplay.textContent = incorrectCount;
+            maxPgScoreDisplay.textContent = maxPgScore;
+            finalScoreDisplay.textContent = finalScore;
+        }
+        
+        /**
+         * Mengatur ulang semua pilihan jawaban siswa dan skor esai.
+         */
+        function resetCorrection() {
+            // Reset semua pilihan radio button di dalam form PG
+            document.getElementById('correctionForm').reset();
+            
+            // Reset input nilai esai
+            for (let i = 1; i <= ESSAY_COUNT; i++) {
+                 const input = document.getElementById(`essayScore${i}`);
+                 if (input) input.value = 0;
+            }
+
+            // Hapus style bold dari semua label
+            document.querySelectorAll('.custom-radio-label').forEach(label => {
+                label.classList.remove('font-extrabold', 'shadow-xl');
+            });
+            
+            // Memanggil updateScore untuk mereset tampilan status dan skor
+            updateScore();
+        }
+
+        /**
+         * Mengatur ulang input kunci jawaban saja.
+         */
+        function resetKeyInput() {
+            keyInputTextarea.value = '';
+            currentAnswerKey = {};
+            totalQuestionsRendered = 40; 
+            
+            parseAndApplyKey(); // Akan merender 40 soal kosong dan mereset skor/jawaban siswa
+            resetCorrection(); 
+        }
+
+        // ===================================
+        // LOGIKA KALKULATOR
+        // ===================================
+
+        const calculatorPanel = document.getElementById('calculator-panel');
+        const display = document.getElementById('display');
+
+        let currentOperand = '';
+        let previousOperand = '';
+        let operation = undefined;
+
+        const calc = {
+            // Menghapus semua input
+            clear: () => {
+                currentOperand = '';
+                previousOperand = '';
+                operation = undefined;
+                calc.updateDisplay();
+            },
+
+            // Menghapus karakter terakhir
+            delete: () => {
+                currentOperand = currentOperand.toString().slice(0, -1);
+                calc.updateDisplay();
+            },
+
+            // Menambahkan angka atau titik desimal
+            appendNumber: (number) => {
+                if (number === '.' && currentOperand.includes('.')) return;
+                currentOperand = currentOperand.toString() + number.toString();
+                calc.updateDisplay();
+            },
+
+            // Memilih operasi (+, -, *, /)
+            chooseOperation: (op) => {
+                if (currentOperand === '') return;
+                if (previousOperand !== '') {
+                    calc.calculate();
+                }
+                operation = op;
+                previousOperand = currentOperand;
+                currentOperand = '';
+                calc.updateDisplay();
+            },
+
+            // Melakukan perhitungan
+            calculate: () => {
+                let result;
+                const prev = parseFloat(previousOperand);
+                const current = parseFloat(currentOperand);
+                if (isNaN(prev) || isNaN(current)) return;
+
+                switch (operation) {
+                    case '+':
+                        result = prev + current;
+                        break;
+                    case '-':
+                        result = prev - current;
+                        break;
+                    case '*':
+                        result = prev * current;
+                        break;
+                    case '/':
+                        result = prev / current;
+                        break;
+                    default:
+                        return;
+                }
+                currentOperand = result;
+                operation = undefined;
+                previousOperand = '';
+                calc.updateDisplay();
+            },
+
+            // Memformat angka untuk tampilan
+            getDisplayNumber: (number) => {
+                const stringNumber = number.toString();
+                const integerDigits = parseFloat(stringNumber.split('.')[0]);
+                const decimalDigits = stringNumber.split('.')[1];
+                let integerDisplay;
+                if (isNaN(integerDigits)) {
+                    integerDisplay = '';
+                } else {
+                    integerDisplay = integerDigits.toLocaleString('en', { maximumFractionDigits: 0 });
+                }
+                if (decimalDigits != null) {
+                    return `${integerDisplay}.${decimalDigits}`;
+                } else {
+                    return integerDisplay;
+                }
+            },
+
+            // Memperbarui tampilan kalkulator
+            updateDisplay: () => {
+                let currentText = calc.getDisplayNumber(currentOperand);
+                if (currentText === '') {
+                    currentText = '0'; // Tampilkan 0 jika kosong
+                }
+                display.innerText = currentText;
+            }
+        };
+
+        /**
+         * Fungsi untuk menampilkan atau menyembunyikan panel kalkulator.
+         */
+        function toggleCalculator() {
+            const isHidden = calculatorPanel.classList.contains('scale-0');
+            if (isHidden) {
+                // Tampilkan
+                calculatorPanel.classList.remove('scale-0', 'opacity-0');
+            } else {
+                // Sembunyikan
+                calculatorPanel.classList.add('scale-0', 'opacity-0');
+            }
+        }
+        
+        // ===================================
+        // INISIALISASI
+        // ===================================
+        window.onload = () => {
+            // Set placeholder dan inisialisasi kunci jawaban dengan default
+            const defaultKeyString = Object.entries(defaultAnswerKey).map(([k, v]) => `${k}. ${v}`).join(' ');
+            keyInputTextarea.value = defaultKeyString;
+            parseAndApplyKey(); // Ini akan memanggil renderQuestions dan updateScore
+            
+            // Inisialisasi tampilan kalkulator
+            calc.clear();
+        };
+
+    </script>
+</body>
+</html>
