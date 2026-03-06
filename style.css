@@ -1,0 +1,229 @@
+body { 
+    font-family: 'Inter', sans-serif; 
+    background: radial-gradient(circle at top right, #1e293b, #0f172a);
+}
+h1, h2, h3, .font-outfit { font-family: 'Outfit', sans-serif; }
+
+:root {
+    --transition-standard: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Home Screen & Wallpaper */
+#launcher {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.premium-shadow {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* App Window Styles */
+.app-window {
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform: scale(0.9);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.app-window.active {
+    transform: scale(1);
+    opacity: 1;
+    pointer-events: auto;
+    display: flex;
+}
+
+/* Launcher Hide/Show */
+#launcher.blurred {
+    filter: blur(40px);
+    transform: scale(1.1);
+    opacity: 0.5;
+}
+
+/* GradeMaster Specific Overrides (inside window) */
+#win-grademaster .glass-card {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Interactive Components */
+.custom-radio-label {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.75rem;
+    border-width: 2px;
+    border-color: #e2e8f0;
+    color: #475569;
+    font-weight: 700;
+    font-size: 1rem;
+    background-color: #ffffff;
+}
+
+input[type="radio"]:checked + .custom-radio-label {
+    background-color: #4f46e5;
+    border-color: #4f46e5;
+    color: #ffffff;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05), 0 0 0 4px #e1e9ff;
+    transform: scale(1.05);
+}
+
+.custom-radio-label:hover:not(input[type="radio"]:checked + .custom-radio-label) {
+    border-color: #a5b4fc;
+    background-color: #f0f4ff;
+    color: #4f46e5;
+}
+
+.calculator-display {
+    background-color: #0f172a;
+    color: #ffffff;
+    padding: 1rem;
+    text-align: right;
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+    font-family: 'Outfit', sans-serif;
+    border-radius: 1rem;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    white-space: nowrap;
+    border-width: 1px;
+    border-color: #1e293b;
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+    font-variant-numeric: tabular-nums;
+}
+
+.calc-button {
+    padding: 1rem;
+    border-radius: 1rem;
+    font-weight: 700;
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.calc-button:active {
+    transform: scale(0.95);
+}
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+@keyframes fadeInScale {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.animate-in {
+    animation: fadeInScale 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Background Animated Gradient */
+@keyframes bgGradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+#launcher {
+    background: linear-gradient(-45deg, #0f172a, #1e1b4b, #312e81, #1e293b);
+    background-size: 400% 400%;
+    animation: bgGradient 15s ease infinite;
+}
+
+/* --- MOBILE OPTIMIZATIONS --- */
+@media (max-width: 768px) {
+    /* Launcher Adjustments */
+    #home-clock { font-size: 4rem !important; }
+    #home-date { font-size: 1rem !important; }
+    
+    .app-window {
+        padding-top: 3.5rem !important;
+        padding-bottom: 2rem !important;
+        border-radius: 0 !important;
+        transform: translateY(20px) scale(1);
+    }
+
+    .app-window.active {
+        transform: translateY(0) scale(1);
+    }
+
+    /* GradeMaster Content Adjustments */
+    #win-grademaster .glass-card {
+        padding: 1.5rem !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+    }
+
+    h1 { font-size: 2rem !important; }
+    h2 { font-size: 1.5rem !important; }
+    
+    .custom-radio-label {
+        width: 2.25rem;
+        height: 2.25rem;
+        font-size: 0.875rem;
+        border-radius: 0.5rem;
+    }
+
+    #correctionForm {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+
+    /* Aside/Dashboard as sticky or compact header */
+    #win-grademaster main {
+        display: flex;
+        flex-direction: column-reverse;
+    }
+
+    aside {
+        position: relative !important;
+        top: 0 !important;
+        margin-bottom: 2rem;
+    }
+
+    #finalScoreDisplay { font-size: 4rem !important; }
+
+    /* Calculator Adjustments */
+    #calculator-inner-panel {
+        padding: 1.5rem !important;
+        border-radius: 1.5rem !important;
+    }
+
+    .calculator-display { font-size: 1.75rem !important; }
+    .calc-button { padding: 0.75rem !important; font-size: 1.125rem !important; }
+
+    /* Dock & Grid */
+    #launcher .grid { 
+        display: grid !important;
+        gap: 1.5rem !important; 
+    }
+    #launcher .grid button div { width: 4.5rem !important; height: 4.5rem !important; }
+}
+
+@media (max-width: 480px) {
+    #launcher .grid { 
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important; 
+    }
+}
