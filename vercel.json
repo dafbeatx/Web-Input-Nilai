@@ -1,3 +1,13 @@
 {
-  "outputDirectory": "./"
+  "outputDirectory": "./",
+  "rewrites": [
+    {
+      "source": "/api/quake",
+      "destination": "https://cuaca-gempa-rest-api.vercel.app/quake"
+    },
+    {
+      "source": "/api/weather/:path*",
+      "destination": "https://cuaca-gempa-rest-api.vercel.app/:path*"
+    }
+  ]
 }

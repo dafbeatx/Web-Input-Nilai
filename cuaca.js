@@ -3,7 +3,8 @@
  * Using api from renomureza/cuaca-gempa-rest-api (BMKG Data)
  */
 
-const WEATHER_API_BASE = 'https://cuaca-gempa-rest-api.vercel.app';
+// Use relative URLs — Vercel rewrites will proxy these to the actual BMKG API
+// This avoids CORS issues since requests stay on the same origin
 
 // Elements
 const quakePanel = document.getElementById('quake-panel');
@@ -51,7 +52,7 @@ async function fetchQuakeData() {
     quakeDataContainer.innerHTML = '';
 
     try {
-        const response = await fetch(`${WEATHER_API_BASE}/quake`);
+        const response = await fetch('/api/quake');
         const result = await response.json();
         
         if (result.success) {
@@ -144,7 +145,7 @@ async function fetchWeatherData(provinsi) {
     weatherDataContainer.innerHTML = '';
 
     try {
-        const response = await fetch(`${WEATHER_API_BASE}/${provinsi}`);
+        const response = await fetch(`/api/weather/${provinsi}`);
         const result = await response.json();
         
         if (result.success) {
