@@ -372,15 +372,18 @@ async function submitNewKey() {
     } catch (err) {
         showStatus('Gagal: ' + err.message, 'error');
     }
+}
 
-    function showStatus(msg, type) {
-        status.textContent = msg;
-        status.className = 'text-xs font-bold p-3 rounded-xl border mt-4';
-        if (type === 'error') status.classList.add('bg-rose-50', 'text-rose-600', 'border-rose-100');
-        else if (type === 'success') status.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-100');
-        else status.classList.add('bg-slate-100', 'text-slate-600', 'border-slate-200');
-        status.classList.remove('hidden');
-    }
+function showStatus(msg, type) {
+    const status = document.getElementById('modalCreateStatus');
+    if(!status) return;
+    
+    status.textContent = msg;
+    status.className = 'text-xs font-bold p-3 rounded-xl border mt-4';
+    if (type === 'error') status.classList.add('bg-rose-50', 'text-rose-600', 'border-rose-100');
+    else if (type === 'success') status.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-100');
+    else status.classList.add('bg-slate-100', 'text-slate-600', 'border-slate-200');
+    status.classList.remove('hidden');
 }
 
 function renderQuestions() {
