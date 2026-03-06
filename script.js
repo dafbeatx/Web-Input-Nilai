@@ -513,9 +513,10 @@ window.onload = () => {
     renderEssayInputs();
     parseAndApplyKey();
 
-    // Initialize Supabase if credentials are provided in the environment/config
-    // For this prototype, we'll try to find them in the global scope if set
+    // Initialize Supabase if credentials are provided globally
     if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined') {
-        initSupabase(SUPABASE_URL, SUPABASE_ANON_KEY);
+        if (SUPABASE_URL !== 'YOUR_SUPABASE_PROJECT_URL' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
+            initSupabase(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
     }
 };
