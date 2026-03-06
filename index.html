@@ -52,6 +52,47 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+
+    <!-- Core OS Logic -->
+    <script>
+        function openApp(appName) {
+            const launcher = document.getElementById('launcher');
+            const win = document.getElementById(`win-${appName}`);
+            if (win) {
+                if (launcher) launcher.classList.add('blurred');
+                win.classList.remove('hidden');
+                setTimeout(() => win.classList.add('active'), 10);
+                
+                // Trigger specific app inits if available
+                if (appName === 'keymanager' && typeof fetchCloudKeys === 'function') fetchCloudKeys();
+                if (appName === 'quran' && typeof initQuranApp === 'function') initQuranApp();
+                if (appName === 'cuaca' && typeof initWeatherApp === 'function') initWeatherApp();
+                if (appName === 'instagram' && typeof initInstaApp === 'function') initInstaApp();
+                
+                if (appName === 'grademaster' && typeof renderQuestions === 'function') {
+                    const header = document.getElementById('headerKeyName');
+                    if(header && !header.textContent.includes('Cloud')) {
+                         header.textContent = "Kunci Jawaban Manual";
+                    }
+                    renderQuestions();
+                    renderEssayInputs();
+                    updateScore();
+                }
+            }
+        }
+
+        function closeApp(appName) {
+            const launcher = document.getElementById('launcher');
+            const win = document.getElementById(`win-${appName}`);
+            if (win) {
+                win.classList.remove('active');
+                if(appName !== 'keymanager' || !document.getElementById('win-grademaster').classList.contains('active')) {
+                    if (launcher) launcher.classList.remove('blurred');
+                }
+                setTimeout(() => win.classList.add('hidden'), 200);
+            }
+        }
+    </script>
 </head>
 <body class="bg-slate-950 min-h-screen overflow-hidden text-slate-900 selection:bg-brand-100 selection:text-brand-900">
 
@@ -552,9 +593,9 @@
         </div>
     </div>
 
-    <script src="cuaca.js"></script>
-    <script src="instagram.js"></script>
-    <script src="quran.js"></script>
-    <script src="script.js"></script>
+    <script src="cuaca.js" defer></script>
+    <script src="instagram.js" defer></script>
+    <script src="quran.js" defer></script>
+    <script src="script.js" defer></script>
 </body>
 </html>

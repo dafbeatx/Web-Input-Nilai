@@ -20,58 +20,8 @@ function updateClock() {
 setInterval(updateClock, 1000);
 updateClock();
 
-function openApp(appName) {
-    const win = document.getElementById(`win-${appName}`);
-    if (win) {
-        launcher.classList.add('blurred');
-        win.classList.remove('hidden');
-        setTimeout(() => win.classList.add('active'), 10);
-        
-        // Specific init for KeyManager
-        if (appName === 'keymanager') {
-            fetchCloudKeys();
-        }
-        
-        // Specific init for Al-Quran
-        if (appName === 'quran' && typeof initQuranApp === 'function') {
-            initQuranApp();
-        }
-
-        // Specific init for Cuaca & Gempa
-        if (appName === 'cuaca' && typeof initWeatherApp === 'function') {
-            initWeatherApp();
-        }
-
-        // Specific init for Instagram
-        if (appName === 'instagram' && typeof initInstaApp === 'function') {
-            initInstaApp();
-        }
-        
-        // Specific init for GradeMaster
-        if (appName === 'grademaster') {
-            // Check if looking at official or custom key
-            const header = document.getElementById('headerKeyName');
-            if(header && !header.textContent.includes('Cloud')) {
-                 header.textContent = "Kunci Jawaban Manual";
-            }
-            renderQuestions();
-            renderEssayInputs();
-            updateScore();
-        }
-    }
-}
-
-function closeApp(appName) {
-    const win = document.getElementById(`win-${appName}`);
-    if (win) {
-        win.classList.remove('active');
-        // Only remove blur if we are going back to launcher
-        // If opening grademaster from keymanager, logic is handled elsewhere
-        if(appName !== 'keymanager' || !document.getElementById('win-grademaster').classList.contains('active')) {
-            launcher.classList.remove('blurred');
-        }
-        setTimeout(() => win.classList.add('hidden'), 200);
-    }
+function closeApp_redundant(appName) {
+    // Logic moved to index.html to avoid ReferenceErrors during early clicks
 }
 
 // --- GRADEMASTER APP LOGIC ---
