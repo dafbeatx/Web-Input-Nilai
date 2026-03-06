@@ -48,44 +48,10 @@ function switchWeatherTab(tab) {
 }
 
 /**
- * Fetch weather forecast data
- */
-async function fetchWeatherData(provinsi) {
-    if (!weatherLoader || !weatherDataContainer) return;
-
-    weatherLoader.classList.remove('hidden');
-    weatherDataContainer.innerHTML = '';
-
-    try {
-        const response = await fetch(`/api/weather?path=${provinsi}`);
-        const result = await response.json();
-        
-        if (result && result.success && result.data && result.data.areas) {
-            renderWeatherData(result.data.areas);
-        } else {
-            throw new Error(result ? result.message : 'Gagal mengambil data cuaca.');
-        }
-    } catch (error) {
-        console.error('Error fetching weather data:', error);
-        weatherDataContainer.innerHTML = `
-            <div class="col-span-full py-20 text-center">
-                <div class="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
-                </div>
-                <p class="font-black text-slate-800 mb-2">Gagal Memuat Cuaca</p>
-                <p class="text-xs text-slate-400 mb-6">Wilayah ini mungkin belum tersedia atau gangguan server.</p>
-                <button onclick="fetchWeatherData('${provinsi}')" class="px-6 py-3 bg-slate-900 text-white rounded-2xl text-xs font-bold shadow-xl shadow-slate-900/20 active:scale-95 transition-all">Coba Lagi</button>
-            </div>
-        `;
-    } finally {
-        weatherLoader.classList.add('hidden');
-    }
-}
-
-/**
  * Fetch latest earthquake data
  */
 async function fetchQuakeData() {
+    if (!quakeLoader || !quakeDataContainer) return;
     quakeLoader.classList.remove('hidden');
     quakeDataContainer.innerHTML = '';
 
@@ -181,109 +147,193 @@ function renderQuakeData(quake) {
 }
 
 /**
- * Render Weather cards to UI (Minimalist & Aesthetic City Cards)
+ * Fetch weather forecast data
  */
-function renderWeatherData(areas) {
+async function fetchWeatherData(provinsi) {
+    if (!weatherLoader || !weatherDataContainer) return;
+
+    weatherLoader.classList.remove('hidden');
     weatherDataContainer.innerHTML = '';
-    
-    // Grid container is already in HTML, we just need to append cards
-    areas.forEach(area => {
-        const weatherParam = area.params.find(p => p.id === 'weather');
-        const tempParam = area.params.find(p => p.id === 't');
-        const humParam = area.params.find(p => p.id === 'hu');
 
-        if (!weatherParam || !tempParam) return;
-
-        // Current forecast (first time range)
-        const current = weatherParam.times[0];
-        const temp = tempParam.times[0].celcius || '--';
-        const hum = humParam.times[0].value || '--';
-        const code = current.value;
-        const weatherName = current.name;
-
-        const card = document.createElement('div');
-        card.className = "group relative p-6 bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40 hover:scale-[1.02] active:scale-95 transition-all duration-300";
+    try {
+        const response = await fetch(`/api/weather?path=${provinsi}`);
+        const result = await response.json();
         
-        const weatherTheme = getWeatherTheme(code);
-        
-        card.innerHTML = `
-            <div class="flex items-center justify-between mb-6">
-                <div>
-                    <h4 class="text-base font-black text-slate-800 leading-tight mb-1">${area.description}</h4>
-                    <p class="text-[10px] font-bold text-slate-400 capitalize tracking-widest">${weatherName}</p>
+        if (result && result.success && result.data) {
+            renderWeatherDashboard(result.data);
+        } else {
+            throw new Error(result ? result.message : 'Gagal mengambil data cuaca.');
+        }
+    } catch (error) {
+        console.error('Error fetching weather data:', error);
+        weatherDataContainer.innerHTML = `
+            <div class="col-span-full py-20 text-center">
+                <div class="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
                 </div>
-                <div class="w-14 h-14 rounded-2xl flex items-center justify-center ${weatherTheme.bg} ${weatherTheme.text} shadow-lg ${weatherTheme.shadow}">
-                    ${weatherTheme.icon}
-                </div>
-            </div>
-
-            <div class="flex items-end justify-between">
-                <div>
-                   <span class="text-4xl font-black text-slate-800">${temp}°</span>
-                   <span class="text-lg font-bold text-slate-300 ml-1">C</span>
-                </div>
-                <div class="flex items-center gap-4">
-                    <div class="flex flex-col items-end">
-                        <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Kelembaban</span>
-                        <span class="text-xs font-bold text-slate-500">${hum}%</span>
-                    </div>
-                </div>
+                <p class="font-black text-slate-800 mb-2">Gagal Memuat Cuaca</p>
+                <p class="text-xs text-slate-400 mb-6">Wilayah ini mungkin sistem pemantauannya sedang offline.</p>
+                <button onclick="fetchWeatherData('${provinsi}')" class="px-6 py-3 bg-slate-900 text-white rounded-2xl text-xs font-bold shadow-xl shadow-slate-900/20 active:scale-95 transition-all">Coba Lagi</button>
             </div>
         `;
-        weatherDataContainer.appendChild(card);
-    });
+    } finally {
+        weatherLoader.classList.add('hidden');
+    }
 }
 
 /**
- * Weather Visual Assets
+ * Render Weather Dashboard (Modern & Premium Design)
+ */
+function renderWeatherDashboard(data) {
+    const current = data.current;
+    if (!current) return;
+
+    const weatherTheme = getWeatherTheme(current.weather);
+    const lokasi = data.lokasi;
+    
+    weatherDataContainer.innerHTML = `
+        <div class="animate-in space-y-6">
+            <!-- Current Highlight Card -->
+            <div class="relative overflow-hidden p-8 rounded-[3rem] text-white shadow-2xl transition-all ${weatherTheme.gradient}">
+                <!-- Background Decorative Pattern -->
+                <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-24 -mt-24 blur-3xl"></div>
+                <div class="absolute bottom-0 left-0 w-48 h-48 bg-black/5 rounded-full -ml-12 -mb-12 blur-2xl"></div>
+
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-10">
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-[0.3em] text-white/60 mb-1">Kondisi Terkini</p>
+                            <h3 class="text-xl font-bold flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                                ${lokasi.kecamatan}, ${lokasi.provinsi}
+                            </h3>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] font-black uppercase tracking-[0.3em] text-white/60 mb-1">Update</p>
+                            <p class="text-[11px] font-bold">${current.local_datetime.split(' ')[1].substring(0, 5)} WIB</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col items-center mb-10 text-center">
+                        <div class="w-32 h-32 mb-4 drop-shadow-2xl animate-float">
+                            <img src="${current.image}" alt="${current.weather_desc}" class="w-full h-full object-contain">
+                        </div>
+                        <div class="flex items-start">
+                            <span class="text-8xl font-black tracking-tighter">${current.t}</span>
+                            <span class="text-3xl font-black mt-4 ml-1">°C</span>
+                        </div>
+                        <p class="text-lg font-bold mt-2 opacity-90">${current.weather_desc}</p>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2 p-1.5 bg-black/10 backdrop-blur-md rounded-[2rem] border border-white/5">
+                        <div class="flex flex-col items-center py-4 rounded-2xl">
+                            <span class="text-[9px] font-black uppercase tracking-widest text-white/50 mb-1">Lembab</span>
+                            <span class="text-sm font-bold">${current.hu}%</span>
+                        </div>
+                        <div class="flex flex-col items-center py-4 rounded-2xl bg-white/10 shadow-sm border border-white/10">
+                            <span class="text-[9px] font-black uppercase tracking-widest text-white/50 mb-1">Angin</span>
+                            <span class="text-sm font-bold">${current.ws} km/j</span>
+                        </div>
+                        <div class="flex flex-col items-center py-4 rounded-2xl">
+                            <span class="text-[9px] font-black uppercase tracking-widest text-white/50 mb-1">Arah</span>
+                            <span class="text-sm font-bold">${current.wd}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Forecast Section -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between px-2">
+                    <h4 class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Prakiraan Selanjutnya</h4>
+                    <span class="px-2 py-0.5 bg-slate-100 rounded-md text-[9px] font-bold text-slate-400 uppercase">24 Jam</span>
+                </div>
+                
+                <div class="flex gap-4 overflow-x-auto pb-6 px-1 scroll-hide">
+                    ${data.forecast.map(f => `
+                        <div class="flex-shrink-0 w-28 p-5 bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/30 text-center hover:scale-105 transition-transform duration-300">
+                            <p class="text-[10px] font-black text-slate-300 uppercase mb-3">${f.local_datetime.split(' ')[1].substring(0, 5)}</p>
+                            <img src="${f.image}" alt="${f.weather_desc}" class="w-12 h-12 mx-auto mb-3">
+                            <p class="text-lg font-black text-slate-800">${f.t}°</p>
+                            <p class="text-[9px] font-bold text-slate-400 truncate mt-1 px-1">${f.weather_desc}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <!-- More Details Grid -->
+            <div class="grid grid-cols-2 gap-4 pb-6">
+                <div class="p-6 bg-white rounded-[2rem] border border-slate-100 shadow-lg shadow-slate-200/20">
+                    <div class="flex items-center gap-3 mb-4">
+                         <div class="w-8 h-8 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M20 12h2"/><path d="m19.07 19.07-1.41-1.41"/><path d="M12 22v2"/><path d="m6.34 17.66-1.41 1.41"/><path d="M2 12h2"/><path d="m7.76 7.76-1.41-1.41"/><circle cx="12" cy="12" r="4"/></svg>
+                         </div>
+                         <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Jarak Pandang</span>
+                    </div>
+                    <p class="text-xl font-black text-slate-800">${current.vs_text}</p>
+                </div>
+                <div class="p-6 bg-white rounded-[2rem] border border-slate-100 shadow-lg shadow-slate-200/20">
+                    <div class="flex items-center gap-3 mb-4">
+                         <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a3.5 3.5 0 1 1-5.95-2.43c.12-.12.2-.28.2-.47V4s3.5 0 3.5 3.5"/><path d="M4.3 16.5a2.5 2.5 0 1 1 3.4-3.4"/></svg>
+                         </div>
+                         <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Tutupan Awan</span>
+                    </div>
+                    <p class="text-xl font-black text-slate-800">${current.tcc}%</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Weather Visual Themes
  */
 function getWeatherTheme(code) {
-  const c = String(code);
+  const c = parseInt(code);
   
-  // Sunny / Clear
-  if (["0", "1", "2"].includes(c)) {
+  // Cerah / Sunny (0, 100)
+  if (c === 0 || c === 100) {
     return {
-      bg: "bg-amber-100",
-      text: "text-amber-600",
-      shadow: "shadow-amber-500/10",
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>'
+      gradient: "bg-gradient-to-br from-amber-400 to-orange-600",
+      theme: "amber"
     };
   }
   
-  // Cloudy
-  if (["3", "4"].includes(c)) {
+  // Cerah Berawan (1, 2, 101, 102)
+  if ([1, 2, 101, 102].includes(c)) {
     return {
-      bg: "bg-slate-100",
-      text: "text-slate-600",
-      shadow: "shadow-slate-500/10",
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a3.5 3.5 0 1 1-5.95-2.43c.12-.12.2-.28.2-.47V4s3.5 0 3.5 3.5"/><path d="M4.3 16.5a2.5 2.5 0 1 1 3.4-3.4"/><path d="M12 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M7 12c-2.2 0-4 1.8-4 4s1.8 4 4 4h4a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3 3 3 0 0 0-3 3v2"/></svg>'
+      gradient: "bg-gradient-to-br from-sky-400 to-blue-600",
+      theme: "sky"
+    };
+  }
+  
+  // Berawan / Berawan Tebal (3, 4, 103, 104)
+  if ([3, 4, 103, 104].includes(c)) {
+    return {
+      gradient: "bg-gradient-to-br from-slate-400 to-slate-700",
+      theme: "slate"
     };
   }
 
-  // Rain
-  if (["60", "61", "63", "80"].includes(c)) {
+  // Hujan (Semua tipe hujan) (60, 61, 63, 80, 201, 202, 203, 204)
+  if ([60, 61, 63, 80, 201, 202, 203, 204].includes(c)) {
     return {
-      bg: "bg-sky-100",
-      text: "text-sky-600",
-      shadow: "shadow-sky-500/10",
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></svg>'
+      gradient: "bg-gradient-to-br from-blue-600 to-indigo-900",
+      theme: "blue"
     };
   }
 
-  // Thunder
-  if (["95", "97"].includes(c)) {
+  // Petir (95, 97)
+  if ([95, 97].includes(c)) {
     return {
-      bg: "bg-indigo-100",
-      text: "text-indigo-600",
-      shadow: "shadow-indigo-500/10",
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="m13 16-1 2h2l-1 2"/><path d="m9 16-1 2h2l-1 2"/></svg>'
+      gradient: "bg-gradient-to-br from-indigo-700 to-slate-900",
+      theme: "indigo"
     };
   }
 
   return {
-    bg: "bg-slate-100",
-    text: "text-slate-600",
-    shadow: "shadow-slate-500/10",
-    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a3.5 3.5 0 1 1-5.95-2.43c.12-.12.2-.28.2-.47V4s3.5 0 3.5 3.5"/><path d="M4.3 16.5a2.5 2.5 0 1 1 3.4-3.4"/><path d="M12 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M7 12c-2.2 0-4 1.8-4 4s1.8 4 4 4h4a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3 3 3 0 0 0-3 3v2"/></svg>'
+    gradient: "bg-gradient-to-br from-sky-500 to-blue-700",
+    theme: "sky"
   };
 }
