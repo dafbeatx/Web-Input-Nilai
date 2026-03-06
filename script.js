@@ -43,7 +43,7 @@ function closeApp(appName) {
     if (win) {
         win.classList.remove('active');
         launcher.classList.remove('blurred');
-        setTimeout(() => win.classList.add('hidden'), 500);
+        setTimeout(() => win.classList.add('hidden'), 200);
     }
 }
 
