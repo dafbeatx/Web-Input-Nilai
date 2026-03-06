@@ -125,7 +125,7 @@ function renderQuakeData(quake) {
                         </div>
                         <div>
                             <p class="text-[10px] uppercase font-black text-amber-500 tracking-widest mb-0.5">Potensi</p>
-                            <p class="text-sm font-bold text-slate-700">${quake.potentials}</p>
+                            <p class="text-sm font-bold text-slate-700">${quake.potensi || quake.potentials}</p>
                         </div>
                     </div>
                 </div>
@@ -145,7 +145,7 @@ async function fetchWeatherData(provinsi) {
     weatherDataContainer.innerHTML = '';
 
     try {
-        const response = await fetch(`/api/weather/${provinsi}`);
+        const response = await fetch(`/api/weather?path=${provinsi}`);
         const result = await response.json();
         
         if (result.success) {
