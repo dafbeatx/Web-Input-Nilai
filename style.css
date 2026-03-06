@@ -11,6 +11,7 @@ h1, h2, h3, .font-outfit { font-family: 'Outfit', sans-serif; }
 /* Home Screen & Wallpaper */
 #launcher {
     background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+    justify-content: center !important;
 }
 
 .glass-card {

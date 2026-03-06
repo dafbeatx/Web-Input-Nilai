@@ -56,16 +56,7 @@
 <body class="bg-slate-950 min-h-screen overflow-hidden text-slate-900 selection:bg-brand-100 selection:text-brand-900">
 
     <!-- LAUNCHER (HOME SCREEN) -->
-    <div id="launcher" class="fixed inset-0 z-0 flex flex-col items-center justify-between p-8 pt-16 transition-all duration-700">
-        <!-- Status Bar -->
-        <div class="fixed top-0 inset-x-0 h-10 px-6 flex items-center justify-between text-white/90 text-sm font-bold z-50">
-            <div id="status-time">12:00</div>
-            <div class="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M20 12h2"/><path d="m19.07 19.07-1.41-1.41"/><path d="M12 22v2"/><path d="m6.34 17.66-1.41 1.41"/><path d="M2 12h2"/><path d="m7.76 7.76-1.41-1.41"/><circle cx="12" cy="12" r="4"/></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M20 20V4"/><path d="M16 20v-4"/><path d="M12 20v-8"/><path d="M8 20v-4"/><path d="M4 20v-1"/></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="10" x="2" y="7" rx="2" ry="2"/><line x1="22" x2="22" y1="11" y2="13"/></svg>
-            </div>
-        </div>
+    <div id="launcher" class="fixed inset-0 z-0 flex flex-col items-center justify-center p-8 transition-all duration-700">
 
         <!-- Clock & Date Widget -->
         <div class="text-center text-white mt-12 animate-in">
@@ -124,27 +115,6 @@
             </div>
         </div>
 
-        <!-- Dock Bar -->
-        <div class="fixed bottom-8 max-w-xs w-full glass-card h-20 rounded-[2.5rem] flex items-center justify-around px-6 border-white/20 shadow-2xl z-10">
-             <button onclick="openApp('keymanager')" class="w-12 h-12 bg-brand-500 rounded-xl flex items-center justify-center text-white shadow-lg hover:scale-110 transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19 7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 5 22 5-22"/></svg>
-             </button>
-             <button onclick="openApp('calculator')" class="w-12 h-12 bg-rose-500 rounded-xl flex items-center justify-center text-white shadow-lg hover:scale-110 transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="14"/><line x1="16" x2="16" y1="18" y2="18"/><line x1="8" x2="8" y1="14" y2="14"/><line x1="8" x2="8" y1="18" y2="18"/><line x1="12" x2="12" y1="14" y2="14"/><line x1="12" x2="12" y1="18" y2="18"/><line x1="12" x2="12" y1="10" y2="10"/></svg>
-             </button>
-             <button onclick="openApp('quran')" class="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg hover:scale-110 transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 6h10"/><path d="M8 10h10"/><path d="M8 14h10"/></svg>
-             </button>
-             <button onclick="openApp('cuaca')" class="w-12 h-12 bg-sky-500 rounded-xl flex items-center justify-center text-white shadow-lg hover:scale-110 transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a3.5 3.5 0 1 1-5.95-2.43c.12-.12.2-.28.2-.47V4s3.5 0 3.5 3.5"/><path d="M4.3 16.5a2.5 2.5 0 1 1 3.4-3.4"/><path d="M12 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M7 12c-2.2 0-4 1.8-4 4s1.8 4 4 4h4a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3 3 3 0 0 0-3 3v2"/></svg>
-             </button>
-             <button onclick="openApp('instagram')" class="w-12 h-12 bg-gradient-to-tr from-yellow-400 via-rose-500 to-purple-600 rounded-xl flex items-center justify-center text-white shadow-lg hover:scale-110 transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
-             </button>
-             <button class="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-slate-900 shadow-lg hover:scale-110 transition-all ring-1 ring-slate-200">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" x2="12" y1="2" y2="4"/><line x1="12" x2="12" y1="20" y2="22"/><line x1="2" x2="4" y1="12" y2="12"/><line x1="20" x2="22" y1="12" y2="12"/></svg>
-             </button>
-        </div>
     </div>
 
     <!-- APP WINDOW: LAYER 1 (KEY MANAGER) -->

@@ -11,7 +11,6 @@ function updateClock() {
     
     const timeStr = `${hours}:${minutes}`;
     if (homeClock) homeClock.textContent = timeStr;
-    if (statusTime) statusTime.textContent = timeStr;
 
     // Update Date
     const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
@@ -41,6 +40,11 @@ function openApp(appName) {
         // Specific init for Cuaca & Gempa
         if (appName === 'cuaca' && typeof initWeatherApp === 'function') {
             initWeatherApp();
+        }
+
+        // Specific init for Instagram
+        if (appName === 'instagram' && typeof initInstaApp === 'function') {
+            initInstaApp();
         }
         
         // Specific init for GradeMaster
