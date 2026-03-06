@@ -99,6 +99,14 @@
                 <span class="text-white text-xs font-bold tracking-wide group-hover:text-emerald-300 transition-colors">Al-Qur'an</span>
             </button>
 
+            <!-- Weather & Quake Icon -->
+            <button onclick="openApp('cuaca')" class="flex flex-col items-center gap-3 group">
+                <div class="w-16 h-16 sm:w-20 sm:h-20 bg-sky-500 rounded-[1.5rem] shadow-2xl flex items-center justify-center text-white ring-4 ring-white/10 group-hover:scale-110 transition-transform duration-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a3.5 3.5 0 1 1-5.95-2.43c.12-.12.2-.28.2-.47V4s3.5 0 3.5 3.5"/><path d="M4.3 16.5a2.5 2.5 0 1 1 3.4-3.4"/><path d="M12 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M7 12c-2.2 0-4 1.8-4 4s1.8 4 4 4h4a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3 3 3 0 0 0-3 3v2"/></svg>
+                </div>
+                <span class="text-white text-xs font-bold tracking-wide group-hover:text-sky-300 transition-colors">Cuaca & Gempa</span>
+            </button>
+
             <!-- Placeholder for future apps -->
             <div class="flex flex-col items-center gap-3 opacity-30">
                 <div class="w-16 h-16 sm:w-20 sm:h-20 bg-slate-700 rounded-[1.5rem] flex items-center justify-center text-white">
@@ -118,6 +126,9 @@
              </button>
              <button onclick="openApp('quran')" class="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg hover:scale-110 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 6h10"/><path d="M8 10h10"/><path d="M8 14h10"/></svg>
+             </button>
+             <button onclick="openApp('cuaca')" class="w-12 h-12 bg-sky-500 rounded-xl flex items-center justify-center text-white shadow-lg hover:scale-110 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a3.5 3.5 0 1 1-5.95-2.43c.12-.12.2-.28.2-.47V4s3.5 0 3.5 3.5"/><path d="M4.3 16.5a2.5 2.5 0 1 1 3.4-3.4"/><path d="M12 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M7 12c-2.2 0-4 1.8-4 4s1.8 4 4 4h4a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3 3 3 0 0 0-3 3v2"/></svg>
              </button>
              <button class="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-slate-900 shadow-lg hover:scale-110 transition-all ring-1 ring-slate-200">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" x2="12" y1="2" y2="4"/><line x1="12" x2="12" y1="20" y2="22"/><line x1="2" x2="4" y1="12" y2="12"/><line x1="20" x2="22" y1="12" y2="12"/></svg>
@@ -438,6 +449,66 @@
         </div>
     </div>
 
+    <!-- APP WINDOW: CUACA & GEMPA -->
+    <div id="win-cuaca" class="app-window fixed inset-0 z-40 hidden flex flex-col items-center bg-slate-50 pt-10 pb-20 overflow-hidden">
+        <div class="fixed top-0 inset-x-0 h-14 glass-card border-b border-slate-200 z-[60] flex items-center justify-between px-6 shadow-sm">
+             <div class="flex items-center gap-3">
+                 <div class="w-8 h-8 bg-sky-500 rounded-lg flex items-center justify-center text-white shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a3.5 3.5 0 1 1-5.95-2.43c.12-.12.2-.28.2-.47V4s3.5 0 3.5 3.5"/><path d="M4.3 16.5a2.5 2.5 0 1 1 3.4-3.4"/><path d="M12 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M7 12c-2.2 0-4 1.8-4 4s1.8 4 4 4h4a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3 3 3 0 0 0-3 3v2"/></svg>
+                 </div>
+                 <span class="font-outfit font-bold text-slate-800">Cuaca & Gempa BMKG</span>
+             </div>
+             <button onclick="closeApp('cuaca')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+             </button>
+        </div>
+
+        <!-- App Tabs -->
+        <div class="w-full max-w-4xl px-6 mt-12 mb-6">
+            <div class="flex bg-slate-200/50 p-1.5 rounded-2xl gap-2">
+                <button onclick="switchWeatherTab('quake')" id="tab-quake" class="flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all bg-white text-slate-800 shadow-sm">
+                    ⚠️ Info Gempa
+                </button>
+                <button onclick="switchWeatherTab('weather')" id="tab-weather" class="flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all text-slate-500 hover:bg-white/50">
+                    ☁️ Prakiraan Cuaca
+                </button>
+            </div>
+        </div>
+
+        <!-- App Content -->
+        <div id="weather-app-content" class="w-full max-w-4xl px-6 flex-1 overflow-y-auto pb-10 custom-scrollbar">
+            <!-- Quake Content -->
+            <div id="quake-panel" class="animate-in">
+                <div id="quake-loader" class="py-20 flex flex-col items-center justify-center text-slate-400">
+                    <div class="w-10 h-10 border-4 border-sky-500/20 border-t-sky-500 rounded-full animate-spin mb-4"></div>
+                    <p class="font-medium text-sm">Memuat data gempa...</p>
+                </div>
+                <div id="quake-data"></div>
+            </div>
+
+            <!-- Weather Content (Hidden by default) -->
+            <div id="weather-panel" class="hidden animate-in">
+                <div id="weather-header" class="mb-6">
+                    <select id="provinceSelect" onchange="fetchWeatherData(this.value)" class="w-full bg-white border-2 border-slate-200 rounded-2xl py-4 px-6 text-sm font-bold focus:border-sky-500 outline-none transition-all shadow-sm cursor-pointer appearance-none">
+                        <option value="dki-jakarta">DKI Jakarta</option>
+                        <option value="jawa-barat">Jawa Barat</option>
+                        <option value="jawa-tengah">Jawa Tengah</option>
+                        <option value="jawa-timur">Jawa Timur</option>
+                        <option value="di-yogyakarta">DI Yogyakarta</option>
+                        <option value="banten">Banten</option>
+                        <!-- Other provinces will be added as needed -->
+                    </select>
+                </div>
+                <div id="weather-loader" class="hidden py-20 flex flex-col items-center justify-center text-slate-400">
+                    <div class="w-10 h-10 border-4 border-sky-500/20 border-t-sky-500 rounded-full animate-spin mb-4"></div>
+                    <p class="font-medium text-sm">Memuat prakiraan cuaca...</p>
+                </div>
+                <div id="weather-data" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="cuaca.js"></script>
     <script src="quran.js"></script>
     <script src="script.js"></script>
 </body>

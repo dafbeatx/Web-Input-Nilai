@@ -37,6 +37,11 @@ function openApp(appName) {
         if (appName === 'quran' && typeof initQuranApp === 'function') {
             initQuranApp();
         }
+
+        // Specific init for Cuaca & Gempa
+        if (appName === 'cuaca' && typeof initWeatherApp === 'function') {
+            initWeatherApp();
+        }
         
         // Specific init for GradeMaster
         if (appName === 'grademaster') {
