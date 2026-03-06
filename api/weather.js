@@ -1,10 +1,9 @@
-import { XMLParser } from 'fast-xml-parser';
+const { XMLParser } = require('fast-xml-parser');
 
-export default async function handler(request, response) {
+module.exports = async function handler(request, response) {
   const { path } = request.query;
   const provinsi = path || 'Indonesia';
   
-  // Map provincial names to BMKG XML filenames
   const provinceMap = {
     'dki-jakarta': 'DKIJakarta',
     'jawa-barat': 'JawaBarat',
@@ -47,6 +46,7 @@ export default async function handler(request, response) {
 
   try {
     const res = await fetch(url);
+    if (!res.ok) throw new Error(`BMKG server returned ${res.status}`);
     const xmlData = await res.text();
     
     const parser = new XMLParser({
@@ -55,22 +55,34 @@ export default async function handler(request, response) {
     });
     
     const jsonObj = parser.parse(xmlData);
-    const areas = jsonObj.data.forecast.area;
     
-    // Transform to the structure expected by cuaca.js
-    const transformedAreas = (Array.isArray(areas) ? areas : [areas]).map(area => {
-      // Find relevant parameters
+    if (!jsonObj.data || !jsonObj.data.forecast || !jsonObj.data.forecast.area) {
+        throw new Error("Invalid XML structure from BMKG");
+    }
+
+    const areas = jsonObj.data.forecast.area;
+    const arrayAreas = Array.isArray(areas) ? areas : [areas];
+    
+    const transformedAreas = arrayAreas.map(area => {
       const findParam = (id) => {
-        const p = area.parameter.find(param => param.id === id);
+        if (!area.parameter) return null;
+        const params = Array.isArray(area.parameter) ? area.parameter : [area.parameter];
+        const p = params.find(param => param.id === id);
         if (!p || !p.timerange) return null;
+        
         const times = Array.isArray(p.timerange) ? p.timerange : [p.timerange];
         return {
           id: id,
-          times: times.map(t => ({
-            celcius: t.value && typeof t.value === 'object' ? t.value.find(v => v.unit === 'C')?.['#text'] : t.value,
-            value: Array.isArray(t.value) ? t.value[0]?.['#text'] : t.value,
-            name: getWeatherName(Array.isArray(t.value) ? t.value[0]?.['#text'] : t.value)
-          }))
+          times: times.map(t => {
+            const val = Array.isArray(t.value) ? t.value[0] : t.value;
+            return {
+                h: t.h,
+                datetime: t.datetime,
+                celcius: val && typeof val === 'object' ? (val['#text'] || val.find?.(v => v.unit === 'C')?.['#text']) : val,
+                value: val && typeof val === 'object' ? val['#text'] : val,
+                name: id === 'weather' ? getWeatherName(val && typeof val === 'object' ? val['#text'] : val) : null
+            };
+          })
         };
       };
 
@@ -91,6 +103,7 @@ export default async function handler(request, response) {
       }
     });
   } catch (error) {
+    console.error("API Weather Error:", error);
     return response.status(500).json({ success: false, message: error.message });
   }
 }
@@ -112,5 +125,5 @@ function getWeatherName(code) {
     "95": "Hujan Petir",
     "97": "Hujan Petir"
   };
-  return weatherCodes[code] || "Berawan";
+  return weatherCodes[String(code)] || "Berawan";
 }

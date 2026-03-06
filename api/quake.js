@@ -1,4 +1,4 @@
-export default async function handler(request, response) {
+module.exports = async function handler(request, response) {
   try {
     const res = await fetch('https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json');
     const data = await res.json();

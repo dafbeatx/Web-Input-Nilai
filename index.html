@@ -463,14 +463,14 @@
              </button>
         </div>
 
-        <!-- App Tabs -->
-        <div class="w-full max-w-4xl px-6 mt-12 mb-6">
-            <div class="flex bg-slate-200/50 p-1.5 rounded-2xl gap-2">
-                <button onclick="switchWeatherTab('quake')" id="tab-quake" class="flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all bg-white text-slate-800 shadow-sm">
-                    ⚠️ Info Gempa
+        <!-- App Tabs (Modern Capsule Style) -->
+        <div class="w-full max-w-4xl px-4 mt-12 mb-8">
+            <div class="flex bg-slate-200/50 p-1.5 rounded-[1.5rem] gap-1 backdrop-blur-xl border border-white/50">
+                <button onclick="switchWeatherTab('quake')" id="tab-quake" class="flex-1 py-3.5 px-4 rounded-[1.2em] text-[11px] font-black uppercase tracking-[0.1em] transition-all bg-white text-slate-800 shadow-xl shadow-slate-200/50">
+                    INFO GEMPA
                 </button>
-                <button onclick="switchWeatherTab('weather')" id="tab-weather" class="flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all text-slate-500 hover:bg-white/50">
-                    ☁️ Prakiraan Cuaca
+                <button onclick="switchWeatherTab('weather')" id="tab-weather" class="flex-1 py-3.5 px-4 rounded-[1.2em] text-[11px] font-black uppercase tracking-[0.1em] transition-all text-slate-400 hover:text-slate-600">
+                    CUACA
                 </button>
             </div>
         </div>
@@ -478,35 +478,56 @@
         <!-- App Content -->
         <div id="weather-app-content" class="w-full max-w-4xl px-6 flex-1 overflow-y-auto pb-10 custom-scrollbar">
             <!-- Quake Content -->
-            <div id="quake-panel" class="animate-in">
-                <div id="quake-loader" class="py-20 flex flex-col items-center justify-center text-slate-400">
-                    <div class="w-10 h-10 border-4 border-sky-500/20 border-t-sky-500 rounded-full animate-spin mb-4"></div>
-                    <p class="font-medium text-sm">Memuat data gempa...</p>
+            <div id="quake-panel" class="space-y-6">
+                <div id="quake-loader" class="hidden py-24 flex flex-col items-center">
+                    <div class="relative w-16 h-16">
+                        <div class="absolute inset-0 border-4 border-rose-500/10 rounded-full"></div>
+                        <div class="absolute inset-0 border-4 border-t-rose-500 rounded-full animate-spin"></div>
+                    </div>
+                    <p class="mt-6 text-[10px] font-black uppercase tracking-widest text-rose-500 animate-pulse">Memantau Gempa Tengah...</p>
                 </div>
-                <div id="quake-data"></div>
+                <div id="quake-data" class="animate-in"></div>
             </div>
 
-            <!-- Weather Content (Hidden by default) -->
+            <!-- Weather Content -->
             <div id="weather-panel" class="hidden animate-in">
-                <div id="weather-header" class="mb-6">
-                    <select id="provinceSelect" onchange="fetchWeatherData(this.value)" class="w-full bg-white border-2 border-slate-200 rounded-2xl py-4 px-6 text-sm font-bold focus:border-sky-500 outline-none transition-all shadow-sm cursor-pointer appearance-none">
-                        <option value="dki-jakarta">DKI Jakarta</option>
-                        <option value="jawa-barat">Jawa Barat</option>
-                        <option value="jawa-tengah">Jawa Tengah</option>
-                        <option value="jawa-timur">Jawa Timur</option>
-                        <option value="di-yogyakarta">DI Yogyakarta</option>
-                        <option value="banten">Banten</option>
-                        <!-- Other provinces will be added as needed -->
-                    </select>
+                <!-- Province Selector -->
+                <div class="mb-8 p-6 bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/30">
+                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 ml-2">Pilih Wilayah</label>
+                    <div class="relative">
+                        <select id="provinceSelect" onchange="fetchWeatherData(this.value)" class="w-full h-14 pl-6 pr-12 bg-slate-50 border-none rounded-3xl text-sm font-bold text-slate-700 appearance-none focus:ring-4 focus:ring-sky-500/5 transition-all">
+                            <option value="dki-jakarta">DKI Jakarta</option>
+                            <option value="jawa-barat">Jawa Barat</option>
+                            <option value="jawa-tengah">Jawa Tengah</option>
+                            <option value="jawa-timur">Jawa Timur</option>
+                            <option value="di-yogyakarta">DI Yogyakarta</option>
+                            <option value="banten">Banten</option>
+                            <option value="bali">Bali</option>
+                            <option value="aceh">Aceh</option>
+                            <option value="sumatera-utara">Sumatera Utara</option>
+                            <option value="sumatera-barat">Sumatera Barat</option>
+                            <option value="sulawesi-selatan">Sulawesi Selatan</option>
+                            <option value="papua">Papua</option>
+                        </select>
+                        <div class="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        </div>
+                    </div>
                 </div>
-                <div id="weather-loader" class="hidden py-20 flex flex-col items-center justify-center text-slate-400">
-                    <div class="w-10 h-10 border-4 border-sky-500/20 border-t-sky-500 rounded-full animate-spin mb-4"></div>
-                    <p class="font-medium text-sm">Memuat prakiraan cuaca...</p>
+
+                <div id="weather-loader" class="hidden py-24 flex flex-col items-center">
+                    <div class="relative w-16 h-16">
+                        <div class="absolute inset-0 border-4 border-sky-500/10 rounded-full"></div>
+                        <div class="absolute inset-0 border-4 border-t-sky-500 rounded-full animate-spin"></div>
+                    </div>
+                    <p class="mt-6 text-[10px] font-black uppercase tracking-widest text-sky-500 animate-pulse">Menghitung Cuaca...</p>
                 </div>
-                <div id="weather-data" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                
+                <div id="weather-data" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                     <!-- Weather cards will be injected here -->
+                </div>
             </div>
         </div>
-    </div>
 
     <script src="cuaca.js"></script>
     <script src="quran.js"></script>
