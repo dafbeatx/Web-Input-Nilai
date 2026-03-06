@@ -4,8 +4,8 @@
 // ---------------------------------------------------------
 // MASUKKAN KREDENSIAL SUPABASE ANDA DI SINI (UNTUK VERCEL):
 // ---------------------------------------------------------
-const MY_SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL';
-const MY_SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const MY_SUPABASE_URL = 'https://fwhdjqvtjzesbdcqorsn.supabase.co';
+const MY_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3aGRqcXZ0anplc2JkY3FvcnNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA3MjMxMTUsImV4cCI6MjA1NjI5OTExNX0.fDIfTfWeM-3l_XzF9mN0xV1YdKsV9QfV1r1J7R_5XWQ';
 // ---------------------------------------------------------
 
 let supabaseClient = null;
