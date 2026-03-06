@@ -28,9 +28,18 @@ function openApp(appName) {
         win.classList.remove('hidden');
         setTimeout(() => win.classList.add('active'), 10);
         
+        // Specific init for KeyManager
+        if (appName === 'keymanager') {
+            fetchCloudKeys();
+        }
+        
         // Specific init for GradeMaster
         if (appName === 'grademaster') {
-            // Re-render to ensure everything matches current state
+            // Check if looking at official or custom key
+            const header = document.getElementById('headerKeyName');
+            if(header && !header.textContent.includes('Cloud')) {
+                 header.textContent = "Kunci Jawaban Manual";
+            }
             renderQuestions();
             renderEssayInputs();
             updateScore();
@@ -42,7 +51,11 @@ function closeApp(appName) {
     const win = document.getElementById(`win-${appName}`);
     if (win) {
         win.classList.remove('active');
-        launcher.classList.remove('blurred');
+        // Only remove blur if we are going back to launcher
+        // If opening grademaster from keymanager, logic is handled elsewhere
+        if(appName !== 'keymanager' || !document.getElementById('win-grademaster').classList.contains('active')) {
+            launcher.classList.remove('blurred');
+        }
         setTimeout(() => win.classList.add('hidden'), 200);
     }
 }
@@ -140,60 +153,97 @@ function updateKeyStatus(count) {
     }
 }
 
-// --- SUPABASE CLOUD LOGIC ---
+// --- TWO-LAYER CLOUD LOGIC ---
 
-async function saveToCloud() {
-    const keyName = document.getElementById('dbKeyName').value.trim();
-    const password = document.getElementById('dbKeyPassword').value.trim();
-    
-    if (!keyName || !password) {
-        showDbStatus('Nama kunci dan password harus diisi!', 'error');
-        return;
-    }
-
-    if (!Object.keys(currentAnswerKey).length) {
-        showDbStatus('Isi dulu kunci jawaban di kolom input!', 'error');
-        return;
-    }
+// 1. Fetching Keys for Layer 1
+async function fetchCloudKeys() {
+    const listContainer = document.getElementById('cloudKeyList');
+    if (!listContainer) return;
 
     if (!supabaseClient) {
-        showDbStatus('Supabase belum dikonfigurasi. Hubungi Admin.', 'error');
-        return;
+         listContainer.innerHTML = `<div class="p-6 bg-rose-50 text-rose-600 rounded-2xl border border-rose-100 shadow-sm flex items-center justify-center font-bold col-span-full">Koneksi Database Gagal (Cek supabase-config.js)</div>`;
+         return;
     }
 
-    showDbStatus('Sedang menyimpan...', 'info');
+    listContainer.innerHTML = `<div class="p-6 text-slate-400 font-medium col-span-full text-center">Mengunduh data...</div>`;
 
     try {
         const { data, error } = await supabaseClient
             .from('grade_keys')
-            .upsert({ 
-                key_name: keyName, 
-                answers: currentAnswerKey, 
-                password: password 
-            }, { onConflict: 'key_name' });
+            .select('key_name, created_at')
+            .order('created_at', { ascending: false });
 
         if (error) throw error;
-        showDbStatus('Kunci jawaban berhasil disimpan!', 'success');
+
+        if (!data || data.length === 0) {
+            listContainer.innerHTML = `<div class="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-slate-400 font-medium col-span-full h-32">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-2 opacity-50"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                Belum ada kunci di Cloud.
+            </div>`;
+            return;
+        }
+
+        listContainer.innerHTML = data.map(key => {
+            const date = new Date(key.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'});
+            return `
+            <button onclick="promptUnlockKey('${key.key_name}')" class="group relative bg-white p-6 rounded-[1.5rem] border border-slate-200 shadow-sm hover:border-brand-300 hover:shadow-xl hover:-translate-y-1 transition-all text-left overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-brand-50 rounded-bl-full -z-10 group-hover:bg-brand-100 transition-colors"></div>
+                <div class="w-10 h-10 bg-brand-100 text-brand-600 rounded-xl flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="9" x2="15" y1="9" y2="9"/><line x1="9" x2="15" y1="13" y2="13"/><line x1="9" x2="12" y1="17" y2="17"/></svg>
+                </div>
+                <h3 class="font-bold text-slate-800 text-lg mb-1 truncate">${key.key_name}</h3>
+                <p class="text-xs font-bold text-slate-400 tracking-wider">DIBUAT PADA: ${date}</p>
+            </button>
+            `;
+        }).join('');
+
     } catch (err) {
-        showDbStatus('Gagal menyimpan: ' + err.message, 'error');
+        listContainer.innerHTML = `<div class="p-6 bg-rose-50 text-rose-600 rounded-2xl border border-rose-100 shadow-sm flex items-center justify-center font-bold col-span-full">Gagal memuat: ${err.message}</div>`;
     }
 }
 
-async function loadFromCloud() {
-    const keyName = document.getElementById('dbKeyName').value.trim();
-    const password = document.getElementById('dbKeyPassword').value.trim();
+// 2. Unlocking and Opening Layer 2
+function promptUnlockKey(keyName) {
+    const modal = document.getElementById('modal-unlock-key');
+    const inner = document.getElementById('modal-unlock-key-inner');
+    document.getElementById('unlockKeyNameDisplay').textContent = keyName;
+    document.getElementById('unlockKeyName').value = keyName;
+    document.getElementById('unlockKeyPassword').value = '';
+    
+    const status = document.getElementById('modalUnlockStatus');
+    status.classList.add('hidden');
+    status.textContent = '';
 
-    if (!keyName || !password) {
-        showDbStatus('Nama kunci dan password harus diisi!', 'error');
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        inner.classList.remove('scale-95');
+    }, 10);
+    document.getElementById('unlockKeyPassword').focus();
+}
+
+function closeUnlockKeyModal() {
+    const modal = document.getElementById('modal-unlock-key');
+    const inner = document.getElementById('modal-unlock-key-inner');
+    modal.classList.add('opacity-0');
+    inner.classList.add('scale-95');
+    setTimeout(() => modal.classList.add('hidden'), 300);
+}
+
+async function submitUnlockKey() {
+    const keyName = document.getElementById('unlockKeyName').value;
+    const password = document.getElementById('unlockKeyPassword').value;
+    const status = document.getElementById('modalUnlockStatus');
+
+    if (!password) {
+        status.textContent = "Password tidak boleh kosong!";
+        status.classList.remove('hidden');
         return;
     }
 
-    if (!supabaseClient) {
-        showDbStatus('Supabase belum dikonfigurasi.', 'error');
-        return;
-    }
-
-    showDbStatus('Sedang memuat...', 'info');
+    status.textContent = "Memverifikasi...";
+    status.classList.remove('hidden', 'bg-rose-50', 'text-rose-600', 'border-rose-100');
+    status.classList.add('bg-slate-100', 'text-slate-600');
 
     try {
         const { data, error } = await supabaseClient
@@ -203,66 +253,134 @@ async function loadFromCloud() {
             .single();
 
         if (error) throw error;
-        if (!data) {
-            showDbStatus('Kunci tidak ditemukan!', 'error');
-            return;
-        }
-
+        
         if (data.password !== password) {
-            showDbStatus('Password salah!', 'error');
+            status.textContent = "Password tidak valid / salah!";
+            status.classList.remove('bg-slate-100', 'text-slate-600');
+            status.classList.add('bg-rose-50', 'text-rose-600', 'border-rose-100');
             return;
         }
 
-        // Apply loaded key
+        // Success! Load data and transition to Layer 2
+        closeUnlockKeyModal();
+        
+        // Prepare GradeMaster Data
         const loadedKey = data.answers;
         currentAnswerKey = loadedKey;
-        keyInputTextarea.value = Object.entries(loadedKey).map(([k, v]) => `${k}.${v}`).join(' ');
-        parseAndApplyKey();
+        if(keyInputTextarea) {
+             keyInputTextarea.value = Object.entries(loadedKey).map(([k, v]) => `${k}.${v}`).join(' ');
+        }
         
-        showDbStatus('Kunci berhasil dimuat!', 'success');
+        // Update Layer 2 UI
+        const headerName = document.getElementById('headerKeyName');
+        if(headerName) headerName.textContent = `Cloud: ${keyName}`;
+        
+        parseAndApplyKey();
+
+        // Perform visual transition
+        closeApp('keymanager');
+        setTimeout(() => openApp('grademaster'), 250);
+
     } catch (err) {
-        showDbStatus('Gagal memuat: ' + err.message, 'error');
+        status.textContent = "Gagal memverifikasi: " + err.message;
+        status.classList.remove('bg-slate-100', 'text-slate-600');
+        status.classList.add('bg-rose-50', 'text-rose-600', 'border-rose-100');
     }
 }
 
-// --- SUPABASE CONFIG UI LOGIC ---
+// 3. Creating a New Key
+function openCreateKeyModal() {
+    const modal = document.getElementById('modal-create-key');
+    const inner = document.getElementById('modal-create-key-inner');
+    
+    document.getElementById('newKeyName').value = '';
+    document.getElementById('newKeyAnswers').value = '';
+    document.getElementById('newKeyPassword').value = '';
+    
+    const status = document.getElementById('modalCreateStatus');
+    status.classList.add('hidden');
+    status.className = 'hidden text-xs font-bold p-3 rounded-xl';
 
-function toggleConfig() {
-    const panel = document.getElementById('configPanel');
-    if (panel) panel.classList.toggle('hidden');
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        inner.classList.remove('scale-95');
+    }, 10);
 }
 
-function applySupabaseConfig() {
-    const url = document.getElementById('spUrl').value.trim();
-    const key = document.getElementById('spKey').value.trim();
+function closeCreateKeyModal() {
+    const modal = document.getElementById('modal-create-key');
+    const inner = document.getElementById('modal-create-key-inner');
+    modal.classList.add('opacity-0');
+    inner.classList.add('scale-95');
+    setTimeout(() => modal.classList.add('hidden'), 300);
+}
 
-    if (!url || !key) {
-        showDbStatus('URL dan Key tidak boleh kosong!', 'error');
+async function submitNewKey() {
+    const keyName = document.getElementById('newKeyName').value.trim();
+    const answersText = document.getElementById('newKeyAnswers').value.trim();
+    const password = document.getElementById('newKeyPassword').value;
+    const status = document.getElementById('modalCreateStatus');
+
+    if (!keyName || !answersText || !password) {
+        showStatus('Semua kolom wajib diisi!', 'error');
         return;
     }
 
-    const success = initSupabase(url, key);
-    if (success) {
-        showDbStatus('Supabase terhubung!', 'success');
-        setTimeout(toggleConfig, 1000);
-    } else {
-        showDbStatus('Gagal terhubung. Cek URL/Key.', 'error');
+    if(password.length < 4) {
+         showStatus('Password minimal 4 karakter!', 'error');
+         return;
     }
-}
 
-function showDbStatus(msg, type) {
-    if (!dbStatus) return;
-    dbStatus.textContent = msg;
-    dbStatus.classList.remove('hidden', 'bg-rose-50', 'text-rose-700', 'bg-emerald-50', 'text-emerald-700', 'bg-slate-100', 'text-slate-600');
-    
-    if (type === 'error') {
-        dbStatus.classList.add('bg-rose-50', 'text-rose-700');
-    } else if (type === 'success') {
-        dbStatus.classList.add('bg-emerald-50', 'text-emerald-700');
+    // Parse answers locally first to ensure validity
+    const tempKey = {};
+    const patternMatches = answersText.match(/(\d+)\s*[.:\-)\s]\s*([A-E])/gi);
+    if (patternMatches) {
+        patternMatches.forEach(match => {
+            const parts = match.match(/(\d+)\s*[.:\-)\s]\s*([A-E])/i);
+            if (parts) tempKey[parseInt(parts[1])] = parts[2].toUpperCase();
+        });
     } else {
-        dbStatus.classList.add('bg-slate-100', 'text-slate-600');
+        const cleanLetters = answersText.toUpperCase().replace(/[^A-E]/g, '');
+        for (let i = 0; i < cleanLetters.length; i++) tempKey[i + 1] = cleanLetters[i];
     }
-    dbStatus.classList.remove('hidden');
+
+    if(Object.keys(tempKey).length === 0) {
+        showStatus('Format jawaban tidak valid!', 'error');
+        return;
+    }
+
+    showStatus('Menyimpan ke Cloud...', 'info');
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('grade_keys')
+            .upsert({ 
+                key_name: keyName, 
+                answers: tempKey, 
+                password: password 
+            }, { onConflict: 'key_name' });
+
+        if (error) throw error;
+        
+        showStatus('Kunci berhasil disimpan!', 'success');
+        setTimeout(() => {
+            closeCreateKeyModal();
+            fetchCloudKeys(); // Refresh list
+        }, 1500);
+
+    } catch (err) {
+        showStatus('Gagal: ' + err.message, 'error');
+    }
+
+    function showStatus(msg, type) {
+        status.textContent = msg;
+        status.className = 'text-xs font-bold p-3 rounded-xl border mt-4';
+        if (type === 'error') status.classList.add('bg-rose-50', 'text-rose-600', 'border-rose-100');
+        else if (type === 'success') status.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-100');
+        else status.classList.add('bg-slate-100', 'text-slate-600', 'border-slate-200');
+        status.classList.remove('hidden');
+    }
 }
 
 function renderQuestions() {
