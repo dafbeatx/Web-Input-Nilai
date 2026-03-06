@@ -1,0 +1,8 @@
+{
+  "name": "web-input-nilai",
+  "version": "1.0.0",
+  "description": "GradeMaster OS with dynamic config",
+  "scripts": {
+    "build": "node -e \"const fs = require('fs'); const template = fs.readFileSync('supabase-config.template.js', 'utf8'); const content = 'const SUPABASE_URL = \\\"' + (process.env.SUPABASE_URL || '') + '\\\";\\nconst SUPABASE_ANON_KEY = \\\"' + (process.env.SUPABASE_ANON_KEY || '') + '\\\";\\n' + template; fs.writeFileSync('supabase-config.js', content);\""
+  }
+}

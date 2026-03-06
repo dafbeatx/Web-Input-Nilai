@@ -1,4 +1,9 @@
 .env
+supabase-config.js
+node_modules/
+dist/
+.vercel
+.next
 .env.local
 .env.*.local
 *.log
