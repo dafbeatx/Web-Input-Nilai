@@ -33,6 +33,11 @@ function openApp(appName) {
             fetchCloudKeys();
         }
         
+        // Specific init for Al-Quran
+        if (appName === 'quran' && typeof initQuranApp === 'function') {
+            initQuranApp();
+        }
+        
         // Specific init for GradeMaster
         if (appName === 'grademaster') {
             // Check if looking at official or custom key
