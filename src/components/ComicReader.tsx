@@ -82,7 +82,8 @@ export default function ComicReader() {
           if (coverRel && coverRel.attributes) {
             coverFileName = coverRel.attributes.fileName;
           }
-          const coverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${m.id}/${coverFileName}.256.jpg` : '';
+          const originalCoverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${m.id}/${coverFileName}.256.jpg` : '';
+          const coverUrl = originalCoverUrl ? `/api/manga/image?url=${encodeURIComponent(originalCoverUrl)}` : '';
 
           return {
             id: m.id,
