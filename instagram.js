@@ -13,26 +13,28 @@ const instaSearch = document.getElementById('instaSearch');
 function initInstaApp() {
     if (instaContent) {
         instaContent.innerHTML = `
-            <div class="col-span-full py-20 text-center text-slate-400">
-                <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+            <div class="col-span-full py-20 flex flex-col items-center justify-center">
+                <div class="relative w-16 h-16 mb-6">
+                    <div class="absolute inset-0 border-4 border-rose-500/10 rounded-full"></div>
+                    <div class="absolute inset-0 border-4 border-t-rose-500 rounded-full animate-spin"></div>
                 </div>
-                <p class="font-bold text-slate-600">Masukkan Username Instagram</p>
-                <p class="text-xs mt-2">Gunakan kotak pencarian di atas untuk memulai.</p>
+                <p class="text-[10px] font-black uppercase tracking-widest text-rose-500 animate-pulse">Menghubungkan ke Instagram...</p>
             </div>
         `;
     }
+    // Automatically fetch default user "keke" on first open
+    fetchInstaPosts("keke");
 }
 
 /**
  * Fetch Instagram Posts
  */
-async function fetchInstaPosts() {
-    const username = instaSearch.value.trim();
+async function fetchInstaPosts(defaultUser = null) {
+    const username = defaultUser || instaSearch.value.trim();
     if (!username) return;
 
-    instaLoader.classList.remove('hidden');
-    instaContent.innerHTML = '';
+    if (instaLoader) instaLoader.classList.remove('hidden');
+    if (instaContent) instaContent.innerHTML = '';
 
     try {
         const response = await fetch('/api/instagram/posts', {
@@ -45,25 +47,30 @@ async function fetchInstaPosts() {
         
         const result = await response.json();
         
-        if (result.data && result.data.user) {
+        if (result.success && result.data && result.data.data && result.data.data.user) {
+            renderInstaGallery(result.data.data.user);
+        } else if (result.data && result.data.user) {
+            // Fallback for different response structures
             renderInstaGallery(result.data.user);
         } else {
             throw new Error(result.message || 'Gagal mengambil data. Pastikan username benar dan publik.');
         }
     } catch (error) {
         console.error('Error fetching Instagram posts:', error);
-        instaContent.innerHTML = `
-            <div class="col-span-full py-20 text-center">
-                <div class="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+        if (instaContent) {
+            instaContent.innerHTML = `
+                <div class="col-span-full py-20 text-center">
+                    <div class="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+                    </div>
+                    <p class="font-black text-slate-800 mb-2">Terjadi Kesalahan</p>
+                    <p class="text-xs text-slate-400 mb-6">${error.message}</p>
+                    <button onclick="fetchInstaPosts()" class="px-6 py-3 bg-slate-900 text-white rounded-2xl text-xs font-bold shadow-xl shadow-slate-900/20 active:scale-95 transition-all">Coba Lagi</button>
                 </div>
-                <p class="font-black text-slate-800 mb-2">Terjadi Kesalahan</p>
-                <p class="text-xs text-slate-400 mb-6">${error.message}</p>
-                <button onclick="fetchInstaPosts()" class="px-6 py-3 bg-slate-900 text-white rounded-2xl text-xs font-bold shadow-xl shadow-slate-900/20 active:scale-95 transition-all">Coba Lagi</button>
-            </div>
-        `;
+            `;
+        }
     } finally {
-        instaLoader.classList.add('hidden');
+        if (instaLoader) instaLoader.classList.add('hidden');
     }
 }
 

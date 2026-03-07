@@ -35,7 +35,19 @@ module.exports = async function handler(request, response) {
   try {
     const res = await fetch(url, options);
     const result = await res.json();
-    return response.status(res.status).json(result);
+    
+    if (!res.ok) {
+      return response.status(res.status).json({
+        success: false,
+        message: result.message || 'RapidAPI Error',
+        data: result
+      });
+    }
+
+    return response.status(200).json({
+      success: true,
+      data: result
+    });
   } catch (error) {
     console.error('Instagram Proxy Error:', error);
     return response.status(500).json({ success: false, message: error.message });
