@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-950 min-h-screen overflow-hidden text-slate-900;
+    font-family: 'Inter', sans-serif;
+  }
+  
+  h1, h2, h3, .font-outfit {
+    font-family: 'Outfit', sans-serif;
+  }
+}
+
+@layer components {
+  .bg-grid {
+    @apply fixed inset-0 w-full h-full;
+    z-index: -1;
+    background: #000000;
+    --gap: 5em;
+    --line: 1px;
+    --color: rgba(255, 255, 255, 0.1);
+
+    background-image: linear-gradient(
+        -90deg,
+        transparent calc(var(--gap) - var(--line)),
+        var(--color) calc(var(--gap) - var(--line) + 1px),
+        var(--color) var(--gap)
+      ),
+      linear-gradient(
+        0deg,
+        transparent calc(var(--gap) - var(--line)),
+        var(--color) calc(var(--gap) - var(--line) + 1px),
+        var(--color) var(--gap)
+      );
+    background-size: var(--gap) var(--gap);
+  }
+
+  .glass-card {
+    @apply bg-white/10 backdrop-blur-[20px] border border-white/10;
+  }
+
+  .premium-shadow {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  .app-window {
+    @apply fixed inset-0 z-40 flex flex-col items-center transition-all duration-200 pointer-events-none opacity-0 translate-y-2.5;
+  }
+
+  .app-window.active {
+    @apply opacity-100 translate-y-0 pointer-events-auto;
+  }
+
+  .custom-radio-label {
+    @apply flex items-center justify-center w-11 h-11 rounded-xl border-2 border-slate-200 bg-white text-slate-600 font-bold text-base cursor-pointer transition-all duration-200;
+  }
+
+  input[type="radio"]:checked + .custom-radio-label {
+    @apply bg-indigo-600 border-indigo-600 text-white shadow-xl scale-105;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05), 0 0 0 4px #e1e9ff;
+  }
+
+  .custom-radio-label:hover:not(input[type="radio"]:checked + .custom-radio-label) {
+    @apply border-indigo-300 bg-indigo-50 text-indigo-600;
+  }
+
+  .calculator-display {
+    @apply bg-slate-900 color-white p-4 text-right text-4xl rounded-2xl mb-4 overflow-hidden whitespace-nowrap border border-slate-800 shadow-inner;
+    font-family: 'Outfit', sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .calc-button {
+    @apply p-4 rounded-2xl font-bold text-xl shadow transition-all duration-200 flex items-center justify-center;
+  }
+
+  .calc-button:active {
+    @apply scale-95;
+  }
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-in {
+  animation: fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes bgGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  @apply w-1.5;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-black/10 rounded-full;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  @apply bg-black/20;
+}
+
+.font-arabic {
+  font-family: 'Amiri', serif;
+}

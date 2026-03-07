@@ -1,11 +1,19 @@
 {
   "name": "web-input-nilai",
   "version": "1.0.0",
-  "description": "GradeMaster OS with dynamic config",
+  "description": "GradeMaster OS - Next.js Migration",
   "scripts": {
-    "build": "node -e \"const fs = require('fs'); const template = fs.readFileSync('supabase-config.template.js', 'utf8'); const content = 'const SUPABASE_URL = \\\"' + (process.env.SUPABASE_URL || '') + '\\\";\\nconst SUPABASE_ANON_KEY = \\\"' + (process.env.SUPABASE_ANON_KEY || '') + '\\\";\\n' + template; fs.writeFileSync('supabase-config.js', content);\""
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "fast-xml-parser": "^4.3.2"
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "lucide-react": "latest",
+    "fast-xml-parser": "^4.3.2",
+    "@supabase/supabase-js": "^2.39.7"
   }
 }

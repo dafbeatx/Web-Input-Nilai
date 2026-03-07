@@ -1,11 +1,12 @@
-module.exports = async function handler(request, response) {
+import { NextResponse } from 'next/server';
+
+export async function GET() {
   try {
-    const res = await fetch('https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json');
+    const res = await fetch('https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json', { cache: 'no-store' });
     const data = await res.json();
     
     const quake = data.Infogempa.gempa;
     
-    // Transform to the structure expected by cuaca.js
     const transformed = {
       success: true,
       data: {
@@ -24,8 +25,8 @@ module.exports = async function handler(request, response) {
       }
     };
 
-    return response.status(200).json(transformed);
-  } catch (error) {
-    return response.status(500).json({ success: false, message: error.message });
+    return NextResponse.json(transformed);
+  } catch (error: any) {
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
