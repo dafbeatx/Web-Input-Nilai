@@ -24,6 +24,8 @@ interface MangaItem {
   coverUrl: string;
   status: string;
   year: number | string;
+  author?: string;
+  genres?: string[];
 }
 
 interface ChapterItem {
@@ -61,43 +63,25 @@ export default function ComicReader() {
     setLoading(true);
     setError(null);
     try {
-      // Fetch latest updated manga with Indonesian translation
-      let path = `manga?limit=30&availableTranslatedLanguage[]=id&includes[]=cover_art`;
+      let url = 'https://mangahook-api.vercel.app/api/mangaList';
       if (query) {
-        path += `&title=${encodeURIComponent(query)}`;
-      } else {
-        path += `&order[followedCount]=desc`; // Popular
+        url = `https://mangahook-api.vercel.app/api/search/${encodeURIComponent(query)}?page=1`;
       }
       
-      const response = await fetch(`/api/manga?path=${encodeURIComponent(path)}`);
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Gagal mengambil data manga dari server");
       const result = await response.json();
       
-      if (result.result === 'ok') {
-        const formattedMangas = result.data.map((m: any) => {
-          const title = m.attributes.title.en || m.attributes.title['ja-ro'] || Object.values(m.attributes.title)[0] || 'Unknown Title';
-          const desc = m.attributes.description.en || m.attributes.description.id || '';
-          
-          let coverFileName = '';
-          const coverRel = m.relationships.find((r: any) => r.type === 'cover_art');
-          if (coverRel && coverRel.attributes) {
-            coverFileName = coverRel.attributes.fileName;
-          }
-          const originalCoverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${m.id}/${coverFileName}.256.jpg` : '';
-          const coverUrl = originalCoverUrl ? `/api/manga/image?url=${encodeURIComponent(originalCoverUrl)}` : '';
-
-          return {
-            id: m.id,
-            title,
-            description: desc,
-            coverUrl,
-            status: m.attributes.status,
-            year: m.attributes.year || 'N/A'
-          };
-        });
-        setMangas(formattedMangas);
-      } else {
-        throw new Error(result.message || "Gagal mengambil data manga");
-      }
+      const list = result.mangaList || [];
+      const formattedMangas = list.map((m: any) => ({
+        id: m.id,
+        title: m.title,
+        description: m.description || '',
+        coverUrl: m.image || '',
+        status: m.status || 'Unknown',
+        year: m.createAt || 'N/A'
+      }));
+      setMangas(formattedMangas);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -117,23 +101,28 @@ export default function ComicReader() {
     setCurrentMangaTitle(manga.title);
     window.history.pushState({ app: 'komik', comicView: 'detail' }, '');
     try {
-      // Fetch chapters in Indonesian
-      const path = `manga/${manga.id}/feed?limit=100&translatedLanguage[]=id&order[chapter]=desc&order[volume]=desc`;
-      const response = await fetch(`/api/manga?path=${encodeURIComponent(path)}`);
+      const response = await fetch(`https://mangahook-api.vercel.app/api/manga/${manga.id}`);
+      if (!response.ok) throw new Error("Gagal mengambil detail manga");
       const result = await response.json();
       
-      if (result.result === 'ok') {
-         const formattedChapters = result.data.map((c: any) => ({
-             id: c.id,
-             chapter: c.attributes.chapter || 'Oneshot',
-             title: c.attributes.title || '',
-             volume: c.attributes.volume || '',
-             publishedAt: new Date(c.attributes.publishAt).toLocaleDateString(),
-             externalUrl: c.attributes.externalUrl,
-             pages: c.attributes.pages || 0
-         }));
-         setChapters(formattedChapters);
-      }
+      // Update selected manga with more details
+      setSelectedManga({
+        ...manga,
+        description: result.description || manga.description,
+        author: result.author || 'Unknown',
+        status: result.status || manga.status,
+        genres: result.genres || []
+      });
+
+      const formattedChapters = (result.chapterList || []).map((c: any) => ({
+          id: c.id,
+          chapter: c.name.replace('Chapter ', ''),
+          title: c.name,
+          volume: '',
+          publishedAt: c.createAt || '',
+          pages: 0
+      }));
+      setChapters(formattedChapters);
     } catch (err) {
       setError("Gagal memuat detail chapter");
     } finally {
@@ -154,18 +143,15 @@ export default function ComicReader() {
     window.history.pushState({ app: 'komik', comicView: 'reader' }, '');
     
     try {
-      // 1. Get AtHome Server for chapter
-      const path = `at-home/server/${chapter.id}`;
-      const response = await fetch(`/api/manga?path=${encodeURIComponent(path)}`);
+      if (!selectedManga) throw new Error("Manga tidak terpilih");
+      const response = await fetch(`https://mangahook-api.vercel.app/api/manga/${selectedManga.id}/${chapter.id}`);
+      if (!response.ok) throw new Error("Gagal mengambil gambar chapter");
       const result = await response.json();
       
-      if (result.result === 'ok') {
-          const baseUrl = result.baseUrl;
-          const hash = result.chapter.hash;
-          const images = result.chapter.data.map((filename: string) => `${baseUrl}/data/${hash}/${filename}`);
-          setChapterImages(images);
+      if (result.image && Array.isArray(result.image)) {
+          setChapterImages(result.image);
       } else {
-          throw new Error("Gagal mengambil gambar chapter dari server at-home");
+          throw new Error("Format gambar tidak sesuai dari server");
       }
     } catch (err) {
       console.error(err);
@@ -306,10 +292,17 @@ export default function ComicReader() {
                     <h2 className="text-3xl md:text-5xl font-black text-slate-900 mb-4 font-outfit tracking-tight leading-tight">{selectedManga.title}</h2>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                         <DetailStat label="Status" value={selectedManga.status} />
-                        <DetailStat label="Year" value={selectedManga.year.toString()} />
-                        <DetailStat label="Source" value="MangaDex" />
+                        <DetailStat label="Author" value={selectedManga.author || '-'} />
+                        <DetailStat label="Source" value="Manga Hook" />
                         <DetailStat label="Chapters" value={chapters.length.toString()} />
                     </div>
+                    {selectedManga.genres && selectedManga.genres.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-8 justify-center md:justify-start">
+                        {selectedManga.genres.slice(0, 5).map(g => (
+                          <span key={g} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-bold">{g}</span>
+                        ))}
+                      </div>
+                    )}
                 </div>
             </div>
 
@@ -323,7 +316,7 @@ export default function ComicReader() {
 
             <div className="mt-12">
                 <h3 className="text-xl font-black text-slate-800 mb-6 px-4 flex items-center gap-3">
-                    <Book size={20} className="text-orange-500" /> Daftar Chapter (Indonesia)
+                    <Book size={20} className="text-orange-500" /> Daftar Chapter
                 </h3>
                 
                 {loading ? (
@@ -338,10 +331,9 @@ export default function ComicReader() {
                             >
                                 <div>
                                     <span className="font-bold text-slate-700 group-hover:text-orange-600 transition-colors uppercase tracking-tight text-sm flex items-center gap-2">
-                                        Ch. {ch.chapter} {ch.title && <span className="hidden md:inline text-slate-400 capitalize truncate max-w-[150px]">- {ch.title}</span>}
+                                        {ch.title}
                                         {ch.externalUrl && <span className="px-2 py-0.5 bg-sky-100 text-sky-600 rounded text-[8px] font-black uppercase tracking-widest ml-2 flex items-center gap-1"><ExternalLink size={10} /> Official</span>}
                                     </span>
-                                    {ch.volume && <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Vol. {ch.volume}</p>}
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <span className="text-[10px] font-bold text-slate-400">{ch.publishedAt}</span>
