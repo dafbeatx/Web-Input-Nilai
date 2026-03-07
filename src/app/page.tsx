@@ -26,12 +26,38 @@ export default function GradeMasterOS() {
     }
     setActiveApp(appId);
     setIsBlurred(true);
+    window.history.pushState({ app: appId }, '');
   };
 
   const closeApp = () => {
     setActiveApp(null);
     setIsBlurred(false);
   };
+
+  // Handle browser back button (smartphone native back)
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      // If a child component already handled this popstate, skip
+      if ((window as any).__popstateHandled) {
+        (window as any).__popstateHandled = false;
+        return;
+      }
+      const state = e.state;
+      if (!state || !state.app) {
+        // Navigated back to home screen
+        setActiveApp(null);
+        setIsBlurred(false);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Set initial state on mount
+  useEffect(() => {
+    window.history.replaceState({ app: null }, '', window.location.pathname);
+  }, []);
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -101,7 +127,7 @@ export default function GradeMasterOS() {
           <WindowHeader 
             title={getAppTitle(activeApp)} 
             icon={getAppIcon(activeApp)} 
-            onClose={closeApp} 
+            onClose={() => window.history.back()} 
             color={getAppColor(activeApp)}
           />
           <div className="w-full flex-1 overflow-auto bg-slate-50 pt-14 custom-scrollbar">

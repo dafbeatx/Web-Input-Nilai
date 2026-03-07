@@ -115,6 +115,7 @@ export default function ComicReader() {
     setSelectedManga(manga);
     setLoading(true);
     setCurrentMangaTitle(manga.title);
+    window.history.pushState({ app: 'komik', comicView: 'detail' }, '');
     try {
       // Fetch chapters in Indonesian
       const path = `manga/${manga.id}/feed?limit=100&translatedLanguage[]=id&order[chapter]=desc&order[volume]=desc`;
@@ -150,6 +151,7 @@ export default function ComicReader() {
     setSelectedChapter(chapter);
     setReaderLoading(true);
     setChapterImages([]);
+    window.history.pushState({ app: 'komik', comicView: 'reader' }, '');
     
     try {
       // 1. Get AtHome Server for chapter
@@ -174,9 +176,25 @@ export default function ComicReader() {
   };
 
   const goBack = () => {
-    if (view === 'reader') setView('detail');
-    else if (view === 'detail') setView('list');
+    window.history.back();
   };
+
+  // Handle browser back button within ComicReader
+  useEffect(() => {
+    const handlePopState = () => {
+      if (view === 'reader') {
+        (window as any).__popstateHandled = true;
+        setView('detail');
+      } else if (view === 'detail') {
+        (window as any).__popstateHandled = true;
+        setView('list');
+      }
+    };
+
+    // Use capture phase to run BEFORE the parent's handler
+    window.addEventListener('popstate', handlePopState, true);
+    return () => window.removeEventListener('popstate', handlePopState, true);
+  }, [view]);
 
   if (view === 'list') {
     return (
