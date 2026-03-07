@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title: "GradeMaster OS - DFBX",
   description: "Advanced grading and educational assistance platform",
   icons: {
-    icon: "/Image/favicon.png",
+    icon: "/favicon.png",
   },
 };
 
