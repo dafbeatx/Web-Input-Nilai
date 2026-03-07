@@ -16,6 +16,7 @@ ALTER TABLE public.grade_keys ENABLE ROW LEVEL SECURITY;
 
 -- Policy dasar: Izinkan akses anonim untuk demo (karena logic password ada di JS)
 -- PENTING: Untuk produksi, sebaiknya perketat policy ini!
+DROP POLICY IF EXISTS "Allow anonymous read/write" ON public.grade_keys;
 CREATE POLICY "Allow anonymous read/write" ON public.grade_keys
     FOR ALL
     TO anon
