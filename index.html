@@ -67,7 +67,6 @@
                 if (appName === 'keymanager' && typeof fetchCloudKeys === 'function') fetchCloudKeys();
                 if (appName === 'quran' && typeof initQuranApp === 'function') initQuranApp();
                 if (appName === 'cuaca' && typeof initWeatherApp === 'function') initWeatherApp();
-                if (appName === 'instagram' && typeof initInstaApp === 'function') initInstaApp();
                 
                 if (appName === 'grademaster' && typeof renderQuestions === 'function') {
                     const header = document.getElementById('headerKeyName');
@@ -136,7 +135,7 @@
             </button>
 
             <!-- Instagram Icon -->
-            <button onclick="openApp('instagram')" class="flex flex-col items-center gap-3 group">
+            <button onclick="window.open('https://instagram.com/keke', '_blank')" class="flex flex-col items-center gap-3 group">
                 <div class="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-tr from-yellow-400 via-rose-500 to-purple-600 rounded-[1.5rem] shadow-2xl flex items-center justify-center text-white ring-4 ring-white/10 group-hover:scale-110 transition-transform duration-300">
                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
                 </div>
@@ -551,46 +550,10 @@
             </div>
         </div>
 
-    <!-- APP WINDOW: INSTAGRAM POST VIEWER -->
-    <div id="win-instagram" class="app-window fixed inset-0 z-40 hidden flex flex-col items-center bg-slate-50 pt-10 pb-20 overflow-hidden">
-        <div class="fixed top-0 inset-x-0 h-14 glass-card border-b border-slate-200 z-[60] flex items-center justify-between px-6 shadow-sm">
-             <div class="flex items-center gap-3">
-                 <div class="w-8 h-8 bg-gradient-to-tr from-yellow-400 via-rose-500 to-purple-600 rounded-lg flex items-center justify-center text-white shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
-                 </div>
-                 <span class="font-outfit font-bold text-slate-800">Instagram Post Viewer</span>
-             </div>
-             <button onclick="closeApp('instagram')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-             </button>
-        </div>
-
-        <!-- Search Header -->
-        <div class="w-full max-w-4xl px-6 mt-12 mb-10">
-            <div class="relative group">
-                <input type="text" id="instaSearch" placeholder="Masukkan username IG..." class="w-full bg-white border-2 border-slate-100 rounded-[2rem] py-5 pl-14 pr-8 text-sm font-bold text-slate-700 shadow-xl shadow-slate-200/50 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 outline-none transition-all placeholder:text-slate-300">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-rose-500 transition-colors"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                <button onclick="fetchInstaPosts()" class="absolute right-3 top-1/2 -translate-y-1/2 px-6 py-2.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all">Cari</button>
-            </div>
-        </div>
-
-        <!-- App Content -->
-        <div id="insta-app-content" class="w-full max-w-4xl px-6 flex-1 overflow-y-auto pb-10 custom-scrollbar">
-            <div id="insta-loader" class="hidden py-24 flex flex-col items-center">
-                <div class="relative w-16 h-16">
-                    <div class="absolute inset-0 border-4 border-rose-500/10 rounded-full"></div>
-                    <div class="absolute inset-0 border-4 border-t-rose-500 rounded-full animate-spin"></div>
-                </div>
-                <p class="mt-6 text-[10px] font-black uppercase tracking-widest text-rose-500 animate-pulse">Menghubungkan ke Instagram...</p>
-            </div>
-            <div id="insta-content" class="animate-in">
-                <!-- Content will be injected here -->
-            </div>
         </div>
     </div>
 
     <script src="cuaca.js" defer></script>
-    <script src="instagram.js" defer></script>
     <script src="quran.js" defer></script>
     <script src="script.js" defer></script>
 </body>
