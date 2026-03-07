@@ -112,7 +112,7 @@ export default function GradeMasterOS() {
   );
 }
 
-function AppIcon({ id, name, icon, color, onClick }: any) {
+function AppIcon({ id, name, icon, color, onClick }: { id: string, name: string, icon: React.ReactNode, color: string, onClick: () => void }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-3 group">
       <div className={`w-16 h-16 sm:w-20 sm:h-20 ${color} rounded-[1.5rem] shadow-2xl flex items-center justify-center text-white ring-4 ring-white/10 group-hover:scale-110 transition-transform duration-300`}>
@@ -123,7 +123,7 @@ function AppIcon({ id, name, icon, color, onClick }: any) {
   );
 }
 
-function WindowHeader({ title, icon, onClose, color }: any) {
+function WindowHeader({ title, icon, onClose, color }: { title: string, icon: React.ReactElement, onClose: () => void, color: string }) {
   return (
     <div className="fixed top-0 inset-x-0 h-14 bg-white/80 backdrop-blur-md border-b border-slate-200 z-[60] flex items-center justify-between px-6 shadow-sm">
       <div className="flex items-center gap-3">

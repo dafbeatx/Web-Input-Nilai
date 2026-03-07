@@ -11,13 +11,36 @@ import {
 
 const QURAN_API_BASE = 'https://api.quran.gading.dev';
 
+interface Surah {
+  number: number;
+  name: {
+    short: string;
+    transliteration: { id: string };
+    translation: { id: string };
+  };
+  numberOfVerses: number;
+  revelation: { id: string };
+}
+
+interface Verse {
+  number: { inSurah: number };
+  audio: { primary: string };
+  text: { arab: string; transliteration: { en: string } };
+  translation: { id: string };
+}
+
+interface SurahDetail extends Surah {
+  verses: Verse[];
+  preBismillah?: { text: { arab: string } } | null;
+}
+
 export default function Quran() {
-  const [surahs, setSurahs] = useState<any[]>([]);
+  const [surahs, setSurahs] = useState<Surah[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSurah, setSelectedSurah] = useState<any | null>(null);
-  const [selectedSurahDetail, setSelectedSurahDetail] = useState<any | null>(null);
+  const [selectedSurah, setSelectedSurah] = useState<Surah | null>(null);
+  const [selectedSurahDetail, setSelectedSurahDetail] = useState<SurahDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   
@@ -62,7 +85,7 @@ export default function Quran() {
     }
   };
 
-  const handleSurahClick = (surah: any) => {
+  const handleSurahClick = (surah: Surah) => {
     setSelectedSurah(surah);
     fetchSurahDetail(surah.number);
   };
@@ -89,7 +112,7 @@ export default function Quran() {
     }
   };
 
-  const filteredSurahs = surahs.filter(s => 
+  const filteredSurahs = surahs.filter((s: Surah) => 
     s.name.transliteration.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.number.toString() === searchQuery
   );
@@ -138,7 +161,7 @@ export default function Quran() {
           </header>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredSurahs.map((surah) => (
+            {filteredSurahs.map((surah: Surah) => (
               <div 
                 key={surah.number} 
                 onClick={() => handleSurahClick(surah)}
@@ -193,7 +216,7 @@ export default function Quran() {
               )}
 
               <div className="space-y-6 pb-10">
-                {selectedSurahDetail.verses.map((verse: any) => (
+                {selectedSurahDetail.verses.map((verse: Verse) => (
                   <div key={verse.number.inSurah} className="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm">
                     <div className="flex justify-between items-start mb-6">
                       <div className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center text-xs font-bold border border-slate-100">

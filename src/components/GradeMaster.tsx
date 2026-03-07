@@ -8,7 +8,8 @@ import {
   CheckCircle2, 
   XCircle, 
   LayoutGrid,
-  ClipboardList
+  ClipboardList,
+  GraduationCap
 } from "lucide-react";
 
 const OPTIONS = ['A', 'B', 'C', 'D', 'E'];
@@ -36,7 +37,7 @@ export default function GradeMaster() {
   useEffect(() => {
     // Initialize key input string from default key
     const initialInput = Object.entries(defaultAnswerKey)
-      .map(([k, v]) => `${k}.${v}`)
+      .map(([k, v]: [string, string]) => `${k}.${v}`)
       .join(' ');
     setKeyInput(initialInput);
   }, []);
@@ -74,7 +75,7 @@ export default function GradeMaster() {
   };
 
   const handleAnswerSelect = (questionNum: number, option: string) => {
-    setUserAnswers(prev => ({ ...prev, [questionNum]: option }));
+    setUserAnswers((prev: Record<number, string>) => ({ ...prev, [questionNum]: option }));
   };
 
   const handleEssayChange = (index: number, val: string) => {
@@ -88,7 +89,7 @@ export default function GradeMaster() {
 
   const resetAll = () => {
     setUserAnswers({});
-    setEssayScores(new Array(ESSAY_COUNT).fill(0));
+    setEssayScores(new Array(ESSAY_COUNT).fill(0) as number[]);
   };
 
   const correctCount = Object.keys(userAnswers).filter(k => {
@@ -101,7 +102,7 @@ export default function GradeMaster() {
     return answerKey[qNum] && userAnswers[qNum] !== answerKey[qNum];
   }).length;
 
-  const totalEssay = essayScores.reduce((a, b) => a + b, 0);
+  const totalEssay = essayScores.reduce((a: number, b: number) => a + b, 0);
   const finalScore = (correctCount * PG_SCORE_MULTIPLIER) + totalEssay;
   const maxScore = (totalQuestions * PG_SCORE_MULTIPLIER) + 20;
   const percentage = maxScore > 0 ? Math.round((finalScore / maxScore) * 100) : 0;
@@ -165,7 +166,7 @@ export default function GradeMaster() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Array.from({ length: totalQuestions }).map((_, i) => {
+              {Array.from({ length: totalQuestions }).map((_: unknown, i: number) => {
                 const qNum = i + 1;
                 const selected = userAnswers[qNum];
                 const correct = answerKey[qNum];

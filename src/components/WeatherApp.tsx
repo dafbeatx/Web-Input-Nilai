@@ -13,10 +13,49 @@ import {
   Search
 } from "lucide-react";
 
+interface Lokasi {
+  kecamatan: string;
+  provinsi: string;
+}
+
+interface WeatherCurrent {
+  weather: string;
+  image: string;
+  t: string;
+  weather_desc: string;
+  hu: string;
+  ws: string;
+  wd: string;
+  local_datetime: string;
+}
+
+interface WeatherForecast {
+  local_datetime: string;
+  image: string;
+  t: string;
+}
+
+interface WeatherData {
+  lokasi: Lokasi;
+  current: WeatherCurrent;
+  forecast: WeatherForecast[];
+}
+
+interface QuakeData {
+  magnitude: string;
+  kedalaman: string;
+  wilayah: string;
+  tanggal: string;
+  jam: string;
+  potensi: string;
+  potentials?: string;
+  shakemap: string;
+}
+
 export default function WeatherApp() {
   const [activeTab, setActiveTab] = useState<'quake' | 'weather'>('quake');
-  const [quakeData, setQuakeData] = useState<any>(null);
-  const [weatherData, setWeatherData] = useState<any>(null);
+  const [quakeData, setQuakeData] = useState<QuakeData | null>(null);
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [province, setProvince] = useState('indonesia');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +119,7 @@ export default function WeatherApp() {
         <div className="mb-8 relative group">
           <select 
             value={province}
-            onChange={(e) => setProvince(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setProvince(e.target.value)}
             className="w-full bg-white border-2 border-slate-100 rounded-[1.5rem] py-4 pl-12 pr-6 text-sm font-bold text-slate-700 shadow-lg shadow-slate-200/50 appearance-none focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 outline-none transition-all"
           >
             <option value="indonesia">Indonesia (Umum)</option>
@@ -119,7 +158,7 @@ export default function WeatherApp() {
   );
 }
 
-function TabButton({ active, onClick, label, icon }: any) {
+function TabButton({ active, onClick, label, icon }: { active: boolean, onClick: () => void, label: string, icon: React.ReactNode }) {
   return (
     <button 
       onClick={onClick}
@@ -130,7 +169,7 @@ function TabButton({ active, onClick, label, icon }: any) {
   );
 }
 
-function QuakeDisplay({ quake }: any) {
+function QuakeDisplay({ quake }: { quake: QuakeData }) {
   return (
     <div className="animate-in space-y-6">
       <div className="relative overflow-hidden bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-rose-500/10">
@@ -174,7 +213,7 @@ function QuakeDisplay({ quake }: any) {
   );
 }
 
-function WeatherDisplay({ weather }: any) {
+function WeatherDisplay({ weather }: { weather: WeatherData }) {
   const current = weather.current;
   const theme = getWeatherTheme(current.weather);
 
@@ -214,7 +253,7 @@ function WeatherDisplay({ weather }: any) {
       <div className="space-y-4">
         <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">Prakiraan Selanjutnya</h4>
         <div className="flex gap-4 overflow-x-auto pb-4 px-2 custom-scrollbar">
-          {weather.forecast.map((f: any, i: number) => (
+          {weather.forecast.map((f: WeatherForecast, i: number) => (
             <div key={i} className="flex-shrink-0 w-28 p-5 bg-white rounded-[2rem] border border-slate-100 shadow-md text-center">
               <p className="text-[9px] font-black text-slate-300 uppercase mb-3">{f.local_datetime.split(' ')[1].substring(0, 5)}</p>
               <img src={f.image} alt="weather" className="w-10 h-10 mx-auto mb-2" />
@@ -227,7 +266,7 @@ function WeatherDisplay({ weather }: any) {
   );
 }
 
-function WeatherStat({ label, value, bg }: any) {
+function WeatherStat({ label, value, bg }: { label: string, value: string, bg?: boolean }) {
   return (
     <div className={`flex flex-col items-center py-4 rounded-2xl ${bg ? 'bg-white/10 border border-white/5' : ''}`}>
       <span className="text-[8px] font-black uppercase tracking-widest text-white/50 mb-1">{label}</span>
@@ -236,7 +275,7 @@ function WeatherStat({ label, value, bg }: any) {
   );
 }
 
-function InfoRow({ icon, title, value }: any) {
+function InfoRow({ icon, title, value }: { icon: React.ReactNode, title: string, value: string }) {
   return (
     <div className="flex items-start gap-4">
       <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
