@@ -13,6 +13,7 @@ import {
 import GradeMaster from "@/components/GradeMaster";
 import Quran from "@/components/Quran";
 import WeatherApp from "@/components/WeatherApp";
+import ComicReader from "@/components/ComicReader";
 
 export default function GradeMasterOS() {
   const [activeApp, setActiveApp] = useState<string | null>(null);
@@ -77,6 +78,13 @@ export default function GradeMasterOS() {
             color="bg-gradient-to-tr from-yellow-400 via-rose-500 to-purple-600" 
             onClick={() => openApp('instagram')} 
           />
+          <AppIcon 
+            id="komik" 
+            name="Komik" 
+            icon={<BookOpen size={32} />} 
+            color="bg-orange-600" 
+            onClick={() => openApp('komik')} 
+          />
           
           <div className="flex flex-col items-center gap-3 opacity-30 cursor-not-allowed">
             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-700 rounded-[1.5rem] flex items-center justify-center text-white">
@@ -100,6 +108,7 @@ export default function GradeMasterOS() {
             {activeApp === 'grademaster' && <GradeMaster />}
             {activeApp === 'quran' && <Quran />}
             {activeApp === 'cuaca' && <WeatherApp />}
+            {activeApp === 'komik' && <ComicReader />}
             {activeApp === 'calculator' && (
               <div className="flex items-center justify-center h-full">
                 <p className="text-slate-400 font-bold uppercase tracking-widest">Kalkulator Coming Soon</p>
@@ -148,6 +157,7 @@ function getAppTitle(id: string) {
     case 'calculator': return 'Kalkulator';
     case 'quran': return 'Al-Qur\'an Indonesia';
     case 'cuaca': return 'Cuaca & Gempa BMKG';
+    case 'komik': return 'Komik Reader';
     default: return 'App';
   }
 }
@@ -158,6 +168,7 @@ function getAppIcon(id: string) {
     case 'calculator': return <Calculator />;
     case 'quran': return <BookOpen />;
     case 'cuaca': return <CloudSun />;
+    case 'komik': return <BookOpen />;
     default: return <Plus />;
   }
 }
@@ -168,6 +179,7 @@ function getAppColor(id: string) {
     case 'calculator': return 'bg-rose-600';
     case 'quran': return 'bg-emerald-600';
     case 'cuaca': return 'bg-sky-500';
+    case 'komik': return 'bg-orange-600';
     default: return 'bg-slate-600';
   }
 }
