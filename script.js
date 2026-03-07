@@ -11,10 +11,13 @@ function updateClock() {
     
     const timeStr = `${hours}:${minutes}`;
     if (homeClock) homeClock.textContent = timeStr;
+    if (statusTime) statusTime.textContent = timeStr;
 
     // Update Date
-    const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-    if (homeDate) homeDate.textContent = now.toLocaleDateString('id-ID', options);
+    if (homeDate) {
+        const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+        homeDate.textContent = now.toLocaleDateString('id-ID', options);
+    }
 }
 
 setInterval(updateClock, 1000);

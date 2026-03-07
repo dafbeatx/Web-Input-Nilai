@@ -35,7 +35,7 @@ async function fetchInstaPosts() {
     instaContent.innerHTML = '';
 
     try {
-        const response = await fetch('/api/instagram', {
+        const response = await fetch('/api/instagram/posts', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -45,8 +45,8 @@ async function fetchInstaPosts() {
         
         const result = await response.json();
         
-        if (result.success && result.data && result.data.data && result.data.data.user) {
-            renderInstaGallery(result.data.data.user);
+        if (result.data && result.data.user) {
+            renderInstaGallery(result.data.user);
         } else {
             throw new Error(result.message || 'Gagal mengambil data. Pastikan username benar dan publik.');
         }
