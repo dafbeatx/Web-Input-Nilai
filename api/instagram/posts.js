@@ -9,14 +9,8 @@ module.exports = async function handler(request, response) {
     return response.status(400).json({ success: false, message: 'Username is required' });
   }
 
-  const apiKey = process.env.RAPIDAPI_KEY;
-
-  if (!apiKey) {
-    return response.status(500).json({ 
-      success: false, 
-      message: 'Server configuration error: RAPIDAPI_KEY is missing' 
-    });
-  }
+  // RapidAPI Key provided by user
+  const apiKey = process.env.RAPIDAPI_KEY || 'dca1ab0243msheb72e2a95849ef8p1819c0jsnfe21c70ec1c2';
 
   const url = 'https://instagram120.p.rapidapi.com/api/instagram/posts';
   const options = {
