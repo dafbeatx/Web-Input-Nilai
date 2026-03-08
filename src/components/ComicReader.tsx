@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { 
   Search, 
   ArrowLeft, 
@@ -340,11 +341,16 @@ export default function ComicReader() {
               >
                 <div className="aspect-[3/4] overflow-hidden relative bg-slate-100 flex items-center justify-center">
                   {manga.coverUrl ? (
-                      <img 
+                      <Image 
                         src={manga.coverUrl} 
                         alt={manga.title} 
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        loading="lazy"
+                        fill
+                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 20vw"
+                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                        onError={(e) => {
+                          // Hide the broken image and let the Book icon fallback show behind it (or just hide it)
+                          e.currentTarget.style.display = 'none';
+                        }}
                       />
                   ) : (
                       <Book size={48} className="text-slate-300 opacity-50" />
@@ -382,7 +388,13 @@ export default function ComicReader() {
       <div className="animate-in pb-20">
         <div className="relative h-64 md:h-80 w-full overflow-hidden bg-slate-900 border-b border-white/10">
             {selectedManga.coverUrl && (
-                <img src={selectedManga.coverUrl} alt="blur" className="w-full h-full object-cover blur-3xl opacity-40 scale-125 saturate-200" />
+                <Image 
+                  src={selectedManga.coverUrl} 
+                  alt="blur background" 
+                  fill
+                  sizes="100vw"
+                  className="object-cover blur-3xl opacity-40 scale-125 saturate-200" 
+                />
             )}
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-900/40 to-slate-50"></div>
             <button 
@@ -396,9 +408,15 @@ export default function ComicReader() {
         <div className="max-w-5xl mx-auto px-6 -mt-32 relative z-10">
             <div className="flex flex-col md:flex-row gap-8">
                 <div className="w-48 md:w-64 shrink-0 mx-auto md:mx-0">
-                    <div className="aspect-[3/4] rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white bg-slate-100">
+                    <div className="aspect-[3/4] rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white bg-slate-100 relative">
                         {selectedManga.coverUrl ? (
-                            <img src={selectedManga.coverUrl} alt={selectedManga.title} className="w-full h-full object-cover" />
+                            <Image 
+                              src={selectedManga.coverUrl} 
+                              alt={selectedManga.title} 
+                              fill
+                              sizes="(max-width: 768px) 250px, 300px"
+                              className="object-cover" 
+                            />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center"><Book size={64} className="text-slate-300" /></div>
                         )}
