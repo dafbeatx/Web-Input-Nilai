@@ -14,7 +14,9 @@ import {
   Star,
   Globe,
   ExternalLink,
-  AlertCircle
+  AlertCircle,
+  Filter,
+  XCircle
 } from "lucide-react";
 
 interface MangaItem {
@@ -55,18 +57,64 @@ export default function ComicReader() {
   const [readerLoading, setReaderLoading] = useState(false);
   const [currentMangaTitle, setCurrentMangaTitle] = useState("");
 
+  const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+
+  const ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  
+  const TAGS = [
+    { id: '391b0423-d847-456f-aff0-8b0cfc03066b', name: 'Action' },
+    { id: '87cc87cd-a395-47af-b27a-93258283bbc6', name: 'Adventure' },
+    { id: '4d32cc48-9f00-4cca-9b5a-a839f0764984', name: 'Comedy' },
+    { id: 'b9af3a63-f058-46de-a9a0-e0c13906197a', name: 'Drama' },
+    { id: 'cdc58593-87dd-415e-bbc0-2ec27bf404cc', name: 'Fantasy' },
+    { id: 'cdad7e68-1419-41dd-bdce-27753074a640', name: 'Horror' },
+    { id: '423e2eae-a7a2-4a8b-ac03-a8351462d71d', name: 'Romance' },
+    { id: 'caaa44eb-cd40-4177-b930-79d3ef2afe87', name: 'School' },
+    { id: 'e5301a23-ebd9-49dd-a0cb-2add944c7fe9', name: 'Slice of Life' }
+  ];
+
+  // Fetch when filters change
+  useEffect(() => {
+    fetchMangaList(searchQuery, selectedLetter, selectedTag);
+  }, [selectedLetter, selectedTag]);
+
+  // Initial fetch
   useEffect(() => {
     fetchMangaList();
   }, []);
 
-  const fetchMangaList = async (query?: string) => {
+  const fetchMangaList = async (query?: string, letter?: string | null, tag?: string | null) => {
     setLoading(true);
     setError(null);
     try {
-      let url = 'https://api.mangadex.org/manga?includes[]=cover_art&limit=20&hasAvailableChapters=true&contentRating[]=safe&contentRating[]=suggestive';
-      if (query) {
-        url = `https://api.mangadex.org/manga?title=${encodeURIComponent(query)}&includes[]=cover_art&order[relevance]=desc&contentRating[]=safe&contentRating[]=suggestive`;
+      const params = new URLSearchParams([
+        ['includes[]', 'cover_art'],
+        ['limit', '30'],
+        ['contentRating[]', 'safe'],
+        ['contentRating[]', 'suggestive']
+      ]);
+
+      if (query && letter) {
+        params.append('title', `${letter} ${query}`);
+        params.append('order[relevance]', 'desc');
+      } else if (query) {
+        params.append('title', query);
+        params.append('order[relevance]', 'desc');
+      } else if (letter) {
+        params.append('title', letter);
+        params.append('order[relevance]', 'desc');
+      } else {
+        // If no text search, order by latest updates
+        params.append('hasAvailableChapters', 'true');
+        params.append('order[latestUploadedChapter]', 'desc');
       }
+
+      if (tag) {
+        params.append('includedTags[]', tag);
+      }
+      
+      const url = `https://api.mangadex.org/manga?${params.toString()}`;
       
       const response = await fetch(url);
       if (!response.ok) throw new Error("Gagal mengambil data manga dari server");
@@ -97,7 +145,14 @@ export default function ComicReader() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchMangaList(searchQuery);
+    fetchMangaList(searchQuery, selectedLetter, selectedTag);
+  };
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedLetter(null);
+    setSelectedTag(null);
+    fetchMangaList();
   };
 
   const openDetail = async (manga: MangaItem) => {
@@ -205,6 +260,57 @@ export default function ComicReader() {
             <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-orange-500 transition-colors" size={20} />
             <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 bg-slate-900 text-white px-6 py-2.5 rounded-full text-xs font-bold hover:bg-orange-600 transition-colors">Cari</button>
           </form>
+
+          {/* Filters Area */}
+          <div className="max-w-4xl mx-auto mt-6 flex flex-col gap-4">
+            
+            {/* Alphabet Row */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
+              <span className="text-[10px] font-black uppercase text-slate-400 mr-2 shrink-0">A-Z</span>
+              {ALPHABETS.map(letter => (
+                <button
+                  key={letter}
+                  onClick={() => setSelectedLetter(selectedLetter === letter ? null : letter)}
+                  className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                    selectedLetter === letter 
+                      ? 'bg-orange-600 text-white shadow-md shadow-orange-500/30' 
+                      : 'bg-white text-slate-600 border border-slate-200 hover:border-orange-500 hover:text-orange-600'
+                  }`}
+                >
+                  {letter}
+                </button>
+              ))}
+            </div>
+
+            {/* Tags Row */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
+              <span className="text-[10px] font-black uppercase text-slate-400 mr-2 shrink-0 flex items-center gap-1"><Filter size={12}/> Genre</span>
+              {TAGS.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setSelectedTag(selectedTag === t.id ? null : t.id)}
+                  className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                    selectedTag === t.id 
+                      ? 'bg-slate-900 text-white shadow-md' 
+                      : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-400'
+                  }`}
+                >
+                  {t.name}
+                </button>
+              ))}
+              
+              {/* Clear Filters Button */}
+              {(selectedLetter || selectedTag || searchQuery) && (
+                <button 
+                  onClick={clearFilters}
+                  className="shrink-0 ml-auto px-3 py-1.5 flex items-center gap-1 text-rose-500 hover:bg-rose-50 rounded-full text-xs font-bold transition-colors"
+                >
+                  <XCircle size={14} /> Clear
+                </button>
+              )}
+            </div>
+
+          </div>
         </header>
 
         {loading ? (
