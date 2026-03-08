@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { 
   GraduationCap, 
-  Calculator, 
+  Calculator as CalculatorIcon, 
   BookOpen, 
   CloudSun, 
   Instagram, 
@@ -14,6 +14,7 @@ import GradeMaster from "@/components/GradeMaster";
 import Quran from "@/components/Quran";
 import WeatherApp from "@/components/WeatherApp";
 import ComicReader from "@/components/ComicReader";
+import Calculator from "@/components/Calculator";
 
 export default function GradeMasterOS() {
   const [activeApp, setActiveApp] = useState<string | null>(null);
@@ -79,7 +80,7 @@ export default function GradeMasterOS() {
           <AppIcon 
             id="calculator" 
             name="Kalkulator" 
-            icon={<Calculator size={32} />} 
+            icon={<CalculatorIcon size={32} />} 
             color="bg-rose-600" 
             onClick={() => openApp('calculator')} 
           />
@@ -135,11 +136,7 @@ export default function GradeMasterOS() {
             {activeApp === 'quran' && <Quran />}
             {activeApp === 'cuaca' && <WeatherApp />}
             {activeApp === 'komik' && <ComicReader />}
-            {activeApp === 'calculator' && (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-slate-400 font-bold uppercase tracking-widest">Kalkulator Coming Soon</p>
-              </div>
-            )}
+            {activeApp === 'calculator' && <Calculator />}
           </div>
         </div>
       )}
@@ -191,7 +188,7 @@ function getAppTitle(id: string) {
 function getAppIcon(id: string) {
   switch (id) {
     case 'grademaster': return <GraduationCap />;
-    case 'calculator': return <Calculator />;
+    case 'calculator': return <CalculatorIcon />;
     case 'quran': return <BookOpen />;
     case 'cuaca': return <CloudSun />;
     case 'komik': return <BookOpen />;
