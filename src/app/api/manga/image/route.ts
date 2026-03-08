@@ -8,8 +8,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'URL required' }, { status: 400 });
   }
 
-  // Only allow MangaDex image URLs
-  if (!url.startsWith('https://uploads.mangadex.org/')) {
+  // Allow MangaDex image URLs and At-Home network URLs
+  const allowedDomains = [
+    'https://uploads.mangadex.org/',
+    'https://s2.mangadex.org/',
+    '.mangadex.network/'
+  ];
+  
+  const isAllowed = allowedDomains.some(domain => url.includes(domain));
+  if (!isAllowed) {
     return NextResponse.json({ error: 'Invalid URL' }, { status: 403 });
   }
 

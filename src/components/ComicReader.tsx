@@ -213,9 +213,10 @@ export default function ComicReader() {
       if (result.chapter && result.chapter.data) {
           const baseUrl = result.baseUrl;
           const hash = result.chapter.hash;
-          const images = result.chapter.data.map((filename: string) => 
-              `${baseUrl}/data/${hash}/${filename}`
-          );
+          const images = result.chapter.data.map((filename: string) => {
+              const rawUrl = `${baseUrl}/data/${hash}/${filename}`;
+              return `/api/manga/image?url=${encodeURIComponent(rawUrl)}`;
+          });
           setChapterImages(images);
       } else {
           throw new Error("Format gambar tidak sesuai dari server");
