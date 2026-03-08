@@ -114,11 +114,13 @@ export default function ComicReader() {
         params.append('includedTags[]', tag);
       }
       
-      const url = `https://api.mangadex.org/manga?${params.toString()}`;
+      const url = `/api/mangalist?${params.toString()}`;
       
       const response = await fetch(url);
       if (!response.ok) throw new Error("Gagal mengambil data manga dari server");
       const result = await response.json();
+      
+      if (result.error) throw new Error(result.error);
       
       const list = result.data || [];
       const formattedMangas = list.map((m: any) => {
@@ -162,10 +164,12 @@ export default function ComicReader() {
     setCurrentMangaTitle(manga.title);
     window.history.pushState({ app: 'komik', comicView: 'detail' }, '');
     try {
-      // Fetch chapter feed from MangaDex
-      const response = await fetch(`https://api.mangadex.org/manga/${manga.id}/feed?translatedLanguage[]=en&translatedLanguage[]=id&order[chapter]=desc&limit=100`);
+      // Fetch chapter feed from local API Proxy
+      const response = await fetch(`/api/mangadetail?id=${manga.id}`);
       if (!response.ok) throw new Error("Gagal mengambil detail chapater");
       const result = await response.json();
+
+      if (result.error) throw new Error(result.error);
 
       const list = result.data || [];
       const formattedChapters = list.map((c: any) => ({
@@ -198,9 +202,11 @@ export default function ComicReader() {
     window.history.pushState({ app: 'komik', comicView: 'reader' }, '');
     
     try {
-      const response = await fetch(`https://api.mangadex.org/at-home/server/${chapter.id}`);
+      const response = await fetch(`/api/mangachapter?id=${chapter.id}`);
       if (!response.ok) throw new Error("Gagal mengambil gambar chapter");
       const result = await response.json();
+      
+      if (result.error) throw new Error(result.error);
       
       if (result.chapter && result.chapter.data) {
           const baseUrl = result.baseUrl;
