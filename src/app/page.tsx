@@ -7,6 +7,7 @@ import {
   BookOpen, 
   CloudSun, 
   Instagram, 
+  Download,
   Plus,
   X
 } from "lucide-react";
@@ -15,6 +16,7 @@ import Quran from "@/components/Quran";
 import WeatherApp from "@/components/WeatherApp";
 import ComicReader from "@/components/ComicReader";
 import Calculator from "@/components/Calculator";
+import InstagramDownloader from "@/components/InstagramDownloader";
 
 export default function GradeMasterOS() {
   const [activeApp, setActiveApp] = useState<string | null>(null);
@@ -112,6 +114,13 @@ export default function GradeMasterOS() {
             color="bg-orange-600" 
             onClick={() => openApp('komik')} 
           />
+          <AppIcon 
+            id="igdownload" 
+            name="IG Download" 
+            icon={<Download size={32} />} 
+            color="bg-gradient-to-tr from-yellow-400 via-rose-500 to-purple-600" 
+            onClick={() => openApp('igdownload')} 
+          />
           
           <div className="flex flex-col items-center gap-3 opacity-30 cursor-not-allowed">
             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-700 rounded-[1.5rem] flex items-center justify-center text-white">
@@ -137,6 +146,7 @@ export default function GradeMasterOS() {
             {activeApp === 'cuaca' && <WeatherApp />}
             {activeApp === 'komik' && <ComicReader />}
             {activeApp === 'calculator' && <Calculator />}
+            {activeApp === 'igdownload' && <InstagramDownloader />}
           </div>
         </div>
       )}
@@ -181,6 +191,7 @@ function getAppTitle(id: string) {
     case 'quran': return 'Al-Qur\'an Indonesia';
     case 'cuaca': return 'Cuaca & Gempa BMKG';
     case 'komik': return 'Komik Reader';
+    case 'igdownload': return 'IG Downloader';
     default: return 'App';
   }
 }
@@ -192,6 +203,7 @@ function getAppIcon(id: string) {
     case 'quran': return <BookOpen />;
     case 'cuaca': return <CloudSun />;
     case 'komik': return <BookOpen />;
+    case 'igdownload': return <Download />;
     default: return <Plus />;
   }
 }
@@ -203,6 +215,7 @@ function getAppColor(id: string) {
     case 'quran': return 'bg-emerald-600';
     case 'cuaca': return 'bg-sky-500';
     case 'komik': return 'bg-orange-600';
+    case 'igdownload': return 'bg-gradient-to-tr from-yellow-400 via-rose-500 to-purple-600';
     default: return 'bg-slate-600';
   }
 }
