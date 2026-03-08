@@ -215,7 +215,9 @@ export default function ComicReader() {
           const hash = result.chapter.hash;
           const images = result.chapter.data.map((filename: string) => {
               const rawUrl = `${baseUrl}/data/${hash}/${filename}`;
-              return `/api/manga/image?url=${encodeURIComponent(rawUrl)}`;
+              const proxiedUrl = `/api/manga/image?url=${encodeURIComponent(rawUrl)}`;
+              console.log('Generating Panel URL:', proxiedUrl);
+              return proxiedUrl;
           });
           setChapterImages(images);
       } else {
@@ -518,13 +520,16 @@ export default function ComicReader() {
             ) : chapterImages.length > 0 ? (
                 chapterImages.map((imgUrl, i) => (
                     <div key={i} className="relative w-full max-w-3xl lg:max-w-4xl min-h-[50vh] bg-slate-900/50 flex flex-col items-center justify-center">
-                        <img 
+                        <Image 
                           src={imgUrl} 
                           alt={`Page ${i+1}`} 
-                          className="w-full object-contain shadow-2xl"
-                          loading="lazy" 
+                          width={1200}
+                          height={1800}
+                          className="w-full h-auto object-contain shadow-2xl"
+                          priority={i < 2}
+                          loading={i < 2 ? undefined : "lazy"}
                         />
-                        <div className="absolute bottom-4 right-4 px-3 py-1 bg-black/80 backdrop-blur-md rounded-lg text-[10px] font-bold text-white/50">{i + 1} / {chapterImages.length}</div>
+                        <div className="absolute bottom-4 right-4 px-3 py-1 bg-black/80 backdrop-blur-md rounded-lg text-[10px] font-bold text-white/50 z-10">{i + 1} / {chapterImages.length}</div>
                     </div>
                 ))
             ) : (
