@@ -63,24 +63,30 @@ export default function ComicReader() {
     setLoading(true);
     setError(null);
     try {
-      let url = 'https://mangahook-api.vercel.app/api/mangaList';
+      let url = 'https://api.mangadex.org/manga?includes[]=cover_art&limit=20&hasAvailableChapters=true&contentRating[]=safe&contentRating[]=suggestive';
       if (query) {
-        url = `https://mangahook-api.vercel.app/api/search/${encodeURIComponent(query)}?page=1`;
+        url = `https://api.mangadex.org/manga?title=${encodeURIComponent(query)}&includes[]=cover_art&order[relevance]=desc&contentRating[]=safe&contentRating[]=suggestive`;
       }
       
       const response = await fetch(url);
       if (!response.ok) throw new Error("Gagal mengambil data manga dari server");
       const result = await response.json();
       
-      const list = result.mangaList || [];
-      const formattedMangas = list.map((m: any) => ({
-        id: m.id,
-        title: m.title,
-        description: m.description || '',
-        coverUrl: m.image || '',
-        status: m.status || 'Unknown',
-        year: m.createAt || 'N/A'
-      }));
+      const list = result.data || [];
+      const formattedMangas = list.map((m: any) => {
+        const coverRel = m.relationships?.find((r: any) => r.type === 'cover_art');
+        const fileName = coverRel?.attributes?.fileName;
+        const coverUrl = fileName ? `https://uploads.mangadex.org/covers/${m.id}/${fileName}.256.jpg` : '';
+        
+        return {
+          id: m.id,
+          title: m.attributes.title.en || Object.values(m.attributes.title)[0] || 'Unknown',
+          description: m.attributes.description?.en || m.attributes.description?.id || '',
+          coverUrl,
+          status: m.attributes.status || 'Unknown',
+          year: m.attributes.year || 'N/A'
+        };
+      });
       setMangas(formattedMangas);
     } catch (err: any) {
       setError(err.message);
@@ -101,26 +107,20 @@ export default function ComicReader() {
     setCurrentMangaTitle(manga.title);
     window.history.pushState({ app: 'komik', comicView: 'detail' }, '');
     try {
-      const response = await fetch(`https://mangahook-api.vercel.app/api/manga/${manga.id}`);
-      if (!response.ok) throw new Error("Gagal mengambil detail manga");
+      // Fetch chapter feed from MangaDex
+      const response = await fetch(`https://api.mangadex.org/manga/${manga.id}/feed?translatedLanguage[]=en&translatedLanguage[]=id&order[chapter]=desc&limit=100`);
+      if (!response.ok) throw new Error("Gagal mengambil detail chapater");
       const result = await response.json();
-      
-      // Update selected manga with more details
-      setSelectedManga({
-        ...manga,
-        description: result.description || manga.description,
-        author: result.author || 'Unknown',
-        status: result.status || manga.status,
-        genres: result.genres || []
-      });
 
-      const formattedChapters = (result.chapterList || []).map((c: any) => ({
+      const list = result.data || [];
+      const formattedChapters = list.map((c: any) => ({
           id: c.id,
-          chapter: c.name.replace('Chapter ', ''),
-          title: c.name,
-          volume: '',
-          publishedAt: c.createAt || '',
-          pages: 0
+          chapter: c.attributes.chapter || 'Oneshot',
+          title: c.attributes.title || `Chapter ${c.attributes.chapter || ''}`,
+          volume: c.attributes.volume || '',
+          publishedAt: new Date(c.attributes.publishAt).toLocaleDateString('id-ID'),
+          pages: c.attributes.pages || 0,
+          externalUrl: c.attributes.externalUrl
       }));
       setChapters(formattedChapters);
     } catch (err) {
@@ -143,13 +143,17 @@ export default function ComicReader() {
     window.history.pushState({ app: 'komik', comicView: 'reader' }, '');
     
     try {
-      if (!selectedManga) throw new Error("Manga tidak terpilih");
-      const response = await fetch(`https://mangahook-api.vercel.app/api/manga/${selectedManga.id}/${chapter.id}`);
+      const response = await fetch(`https://api.mangadex.org/at-home/server/${chapter.id}`);
       if (!response.ok) throw new Error("Gagal mengambil gambar chapter");
       const result = await response.json();
       
-      if (result.image && Array.isArray(result.image)) {
-          setChapterImages(result.image);
+      if (result.chapter && result.chapter.data) {
+          const baseUrl = result.baseUrl;
+          const hash = result.chapter.hash;
+          const images = result.chapter.data.map((filename: string) => 
+              `${baseUrl}/data/${hash}/${filename}`
+          );
+          setChapterImages(images);
       } else {
           throw new Error("Format gambar tidak sesuai dari server");
       }
@@ -293,7 +297,7 @@ export default function ComicReader() {
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                         <DetailStat label="Status" value={selectedManga.status} />
                         <DetailStat label="Author" value={selectedManga.author || '-'} />
-                        <DetailStat label="Source" value="Manga Hook" />
+                        <DetailStat label="Source" value="MangaDex" />
                         <DetailStat label="Chapters" value={chapters.length.toString()} />
                     </div>
                     {selectedManga.genres && selectedManga.genres.length > 0 && (
