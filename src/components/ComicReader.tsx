@@ -127,7 +127,8 @@ export default function ComicReader() {
       const formattedMangas = list.map((m: any) => {
         const coverRel = m.relationships?.find((r: any) => r.type === 'cover_art');
         const fileName = coverRel?.attributes?.fileName;
-        const coverUrl = fileName ? `https://uploads.mangadex.org/covers/${m.id}/${fileName}.256.jpg` : '';
+        const rawCoverUrl = fileName ? `https://uploads.mangadex.org/covers/${m.id}/${fileName}.256.jpg` : '';
+        const coverUrl = rawCoverUrl ? `/api/manga/image?url=${encodeURIComponent(rawCoverUrl)}` : '';
         
         return {
           id: m.id,
