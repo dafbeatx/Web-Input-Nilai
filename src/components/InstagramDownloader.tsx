@@ -44,12 +44,7 @@ export default function InstagramDownloader() {
     setMedia(null);
 
     try {
-      const res = await fetch("/api/instagram-download", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim() }),
-      });
-
+      const res = await fetch(`/api/igdl?url=${encodeURIComponent(url.trim())}`);
       const data = await res.json();
 
       if (!res.ok) {

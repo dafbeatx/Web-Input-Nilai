@@ -1,21 +1,34 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+import { downloadInstagram } from "@/lib/ig-downloader";
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const url = searchParams.get('url');
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const url = searchParams.get("url");
 
   if (!url) {
-    return NextResponse.json({ error: 'URL parameter is missing' }, { status: 400 });
+    return NextResponse.json(
+      { error: "URL Instagram diperlukan" },
+      { status: 400 }
+    );
   }
 
   try {
-    // Dynamic require for CommonJS module
-    const snapsave = require('@/lib/ig-downloader');
-    const downloadedURL = await snapsave(url);
-    
-    return NextResponse.json({ url: downloadedURL });
+    const results = await downloadInstagram(url);
+
+    if (!results || results.length === 0) {
+      return NextResponse.json(
+        { error: "Media tidak ditemukan. Pastikan post tidak private dan link valid." },
+        { status: 404 }
+      );
+    }
+
+    // Return the first media item for the current frontend implementation
+    return NextResponse.json(results[0]);
   } catch (error: any) {
-    console.error('Error in igdl route:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error("Instagram download error:", error);
+    return NextResponse.json(
+      { error: "Terjadi kesalahan pada server. Coba lagi nanti." },
+      { status: 500 }
+    );
   }
 }
