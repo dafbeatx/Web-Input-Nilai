@@ -135,3 +135,42 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: err.message || 'Gagal memuat sesi' }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { sessionName, password } = body;
+
+    if (!sessionName || !password) {
+      return NextResponse.json({ error: 'Nama sesi dan password wajib diisi' }, { status: 400 });
+    }
+
+    const { data: existing, error: fetchError } = await supabase
+      .from('grade_sessions')
+      .select('id, password')
+      .eq('session_name', sessionName)
+      .single();
+
+    if (fetchError || !existing) {
+      return NextResponse.json({ error: 'Sesi tidak ditemukan' }, { status: 404 });
+    }
+
+    if (existing.password !== password) {
+      return NextResponse.json({ error: 'Password salah' }, { status: 403 });
+    }
+
+    const { error: deleteError } = await supabase
+      .from('grade_sessions')
+      .delete()
+      .eq('id', existing.id);
+
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    return NextResponse.json({ message: 'Sesi berhasil dihapus' });
+  } catch (err: any) {
+    console.error('Grade delete error:', err);
+    return NextResponse.json({ error: err.message || 'Gagal menghapus sesi' }, { status: 500 });
+  }
+}

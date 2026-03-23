@@ -18,14 +18,15 @@ import {
   ArrowLeft,
   User,
   BookOpen,
-  Plus
+  Plus,
+  Trash2
 } from "lucide-react";
 
 const OPTIONS = ['A', 'B', 'C', 'D'];
 const ESSAY_COUNT = 5;
 const PG_SCORE_MULTIPLIER = 2;
 
-type ModalType = 'save' | 'load' | null;
+type ModalType = 'save' | 'load' | 'delete' | null;
 type ToastType = { message: string; type: 'success' | 'error' } | null;
 type Layer = 'home' | 'setup' | 'dashboard' | 'grading';
 
@@ -84,6 +85,7 @@ export default function GradeMaster() {
   const [sessions, setSessions] = useState<SessionMeta[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [studentList, setStudentList] = useState<string[]>([]);
+  const [studentManualInput, setStudentManualInput] = useState("");
   const [uploadingDoc, setUploadingDoc] = useState(false);
 
   const [teacherName, setTeacherName] = useState("");
@@ -197,6 +199,14 @@ export default function GradeMaster() {
     setAnswerKey(parsedPreview);
     setTotalQuestions(parsedCount);
     
+    const extraStudents = studentManualInput
+      .split(/\r?\n/)
+      .map(line => line.trim().replace(/^[\d\.\-\*]+\s*/, ''))
+      .filter(line => line.length > 2 && line.length < 50);
+      
+    const finalStudentList = Array.from(new Set([...studentList, ...extraStudents]));
+    setStudentList(finalStudentList);
+    
     setModalLoading(true);
     try {
       const res = await fetch('/api/grademaster', {
@@ -214,7 +224,7 @@ export default function GradeMaster() {
           subject,
           className: studentClass,
           schoolLevel,
-          studentList
+          studentList: finalStudentList
         }),
       });
       const data = await res.json();
@@ -290,6 +300,38 @@ export default function GradeMaster() {
     setGradedStudents(prev => [...prev, newStudent]);
     setToast({ message: `Nilai ${studentName} berhasil disimpan ke daftar kelas!`, type: 'success' });
     resetAnswers();
+  };
+
+  const handleDeleteSession = async () => {
+    if (!sessionName.trim() || !sessionPassword.trim()) {
+      setModalError("Nama sesi dan password wajib diisi");
+      return;
+    }
+
+    setModalLoading(true);
+    setModalError("");
+
+    try {
+      const res = await fetch('/api/grademaster', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionName: sessionName.trim(),
+          password: sessionPassword.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal menghapus sesi');
+
+      setToast({ message: data.message || 'Sesi berhasil dihapus!', type: 'success' });
+      closeModal();
+      fetchSessions();
+    } catch (err: any) {
+      setModalError(err.message);
+    } finally {
+      setModalLoading(false);
+    }
   };
 
   const openModal = (type: ModalType) => {
@@ -453,7 +495,16 @@ export default function GradeMaster() {
                     <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                       <BookOpen size={24} />
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full">{s.school_level || 'N/A'}</span>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setSessionName(s.session_name); setModal('delete'); }}
+                        className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                        title="Hapus Sesi"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full">{s.school_level || 'N/A'}</span>
+                    </div>
                   </div>
                   <h3 className="text-xl font-black text-slate-800 mb-1 truncate">{s.session_name}</h3>
                   <p className="text-sm font-bold text-slate-500 truncate">{s.subject || 'Mapel tidak diketahui'}</p>
@@ -598,6 +649,16 @@ export default function GradeMaster() {
                    )}
                 </div>
               </div>
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mt-4 mb-2">
+                <ClipboardList size={14} /> Atau Input Manual (Satu per baris)
+              </label>
+              <textarea
+                value={studentManualInput}
+                onChange={(e) => setStudentManualInput(e.target.value)}
+                placeholder={"Contoh:\n1. Budi Santoso\n2. Siti Aminah\n..."}
+                rows={3}
+                className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300 resize-none font-mono"
+              />
             </div>
 
             <div>
@@ -1035,13 +1096,13 @@ export default function GradeMaster() {
           </button>
 
           <div className="flex items-center gap-3 mb-6">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${modal === 'save' ? 'bg-indigo-600' : 'bg-sky-600'}`}>
-              {modal === 'save' ? <Save size={20} /> : <FolderOpen size={20} />}
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${modal === 'save' ? 'bg-indigo-600' : modal === 'delete' ? 'bg-rose-600' : 'bg-sky-600'}`}>
+              {modal === 'save' ? <Save size={20} /> : modal === 'delete' ? <Trash2 size={20} /> : <FolderOpen size={20} />}
             </div>
             <div>
-              <h3 className="font-bold text-slate-800 text-lg">{modal === 'save' ? 'Simpan Sesi' : 'Muat Sesi'}</h3>
+              <h3 className="font-bold text-slate-800 text-lg">{modal === 'save' ? 'Simpan Sesi' : modal === 'delete' ? 'Hapus Sesi' : 'Muat Sesi'}</h3>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                {modal === 'save' ? 'Simpan data koreksi ke database' : 'Muat data koreksi dari database'}
+                {modal === 'save' ? 'Simpan data koreksi ke database' : modal === 'delete' ? 'Hapus sesi secara permanen' : 'Muat data koreksi dari database'}
               </p>
             </div>
           </div>
@@ -1054,8 +1115,9 @@ export default function GradeMaster() {
                 value={sessionName}
                 onChange={(e) => { setSessionName(e.target.value); setModalError(""); }}
                 placeholder="Contoh: UTS Kelas 10A"
-                className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
+                className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300 disabled:opacity-60"
                 autoFocus
+                disabled={modal === 'delete'}
               />
             </div>
             <div>
@@ -1066,7 +1128,7 @@ export default function GradeMaster() {
                 onChange={(e) => { setSessionPassword(e.target.value); setModalError(""); }}
                 placeholder="Masukkan password"
                 className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
-                onKeyDown={(e) => e.key === 'Enter' && (modal === 'save' ? handleSaveSession() : handleLoadSession())}
+                onKeyDown={(e) => e.key === 'Enter' && (modal === 'save' ? handleSaveSession() : modal === 'delete' ? handleDeleteSession() : handleLoadSession())}
               />
             </div>
 
@@ -1078,11 +1140,13 @@ export default function GradeMaster() {
             )}
 
             <button
-              onClick={modal === 'save' ? handleSaveSession : handleLoadSession}
+              onClick={modal === 'save' ? handleSaveSession : modal === 'delete' ? handleDeleteSession : handleLoadSession}
               disabled={modalLoading}
               className={`w-full py-3.5 rounded-xl text-white text-sm font-black uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                 modal === 'save' 
                   ? 'bg-indigo-600 shadow-indigo-600/20 hover:scale-[1.02] active:scale-95' 
+                  : modal === 'delete'
+                  ? 'bg-rose-600 shadow-rose-600/20 hover:scale-[1.02] active:scale-95'
                   : 'bg-sky-600 shadow-sky-600/20 hover:scale-[1.02] active:scale-95'
               }`}
             >
@@ -1090,6 +1154,8 @@ export default function GradeMaster() {
                 <><Loader2 size={16} className="animate-spin" /> Memproses...</>
               ) : modal === 'save' ? (
                 <><Save size={16} /> Simpan</>
+              ) : modal === 'delete' ? (
+                <><Trash2 size={16} /> Hapus</>
               ) : (
                 <><FolderOpen size={16} /> Muat</>
               )}
