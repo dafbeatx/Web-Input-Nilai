@@ -11,6 +11,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.39.7",
     "axios": "^1.13.6",
+    "bcryptjs": "^3.0.3",
     "cheerio": "^1.2.0",
     "fast-xml-parser": "^4.3.2",
     "lucide-react": "latest",
@@ -18,9 +19,11 @@
     "next": "latest",
     "pdf-parse": "^2.4.5",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "recharts": "^3.8.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

@@ -1,82 +1,86 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
+import { hashPassword, verifyPassword, validateSessionInput, checkRateLimit } from '@/lib/grademaster/security';
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || 'unknown';
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json({ error: 'Terlalu banyak percobaan. Coba lagi nanti.' }, { status: 429 });
+    }
+
     const body = await req.json();
-    const { 
-      sessionName, 
-      password, 
-      answerKey, 
-      studentAnswers, 
-      essayScores, 
-      totalQuestions,
-      gradedStudents,
-      teacherName,
+    const {
+      sessionName,
+      password,
+      answerKey,
+      teacher,
       subject,
       className,
       schoolLevel,
-      studentList
+      studentList,
+      scoringConfig,
     } = body;
 
-    if (!sessionName || !password) {
-      return NextResponse.json({ error: 'Nama sesi dan password wajib diisi' }, { status: 400 });
+    const validationError = validateSessionInput({ sessionName, password, teacher, subject });
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
     const { data: existing } = await supabase
-      .from('grade_sessions')
-      .select('id, password')
-      .eq('session_name', sessionName)
+      .from('gm_sessions')
+      .select('id, password_hash')
+      .eq('session_name', sessionName.trim())
       .single();
 
     if (existing) {
-      if (existing.password !== password) {
+      const valid = await verifyPassword(password.trim(), existing.password_hash);
+      if (!valid) {
         return NextResponse.json({ error: 'Password salah untuk sesi ini' }, { status: 403 });
       }
 
       const { error } = await supabase
-        .from('grade_sessions')
+        .from('gm_sessions')
         .update({
-          answer_key: answerKey,
-          student_answers: studentAnswers,
-          essay_scores: essayScores,
-          total_questions: totalQuestions,
-          graded_students: gradedStudents,
-          teacher_name: teacherName,
-          subject: subject,
-          class_name: className,
-          school_level: schoolLevel,
-          student_list: studentList,
+          answer_key: answerKey || [],
+          teacher: teacher || '',
+          subject: subject || '',
+          class_name: className || '',
+          school_level: schoolLevel || 'SMA',
+          student_list: studentList || [],
+          scoring_config: scoringConfig || undefined,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
 
       if (error) throw error;
-      return NextResponse.json({ message: 'Sesi berhasil diperbarui' });
+      return NextResponse.json({ message: 'Sesi berhasil diperbarui', sessionId: existing.id });
     }
 
-    const { error } = await supabase
-      .from('grade_sessions')
+    const passwordHash = await hashPassword(password.trim());
+
+    const { data: newSession, error } = await supabase
+      .from('gm_sessions')
       .insert({
-        session_name: sessionName,
-        password,
-        answer_key: answerKey,
-        student_answers: studentAnswers,
-        essay_scores: essayScores,
-        total_questions: totalQuestions,
-        graded_students: gradedStudents,
-        teacher_name: teacherName,
-        subject: subject,
-        class_name: className,
-        school_level: schoolLevel,
-        student_list: studentList,
-      });
+        session_name: sessionName.trim(),
+        password_hash: passwordHash,
+        answer_key: answerKey || [],
+        teacher: teacher || '',
+        subject: subject || '',
+        class_name: className || '',
+        school_level: schoolLevel || 'SMA',
+        student_list: studentList || [],
+        scoring_config: scoringConfig || undefined,
+      })
+      .select('id')
+      .single();
 
     if (error) throw error;
-    return NextResponse.json({ message: 'Sesi berhasil disimpan' });
-  } catch (err: any) {
-    console.error('Grade save error:', err);
-    return NextResponse.json({ error: err.message || 'Gagal menyimpan sesi' }, { status: 500 });
+    return NextResponse.json({ message: 'Sesi berhasil dibuat', sessionId: newSession?.id });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Gagal menyimpan sesi';
+    console.error('Session save error:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -86,58 +90,99 @@ export async function GET(req: NextRequest) {
     const name = searchParams.get('name');
     const password = searchParams.get('password');
 
+    // List all sessions (no auth needed)
     if (!name && !password) {
       const { data, error } = await supabase
-        .from('grade_sessions')
-        .select('id, session_name, teacher_name, subject, class_name, school_level, updated_at')
+        .from('gm_sessions')
+        .select('id, session_name, teacher, subject, class_name, school_level, updated_at')
         .order('updated_at', { ascending: false });
 
-      if (error) {
-        return NextResponse.json({ error: 'Gagal memuat daftar sesi' }, { status: 500 });
-      }
+      if (error) throw error;
 
-      return NextResponse.json({ sessions: data });
+      // Attach student count per session
+      const sessionsWithCounts = await Promise.all(
+        (data || []).map(async (s) => {
+          const { count } = await supabase
+            .from('gm_students')
+            .select('*', { count: 'exact', head: true })
+            .eq('session_id', s.id);
+          return { ...s, student_count: count || 0 };
+        })
+      );
+
+      return NextResponse.json({ sessions: sessionsWithCounts });
     }
 
     if (!name || !password) {
       return NextResponse.json({ error: 'Nama sesi dan password wajib diisi' }, { status: 400 });
     }
 
-    const { data, error } = await supabase
-      .from('grade_sessions')
+    const ip = req.headers.get('x-forwarded-for') || 'unknown';
+    if (!checkRateLimit(`get:${ip}`)) {
+      return NextResponse.json({ error: 'Terlalu banyak percobaan' }, { status: 429 });
+    }
+
+    const { data: session, error } = await supabase
+      .from('gm_sessions')
       .select('*')
-      .eq('session_name', name)
+      .eq('session_name', name.trim())
       .single();
 
-    if (error || !data) {
+    if (error || !session) {
       return NextResponse.json({ error: 'Sesi tidak ditemukan' }, { status: 404 });
     }
 
-    if (data.password !== password) {
+    const valid = await verifyPassword(password.trim(), session.password_hash);
+    if (!valid) {
       return NextResponse.json({ error: 'Password salah' }, { status: 403 });
     }
 
+    // Fetch students for this session
+    const { data: students } = await supabase
+      .from('gm_students')
+      .select('*')
+      .eq('session_id', session.id)
+      .order('created_at', { ascending: true });
+
     return NextResponse.json({
-      sessionName: data.session_name,
-      answerKey: data.answer_key,
-      studentAnswers: data.student_answers,
-      essayScores: data.essay_scores,
-      totalQuestions: data.total_questions,
-      gradedStudents: data.graded_students,
-      teacherName: data.teacher_name,
-      subject: data.subject,
-      className: data.class_name,
-      schoolLevel: data.school_level,
-      studentList: data.student_list
+      sessionId: session.id,
+      sessionName: session.session_name,
+      answerKey: session.answer_key,
+      teacher: session.teacher,
+      subject: session.subject,
+      className: session.class_name,
+      schoolLevel: session.school_level,
+      studentList: session.student_list,
+      scoringConfig: session.scoring_config,
+      gradedStudents: (students || []).map(s => ({
+        id: s.id,
+        name: s.name,
+        answers: s.mcq_answers,
+        essayScores: s.essay_scores,
+        correct: s.correct,
+        wrong: s.wrong,
+        mcqScore: Number(s.mcq_score),
+        essayScore: Number(s.essay_score),
+        finalScore: Number(s.final_score),
+        percentage: Number(s.final_score),
+        csi: s.csi,
+        lps: s.lps,
+      })),
     });
-  } catch (err: any) {
-    console.error('Grade load error:', err);
-    return NextResponse.json({ error: err.message || 'Gagal memuat sesi' }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Gagal memuat sesi';
+    console.error('Session load error:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || 'unknown';
+    if (!checkRateLimit(`del:${ip}`)) {
+      return NextResponse.json({ error: 'Terlalu banyak percobaan' }, { status: 429 });
+    }
+
     const body = await req.json();
     const { sessionName, password } = body;
 
@@ -145,32 +190,33 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Nama sesi dan password wajib diisi' }, { status: 400 });
     }
 
-    const { data: existing, error: fetchError } = await supabase
-      .from('grade_sessions')
-      .select('id, password')
-      .eq('session_name', sessionName)
+    const { data: session, error: fetchError } = await supabase
+      .from('gm_sessions')
+      .select('id, password_hash')
+      .eq('session_name', sessionName.trim())
       .single();
 
-    if (fetchError || !existing) {
+    if (fetchError || !session) {
       return NextResponse.json({ error: 'Sesi tidak ditemukan' }, { status: 404 });
     }
 
-    if (existing.password !== password) {
+    const valid = await verifyPassword(password.trim(), session.password_hash);
+    if (!valid) {
       return NextResponse.json({ error: 'Password salah' }, { status: 403 });
     }
 
+    // CASCADE delete handles students & answers
     const { error: deleteError } = await supabase
-      .from('grade_sessions')
+      .from('gm_sessions')
       .delete()
-      .eq('id', existing.id);
+      .eq('id', session.id);
 
-    if (deleteError) {
-      throw deleteError;
-    }
+    if (deleteError) throw deleteError;
 
     return NextResponse.json({ message: 'Sesi berhasil dihapus' });
-  } catch (err: any) {
-    console.error('Grade delete error:', err);
-    return NextResponse.json({ error: err.message || 'Gagal menghapus sesi' }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Gagal menghapus sesi';
+    console.error('Session delete error:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
