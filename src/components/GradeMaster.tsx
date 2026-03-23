@@ -458,63 +458,63 @@ export default function GradeMaster() {
 
   if (layer === 'home') {
     return (
-      <div className="min-h-screen p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto animate-in">
-        <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="min-h-screen p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in">
+        <header className="mb-8 md:mb-12 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
           <div>
-            <div className="flex items-center gap-3 text-indigo-600 mb-2">
-              <GraduationCap size={32} />
-              <span className="text-sm font-black uppercase tracking-[0.2em]">GradeMaster OS</span>
+            <div className="flex items-center gap-2 md:gap-3 text-indigo-600 mb-1 md:mb-2">
+              <GraduationCap size={24} className="md:w-8 md:h-8" />
+              <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em]">GradeMaster OS</span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-slate-800 tracking-tight">Kumpulan Kelas</h1>
-            <p className="text-slate-500 font-bold mt-2">Pilih sesi kelas Anda atau buat sesi baru untuk mulai evaluasi.</p>
+            <h1 className="text-2xl md:text-4xl font-black text-slate-800 tracking-tight">Kumpulan Kelas</h1>
+            <p className="text-sm md:text-base text-slate-500 font-bold mt-1 md:mt-2">Pilih sesi kelas Anda atau buat sesi baru untuk mulai evaluasi.</p>
           </div>
-          <button onClick={() => { setLayer('setup'); setSessionName(''); setKeyInput(''); setAnswerKey({}); resetAnswers(); setGradedStudents([]); setStudentList([]); }} className="px-6 py-4 bg-indigo-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
-            <Plus size={18} /> Buat Sesi Baru
+          <button onClick={() => { setLayer('setup'); setSessionName(''); setKeyInput(''); setAnswerKey({}); resetAnswers(); setGradedStudents([]); setStudentList([]); }} className="px-4 py-3 md:px-6 md:py-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+            <Plus size={16} className="md:w-[18px] md:h-[18px]" /> Buat Sesi Baru
           </button>
         </header>
 
         {isLoadingSessions ? (
-          <div className="flex justify-center items-center py-20">
-            <Loader2 size={40} className="animate-spin text-indigo-500" />
+          <div className="flex justify-center items-center py-12 md:py-20">
+            <Loader2 size={32} className="animate-spin text-indigo-500 md:w-10 md:h-10" />
           </div>
         ) : sessions.length === 0 ? (
-          <div className="text-center py-20 bg-slate-50 rounded-[3rem] border border-dashed border-slate-200">
-            <FolderOpen size={48} className="mx-auto text-slate-300 mb-4" />
-            <h3 className="text-xl font-black text-slate-700 mb-2">Belum Ada Sesi Kelas</h3>
-            <p className="text-slate-500 font-bold mb-6">Mulai dengan membuat sesi kelas baru untuk menyimpan kunci dan menilai siswa.</p>
-            <button onClick={() => setLayer('setup')} className="px-6 py-3 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors">
+          <div className="text-center py-12 md:py-20 bg-slate-50 rounded-2xl md:rounded-[3rem] border border-dashed border-slate-200">
+            <FolderOpen size={36} className="mx-auto text-slate-300 mb-3 md:mb-4 md:w-12 md:h-12" />
+            <h3 className="text-lg md:text-xl font-black text-slate-700 mb-1 md:mb-2">Belum Ada Sesi Kelas</h3>
+            <p className="text-xs md:text-sm text-slate-500 font-bold mb-4 md:mb-6">Mulai dengan membuat sesi kelas baru untuk menyimpan kunci dan menilai siswa.</p>
+            <button onClick={() => setLayer('setup')} className="px-4 py-2.5 md:px-6 md:py-3 bg-indigo-50 text-indigo-600 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors">
               Buat Sesi Pertama
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {sessions.map(s => (
-              <div key={s.id} onClick={() => handleSessionClick(s.session_name)} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-500/10 transition-all cursor-pointer group flex flex-col justify-between">
+              <div key={s.id} onClick={() => handleSessionClick(s.session_name)} className="bg-white p-4 sm:p-5 md:p-6 rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-500/10 transition-all cursor-pointer group flex flex-col justify-between">
                 <div>
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                      <BookOpen size={24} />
+                  <div className="flex justify-between items-start mb-3 md:mb-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-50 text-indigo-600 rounded-lg md:rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                      <BookOpen size={20} className="md:w-6 md:h-6" />
                     </div>
                     <div className="flex items-center gap-2">
                       <button 
                         onClick={(e) => { e.stopPropagation(); setSessionName(s.session_name); setModal('delete'); }}
-                        className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                        className="p-1 md:p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
                         title="Hapus Sesi"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} className="md:w-4 md:h-4" />
                       </button>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full">{s.school_level || 'N/A'}</span>
+                      <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-2 py-0.5 md:px-2.5 md:py-1 rounded-full">{s.school_level || 'N/A'}</span>
                     </div>
                   </div>
-                  <h3 className="text-xl font-black text-slate-800 mb-1 truncate">{s.session_name}</h3>
-                  <p className="text-sm font-bold text-slate-500 truncate">{s.subject || 'Mapel tidak diketahui'}</p>
+                  <h3 className="text-lg md:text-xl font-black text-slate-800 mb-0.5 md:mb-1 truncate">{s.session_name}</h3>
+                  <p className="text-xs md:text-sm font-bold text-slate-500 truncate">{s.subject || 'Mapel tidak diketahui'}</p>
                 </div>
-                <div className="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
-                    <User size={14} />
-                    <span className="truncate max-w-[120px]">{s.teacher_name || 'Guru'}</span>
+                <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-slate-50 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs font-bold text-slate-400">
+                    <User size={12} className="md:w-[14px] md:h-[14px]" />
+                    <span className="truncate max-w-[100px] md:max-w-[120px]">{s.teacher_name || 'Guru'}</span>
                   </div>
-                  <div className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
+                  <div className="text-[10px] md:text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-1 md:px-3 md:py-1.5 rounded-md md:rounded-lg border border-indigo-100">
                     Kls {s.class_name || '-'}
                   </div>
                 </div>
@@ -531,91 +531,91 @@ export default function GradeMaster() {
 
   if (layer === 'setup') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 animate-in">
+      <div className="min-h-screen flex items-center justify-center p-3 sm:p-6 animate-in">
         <div className="w-full max-w-xl">
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-100 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 border border-indigo-200">
-              <GraduationCap size={14} /> Koreksi Otomatis
+          <div className="text-center mb-6 md:mb-10">
+            <div className="inline-flex items-center gap-1.5 md:gap-2 px-3 py-1 md:px-4 md:py-1.5 bg-indigo-100 text-indigo-600 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-3 md:mb-4 border border-indigo-200">
+              <GraduationCap size={12} className="md:w-3.5 md:h-3.5" /> Koreksi Otomatis
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-slate-800 tracking-tight font-outfit">GradeMaster</h1>
-            <p className="text-slate-400 text-sm mt-2">Isi data di bawah untuk mulai mengoreksi</p>
+            <h1 className="text-2xl md:text-5xl font-black text-slate-800 tracking-tight font-outfit">GradeMaster</h1>
+            <p className="text-slate-400 text-xs md:text-sm mt-1 md:mt-2">Isi data di bawah untuk mulai mengoreksi</p>
           </div>
 
-          <div className="bg-white rounded-[2.5rem] p-6 sm:p-8 shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white rounded-2xl md:rounded-[2.5rem] p-4 sm:p-6 md:p-8 shadow-xl shadow-slate-200/50 border border-slate-100 space-y-4 md:space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                <div>
-                  <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-                    <FolderOpen size={14} /> Nama Sesi Kelas (Unik)
+                  <label className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2">
+                    <FolderOpen size={12} className="md:w-3.5 md:h-3.5" /> Nama Sesi Kelas (Unik)
                   </label>
                   <input
                     type="text"
                     value={sessionName}
                     onChange={(e) => setSessionName(e.target.value)}
                     placeholder="Contoh: UTS Mat 10A"
-                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl md:rounded-2xl p-3 md:p-4 text-xs md:text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
                   />
                </div>
                <div>
-                  <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-                    <Key size={14} /> Password Sesi
+                  <label className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2">
+                    <Key size={12} className="md:w-3.5 md:h-3.5" /> Password Sesi
                   </label>
                   <input
                     type="password"
                     value={sessionPassword}
                     onChange={(e) => setSessionPassword(e.target.value)}
                     placeholder="Untuk akses & edit"
-                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl md:rounded-2xl p-3 md:p-4 text-xs md:text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
                   />
                </div>
             </div>
 
             <div>
-              <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-                <User size={14} /> Nama Guru
+              <label className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2">
+                <User size={12} className="md:w-3.5 md:h-3.5" /> Nama Guru
               </label>
               <input
                 type="text"
                 value={teacherName}
                 onChange={(e) => setTeacherName(e.target.value)}
                 placeholder="Contoh: Budi Santoso"
-                className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
+                className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl md:rounded-2xl p-3 md:p-4 text-xs md:text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
               />
             </div>
 
             <div>
-              <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-                <BookOpen size={14} /> Mata Pelajaran
+              <label className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2">
+                <BookOpen size={12} className="md:w-3.5 md:h-3.5" /> Mata Pelajaran
               </label>
               <input
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Contoh: Matematika"
-                className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
+                className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl md:rounded-2xl p-3 md:p-4 text-xs md:text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
               <div>
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-                  <LayoutGrid size={14} /> Kelas
+                <label className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2">
+                  <LayoutGrid size={12} className="md:w-3.5 md:h-3.5" /> Kelas
                 </label>
                 <input
                   type="text"
                   value={studentClass}
                   onChange={(e) => setStudentClass(e.target.value)}
                   placeholder="Contoh: 10A"
-                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl md:rounded-2xl p-3 md:p-4 text-xs md:text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
                 />
               </div>
               <div>
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-                  <GraduationCap size={14} /> Tingkat
+                <label className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2">
+                  <GraduationCap size={12} className="md:w-3.5 md:h-3.5" /> Tingkat
                 </label>
                 <select
                   value={schoolLevel}
                   onChange={(e) => setSchoolLevel(e.target.value)}
-                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all cursor-pointer"
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl md:rounded-2xl p-3 md:p-4 text-xs md:text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all cursor-pointer"
                 >
                   <option value="SMP">SMP</option>
                   <option value="SMA">SMA</option>
@@ -624,11 +624,11 @@ export default function GradeMaster() {
             </div>
 
             <div>
-              <label className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-                <div className="flex items-center gap-2">
-                  <User size={14} /> Daftar Siswa ({studentList.length} Anak)
+              <label className="flex items-center justify-between text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2">
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <User size={12} className="md:w-3.5 md:h-3.5" /> Daftar Siswa ({studentList.length} Anak)
                 </div>
-                {uploadingDoc && <Loader2 size={14} className="animate-spin text-indigo-500 text-xs" />}
+                {uploadingDoc && <Loader2 size={12} className="animate-spin text-indigo-500 md:w-3.5 md:h-3.5" />}
               </label>
               <div className="relative">
                 <input
@@ -637,40 +637,40 @@ export default function GradeMaster() {
                    onChange={handleFileUpload}
                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 />
-                <div className="w-full bg-slate-50 border-2 border-slate-100 border-dashed rounded-2xl p-4 text-sm font-bold text-slate-500 text-center transition-all hover:bg-slate-100 flex flex-col items-center justify-center gap-2">
+                <div className="w-full bg-slate-50 border-2 border-slate-100 border-dashed rounded-xl md:rounded-2xl p-3 md:p-4 text-xs md:text-sm font-bold text-slate-500 text-center transition-all hover:bg-slate-100 flex flex-col items-center justify-center gap-1.5 md:gap-2">
                    {studentList.length > 0 ? (
-                      <span className="text-indigo-600 flex items-center gap-2"><CheckCircle2 size={24} className="mb-1" /> {studentList.length} Nama Terekstrak</span>
+                      <span className="text-indigo-600 flex items-center gap-1.5 md:gap-2"><CheckCircle2 size={20} className="mb-0.5 md:mb-1 md:w-6 md:h-6" /> {studentList.length} Nama Terekstrak</span>
                    ) : (
                       <>
-                        <ClipboardList size={24} className="text-slate-400" />
+                        <ClipboardList size={20} className="text-slate-400 md:w-6 md:h-6" />
                         <span>Klik / Seret file daftar siswa ke sini</span>
-                        <span className="text-[10px] font-normal text-slate-400">Mendukung .PDF, .DOCX, .TXT, .CSV, .XML</span>
+                        <span className="text-[9px] md:text-[10px] font-normal text-slate-400">Mendukung .PDF, .DOCX, .TXT, .CSV, .XML</span>
                       </>
                    )}
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mt-4 mb-2">
-                <ClipboardList size={14} /> Atau Input Manual (Satu per baris)
+              <label className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mt-3 md:mt-4 mb-1.5 md:mb-2">
+                <ClipboardList size={12} className="md:w-3.5 md:h-3.5" /> Atau Input Manual (Satu per baris)
               </label>
               <textarea
                 value={studentManualInput}
                 onChange={(e) => setStudentManualInput(e.target.value)}
                 placeholder={"Contoh:\n1. Budi Santoso\n2. Siti Aminah\n..."}
                 rows={3}
-                className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300 resize-none font-mono"
+                className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl md:rounded-2xl p-3 md:p-4 text-xs md:text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300 resize-none font-mono"
               />
             </div>
 
             <div>
-              <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-                <Key size={14} /> Kunci Jawaban
+              <label className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2">
+                <Key size={12} className="md:w-3.5 md:h-3.5" /> Kunci Jawaban
               </label>
               <textarea
                 value={keyInput}
                 onChange={(e) => setKeyInput(e.target.value)}
                 placeholder={"Tempel kunci jawaban di sini, format bebas:\n1.A 2.B 3.C 4.D ...\n1.A2.B3.C4.D\n1) A  2) B  3) C\nABCDABCD..."}
                 rows={5}
-                className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300 resize-none font-mono"
+                className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl md:rounded-2xl p-3 md:p-4 text-xs md:text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300 resize-none font-mono"
               />
 
               {keyInput.trim().length > 0 && (
@@ -702,17 +702,17 @@ export default function GradeMaster() {
             <button
               onClick={handleGoToDashboard}
               disabled={modalLoading}
-              className="w-full py-4 bg-indigo-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 md:py-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {modalLoading ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />} Mulai Evaluasi 
+              {modalLoading ? <Loader2 size={16} className="animate-spin md:w-[18px] md:h-[18px]" /> : <ArrowRight size={16} className="md:w-[18px] md:h-[18px]" />} Mulai Evaluasi 
             </button>
 
-            <div className="pt-4 border-t border-slate-100">
+            <div className="pt-3 md:pt-4 border-t border-slate-100">
               <button
                 onClick={() => { setLayer('home'); fetchSessions(); }}
-                className="w-full py-3 bg-slate-50 border border-slate-200 text-slate-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-sky-50 hover:text-sky-600 hover:border-sky-100 transition-all flex items-center justify-center gap-2"
+                className="w-full py-2.5 md:py-3 bg-slate-50 border border-slate-200 text-slate-500 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-sky-50 hover:text-sky-600 hover:border-sky-100 transition-all flex items-center justify-center gap-1.5 md:gap-2"
               >
-                <ArrowLeft size={14} /> Kembali ke Kumpulan Kelas
+                <ArrowLeft size={12} className="md:w-3.5 md:h-3.5" /> Kembali ke Kumpulan Kelas
               </button>
             </div>
           </div>
@@ -724,40 +724,40 @@ export default function GradeMaster() {
     );
   }
 
-  if (layer === 'dashboard') {
-    return (
-      <div className="p-4 sm:p-6 lg:p-10 max-w-5xl mx-auto animate-in">
-        <header className="mb-10 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-100 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 border border-indigo-200">
-             <LayoutGrid size={14} /> Dashboard Analitik
-          </div>
-          <h1 className="text-3xl md:text-5xl font-black text-slate-800 tracking-tight font-outfit mb-3">Ikhtisar Kelas</h1>
-          <p className="text-slate-500 font-bold">Halo, {teacherName} • {subject}</p>
-        </header>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-indigo-600/20 relative overflow-hidden group">
-               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700"></div>
-               <h3 className="text-2xl font-black mb-1 relative z-10 font-outfit">Kelas {studentClass}</h3>
-               <p className="text-indigo-200 text-xs font-bold mb-8 relative z-10 uppercase tracking-widest">Tingkat {schoolLevel}</p>
-               <button onClick={handleStartGradingStudent} className="w-full py-4 bg-white text-indigo-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg flex justify-center items-center gap-2 relative z-10">
-                  Koreksi Siswa <ArrowRight size={16} />
-               </button>
+    if (layer === 'dashboard') {
+      return (
+        <div className="p-3 sm:p-5 lg:p-8 max-w-5xl mx-auto animate-in">
+          <header className="mb-8 md:mb-10 text-center">
+            <div className="inline-flex items-center gap-1.5 md:gap-2 px-3 py-1 md:px-4 md:py-1.5 bg-indigo-100 text-indigo-600 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-3 md:mb-4 border border-indigo-200">
+               <LayoutGrid size={12} className="md:w-3.5 md:h-3.5" /> Dashboard Analitik
             </div>
+            <h1 className="text-2xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tight font-outfit mb-2 md:mb-3">Ikhtisar Kelas</h1>
+            <p className="text-xs md:text-sm text-slate-500 font-bold">Halo, {teacherName} • {subject}</p>
+          </header>
+  
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+            <div className="lg:col-span-1 space-y-4 md:space-y-6">
+              <div className="bg-indigo-600 rounded-2xl md:rounded-[2.5rem] p-5 md:p-8 text-white shadow-xl shadow-indigo-600/20 relative overflow-hidden group">
+                 <div className="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 bg-white/10 rounded-full blur-xl md:blur-2xl -mr-8 -mt-8 md:-mr-10 md:-mt-10 group-hover:scale-150 transition-transform duration-700"></div>
+                 <h3 className="text-xl md:text-2xl font-black mb-1 relative z-10 font-outfit">Kelas {studentClass}</h3>
+                 <p className="text-indigo-200 text-[10px] md:text-xs font-bold mb-6 md:mb-8 relative z-10 uppercase tracking-widest">Tingkat {schoolLevel}</p>
+                 <button onClick={handleStartGradingStudent} className="w-full py-3 md:py-4 bg-white text-indigo-600 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg flex justify-center items-center gap-1.5 md:gap-2 relative z-10">
+                    Koreksi Siswa <ArrowRight size={14} className="md:w-4 md:h-4" />
+                 </button>
+              </div>
             
             <button onClick={() => setLayer('setup')} className="w-full py-4 text-slate-400 font-bold hover:text-indigo-600 transition-colors uppercase tracking-widest text-xs flex justify-center items-center gap-2">
                <ArrowLeft size={16} /> Kembali ke Pengaturan
             </button>
           </div>
 
-          <div className="lg:col-span-2 space-y-6">
-             <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center h-full relative overflow-hidden">
-                 <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none"></div>
-                 <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-8 relative z-10">Analitik Prediktif Rata-rata Kelas</h4>
+          <div className="lg:col-span-2 space-y-4 md:space-y-6">
+             <div className="bg-white rounded-2xl md:rounded-[2.5rem] p-5 md:p-8 border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center h-full relative overflow-hidden">
+                 <div className="absolute inset-x-0 bottom-0 h-16 md:h-32 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none"></div>
+                 <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6 md:mb-8 relative z-10 w-full">Analitik Prediktif Rata-rata Kelas</h4>
                  
-                 <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 w-full relative z-10">
-                    <div className="relative w-36 h-36 flex items-center justify-center shrink-0">
+                 <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-16 w-full relative z-10">
+                    <div className="relative w-36 h-36 flex items-center justify-center shrink-0 transform scale-75 md:scale-100 origin-center -my-4 md:my-0">
                        <svg className="w-full h-full transform -rotate-90 drop-shadow-lg">
                           <circle cx="72" cy="72" r="62" className="stroke-slate-100" strokeWidth="14" fill="none" />
                           <circle cx="72" cy="72" r="62" className="stroke-emerald-400" strokeWidth="14" fill="none" strokeDasharray="389.5" strokeDashoffset={389.5 - ((avgIq - 90) / 40) * 389.5} strokeLinecap="round" />
@@ -768,16 +768,16 @@ export default function GradeMaster() {
                        </div>
                     </div>
 
-                    <div className="flex-1 w-full max-w-sm space-y-6 text-left">
+                    <div className="flex-1 w-full max-w-sm space-y-4 md:space-y-6 text-left">
                        <div>
-                          <div className="flex justify-between items-end mb-2">
+                          <div className="flex justify-between items-end mb-1.5 md:mb-2">
                              <div className="flex flex-col">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-sky-500">Kecerdasan Kognitif</span>
-                                <span className="text-xs font-bold text-slate-400">{avgKognitif >= 80 ? 'Tingkat Menengah Atas' : avgKognitif >= 60 ? 'Tingkat Menengah' : 'Perlu Bimbingan'}</span>
+                                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-sky-500">Kecerdasan Kognitif</span>
+                                <span className="text-[10px] md:text-xs font-bold text-slate-400">{avgKognitif >= 80 ? 'Tingkat Menengah Atas' : avgKognitif >= 60 ? 'Tingkat Menengah' : 'Perlu Bimbingan'}</span>
                              </div>
-                             <span className="text-xl font-black text-slate-800">{avgKognitif}%</span>
+                             <span className="text-lg md:text-xl font-black text-slate-800">{avgKognitif}%</span>
                           </div>
-                          <div className="h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                          <div className="h-3 md:h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner">
                              <div className="h-full bg-gradient-to-r from-sky-400 to-blue-500 rounded-full relative overflow-hidden transition-all duration-1000" style={{ width: `${avgKognitif}%`}}>
                                 <div className="absolute inset-0 bg-white/20 w-1/2 skew-x-12 translate-x-full animate-[shimmer_2s_infinite]"></div>
                              </div>
@@ -785,14 +785,14 @@ export default function GradeMaster() {
                        </div>
                        
                        <div>
-                          <div className="flex justify-between items-end mb-2">
+                          <div className="flex justify-between items-end mb-1.5 md:mb-2">
                              <div className="flex flex-col">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Tingkat Pemahaman</span>
-                                <span className="text-xs font-bold text-slate-400">{avgPemahaman >= 80 ? 'Di Atas Rata-rata' : avgPemahaman >= 60 ? 'Rata-rata' : 'Di Bawah Rata-rata'}</span>
+                                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-indigo-500">Tingkat Pemahaman</span>
+                                <span className="text-[10px] md:text-xs font-bold text-slate-400">{avgPemahaman >= 80 ? 'Di Atas Rata-rata' : avgPemahaman >= 60 ? 'Rata-rata' : 'Di Bawah Rata-rata'}</span>
                              </div>
-                             <span className="text-xl font-black text-slate-800">{avgPemahaman}%</span>
+                             <span className="text-lg md:text-xl font-black text-slate-800">{avgPemahaman}%</span>
                           </div>
-                          <div className="h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                          <div className="h-3 md:h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner">
                              <div className="h-full bg-gradient-to-r from-indigo-400 to-purple-500 rounded-full relative overflow-hidden transition-all duration-1000" style={{ width: `${avgPemahaman}%`}}>
                                 <div className="absolute inset-0 bg-white/20 w-1/2 skew-x-12 translate-x-full animate-[shimmer_2s_infinite]"></div>
                              </div>
@@ -805,22 +805,22 @@ export default function GradeMaster() {
         </div>
 
         {/* Tabel Daftar Siswa - Setiap Anak */}
-        <div className="mt-8 bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm overflow-hidden">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="mt-4 md:mt-8 bg-white rounded-2xl md:rounded-[2.5rem] p-5 md:p-8 border border-slate-100 shadow-sm overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-4 mb-4 md:mb-6">
                <div>
-                  <h3 className="text-lg font-black text-slate-800 font-outfit">Lembar Penilaian Siswa</h3>
-                  <p className="text-xs font-bold text-slate-400">Total {gradedStudents.length} siswa telah dikoreksi (Rata-rata Kelas: {avgScore})</p>
+                  <h3 className="text-base md:text-lg font-black text-slate-800 font-outfit">Lembar Penilaian Siswa</h3>
+                  <p className="text-[10px] md:text-xs font-bold text-slate-400">Total {gradedStudents.length} {gradedStudents.length === 1 ? 'siswa' : 'siswa'} telah dikoreksi (Rata-rata Kelas: {avgScore})</p>
                </div>
-               <button onClick={handleStartGradingStudent} className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2">
-                  <Plus size={14} /> Tambah Siswa
+               <button onClick={handleStartGradingStudent} className="px-3 md:px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors flex items-center justify-center gap-1.5 md:gap-2">
+                  <Plus size={12} className="md:w-3.5 md:h-3.5" /> Tambah Siswa
                </button>
             </div>
 
             {gradedStudents.length === 0 ? (
-               <div className="text-center py-10 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
-                  <User size={32} className="mx-auto text-slate-300 mb-3" />
-                  <p className="text-slate-500 font-bold text-sm">Belum ada nilai tersimpan.</p>
-                  <p className="text-slate-400 text-xs mt-1">Klik "Koreksi Siswa" untuk memulai evaluasi.</p>
+               <div className="text-center py-6 md:py-10 bg-slate-50 rounded-xl md:rounded-3xl border border-dashed border-slate-200">
+                  <User size={24} className="mx-auto text-slate-300 mb-2 md:mb-3 md:w-8 md:h-8" />
+                  <p className="text-slate-500 font-bold text-xs md:text-sm">Belum ada nilai tersimpan.</p>
+                  <p className="text-slate-400 text-[10px] md:text-xs mt-1">Klik "Koreksi Siswa" untuk memulai evaluasi.</p>
                </div>
             ) : (
                <div className="overflow-x-auto">
@@ -870,44 +870,44 @@ export default function GradeMaster() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto animate-in">
-      <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div className="p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in">
+      <header className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
         <div>
-          <button onClick={() => setLayer('dashboard')} className="flex items-center gap-2 text-slate-400 hover:text-indigo-600 font-bold text-xs uppercase tracking-widest transition-colors mb-3">
-            <ArrowLeft size={14} /> Kembali ke Dashboard
+          <button onClick={() => setLayer('dashboard')} className="flex items-center gap-1.5 md:gap-2 text-slate-400 hover:text-indigo-600 font-bold text-[10px] md:text-xs uppercase tracking-widest transition-colors mb-2 md:mb-3">
+            <ArrowLeft size={12} className="md:w-[14px] md:h-[14px]" /> Kembali ke Dashboard
           </button>
-          <div className="flex items-center gap-3 text-indigo-600 mb-1">
-            <GraduationCap size={24} />
-            <span className="text-xs font-black uppercase tracking-[0.2em]">Koreksi Otomatis</span>
+          <div className="flex items-center gap-2 md:gap-3 text-indigo-600 mb-1">
+            <GraduationCap size={20} className="md:w-6 md:h-6" />
+            <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em]">Koreksi Otomatis</span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight">{teacherName}</h1>
-          <p className="text-sm text-slate-400 font-bold mt-1">{subject} • {totalQuestions} Soal PG</p>
+          <h1 className="text-2xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tight">{teacherName}</h1>
+          <p className="text-xs md:text-sm text-slate-400 font-bold mt-1">{subject} • {totalQuestions} Soal PG</p>
         </div>
         
-        <div className="flex items-center gap-3">
-            <button onClick={resetAnswers} className="px-5 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all flex items-center gap-2">
-                <RotateCcw size={14} /> Reset
+        <div className="flex items-center gap-2 md:gap-3">
+            <button onClick={resetAnswers} className="px-4 py-2.5 md:px-5 md:py-3 bg-white border border-slate-200 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all flex items-center gap-1.5 md:gap-2">
+                <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Reset
             </button>
-            <button onClick={() => openModal('save')} className="px-5 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
-                <Save size={14} /> Simpan
+            <button onClick={() => openModal('save')} className="px-4 py-2.5 md:px-5 md:py-3 bg-indigo-600 text-white rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 md:gap-2">
+                <Save size={12} className="md:w-[14px] md:h-[14px]" /> Simpan
             </button>
         </div>
       </header>
 
-      <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-8 space-y-8">
-          <section className="bg-white rounded-[2.5rem] p-6 md:p-8 border border-slate-100 shadow-sm">
-             <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-sky-100 text-sky-600 rounded-xl flex items-center justify-center">
-                  <User size={20} />
+      <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-start">
+        <div className="lg:col-span-8 space-y-4 md:space-y-8">
+          <section className="bg-white rounded-2xl md:rounded-[2.5rem] p-4 sm:p-6 md:p-8 border border-slate-100 shadow-sm">
+             <div className="flex items-center gap-2.5 md:gap-3 mb-4 md:mb-6">
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-sky-100 text-sky-600 rounded-lg md:rounded-xl flex items-center justify-center">
+                  <User size={16} className="md:w-5 md:h-5" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-slate-800">Data Siswa Diperiksa</h2>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Identitas untuk format nilai (Kelas {studentClass})</p>
+                  <h2 className="font-bold text-slate-800 text-sm md:text-base">Data Siswa Diperiksa</h2>
+                  <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Identitas untuk format nilai (Kelas {studentClass})</p>
                 </div>
              </div>
              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nama Siswa</label>
+                <label className="block text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2">Nama Siswa</label>
                 {studentList.length > 0 ? (
                   <select 
                     value={studentName} 
@@ -922,19 +922,19 @@ export default function GradeMaster() {
                       ))}
                   </select>
                 ) : (
-                  <input type="text" value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="Contoh: Ahmad" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"/>
+                  <input type="text" value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="Contoh: Ahmad" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-xs md:text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"/>
                 )}
              </div>
           </section>
 
           <section className="space-y-4">
-            <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
-                  <ClipboardList size={20} />
+            <div className="flex items-center gap-2.5 md:gap-3 mb-4 md:mb-6">
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-emerald-100 text-emerald-600 rounded-lg md:rounded-xl flex items-center justify-center">
+                  <ClipboardList size={16} className="md:w-5 md:h-5" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-slate-800">Lembar Jawaban Siswa</h2>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Klik pilihan yang dijawab siswa</p>
+                  <h2 className="font-bold text-slate-800 text-sm md:text-base">Lembar Jawaban Siswa</h2>
+                  <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Klik pilihan yang dijawab siswa</p>
                 </div>
             </div>
 
@@ -961,10 +961,10 @@ export default function GradeMaster() {
                 }
 
                 return (
-                  <div key={qNum} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-200 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <span className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center font-bold text-sm">{qNum}</span>
-                      <div className="flex flex-wrap gap-2 sm:gap-2">
+                  <div key={qNum} className="flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-200 transition-colors">
+                    <div className="flex items-center gap-3 md:gap-4">
+                      <span className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center font-bold text-xs md:text-sm">{qNum}</span>
+                      <div className="flex flex-wrap gap-1.5 md:gap-2 sm:gap-2">
                         {OPTIONS.map(opt => (
                           <div key={opt} className="relative">
                             <input 
@@ -990,31 +990,31 @@ export default function GradeMaster() {
           </section>
         </div>
 
-        <aside className="lg:col-span-4 lg:sticky lg:top-20 space-y-6">
-          <div className="glass-card rounded-[2.5rem] p-8 overflow-hidden relative group border-indigo-100 bg-white/80">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-bl-full -z-10 group-hover:bg-indigo-500/20 transition-colors"></div>
+        <aside className="lg:col-span-4 lg:sticky lg:top-20 space-y-4 md:space-y-6">
+          <div className="glass-card rounded-2xl md:rounded-[2.5rem] p-5 md:p-8 overflow-hidden relative group border-indigo-100 bg-white/80">
+            <div className="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 bg-indigo-500/10 rounded-bl-full -z-10 group-hover:bg-indigo-500/20 transition-colors"></div>
             
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Skor Akhir</p>
-            <div className="flex items-end gap-3 mb-6">
-              <span className="text-7xl font-black text-slate-900 leading-none">{finalScore}</span>
+            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5 md:mb-2">Skor Akhir</p>
+            <div className="flex items-end gap-2 md:gap-3 mb-4 md:mb-6">
+              <span className="text-5xl md:text-7xl font-black text-slate-900 leading-none">{finalScore}</span>
               <span className="text-slate-300 font-bold mb-1">/ {maxScore}</span>
             </div>
 
             {studentName.trim() && studentClass.trim() && (
-              <div className="mb-6 p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100/50">
-                 <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1">Format Nama</p>
-                 <p className="text-sm font-bold text-indigo-700 break-all select-all">
+              <div className="mb-4 md:mb-6 p-3 md:p-4 rounded-xl md:rounded-2xl bg-indigo-50/50 border border-indigo-100/50">
+                 <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1">Format Nama</p>
+                 <p className="text-xs md:text-sm font-bold text-indigo-700 break-all select-all">
                    {`${studentName}_${studentClass}_${schoolLevel}`.replace(/\s+/g, '_')}
                  </p>
               </div>
             )}
 
-            <div className="mb-8 p-6 bg-slate-900 rounded-[2rem] text-white overflow-hidden relative">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Persentase</span>
-                <span className="text-2xl font-black">{percentage}%</span>
+            <div className="mb-6 md:mb-8 p-4 md:p-6 bg-slate-900 rounded-2xl md:rounded-[2rem] text-white overflow-hidden relative">
+              <div className="flex items-center justify-between mb-3 md:mb-4">
+                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-500">Persentase</span>
+                <span className="text-xl md:text-2xl font-black">{percentage}%</span>
               </div>
-              <div className="h-4 bg-slate-800 rounded-full overflow-hidden p-1">
+              <div className="h-3 md:h-4 bg-slate-800 rounded-full overflow-hidden p-0.5 md:p-1">
                 <div 
                   className="h-full bg-gradient-to-r from-indigo-500 to-sky-400 rounded-full transition-all duration-1000 ease-out"
                   style={{ width: `${percentage}%` }}
@@ -1022,20 +1022,20 @@ export default function GradeMaster() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center">
-                <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-3">
-                  <CheckCircle2 size={20} />
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
+              <div className="p-3 md:p-5 bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center">
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-emerald-50 text-emerald-600 rounded-lg md:rounded-xl flex items-center justify-center mb-2 md:mb-3">
+                  <CheckCircle2 size={16} className="md:w-5 md:h-5" />
                 </div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Benar</p>
-                <span className="text-2xl font-black text-slate-800">{correctCount}</span>
+                <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5 md:mb-1">Benar</p>
+                <span className="text-xl md:text-2xl font-black text-slate-800">{correctCount}</span>
               </div>
-              <div className="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center">
-                <div className="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center mb-3">
-                  <XCircle size={20} />
+              <div className="p-3 md:p-5 bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center">
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-rose-50 text-rose-600 rounded-lg md:rounded-xl flex items-center justify-center mb-2 md:mb-3">
+                  <XCircle size={16} className="md:w-5 md:h-5" />
                 </div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Salah</p>
-                <span className="text-2xl font-black text-slate-800">{incorrectCount}</span>
+                <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5 md:mb-1">Salah</p>
+                <span className="text-xl md:text-2xl font-black text-slate-800">{incorrectCount}</span>
               </div>
             </div>
 
@@ -1090,59 +1090,59 @@ export default function GradeMaster() {
     return (
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeModal}></div>
-        <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 sm:p-8 animate-in">
-          <button onClick={closeModal} className="absolute top-6 right-6 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-rose-100 hover:text-rose-600 transition-colors">
+        <div className="relative w-full max-w-md bg-white rounded-2xl md:rounded-3xl shadow-2xl p-5 md:p-8 animate-in">
+          <button onClick={closeModal} className="absolute top-4 right-4 md:top-6 md:right-6 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-rose-100 hover:text-rose-600 transition-colors">
             <X size={16} />
           </button>
 
-          <div className="flex items-center gap-3 mb-6">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${modal === 'save' ? 'bg-indigo-600' : modal === 'delete' ? 'bg-rose-600' : 'bg-sky-600'}`}>
-              {modal === 'save' ? <Save size={20} /> : modal === 'delete' ? <Trash2 size={20} /> : <FolderOpen size={20} />}
+          <div className="flex items-center gap-2.5 md:gap-3 mb-4 md:mb-6">
+            <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center text-white ${modal === 'save' ? 'bg-indigo-600' : modal === 'delete' ? 'bg-rose-600' : 'bg-sky-600'}`}>
+              {modal === 'save' ? <Save size={16} className="md:w-5 md:h-5" /> : modal === 'delete' ? <Trash2 size={16} className="md:w-5 md:h-5" /> : <FolderOpen size={16} className="md:w-5 md:h-5" />}
             </div>
             <div>
-              <h3 className="font-bold text-slate-800 text-lg">{modal === 'save' ? 'Simpan Sesi' : modal === 'delete' ? 'Hapus Sesi' : 'Muat Sesi'}</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <h3 className="font-bold text-slate-800 text-base md:text-lg">{modal === 'save' ? 'Simpan Sesi' : modal === 'delete' ? 'Hapus Sesi' : 'Muat Sesi'}</h3>
+              <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">
                 {modal === 'save' ? 'Simpan data koreksi ke database' : modal === 'delete' ? 'Hapus sesi secara permanen' : 'Muat data koreksi dari database'}
               </p>
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nama Sesi</label>
+              <label className="block text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2">Nama Sesi</label>
               <input
                 type="text"
                 value={sessionName}
                 onChange={(e) => { setSessionName(e.target.value); setModalError(""); }}
                 placeholder="Contoh: UTS Kelas 10A"
-                className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300 disabled:opacity-60"
+                className="w-full bg-slate-50 border-2 border-slate-100 rounded-lg md:rounded-xl p-2.5 md:p-3 text-xs md:text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300 disabled:opacity-60"
                 autoFocus
                 disabled={modal === 'delete'}
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Password</label>
+              <label className="block text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2">Password</label>
               <input
                 type="password"
                 value={sessionPassword}
                 onChange={(e) => { setSessionPassword(e.target.value); setModalError(""); }}
                 placeholder="Masukkan password"
-                className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
+                className="w-full bg-slate-50 border-2 border-slate-100 rounded-lg md:rounded-xl p-2.5 md:p-3 text-xs md:text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
                 onKeyDown={(e) => e.key === 'Enter' && (modal === 'save' ? handleSaveSession() : modal === 'delete' ? handleDeleteSession() : handleLoadSession())}
               />
             </div>
 
             {modalError && (
-              <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-100 rounded-xl">
-                <AlertCircle size={16} className="text-rose-500 shrink-0" />
-                <p className="text-xs font-bold text-rose-600">{modalError}</p>
+              <div className="flex items-center gap-2 p-2.5 md:p-3 bg-rose-50 border border-rose-100 rounded-lg md:rounded-xl">
+                <AlertCircle size={14} className="text-rose-500 shrink-0 md:w-4 md:h-4" />
+                <p className="text-[10px] md:text-xs font-bold text-rose-600">{modalError}</p>
               </div>
             )}
 
             <button
               onClick={modal === 'save' ? handleSaveSession : modal === 'delete' ? handleDeleteSession : handleLoadSession}
               disabled={modalLoading}
-              className={`w-full py-3.5 rounded-xl text-white text-sm font-black uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`w-full py-3 md:py-3.5 rounded-lg md:rounded-xl text-white text-xs md:text-sm font-black uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-1.5 md:gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                 modal === 'save' 
                   ? 'bg-indigo-600 shadow-indigo-600/20 hover:scale-[1.02] active:scale-95' 
                   : modal === 'delete'
@@ -1151,13 +1151,13 @@ export default function GradeMaster() {
               }`}
             >
               {modalLoading ? (
-                <><Loader2 size={16} className="animate-spin" /> Memproses...</>
+                <><Loader2 size={14} className="animate-spin md:w-4 md:h-4" /> Memproses...</>
               ) : modal === 'save' ? (
-                <><Save size={16} /> Simpan</>
+                <><Save size={14} className="md:w-4 md:h-4" /> Simpan</>
               ) : modal === 'delete' ? (
-                <><Trash2 size={16} /> Hapus</>
+                <><Trash2 size={14} className="md:w-4 md:h-4" /> Hapus</>
               ) : (
-                <><FolderOpen size={16} /> Muat</>
+                <><FolderOpen size={14} className="md:w-4 md:h-4" /> Muat</>
               )}
             </button>
           </div>
