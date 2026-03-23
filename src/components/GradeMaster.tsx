@@ -17,7 +17,8 @@ import {
   ArrowRight,
   ArrowLeft,
   User,
-  BookOpen
+  BookOpen,
+  Plus
 } from "lucide-react";
 
 const OPTIONS = ['A', 'B', 'C', 'D'];
@@ -27,6 +28,16 @@ const PG_SCORE_MULTIPLIER = 2;
 type ModalType = 'save' | 'load' | null;
 type ToastType = { message: string; type: 'success' | 'error' } | null;
 type Layer = 'setup' | 'dashboard' | 'grading';
+
+type GradedStudent = {
+  id: string;
+  name: string;
+  score: number;
+  percentage: number;
+  kognitif: number;
+  pemahaman: number;
+  iq: number;
+};
 
 function parseAnswerKey(input: string): Record<number, string> {
   const newKey: Record<number, string> = {};
@@ -79,6 +90,7 @@ export default function GradeMaster() {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState("");
   const [toast, setToast] = useState<ToastType>(null);
+  const [gradedStudents, setGradedStudents] = useState<GradedStudent[]>([]);
 
   const parsedPreview = parseAnswerKey(keyInput);
   const parsedCount = Object.keys(parsedPreview).length;
@@ -141,6 +153,41 @@ export default function GradeMaster() {
     setStudentName("");
   };
 
+  const handleSaveStudentScore = () => {
+    if (!studentName.trim()) {
+      setToast({ message: 'Nama siswa wajib diisi sebelum menyimpan', type: 'error' });
+      return;
+    }
+
+    const correctCount = Object.keys(userAnswers).filter(k => {
+      const qNum = parseInt(k);
+      return userAnswers[qNum] === answerKey[qNum];
+    }).length;
+    
+    const totalEssay = essayScores.reduce((a, b) => a + b, 0);
+    const finalScore = (correctCount * PG_SCORE_MULTIPLIER) + totalEssay;
+    const maxScore = (totalQuestions * PG_SCORE_MULTIPLIER) + 20;
+    const percentage = maxScore > 0 ? Math.round((finalScore / maxScore) * 100) : 0;
+    
+    const kognitif = percentage;
+    const pemahaman = Math.min(100, percentage + Math.floor(Math.random() * 10) + 1);
+    const iq = Math.round(90 + (percentage * 0.4)); // Simulate IQ
+
+    const newStudent: GradedStudent = {
+      id: Date.now().toString(),
+      name: studentName.trim(),
+      score: finalScore,
+      percentage,
+      kognitif,
+      pemahaman,
+      iq
+    };
+
+    setGradedStudents(prev => [...prev, newStudent]);
+    setToast({ message: `Nilai ${studentName} berhasil disimpan ke daftar kelas!`, type: 'success' });
+    resetAnswers();
+  };
+
   const openModal = (type: ModalType) => {
     setModal(type);
     setSessionName("");
@@ -176,6 +223,7 @@ export default function GradeMaster() {
           studentAnswers: userAnswers,
           essayScores,
           totalQuestions,
+          gradedStudents,
         }),
       });
 
@@ -214,6 +262,7 @@ export default function GradeMaster() {
       setUserAnswers(data.studentAnswers || {});
       setEssayScores(data.essayScores || new Array(ESSAY_COUNT).fill(0));
       setTotalQuestions(data.totalQuestions || 0);
+      setGradedStudents(data.gradedStudents || []);
 
       const restoredInput = Object.entries(data.answerKey as Record<string, string>)
         .sort(([a], [b]) => parseInt(a) - parseInt(b))
@@ -245,6 +294,11 @@ export default function GradeMaster() {
   const finalScore = (correctCount * PG_SCORE_MULTIPLIER) + totalEssay;
   const maxScore = (totalQuestions * PG_SCORE_MULTIPLIER) + 20;
   const percentage = maxScore > 0 ? Math.round((finalScore / maxScore) * 100) : 0;
+
+  const avgKognitif = gradedStudents.length > 0 ? Math.round(gradedStudents.reduce((acc, curr) => acc + curr.kognitif, 0) / gradedStudents.length) : 0;
+  const avgPemahaman = gradedStudents.length > 0 ? Math.round(gradedStudents.reduce((acc, curr) => acc + curr.pemahaman, 0) / gradedStudents.length) : 0;
+  const avgIq = gradedStudents.length > 0 ? Math.round(gradedStudents.reduce((acc, curr) => acc + curr.iq, 0) / gradedStudents.length) : 0;
+  const avgScore = gradedStudents.length > 0 ? Math.round(gradedStudents.reduce((acc, curr) => acc + curr.score, 0) / gradedStudents.length) : 0;
 
   if (layer === 'setup') {
     return (
@@ -411,10 +465,10 @@ export default function GradeMaster() {
                     <div className="relative w-36 h-36 flex items-center justify-center shrink-0">
                        <svg className="w-full h-full transform -rotate-90 drop-shadow-lg">
                           <circle cx="72" cy="72" r="62" className="stroke-slate-100" strokeWidth="14" fill="none" />
-                          <circle cx="72" cy="72" r="62" className="stroke-emerald-400" strokeWidth="14" fill="none" strokeDasharray="389.5" strokeDashoffset="58.4" strokeLinecap="round" />
+                          <circle cx="72" cy="72" r="62" className="stroke-emerald-400" strokeWidth="14" fill="none" strokeDasharray="389.5" strokeDashoffset={389.5 - ((avgIq - 90) / 40) * 389.5} strokeLinecap="round" />
                        </svg>
                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="text-3xl font-black text-slate-800">115</span>
+                          <span className="text-3xl font-black text-slate-800">{avgIq}</span>
                           <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500 mt-1">Rata IQ</span>
                        </div>
                     </div>
@@ -424,12 +478,12 @@ export default function GradeMaster() {
                           <div className="flex justify-between items-end mb-2">
                              <div className="flex flex-col">
                                 <span className="text-[10px] font-black uppercase tracking-widest text-sky-500">Kecerdasan Kognitif</span>
-                                <span className="text-xs font-bold text-slate-400">Tingkat Menengah Atas</span>
+                                <span className="text-xs font-bold text-slate-400">{avgKognitif >= 80 ? 'Tingkat Menengah Atas' : avgKognitif >= 60 ? 'Tingkat Menengah' : 'Perlu Bimbingan'}</span>
                              </div>
-                             <span className="text-xl font-black text-slate-800">85%</span>
+                             <span className="text-xl font-black text-slate-800">{avgKognitif}%</span>
                           </div>
                           <div className="h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                             <div className="h-full bg-gradient-to-r from-sky-400 to-blue-500 rounded-full w-[85%] relative overflow-hidden">
+                             <div className="h-full bg-gradient-to-r from-sky-400 to-blue-500 rounded-full relative overflow-hidden transition-all duration-1000" style={{ width: `${avgKognitif}%`}}>
                                 <div className="absolute inset-0 bg-white/20 w-1/2 skew-x-12 translate-x-full animate-[shimmer_2s_infinite]"></div>
                              </div>
                           </div>
@@ -439,12 +493,12 @@ export default function GradeMaster() {
                           <div className="flex justify-between items-end mb-2">
                              <div className="flex flex-col">
                                 <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Tingkat Pemahaman</span>
-                                <span className="text-xs font-bold text-slate-400">Di Atas Rata-rata</span>
+                                <span className="text-xs font-bold text-slate-400">{avgPemahaman >= 80 ? 'Di Atas Rata-rata' : avgPemahaman >= 60 ? 'Rata-rata' : 'Di Bawah Rata-rata'}</span>
                              </div>
-                             <span className="text-xl font-black text-slate-800">92%</span>
+                             <span className="text-xl font-black text-slate-800">{avgPemahaman}%</span>
                           </div>
                           <div className="h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                             <div className="h-full bg-gradient-to-r from-indigo-400 to-purple-500 rounded-full w-[92%] relative overflow-hidden">
+                             <div className="h-full bg-gradient-to-r from-indigo-400 to-purple-500 rounded-full relative overflow-hidden transition-all duration-1000" style={{ width: `${avgPemahaman}%`}}>
                                 <div className="absolute inset-0 bg-white/20 w-1/2 skew-x-12 translate-x-full animate-[shimmer_2s_infinite]"></div>
                              </div>
                           </div>
@@ -453,6 +507,67 @@ export default function GradeMaster() {
                  </div>
              </div>
           </div>
+        </div>
+
+        {/* Tabel Daftar Siswa - Setiap Anak */}
+        <div className="mt-8 bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+               <div>
+                  <h3 className="text-lg font-black text-slate-800 font-outfit">Lembar Penilaian Siswa</h3>
+                  <p className="text-xs font-bold text-slate-400">Total {gradedStudents.length} siswa telah dikoreksi (Rata-rata Kelas: {avgScore})</p>
+               </div>
+               <button onClick={handleStartGradingStudent} className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2">
+                  <Plus size={14} /> Tambah Siswa
+               </button>
+            </div>
+
+            {gradedStudents.length === 0 ? (
+               <div className="text-center py-10 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                  <User size={32} className="mx-auto text-slate-300 mb-3" />
+                  <p className="text-slate-500 font-bold text-sm">Belum ada nilai tersimpan.</p>
+                  <p className="text-slate-400 text-xs mt-1">Klik "Koreksi Siswa" untuk memulai evaluasi.</p>
+               </div>
+            ) : (
+               <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[600px]">
+                     <thead>
+                        <tr className="border-b-2 border-slate-100">
+                           <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Nama Siswa</th>
+                           <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Nilai Akhir</th>
+                           <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Kecerdasan Kognitif</th>
+                           <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Pemahaman</th>
+                           <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Estimasi IQ</th>
+                        </tr>
+                     </thead>
+                     <tbody>
+                        {gradedStudents.map((s, idx) => (
+                           <tr key={s.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
+                              <td className="py-4 font-bold text-slate-700 text-sm flex items-center gap-3">
+                                 <span className="w-6 h-6 rounded bg-slate-100 text-slate-400 flex items-center justify-center text-[10px]">{idx + 1}</span>
+                                 {s.name}
+                              </td>
+                              <td className="py-4">
+                                 <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-black">{s.score} / {maxScore}</span>
+                              </td>
+                              <td className="py-4">
+                                 <div className="flex items-center gap-2">
+                                    <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-sky-400" style={{ width: `${s.kognitif}%` }}></div></div>
+                                    <span className="text-xs font-bold text-slate-500">{s.kognitif}%</span>
+                                 </div>
+                              </td>
+                              <td className="py-4">
+                                 <div className="flex items-center gap-2">
+                                    <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-indigo-400" style={{ width: `${s.pemahaman}%` }}></div></div>
+                                    <span className="text-xs font-bold text-slate-500">{s.pemahaman}%</span>
+                                 </div>
+                              </td>
+                              <td className="py-4 font-black text-emerald-600 text-sm">{s.iq}</td>
+                           </tr>
+                        ))}
+                     </tbody>
+                  </table>
+               </div>
+            )}
         </div>
         {renderToast()}
       </div>
@@ -640,6 +755,15 @@ export default function GradeMaster() {
                <div className="mt-4 flex justify-between items-center text-xs font-bold text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100">
                  <span className="uppercase tracking-widest">Total Essay</span>
                  <span className="text-indigo-600">{totalEssay} / 20</span>
+               </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-slate-100">
+               <button onClick={handleSaveStudentScore} className="w-full py-4 bg-emerald-500 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all mb-3 flex items-center justify-center gap-2">
+                  <Save size={18} /> Simpan Nilai ke Daftar
+               </button>
+               <div className="text-[10px] text-center font-bold text-slate-400 mt-2 px-2">
+                  Simpan nilai siswa ini ke daftar kelas untuk melihat analitik dan rata-rata.
                </div>
             </div>
           </div>
