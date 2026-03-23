@@ -26,7 +26,7 @@ const PG_SCORE_MULTIPLIER = 2;
 
 type ModalType = 'save' | 'load' | null;
 type ToastType = { message: string; type: 'success' | 'error' } | null;
-type Layer = 'setup' | 'grading';
+type Layer = 'setup' | 'dashboard' | 'grading';
 
 function parseAnswerKey(input: string): Record<number, string> {
   const newKey: Record<number, string> = {};
@@ -89,13 +89,17 @@ export default function GradeMaster() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const handleStartGrading = () => {
+  const handleGoToDashboard = () => {
     if (!teacherName.trim()) {
       setToast({ message: 'Nama guru wajib diisi', type: 'error' });
       return;
     }
     if (!subject.trim()) {
       setToast({ message: 'Mata pelajaran wajib diisi', type: 'error' });
+      return;
+    }
+    if (!studentClass.trim()) {
+      setToast({ message: 'Kelas wajib diisi', type: 'error' });
       return;
     }
     if (parsedCount === 0) {
@@ -105,6 +109,10 @@ export default function GradeMaster() {
 
     setAnswerKey(parsedPreview);
     setTotalQuestions(parsedCount);
+    setLayer('dashboard');
+  };
+
+  const handleStartGradingStudent = () => {
     setUserAnswers({});
     setEssayScores(new Array(ESSAY_COUNT).fill(0));
     setLayer('grading');
@@ -277,6 +285,34 @@ export default function GradeMaster() {
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                  <LayoutGrid size={14} /> Kelas
+                </label>
+                <input
+                  type="text"
+                  value={studentClass}
+                  onChange={(e) => setStudentClass(e.target.value)}
+                  placeholder="Contoh: 10A"
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                  <GraduationCap size={14} /> Tingkat
+                </label>
+                <select
+                  value={schoolLevel}
+                  onChange={(e) => setSchoolLevel(e.target.value)}
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all cursor-pointer"
+                >
+                  <option value="SMP">SMP</option>
+                  <option value="SMA">SMA</option>
+                </select>
+              </div>
+            </div>
+
             <div>
               <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
                 <Key size={14} /> Kunci Jawaban
@@ -316,10 +352,10 @@ export default function GradeMaster() {
             </div>
 
             <button
-              onClick={handleStartGrading}
+              onClick={handleGoToDashboard}
               className="w-full py-4 bg-indigo-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
             >
-              Mulai Koreksi <ArrowRight size={18} />
+              Simpan & Lanjut <ArrowRight size={18} />
             </button>
 
             <div className="pt-4 border-t border-slate-100">
@@ -339,12 +375,96 @@ export default function GradeMaster() {
     );
   }
 
+  if (layer === 'dashboard') {
+    return (
+      <div className="p-4 sm:p-6 lg:p-10 max-w-5xl mx-auto animate-in">
+        <header className="mb-10 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-100 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 border border-indigo-200">
+             <LayoutGrid size={14} /> Dashboard Analitik
+          </div>
+          <h1 className="text-3xl md:text-5xl font-black text-slate-800 tracking-tight font-outfit mb-3">Ikhtisar Kelas</h1>
+          <p className="text-slate-500 font-bold">Halo, {teacherName} • {subject}</p>
+        </header>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-indigo-600/20 relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700"></div>
+               <h3 className="text-2xl font-black mb-1 relative z-10 font-outfit">Kelas {studentClass}</h3>
+               <p className="text-indigo-200 text-xs font-bold mb-8 relative z-10 uppercase tracking-widest">Tingkat {schoolLevel}</p>
+               <button onClick={handleStartGradingStudent} className="w-full py-4 bg-white text-indigo-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg flex justify-center items-center gap-2 relative z-10">
+                  Koreksi Siswa <ArrowRight size={16} />
+               </button>
+            </div>
+            
+            <button onClick={() => setLayer('setup')} className="w-full py-4 text-slate-400 font-bold hover:text-indigo-600 transition-colors uppercase tracking-widest text-xs flex justify-center items-center gap-2">
+               <ArrowLeft size={16} /> Kembali ke Pengaturan
+            </button>
+          </div>
+
+          <div className="lg:col-span-2 space-y-6">
+             <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center h-full relative overflow-hidden">
+                 <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none"></div>
+                 <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-8 relative z-10">Analitik Prediktif Rata-rata Kelas</h4>
+                 
+                 <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 w-full relative z-10">
+                    <div className="relative w-36 h-36 flex items-center justify-center shrink-0">
+                       <svg className="w-full h-full transform -rotate-90 drop-shadow-lg">
+                          <circle cx="72" cy="72" r="62" className="stroke-slate-100" strokeWidth="14" fill="none" />
+                          <circle cx="72" cy="72" r="62" className="stroke-emerald-400" strokeWidth="14" fill="none" strokeDasharray="389.5" strokeDashoffset="58.4" strokeLinecap="round" />
+                       </svg>
+                       <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-3xl font-black text-slate-800">115</span>
+                          <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500 mt-1">Rata IQ</span>
+                       </div>
+                    </div>
+
+                    <div className="flex-1 w-full max-w-sm space-y-6 text-left">
+                       <div>
+                          <div className="flex justify-between items-end mb-2">
+                             <div className="flex flex-col">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-sky-500">Kecerdasan Kognitif</span>
+                                <span className="text-xs font-bold text-slate-400">Tingkat Menengah Atas</span>
+                             </div>
+                             <span className="text-xl font-black text-slate-800">85%</span>
+                          </div>
+                          <div className="h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                             <div className="h-full bg-gradient-to-r from-sky-400 to-blue-500 rounded-full w-[85%] relative overflow-hidden">
+                                <div className="absolute inset-0 bg-white/20 w-1/2 skew-x-12 translate-x-full animate-[shimmer_2s_infinite]"></div>
+                             </div>
+                          </div>
+                       </div>
+                       
+                       <div>
+                          <div className="flex justify-between items-end mb-2">
+                             <div className="flex flex-col">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Tingkat Pemahaman</span>
+                                <span className="text-xs font-bold text-slate-400">Di Atas Rata-rata</span>
+                             </div>
+                             <span className="text-xl font-black text-slate-800">92%</span>
+                          </div>
+                          <div className="h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                             <div className="h-full bg-gradient-to-r from-indigo-400 to-purple-500 rounded-full w-[92%] relative overflow-hidden">
+                                <div className="absolute inset-0 bg-white/20 w-1/2 skew-x-12 translate-x-full animate-[shimmer_2s_infinite]"></div>
+                             </div>
+                          </div>
+                       </div>
+                    </div>
+                 </div>
+             </div>
+          </div>
+        </div>
+        {renderToast()}
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto animate-in">
       <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <button onClick={handleBackToSetup} className="flex items-center gap-2 text-slate-400 hover:text-indigo-600 font-bold text-xs uppercase tracking-widest transition-colors mb-3">
-            <ArrowLeft size={14} /> Kembali ke Setup
+          <button onClick={() => setLayer('dashboard')} className="flex items-center gap-2 text-slate-400 hover:text-indigo-600 font-bold text-xs uppercase tracking-widest transition-colors mb-3">
+            <ArrowLeft size={14} /> Kembali ke Dashboard
           </button>
           <div className="flex items-center gap-3 text-indigo-600 mb-1">
             <GraduationCap size={24} />
@@ -372,26 +492,13 @@ export default function GradeMaster() {
                   <User size={20} />
                 </div>
                 <div>
-                  <h2 className="font-bold text-slate-800">Data Siswa</h2>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Identitas untuk format nilai</p>
+                  <h2 className="font-bold text-slate-800">Data Siswa Diperiksa</h2>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Identitas untuk format nilai (Kelas {studentClass})</p>
                 </div>
              </div>
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nama Siswa</label>
-                   <input type="text" value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="Contoh: Ahmad" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"/>
-                </div>
-                <div>
-                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Kelas</label>
-                   <input type="text" value={studentClass} onChange={(e) => setStudentClass(e.target.value)} placeholder="Contoh: 10A" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"/>
-                </div>
-                <div>
-                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Tingkat</label>
-                   <select value={schoolLevel} onChange={(e) => setSchoolLevel(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all cursor-pointer">
-                      <option value="SMP">SMP</option>
-                      <option value="SMA">SMA</option>
-                   </select>
-                </div>
+             <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nama Siswa</label>
+                <input type="text" value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="Contoh: Ahmad" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"/>
              </div>
           </section>
 
