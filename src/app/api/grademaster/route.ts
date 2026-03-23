@@ -4,7 +4,20 @@ import { supabase } from '@/lib/supabase/client';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { sessionName, password, answerKey, studentAnswers, essayScores, totalQuestions } = body;
+    const { 
+      sessionName, 
+      password, 
+      answerKey, 
+      studentAnswers, 
+      essayScores, 
+      totalQuestions,
+      gradedStudents,
+      teacherName,
+      subject,
+      className,
+      schoolLevel,
+      studentList
+    } = body;
 
     if (!sessionName || !password) {
       return NextResponse.json({ error: 'Nama sesi dan password wajib diisi' }, { status: 400 });
@@ -28,6 +41,12 @@ export async function POST(req: NextRequest) {
           student_answers: studentAnswers,
           essay_scores: essayScores,
           total_questions: totalQuestions,
+          graded_students: gradedStudents,
+          teacher_name: teacherName,
+          subject: subject,
+          class_name: className,
+          school_level: schoolLevel,
+          student_list: studentList,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
@@ -45,6 +64,12 @@ export async function POST(req: NextRequest) {
         student_answers: studentAnswers,
         essay_scores: essayScores,
         total_questions: totalQuestions,
+        graded_students: gradedStudents,
+        teacher_name: teacherName,
+        subject: subject,
+        class_name: className,
+        school_level: schoolLevel,
+        student_list: studentList,
       });
 
     if (error) throw error;
@@ -60,6 +85,19 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const name = searchParams.get('name');
     const password = searchParams.get('password');
+
+    if (!name && !password) {
+      const { data, error } = await supabase
+        .from('grade_sessions')
+        .select('id, session_name, teacher_name, subject, class_name, school_level, updated_at')
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        return NextResponse.json({ error: 'Gagal memuat daftar sesi' }, { status: 500 });
+      }
+
+      return NextResponse.json({ sessions: data });
+    }
 
     if (!name || !password) {
       return NextResponse.json({ error: 'Nama sesi dan password wajib diisi' }, { status: 400 });
@@ -85,6 +123,12 @@ export async function GET(req: NextRequest) {
       studentAnswers: data.student_answers,
       essayScores: data.essay_scores,
       totalQuestions: data.total_questions,
+      gradedStudents: data.graded_students,
+      teacherName: data.teacher_name,
+      subject: data.subject,
+      className: data.class_name,
+      schoolLevel: data.school_level,
+      studentList: data.student_list
     });
   } catch (err: any) {
     console.error('Grade load error:', err);

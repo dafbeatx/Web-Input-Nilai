@@ -34,6 +34,14 @@ CREATE TABLE IF NOT EXISTS public.grade_sessions (
     UNIQUE(session_name)
 );
 
+ALTER TABLE public.grade_sessions 
+ADD COLUMN IF NOT EXISTS teacher_name TEXT,
+ADD COLUMN IF NOT EXISTS subject TEXT,
+ADD COLUMN IF NOT EXISTS class_name TEXT,
+ADD COLUMN IF NOT EXISTS school_level TEXT,
+ADD COLUMN IF NOT EXISTS student_list JSONB DEFAULT '[]',
+ADD COLUMN IF NOT EXISTS graded_students JSONB DEFAULT '[]';
+
 ALTER TABLE public.grade_sessions ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow anonymous access grade_sessions" ON public.grade_sessions;

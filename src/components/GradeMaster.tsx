@@ -27,7 +27,17 @@ const PG_SCORE_MULTIPLIER = 2;
 
 type ModalType = 'save' | 'load' | null;
 type ToastType = { message: string; type: 'success' | 'error' } | null;
-type Layer = 'setup' | 'dashboard' | 'grading';
+type Layer = 'home' | 'setup' | 'dashboard' | 'grading';
+
+type SessionMeta = {
+  id: string;
+  session_name: string;
+  teacher_name: string;
+  subject: string;
+  class_name: string;
+  school_level: string;
+  updated_at: string;
+};
 
 type GradedStudent = {
   id: string;
@@ -69,7 +79,12 @@ function parseAnswerKey(input: string): Record<number, string> {
 }
 
 export default function GradeMaster() {
-  const [layer, setLayer] = useState<Layer>('setup');
+  const [layer, setLayer] = useState<Layer>('home');
+
+  const [sessions, setSessions] = useState<SessionMeta[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true);
+  const [studentList, setStudentList] = useState<string[]>([]);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   const [teacherName, setTeacherName] = useState("");
   const [subject, setSubject] = useState("");
@@ -101,7 +116,59 @@ export default function GradeMaster() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const handleGoToDashboard = () => {
+  useEffect(() => {
+    fetchSessions();
+  }, []);
+
+  const fetchSessions = async () => {
+    setIsLoadingSessions(true);
+    try {
+      const res = await fetch('/api/grademaster');
+      const data = await res.json();
+      if (data.sessions) setSessions(data.sessions);
+    } catch (err) {
+      console.error("Failed to load sessions:", err);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
+
+  const handleSessionClick = (name: string) => {
+    setSessionName(name);
+    setModal('load');
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingDoc(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/parse-document', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal memproses file');
+
+      if (data.students && data.students.length > 0) {
+        setStudentList(data.students);
+        setToast({ message: `${data.students.length} siswa berhasil dimuat!`, type: 'success' });
+      } else {
+        throw new Error('Tidak ada nama siswa ditemukan di dalam file');
+      }
+    } catch (err: any) {
+      setToast({ message: err.message, type: 'error' });
+    } finally {
+      setUploadingDoc(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleGoToDashboard = async () => {
     if (!teacherName.trim()) {
       setToast({ message: 'Nama guru wajib diisi', type: 'error' });
       return;
@@ -114,14 +181,51 @@ export default function GradeMaster() {
       setToast({ message: 'Kelas wajib diisi', type: 'error' });
       return;
     }
+    if (!sessionName.trim()) {
+      setToast({ message: 'Nama sesi wajib diisi', type: 'error' });
+      return;
+    }
+    if (!sessionPassword.trim()) {
+      setToast({ message: 'Password sesi wajib diisi', type: 'error' });
+      return;
+    }
     if (parsedCount === 0) {
-      setToast({ message: 'Kunci jawaban belum valid atau kosong', type: 'error' });
+      setToast({ message: 'Kunci jawaban belum valid', type: 'error' });
       return;
     }
 
     setAnswerKey(parsedPreview);
     setTotalQuestions(parsedCount);
-    setLayer('dashboard');
+    
+    setModalLoading(true);
+    try {
+      const res = await fetch('/api/grademaster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionName: sessionName.trim(),
+          password: sessionPassword.trim(),
+          answerKey: parsedPreview,
+          studentAnswers: userAnswers,
+          essayScores,
+          totalQuestions: parsedCount,
+          gradedStudents,
+          teacherName,
+          subject,
+          className: studentClass,
+          schoolLevel,
+          studentList
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setToast({ message: 'Sesi kelas berhasil dibuat/disimpan', type: 'success' });
+      setLayer('dashboard');
+    } catch (err: any) {
+      setToast({ message: err.message || 'Gagal menyimpan sesi', type: 'error' });
+    } finally {
+      setModalLoading(false);
+    }
   };
 
   const handleStartGradingStudent = () => {
@@ -224,6 +328,11 @@ export default function GradeMaster() {
           essayScores,
           totalQuestions,
           gradedStudents,
+          teacherName,
+          subject,
+          className: studentClass,
+          schoolLevel,
+          studentList
         }),
       });
 
@@ -263,6 +372,11 @@ export default function GradeMaster() {
       setEssayScores(data.essayScores || new Array(ESSAY_COUNT).fill(0));
       setTotalQuestions(data.totalQuestions || 0);
       setGradedStudents(data.gradedStudents || []);
+      setTeacherName(data.teacherName || "");
+      setSubject(data.subject || "");
+      setStudentClass(data.className || "");
+      setSchoolLevel(data.schoolLevel || "SMA");
+      setStudentList(data.studentList || []);
 
       const restoredInput = Object.entries(data.answerKey as Record<string, string>)
         .sort(([a], [b]) => parseInt(a) - parseInt(b))
@@ -300,6 +414,70 @@ export default function GradeMaster() {
   const avgIq = gradedStudents.length > 0 ? Math.round(gradedStudents.reduce((acc, curr) => acc + curr.iq, 0) / gradedStudents.length) : 0;
   const avgScore = gradedStudents.length > 0 ? Math.round(gradedStudents.reduce((acc, curr) => acc + curr.score, 0) / gradedStudents.length) : 0;
 
+  if (layer === 'home') {
+    return (
+      <div className="min-h-screen p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto animate-in">
+        <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <div className="flex items-center gap-3 text-indigo-600 mb-2">
+              <GraduationCap size={32} />
+              <span className="text-sm font-black uppercase tracking-[0.2em]">GradeMaster OS</span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-black text-slate-800 tracking-tight">Kumpulan Kelas</h1>
+            <p className="text-slate-500 font-bold mt-2">Pilih sesi kelas Anda atau buat sesi baru untuk mulai evaluasi.</p>
+          </div>
+          <button onClick={() => { setLayer('setup'); setSessionName(''); setKeyInput(''); setAnswerKey({}); resetAnswers(); setGradedStudents([]); setStudentList([]); }} className="px-6 py-4 bg-indigo-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+            <Plus size={18} /> Buat Sesi Baru
+          </button>
+        </header>
+
+        {isLoadingSessions ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader2 size={40} className="animate-spin text-indigo-500" />
+          </div>
+        ) : sessions.length === 0 ? (
+          <div className="text-center py-20 bg-slate-50 rounded-[3rem] border border-dashed border-slate-200">
+            <FolderOpen size={48} className="mx-auto text-slate-300 mb-4" />
+            <h3 className="text-xl font-black text-slate-700 mb-2">Belum Ada Sesi Kelas</h3>
+            <p className="text-slate-500 font-bold mb-6">Mulai dengan membuat sesi kelas baru untuk menyimpan kunci dan menilai siswa.</p>
+            <button onClick={() => setLayer('setup')} className="px-6 py-3 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors">
+              Buat Sesi Pertama
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sessions.map(s => (
+              <div key={s.id} onClick={() => handleSessionClick(s.session_name)} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-500/10 transition-all cursor-pointer group flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                      <BookOpen size={24} />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full">{s.school_level || 'N/A'}</span>
+                  </div>
+                  <h3 className="text-xl font-black text-slate-800 mb-1 truncate">{s.session_name}</h3>
+                  <p className="text-sm font-bold text-slate-500 truncate">{s.subject || 'Mapel tidak diketahui'}</p>
+                </div>
+                <div className="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+                    <User size={14} />
+                    <span className="truncate max-w-[120px]">{s.teacher_name || 'Guru'}</span>
+                  </div>
+                  <div className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
+                    Kls {s.class_name || '-'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {renderModal()}
+        {renderToast()}
+      </div>
+    );
+  }
+
   if (layer === 'setup') {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 animate-in">
@@ -313,6 +491,33 @@ export default function GradeMaster() {
           </div>
 
           <div className="bg-white rounded-[2.5rem] p-6 sm:p-8 shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                    <FolderOpen size={14} /> Nama Sesi Kelas (Unik)
+                  </label>
+                  <input
+                    type="text"
+                    value={sessionName}
+                    onChange={(e) => setSessionName(e.target.value)}
+                    placeholder="Contoh: UTS Mat 10A"
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
+                  />
+               </div>
+               <div>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                    <Key size={14} /> Password Sesi
+                  </label>
+                  <input
+                    type="password"
+                    value={sessionPassword}
+                    onChange={(e) => setSessionPassword(e.target.value)}
+                    placeholder="Untuk akses & edit"
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
+                  />
+               </div>
+            </div>
+
             <div>
               <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
                 <User size={14} /> Nama Guru
@@ -368,6 +573,34 @@ export default function GradeMaster() {
             </div>
 
             <div>
+              <label className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                <div className="flex items-center gap-2">
+                  <User size={14} /> Daftar Siswa ({studentList.length} Anak)
+                </div>
+                {uploadingDoc && <Loader2 size={14} className="animate-spin text-indigo-500 text-xs" />}
+              </label>
+              <div className="relative">
+                <input
+                   type="file"
+                   accept=".txt,.csv,.xml,.pdf,.docx"
+                   onChange={handleFileUpload}
+                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                />
+                <div className="w-full bg-slate-50 border-2 border-slate-100 border-dashed rounded-2xl p-4 text-sm font-bold text-slate-500 text-center transition-all hover:bg-slate-100 flex flex-col items-center justify-center gap-2">
+                   {studentList.length > 0 ? (
+                      <span className="text-indigo-600 flex items-center gap-2"><CheckCircle2 size={24} className="mb-1" /> {studentList.length} Nama Terekstrak</span>
+                   ) : (
+                      <>
+                        <ClipboardList size={24} className="text-slate-400" />
+                        <span>Klik / Seret file daftar siswa ke sini</span>
+                        <span className="text-[10px] font-normal text-slate-400">Mendukung .PDF, .DOCX, .TXT, .CSV, .XML</span>
+                      </>
+                   )}
+                </div>
+              </div>
+            </div>
+
+            <div>
               <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
                 <Key size={14} /> Kunci Jawaban
               </label>
@@ -407,17 +640,18 @@ export default function GradeMaster() {
 
             <button
               onClick={handleGoToDashboard}
-              className="w-full py-4 bg-indigo-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+              disabled={modalLoading}
+              className="w-full py-4 bg-indigo-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Simpan & Lanjut <ArrowRight size={18} />
+              {modalLoading ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />} Mulai Evaluasi 
             </button>
 
             <div className="pt-4 border-t border-slate-100">
               <button
-                onClick={() => openModal('load')}
+                onClick={() => { setLayer('home'); fetchSessions(); }}
                 className="w-full py-3 bg-slate-50 border border-slate-200 text-slate-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-sky-50 hover:text-sky-600 hover:border-sky-100 transition-all flex items-center justify-center gap-2"
               >
-                <FolderOpen size={14} /> Muat Sesi Tersimpan
+                <ArrowLeft size={14} /> Kembali ke Kumpulan Kelas
               </button>
             </div>
           </div>
@@ -613,7 +847,22 @@ export default function GradeMaster() {
              </div>
              <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nama Siswa</label>
-                <input type="text" value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="Contoh: Ahmad" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"/>
+                {studentList.length > 0 ? (
+                  <select 
+                    value={studentName} 
+                    onChange={(e) => setStudentName(e.target.value)} 
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                  >
+                    <option value="" disabled>Pilih nama siswa...</option>
+                    {studentList
+                      .filter(name => !gradedStudents.find(gs => gs.name.toLowerCase() === name.toLowerCase()))
+                      .map((name, idx) => (
+                        <option key={idx} value={name}>{name}</option>
+                      ))}
+                  </select>
+                ) : (
+                  <input type="text" value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="Contoh: Ahmad" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"/>
+                )}
              </div>
           </section>
 
