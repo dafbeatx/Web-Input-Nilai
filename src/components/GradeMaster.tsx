@@ -240,7 +240,7 @@ export default function GradeMaster() {
 
   if (layer === 'setup') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 animate-in">
+      <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 animate-in">
         <div className="w-full max-w-xl">
           <div className="text-center mb-10">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-100 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 border border-indigo-200">
@@ -250,7 +250,7 @@ export default function GradeMaster() {
             <p className="text-slate-400 text-sm mt-2">Isi data di bawah untuk mulai mengoreksi</p>
           </div>
 
-          <div className="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6">
+          <div className="bg-white rounded-[2.5rem] p-6 sm:p-8 shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6">
             <div>
               <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
                 <User size={14} /> Nama Guru
@@ -340,7 +340,7 @@ export default function GradeMaster() {
   }
 
   return (
-    <div className="p-6 lg:p-10 max-w-7xl mx-auto animate-in">
+    <div className="p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto animate-in">
       <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <button onClick={handleBackToSetup} className="flex items-center gap-2 text-slate-400 hover:text-indigo-600 font-bold text-xs uppercase tracking-widest transition-colors mb-3">
@@ -432,7 +432,7 @@ export default function GradeMaster() {
                   <div key={qNum} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-200 transition-colors">
                     <div className="flex items-center gap-4">
                       <span className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center font-bold text-sm">{qNum}</span>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2 sm:gap-2">
                         {OPTIONS.map(opt => (
                           <div key={opt} className="relative">
                             <input 
@@ -549,7 +549,7 @@ export default function GradeMaster() {
     return (
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeModal}></div>
-        <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 animate-in">
+        <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 sm:p-8 animate-in">
           <button onClick={closeModal} className="absolute top-6 right-6 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-rose-100 hover:text-rose-600 transition-colors">
             <X size={16} />
           </button>

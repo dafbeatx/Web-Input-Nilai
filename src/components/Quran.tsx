@@ -137,7 +137,7 @@ export default function Quran() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto animate-in">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto animate-in">
       <audio 
         ref={audioRef} 
         onEnded={() => setPlayingAudio(null)}
@@ -165,7 +165,7 @@ export default function Quran() {
               <div 
                 key={surah.number} 
                 onClick={() => handleSurahClick(surah)}
-                className="group p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer flex items-center justify-between"
+                className="group p-4 sm:p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer flex items-center justify-between"
               >
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm group-hover:bg-emerald-600 group-hover:text-white transition-colors">
@@ -217,7 +217,7 @@ export default function Quran() {
 
               <div className="space-y-6 pb-10">
                 {selectedSurahDetail.verses.map((verse: Verse) => (
-                  <div key={verse.number.inSurah} className="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                  <div key={verse.number.inSurah} className="p-4 sm:p-6 bg-white rounded-2xl border border-slate-100 shadow-sm">
                     <div className="flex justify-between items-start mb-6">
                       <div className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center text-xs font-bold border border-slate-100">
                         {verse.number.inSurah}
@@ -229,7 +229,7 @@ export default function Quran() {
                         {playingAudio === verse.audio.primary ? <Pause size={18} /> : <Play size={18} />}
                       </button>
                     </div>
-                    <div className="text-right font-arabic text-3xl leading-[2.5] text-slate-800 mb-6" dir="rtl">
+                    <div className="text-right font-arabic text-2xl sm:text-3xl leading-[2.5] text-slate-800 mb-6" dir="rtl">
                       {verse.text.arab}
                     </div>
                     <div className="text-emerald-600 font-medium text-sm mb-2 italic">

@@ -64,7 +64,7 @@ export default function GradeMasterOS() {
         id="launcher" 
         className={`fixed inset-0 z-0 flex flex-col items-center justify-center p-8 transition-all duration-700 ${isBlurred ? "opacity-20 scale-95 blur-sm" : "opacity-100 scale-100"}`}
       >
-        <div className="grid grid-cols-4 gap-8 mb-32 max-w-lg w-full px-4 animate-in">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 sm:gap-8 gap-y-8 mb-32 max-w-lg w-full px-4 animate-in">
           <AppIcon 
             id="grademaster" 
             name="GradeMaster" 
@@ -134,8 +134,8 @@ export default function GradeMasterOS() {
 
 function AppIcon({ id, name, icon, color, onClick }: { id: string, name: string, icon: React.ReactNode, color: string, onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex flex-col items-center gap-3 group">
-      <div className={`w-16 h-16 sm:w-20 sm:h-20 ${color} rounded-[1.5rem] shadow-2xl flex items-center justify-center text-white ring-4 ring-white/10 group-hover:scale-110 transition-transform duration-300`}>
+    <button onClick={onClick} className="flex flex-col items-center gap-2 sm:gap-3 group">
+      <div className={`w-16 h-16 sm:w-20 sm:h-20 ${color} rounded-[1.25rem] sm:rounded-[1.5rem] shadow-2xl flex items-center justify-center text-white ring-4 ring-white/10 group-hover:scale-110 transition-transform duration-300`}>
         {icon}
       </div>
       <span className="text-white text-xs font-bold tracking-wide group-hover:text-indigo-300 transition-colors">{name}</span>

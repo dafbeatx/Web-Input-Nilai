@@ -99,7 +99,7 @@ export default function WeatherApp() {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto animate-in">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto animate-in">
       <header className="mb-8 p-1.5 bg-slate-100/80 backdrop-blur-md rounded-2xl flex gap-1.5 border border-slate-200">
         <TabButton 
           active={activeTab === 'quake'} 
@@ -174,7 +174,7 @@ function QuakeDisplay({ quake }: { quake: QuakeData }) {
     <div className="animate-in space-y-6">
       <div className="relative overflow-hidden bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-rose-500/10">
         <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-        <div className="p-8 relative z-10">
+        <div className="p-6 sm:p-8 relative z-10">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div>
@@ -219,7 +219,7 @@ function WeatherDisplay({ weather }: { weather: WeatherData }) {
 
   return (
     <div className="animate-in space-y-6 pb-10">
-      <div className={`relative overflow-hidden p-8 rounded-[3rem] text-white shadow-2xl ${theme.gradient}`}>
+      <div className={`relative overflow-hidden p-6 sm:p-8 rounded-[3rem] text-white shadow-2xl ${theme.gradient}`}>
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-24 -mt-24 blur-3xl"></div>
         
         <div className="relative z-10">
@@ -254,7 +254,7 @@ function WeatherDisplay({ weather }: { weather: WeatherData }) {
         <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">Prakiraan Selanjutnya</h4>
         <div className="flex gap-4 overflow-x-auto pb-4 px-2 custom-scrollbar">
           {weather.forecast.map((f: WeatherForecast, i: number) => (
-            <div key={i} className="flex-shrink-0 w-28 p-5 bg-white rounded-[2rem] border border-slate-100 shadow-md text-center">
+            <div key={i} className="flex-shrink-0 w-24 sm:w-28 p-4 sm:p-5 bg-white rounded-[2rem] border border-slate-100 shadow-md text-center">
               <p className="text-[9px] font-black text-slate-300 uppercase mb-3">{f.local_datetime.split(' ')[1].substring(0, 5)}</p>
               <img src={f.image} alt="weather" className="w-10 h-10 mx-auto mb-2" />
               <p className="text-base font-black text-slate-800">{f.t}°</p>

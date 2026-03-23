@@ -254,7 +254,7 @@ export default function ComicReader() {
 
   if (view === 'list') {
     return (
-      <div className="p-6 max-w-6xl mx-auto animate-in">
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto animate-in">
         <header className="mb-10 text-center">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-orange-100 text-orange-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 border border-orange-200 shadow-sm">
                 <Globe size={12} /> Powered by MangaDex
@@ -409,7 +409,7 @@ export default function ComicReader() {
             </button>
         </div>
 
-        <div className="max-w-5xl mx-auto px-6 -mt-32 relative z-10">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-32 relative z-10">
             <div className="flex flex-col md:flex-row gap-8">
                 <div className="w-48 md:w-64 shrink-0 mx-auto md:mx-0">
                     <div className="aspect-[3/4] rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white bg-slate-100 relative">
@@ -444,7 +444,7 @@ export default function ComicReader() {
                 </div>
             </div>
 
-            <div className="mt-12 bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm relative overflow-hidden">
+            <div className="mt-12 bg-white rounded-[2.5rem] p-6 sm:p-8 border border-slate-100 shadow-sm relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full -mr-32 -mt-32 blur-3xl mix-blend-multiply"></div>
                 <h3 className="text-xl font-black text-slate-800 mb-4 flex items-center gap-3 relative z-10">
                     <Layout size={20} className="text-orange-500" /> Sinopsis
@@ -543,7 +543,7 @@ export default function ComicReader() {
 
         {/* Floating Reader Navigation Map */}
         {!readerLoading && chapterImages.length > 0 && (
-            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 p-2.5 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl z-[70]">
+            <div className="fixed bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 sm:gap-4 p-2 sm:p-2.5 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl z-[70]">
                 <button className="w-10 h-10 rounded-full flex items-center justify-center bg-white/5 text-white/70 hover:bg-orange-600 hover:text-white transition-all" title="Chapter Sebelumnya">
                      <ChevronLeft size={20} />
                 </button>
