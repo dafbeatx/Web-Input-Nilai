@@ -19,14 +19,17 @@ import {
   User,
   BookOpen,
   Plus,
-  Trash2
+  Trash2,
+  HelpCircle,
+  FileText,
+  PieChart
 } from "lucide-react";
 
 const OPTIONS = ['A', 'B', 'C', 'D'];
 const ESSAY_COUNT = 5;
 const PG_SCORE_MULTIPLIER = 2;
 
-type ModalType = 'save' | 'load' | 'delete' | null;
+type ModalType = 'save' | 'load' | 'delete' | 'about' | null;
 type ToastType = { message: string; type: 'success' | 'error' } | null;
 type Layer = 'home' | 'setup' | 'dashboard' | 'grading';
 
@@ -465,7 +468,16 @@ export default function GradeMaster() {
               <GraduationCap size={24} className="md:w-8 md:h-8" />
               <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em]">GradeMaster OS</span>
             </div>
-            <h1 className="text-2xl md:text-4xl font-black text-slate-800 tracking-tight">Kumpulan Kelas</h1>
+            <h1 className="text-2xl md:text-4xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+              Kumpulan Kelas 
+              <button 
+                onClick={() => setModal('about')} 
+                className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center transition-colors shadow-inner"
+                title="Tentang GradeMaster"
+              >
+                <HelpCircle size={16} className="md:w-5 md:h-5" />
+              </button>
+            </h1>
             <p className="text-sm md:text-base text-slate-500 font-bold mt-1 md:mt-2">Pilih sesi kelas Anda atau buat sesi baru untuk mulai evaluasi.</p>
           </div>
           <button onClick={() => { setLayer('setup'); setSessionName(''); setKeyInput(''); setAnswerKey({}); resetAnswers(); setGradedStudents([]); setStudentList([]); }} className="px-4 py-3 md:px-6 md:py-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
@@ -478,12 +490,36 @@ export default function GradeMaster() {
             <Loader2 size={32} className="animate-spin text-indigo-500 md:w-10 md:h-10" />
           </div>
         ) : sessions.length === 0 ? (
-          <div className="text-center py-12 md:py-20 bg-slate-50 rounded-2xl md:rounded-[3rem] border border-dashed border-slate-200">
-            <FolderOpen size={36} className="mx-auto text-slate-300 mb-3 md:mb-4 md:w-12 md:h-12" />
-            <h3 className="text-lg md:text-xl font-black text-slate-700 mb-1 md:mb-2">Belum Ada Sesi Kelas</h3>
-            <p className="text-xs md:text-sm text-slate-500 font-bold mb-4 md:mb-6">Mulai dengan membuat sesi kelas baru untuk menyimpan kunci dan menilai siswa.</p>
-            <button onClick={() => setLayer('setup')} className="px-4 py-2.5 md:px-6 md:py-3 bg-indigo-50 text-indigo-600 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors">
-              Buat Sesi Pertama
+          <div className="text-center py-10 md:py-16 bg-white rounded-2xl md:rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/50 w-full max-w-4xl mx-auto px-4 md:px-8">
+            <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-indigo-50 text-indigo-600 rounded-2xl mb-4 md:mb-6">
+               <GraduationCap size={28} className="md:w-8 md:h-8" />
+            </div>
+            <h3 className="text-xl md:text-3xl font-black text-slate-800 mb-2 md:mb-3 font-outfit">Selamat Datang di GradeMaster OS</h3>
+            <p className="text-xs md:text-sm text-slate-500 font-bold mb-6 md:mb-10 max-w-2xl mx-auto leading-relaxed">
+              Platform koreksi lembar jawaban dan analitik kognitif cerdas untuk pendidik modern. 
+              Tinggalkan cara manual, kini Anda dapat mengelola puluhan kelas hanya dengan beberapa klik.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12 text-left">
+              <div className="p-4 md:p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                <FileText size={20} className="text-sky-500 mb-3 md:w-6 md:h-6" />
+                <h4 className="text-sm font-black text-slate-700 mb-1.5">Ekstraksi Pintar</h4>
+                <p className="text-[10px] md:text-xs text-slate-500 font-bold leading-relaxed">Upload file absen format PDF, Word, atau Excel. GradeMaster akan membersihkan dan menyusunnya otomatis.</p>
+              </div>
+              <div className="p-4 md:p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                <CheckCircle2 size={20} className="text-emerald-500 mb-3 md:w-6 md:h-6" />
+                <h4 className="text-sm font-black text-slate-700 mb-1.5">Koreksi Kilat</h4>
+                <p className="text-[10px] md:text-xs text-slate-500 font-bold leading-relaxed">Ketik kunci jawaban secara acak atau tempel dari sumber mana saja, sistem akan memahaminya dalam sedetik.</p>
+              </div>
+              <div className="p-4 md:p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                <PieChart size={20} className="text-indigo-500 mb-3 md:w-6 md:h-6" />
+                <h4 className="text-sm font-black text-slate-700 mb-1.5">Analitik Kognitif</h4>
+                <p className="text-[10px] md:text-xs text-slate-500 font-bold leading-relaxed">Lebih dari sekadar angka. Dapatkan estimasi IQ dan pemahaman materi secara prediktif dari hasil tiap siswa.</p>
+              </div>
+            </div>
+
+            <button onClick={() => setLayer('setup')} className="px-6 py-3.5 md:px-8 md:py-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-indigo-600/20 inline-flex items-center gap-2">
+              <Plus size={16} /> Buat Sesi Kelas Perdana
             </button>
           </div>
         ) : (
@@ -1087,6 +1123,52 @@ export default function GradeMaster() {
 
   function renderModal() {
     if (!modal) return null;
+
+    if (modal === 'about') {
+       return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={closeModal}></div>
+          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 md:p-8 animate-in overflow-hidden">
+            <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-br from-indigo-500 to-purple-600 pointer-events-none"></div>
+            <button onClick={closeModal} className="absolute top-4 right-4 md:top-6 md:right-6 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/40 transition-colors z-10">
+              <X size={16} />
+            </button>
+  
+            <div className="relative z-10 flex flex-col items-center text-center mt-6">
+               <div className="w-16 h-16 md:w-20 md:h-20 bg-white shadow-xl rounded-2xl flex items-center justify-center text-indigo-600 mb-4 md:mb-5 ring-4 ring-white/50">
+                  <GraduationCap size={36} className="md:w-10 md:h-10" />
+               </div>
+               <h3 className="font-outfit font-black text-xl md:text-3xl text-slate-800 tracking-tight">GradeMaster OS</h3>
+               <p className="text-xs md:text-sm font-bold text-slate-500 mt-2 leading-relaxed">Sistem Koreksi Pilihan Ganda & Analitik Kognitif modern untuk membantu guru memproses nilai dan memprediksi potensi siswa secara real-time.</p>
+            </div>
+            
+            <div className="relative z-10 mt-8 space-y-4 text-left">
+               <div className="flex gap-3 md:gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100 items-start">
+                  <div className="w-8 h-8 shrink-0 bg-sky-100 text-sky-600 rounded-full flex items-center justify-center"><FileText size={16} /></div>
+                  <div>
+                    <h5 className="text-[11px] md:text-xs font-black uppercase tracking-widest text-slate-700 mb-1">Upload Berkas Bebas</h5>
+                    <p className="text-[10px] md:text-xs font-bold text-slate-500">Mampu mengekstrak ratusan daftar nama langsung dari pindaian rapor PDF, skema XML, hingga dokumen Word.</p>
+                  </div>
+               </div>
+               <div className="flex gap-3 md:gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100 items-start">
+                  <div className="w-8 h-8 shrink-0 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center"><PieChart size={16} /></div>
+                  <div>
+                    <h5 className="text-[11px] md:text-xs font-black uppercase tracking-widest text-slate-700 mb-1">Analitik Prediktif</h5>
+                    <p className="text-[10px] md:text-xs font-bold text-slate-500">Aplikasi mengkalkulasi rasio soal sulit dan mendeteksi skor IQ hingga tingkat pemahaman masing-masing siswa.</p>
+                  </div>
+               </div>
+            </div>
+  
+            <div className="relative z-10 mt-8">
+               <button onClick={closeModal} className="w-full py-3.5 bg-slate-900 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:scale-[1.02] active:scale-95 transition-all">
+                  Tutup Informasi
+               </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeModal}></div>
