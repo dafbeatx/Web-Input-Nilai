@@ -9,15 +9,35 @@ CREATE TABLE IF NOT EXISTS public.grade_keys (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Note: Jika ingin menggunakan Row Level Security (RLS) di masa depan,
--- Anda dapat mengaktifkannya di sini. Untuk saat ini, kita menggunakan 
--- password-logic di sisi client untuk membatasi akses muat data.
 ALTER TABLE public.grade_keys ENABLE ROW LEVEL SECURITY;
 
--- Policy dasar: Izinkan akses anonim untuk demo (karena logic password ada di JS)
--- PENTING: Untuk produksi, sebaiknya perketat policy ini!
 DROP POLICY IF EXISTS "Allow anonymous read/write" ON public.grade_keys;
 CREATE POLICY "Allow anonymous read/write" ON public.grade_keys
+    FOR ALL
+    TO anon
+    USING (true)
+    WITH CHECK (true);
+
+-- TABEL: grade_sessions
+-- Menyimpan sesi koreksi lengkap (kunci jawaban + jawaban siswa + skor essay)
+
+CREATE TABLE IF NOT EXISTS public.grade_sessions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    session_name TEXT NOT NULL,
+    password TEXT NOT NULL,
+    answer_key JSONB NOT NULL DEFAULT '{}',
+    student_answers JSONB NOT NULL DEFAULT '{}',
+    essay_scores JSONB NOT NULL DEFAULT '[]',
+    total_questions INTEGER NOT NULL DEFAULT 40,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    UNIQUE(session_name)
+);
+
+ALTER TABLE public.grade_sessions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow anonymous access grade_sessions" ON public.grade_sessions;
+CREATE POLICY "Allow anonymous access grade_sessions" ON public.grade_sessions
     FOR ALL
     TO anon
     USING (true)

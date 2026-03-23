@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Key, 
   RotateCcw, 
@@ -9,7 +9,11 @@ import {
   XCircle, 
   LayoutGrid,
   ClipboardList,
-  GraduationCap
+  GraduationCap,
+  FolderOpen,
+  X,
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 
 const OPTIONS = ['A', 'B', 'C', 'D', 'E'];
@@ -27,6 +31,9 @@ const defaultAnswerKey: Record<number, string> = {
   36: 'B', 37: 'B', 38: 'C', 39: 'B', 40: 'A'
 };
 
+type ModalType = 'save' | 'load' | null;
+type ToastType = { message: string; type: 'success' | 'error' } | null;
+
 export default function GradeMaster() {
   const [answerKey, setAnswerKey] = useState<Record<number, string>>(defaultAnswerKey);
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
@@ -34,13 +41,25 @@ export default function GradeMaster() {
   const [keyInput, setKeyInput] = useState("");
   const [totalQuestions, setTotalQuestions] = useState(40);
 
+  const [modal, setModal] = useState<ModalType>(null);
+  const [sessionName, setSessionName] = useState("");
+  const [sessionPassword, setSessionPassword] = useState("");
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalError, setModalError] = useState("");
+  const [toast, setToast] = useState<ToastType>(null);
+
   useEffect(() => {
-    // Initialize key input string from default key
     const initialInput = Object.entries(defaultAnswerKey)
       .map(([k, v]: [string, string]) => `${k}.${v}`)
       .join(' ');
     setKeyInput(initialInput);
   }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   const handleKeyInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
@@ -92,6 +111,100 @@ export default function GradeMaster() {
     setEssayScores(new Array(ESSAY_COUNT).fill(0) as number[]);
   };
 
+  const openModal = (type: ModalType) => {
+    setModal(type);
+    setSessionName("");
+    setSessionPassword("");
+    setModalError("");
+  };
+
+  const closeModal = () => {
+    setModal(null);
+    setSessionName("");
+    setSessionPassword("");
+    setModalError("");
+    setModalLoading(false);
+  };
+
+  const handleSaveSession = async () => {
+    if (!sessionName.trim() || !sessionPassword.trim()) {
+      setModalError("Nama sesi dan password wajib diisi");
+      return;
+    }
+
+    setModalLoading(true);
+    setModalError("");
+
+    try {
+      const res = await fetch('/api/grademaster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionName: sessionName.trim(),
+          password: sessionPassword.trim(),
+          answerKey,
+          studentAnswers: userAnswers,
+          essayScores,
+          totalQuestions,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Gagal menyimpan');
+      }
+
+      setToast({ message: data.message || 'Sesi berhasil disimpan!', type: 'success' });
+      closeModal();
+    } catch (err: any) {
+      setModalError(err.message);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleLoadSession = async () => {
+    if (!sessionName.trim() || !sessionPassword.trim()) {
+      setModalError("Nama sesi dan password wajib diisi");
+      return;
+    }
+
+    setModalLoading(true);
+    setModalError("");
+
+    try {
+      const params = new URLSearchParams({
+        name: sessionName.trim(),
+        password: sessionPassword.trim(),
+      });
+
+      const res = await fetch(`/api/grademaster?${params.toString()}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Gagal memuat sesi');
+      }
+
+      setAnswerKey(data.answerKey);
+      setUserAnswers(data.studentAnswers || {});
+      setEssayScores(data.essayScores || new Array(ESSAY_COUNT).fill(0));
+      setTotalQuestions(data.totalQuestions || 40);
+
+      const restoredInput = Object.entries(data.answerKey as Record<string, string>)
+        .map(([k, v]) => `${k}.${v}`)
+        .join(' ');
+      setKeyInput(restoredInput);
+
+      setToast({ message: `Sesi "${data.sessionName}" berhasil dimuat!`, type: 'success' });
+      closeModal();
+    } catch (err: any) {
+      setModalError(err.message);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
   const correctCount = Object.keys(userAnswers).filter(k => {
     const qNum = parseInt(k);
     return userAnswers[qNum] === answerKey[qNum];
@@ -122,7 +235,10 @@ export default function GradeMaster() {
             <button onClick={resetAll} className="px-6 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all flex items-center gap-2">
                 <RotateCcw size={14} /> Reset
             </button>
-            <button className="px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+            <button onClick={() => openModal('load')} className="px-6 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-sky-50 hover:text-sky-600 hover:border-sky-100 transition-all flex items-center gap-2">
+                <FolderOpen size={14} /> Muat Sesi
+            </button>
+            <button onClick={() => openModal('save')} className="px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
                 <Save size={14} /> Simpan Sesi
             </button>
         </div>
@@ -289,6 +405,92 @@ export default function GradeMaster() {
           </div>
         </aside>
       </main>
+
+      {/* Save/Load Modal */}
+      {modal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeModal}></div>
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 animate-in">
+            <button onClick={closeModal} className="absolute top-6 right-6 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-rose-100 hover:text-rose-600 transition-colors">
+              <X size={16} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${modal === 'save' ? 'bg-indigo-600' : 'bg-sky-600'}`}>
+                {modal === 'save' ? <Save size={20} /> : <FolderOpen size={20} />}
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800 text-lg">{modal === 'save' ? 'Simpan Sesi' : 'Muat Sesi'}</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  {modal === 'save' ? 'Simpan data koreksi ke database' : 'Muat data koreksi dari database'}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nama Sesi</label>
+                <input
+                  type="text"
+                  value={sessionName}
+                  onChange={(e) => { setSessionName(e.target.value); setModalError(""); }}
+                  placeholder="Contoh: UTS Kelas 10A"
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Password</label>
+                <input
+                  type="password"
+                  value={sessionPassword}
+                  onChange={(e) => { setSessionPassword(e.target.value); setModalError(""); }}
+                  placeholder="Masukkan password"
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
+                  onKeyDown={(e) => e.key === 'Enter' && (modal === 'save' ? handleSaveSession() : handleLoadSession())}
+                />
+              </div>
+
+              {modalError && (
+                <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-100 rounded-xl">
+                  <AlertCircle size={16} className="text-rose-500 shrink-0" />
+                  <p className="text-xs font-bold text-rose-600">{modalError}</p>
+                </div>
+              )}
+
+              <button
+                onClick={modal === 'save' ? handleSaveSession : handleLoadSession}
+                disabled={modalLoading}
+                className={`w-full py-3.5 rounded-xl text-white text-sm font-black uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  modal === 'save' 
+                    ? 'bg-indigo-600 shadow-indigo-600/20 hover:scale-[1.02] active:scale-95' 
+                    : 'bg-sky-600 shadow-sky-600/20 hover:scale-[1.02] active:scale-95'
+                }`}
+              >
+                {modalLoading ? (
+                  <><Loader2 size={16} className="animate-spin" /> Memproses...</>
+                ) : modal === 'save' ? (
+                  <><Save size={16} /> Simpan</>
+                ) : (
+                  <><FolderOpen size={16} /> Muat</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[300] px-6 py-3 rounded-2xl shadow-2xl text-sm font-bold flex items-center gap-2 animate-in ${
+          toast.type === 'success' 
+            ? 'bg-emerald-600 text-white shadow-emerald-600/30' 
+            : 'bg-rose-600 text-white shadow-rose-600/30'
+        }`}>
+          {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }
