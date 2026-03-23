@@ -60,9 +60,13 @@ function parseAnswerKey(input: string): Record<number, string> {
 export default function GradeMaster() {
   const [layer, setLayer] = useState<Layer>('setup');
 
-  const [studentName, setStudentName] = useState("");
+  const [teacherName, setTeacherName] = useState("");
   const [subject, setSubject] = useState("");
   const [keyInput, setKeyInput] = useState("");
+
+  const [studentName, setStudentName] = useState("");
+  const [studentClass, setStudentClass] = useState("");
+  const [schoolLevel, setSchoolLevel] = useState("SMA");
 
   const [answerKey, setAnswerKey] = useState<Record<number, string>>({});
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
@@ -86,8 +90,8 @@ export default function GradeMaster() {
   }, [toast]);
 
   const handleStartGrading = () => {
-    if (!studentName.trim()) {
-      setToast({ message: 'Nama siswa wajib diisi', type: 'error' });
+    if (!teacherName.trim()) {
+      setToast({ message: 'Nama guru wajib diisi', type: 'error' });
       return;
     }
     if (!subject.trim()) {
@@ -126,6 +130,7 @@ export default function GradeMaster() {
   const resetAnswers = () => {
     setUserAnswers({});
     setEssayScores(new Array(ESSAY_COUNT).fill(0) as number[]);
+    setStudentName("");
   };
 
   const openModal = (type: ModalType) => {
@@ -248,13 +253,13 @@ export default function GradeMaster() {
           <div className="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6">
             <div>
               <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-                <User size={14} /> Nama Siswa
+                <User size={14} /> Nama Guru
               </label>
               <input
                 type="text"
-                value={studentName}
-                onChange={(e) => setStudentName(e.target.value)}
-                placeholder="Contoh: Ahmad Fauzi"
+                value={teacherName}
+                onChange={(e) => setTeacherName(e.target.value)}
+                placeholder="Contoh: Budi Santoso"
                 className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300"
               />
             </div>
@@ -345,7 +350,7 @@ export default function GradeMaster() {
             <GraduationCap size={24} />
             <span className="text-xs font-black uppercase tracking-[0.2em]">Koreksi Otomatis</span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight">{studentName}</h1>
+          <h1 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight">{teacherName}</h1>
           <p className="text-sm text-slate-400 font-bold mt-1">{subject} • {totalQuestions} Soal PG</p>
         </div>
         
@@ -361,6 +366,35 @@ export default function GradeMaster() {
 
       <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <div className="lg:col-span-8 space-y-8">
+          <section className="bg-white rounded-[2.5rem] p-6 md:p-8 border border-slate-100 shadow-sm">
+             <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-sky-100 text-sky-600 rounded-xl flex items-center justify-center">
+                  <User size={20} />
+                </div>
+                <div>
+                  <h2 className="font-bold text-slate-800">Data Siswa</h2>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Identitas untuk format nilai</p>
+                </div>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nama Siswa</label>
+                   <input type="text" value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="Contoh: Ahmad" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"/>
+                </div>
+                <div>
+                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Kelas</label>
+                   <input type="text" value={studentClass} onChange={(e) => setStudentClass(e.target.value)} placeholder="Contoh: 10A" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"/>
+                </div>
+                <div>
+                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Tingkat</label>
+                   <select value={schoolLevel} onChange={(e) => setSchoolLevel(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all cursor-pointer">
+                      <option value="SMP">SMP</option>
+                      <option value="SMA">SMA</option>
+                   </select>
+                </div>
+             </div>
+          </section>
+
           <section className="space-y-4">
             <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
@@ -429,10 +463,19 @@ export default function GradeMaster() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-bl-full -z-10 group-hover:bg-indigo-500/20 transition-colors"></div>
             
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Skor Akhir</p>
-            <div className="flex items-end gap-3 mb-8">
+            <div className="flex items-end gap-3 mb-6">
               <span className="text-7xl font-black text-slate-900 leading-none">{finalScore}</span>
               <span className="text-slate-300 font-bold mb-1">/ {maxScore}</span>
             </div>
+
+            {studentName.trim() && studentClass.trim() && (
+              <div className="mb-6 p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100/50">
+                 <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1">Format Nama</p>
+                 <p className="text-sm font-bold text-indigo-700 break-all select-all">
+                   {`${studentName}_${studentClass}_${schoolLevel}`.replace(/\s+/g, '_')}
+                 </p>
+              </div>
+            )}
 
             <div className="mb-8 p-6 bg-slate-900 rounded-[2rem] text-white overflow-hidden relative">
               <div className="flex items-center justify-between mb-4">
