@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Users, Search, PlusCircle, MinusCircle, AlertCircle, Save, Loader2, UserPlus, FileText } from 'lucide-react';
+import { ArrowLeft, Users, Search, PlusCircle, MinusCircle, AlertCircle, Save, Loader2, UserPlus, FileText, LayoutGrid } from 'lucide-react';
 import { ToastType } from '@/lib/grademaster/types';
 
 interface BehaviorStudent {
@@ -32,14 +32,36 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
   // Modal State
   const [selectedStudent, setSelectedStudent] = useState<BehaviorStudent | null>(null);
 
-  const fetchStudents = async () => {
-    if (!className.trim() || !academicYear.trim()) {
+  // Class Overview
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  const [isLoadingClasses, setIsLoadingClasses] = useState(false);
+
+  useEffect(() => {
+    fetchAvailableClasses();
+  }, [academicYear]);
+
+  const fetchAvailableClasses = async () => {
+    setIsLoadingClasses(true);
+    try {
+      const res = await fetch(`/api/grademaster/behaviors?year=${encodeURIComponent(academicYear)}`);
+      const data = await res.json();
+      if (res.ok) setAvailableClasses(data.classes || []);
+    } catch {
+      // ignore
+    } finally {
+      setIsLoadingClasses(false);
+    }
+  };
+
+  const loadClassDirectly = async (targetClass: string, targetYear: string) => {
+    if (!targetClass.trim() || !targetYear.trim()) {
       setToast({ message: "Kelas dan Tahun Ajaran wajib diisi", type: "error" });
       return;
     }
+    setClassName(targetClass);
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(className)}&year=${encodeURIComponent(academicYear)}`);
+      const res = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(targetClass)}&year=${encodeURIComponent(targetYear)}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
@@ -51,6 +73,8 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
       setIsLoading(false);
     }
   };
+
+  const fetchStudents = () => loadClassDirectly(className, academicYear);
 
   const handleCreateNewClass = async () => {
     if (!studentInput.trim()) {
@@ -75,6 +99,9 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
       if (!res.ok) throw new Error(data.error);
 
       setStudents(data.students || []);
+      if (!availableClasses.includes(className)) {
+        setAvailableClasses(prev => [...prev, className]);
+      }
       setToast({ message: "Siswa berhasil ditambahkan dan poin di-reset ke 100", type: "success" });
     } catch (err: any) {
       setToast({ message: err.message || "Gagal menyimpan data siswa", type: "error" });
@@ -131,6 +158,42 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
           </button>
         </div>
       </div>
+
+      {/* CLASS OVERVIEW SECTION (Only visible when no specific class is loaded) */}
+      {!isLoaded && (
+        <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-xs md:text-sm font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><LayoutGrid size={16} /> Daftar Kelas Tersedia</h2>
+            <div className="h-px bg-slate-200 flex-1 ml-4" />
+          </div>
+          
+          {isLoadingClasses ? (
+            <div className="flex justify-center items-center py-10">
+              <Loader2 size={24} className="animate-spin text-indigo-500" />
+            </div>
+          ) : availableClasses.length > 0 ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+              {availableClasses.map(cls => (
+                <button
+                  key={cls}
+                  onClick={() => loadClassDirectly(cls, academicYear)}
+                  className="bg-white border-2 border-slate-100 p-4 md:p-6 rounded-2xl md:rounded-3xl hover:border-indigo-500 hover:shadow-xl hover:shadow-indigo-500/10 transition-all text-center group flex flex-col items-center justify-center outline-none focus:border-indigo-500"
+                >
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mb-3 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    <Users size={20} className="md:w-6 md:h-6" />
+                  </div>
+                  <h3 className="font-black text-slate-800 text-base md:text-lg">{cls}</h3>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center p-8 bg-white border border-slate-100 rounded-3xl">
+              <p className="text-slate-500 font-bold text-sm">Belum ada kelas terdaftar di tahun ajaran ini.</p>
+              <p className="text-slate-400 text-xs mt-1">Silakan ketikkan nama Kelas di atas lalu klik Muat Data untuk membuat referensi kelas baru.</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* CONTENT SECTION */}
       {isLoaded && students.length === 0 && (

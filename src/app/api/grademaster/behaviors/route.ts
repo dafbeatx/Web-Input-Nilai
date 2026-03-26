@@ -8,8 +8,20 @@ export async function GET(req: NextRequest) {
     const className = searchParams.get('class');
     const academicYear = searchParams.get('year');
 
-    if (!className || !academicYear) {
-      return NextResponse.json({ error: 'Parameter kelas dan tahun ajaran wajib diisi' }, { status: 400 });
+    if (!className) {
+      const year = academicYear || "2025/2026";
+      const { data, error } = await supabase
+        .from('gm_behaviors')
+        .select('class_name')
+        .eq('academic_year', year);
+
+      if (error) throw error;
+      const classes = Array.from(new Set(data?.map(d => d.class_name) || []));
+      return NextResponse.json({ classes });
+    }
+
+    if (!academicYear) {
+      return NextResponse.json({ error: 'Tahun ajaran wajib diisi' }, { status: 400 });
     }
 
     const { data, error } = await supabase
