@@ -9,25 +9,31 @@ export async function handleUserCommand(chatId: number, text: string) {
     userConversations.delete(chatId);
     await sendMessage(
       chatId,
-      `🎓 <b>GradeMaster Bot</b>\n\n` +
-      `Selamat datang! Bot ini membantu Anda melihat hasil nilai ujian.\n\n` +
-      `📊 /nilai — Cari nilai Anda\n` +
-      `ℹ️ /help — Bantuan`
+      `🎓 <b>Selamat Datang di GradeMaster Bot</b>\n\n` +
+      `Bot ini dirancang khusus untuk memudahkan Anda (Siswa/Orang Tua) dalam melihat hasil nilai ujian secara mandiri.\n\n` +
+      `📝 <b>Cara Penggunaan:</b>\n` +
+      `1. Ketik /nilai atau klik tombol di bawah.\n` +
+      `2. Pilih <b>Kelas</b> Anda (contoh: 9A).\n` +
+      `3. Pilih <b>Mata Pelajaran</b>.\n` +
+      `4. Pilih <b>Jenis Ujian</b> (UTS/UAS/PAS).\n` +
+      `5. Pilih <b>Tahun Ajaran</b>.\n` +
+      `6. Masukkan <b>Nama Lengkap</b> Anda sesuai absen.\n\n` +
+      `Sistem akan menampilkan Detail Nilai, Ranking, dan Statistik Kelas Anda secara otomatis.`
     );
-    return;
+    // Auto-trigger /nilai for better UX
+    return handleUserCommand(chatId, '/nilai');
   }
 
   if (text === '/help') {
     await sendMessage(
       chatId,
-      `📖 <b>Cara Menggunakan Bot</b>\n\n` +
-      `1. Ketik /nilai\n` +
-      `2. Pilih kelas Anda\n` +
-      `3. Pilih mata pelajaran\n` +
-      `4. Pilih jenis ujian (UTS/UAS)\n` +
-      `5. Pilih tahun ajaran\n` +
-      `6. Masukkan nama Anda\n` +
-      `7. Sistem akan menampilkan nilai Anda`
+      `📖 <b>Panduan Lengkap Pencarian Nilai:</b>\n\n` +
+      `Pastikan Anda menyiapkan data berikut:\n` +
+      `• <b>Nama Lengkap:</b> Harus sesuai dengan yang terdaftar di sekolah.\n` +
+      `• <b>Kelas:</b> Pilih dari daftar yang tersedia.\n` +
+      `• <b>Mata Pelajaran:</b> Pilih dari daftar sesi yang aktif.\n\n` +
+      `Jika nilai belum muncul, kemungkinan Admin belum meng-upload hasil untuk sesi tersebut.\n\n` +
+      `Ketik /nilai untuk memulai.`
     );
     return;
   }
@@ -40,27 +46,27 @@ export async function handleUserCommand(chatId: number, text: string) {
       .order('class_name');
 
     if (!sessions || sessions.length === 0) {
-      await sendMessage(chatId, '📭 Belum ada data kelas tersedia.');
+      await sendMessage(chatId, '📭 <b>Maaf,</b> saat ini belum ada data kelas yang tersedia di sistem.');
       return;
     }
 
     const uniqueClasses = [...new Set(sessions.map(s => s.class_name).filter(Boolean))];
     if (uniqueClasses.length === 0) {
-      await sendMessage(chatId, '📭 Belum ada data kelas tersedia.');
+      await sendMessage(chatId, '📭 <b>Maaf,</b> saat ini belum ada data kelas yang tersedia di sistem.');
       return;
     }
 
     const keyboard = [];
     for (let i = 0; i < uniqueClasses.length; i += 3) {
       const row = uniqueClasses.slice(i, i + 3).map(c => ({
-        text: `Kelas ${c}`,
+        text: `📍 Kelas ${c}`,
         callback_data: `user_class::${c}`,
       }));
       keyboard.push(row);
     }
 
     userConversations.set(chatId, { step: 'waiting_class', data: {} });
-    await sendInlineKeyboard(chatId, '🏫 Pilih <b>kelas</b> Anda:', keyboard);
+    await sendInlineKeyboard(chatId, '🏫 <b>Langkah 1:</b> Silakan pilih <b>Kelas</b> Anda:', keyboard);
     return;
   }
 
@@ -69,7 +75,7 @@ export async function handleUserCommand(chatId: number, text: string) {
     return;
   }
 
-  await sendMessage(chatId, '📊 Ketik /nilai untuk mencari nilai Anda, atau /help untuk bantuan.');
+  await sendMessage(chatId, '🤖 Maaf, saya tidak mengerti perintah tersebut. Silakan ketik /nilai untuk mencari nilai.');
 }
 
 export async function handleUserCallback(chatId: number, callbackData: string) {
@@ -84,14 +90,14 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
 
     const uniqueSubjects = [...new Set((sessions || []).map(s => s.subject).filter(Boolean))];
     if (uniqueSubjects.length === 0) {
-      await sendMessage(chatId, '📭 Tidak ada data mata pelajaran untuk kelas ini.');
+      await sendMessage(chatId, `📭 Tidak ada data mata pelajaran untuk <b>Kelas ${value}</b>.`);
       userConversations.delete(chatId);
       return;
     }
 
     const keyboard = uniqueSubjects.map(s => [{ text: `📚 ${s}`, callback_data: `user_subject::${s}` }]);
     userConversations.set(chatId, { step: 'waiting_subject', data: { className: value } });
-    await sendInlineKeyboard(chatId, '📚 Pilih <b>mata pelajaran</b>:', keyboard);
+    await sendInlineKeyboard(chatId, '📚 <b>Langkah 2:</b> Pilih <b>Mata Pelajaran</b>:', keyboard);
     return;
   }
 
@@ -105,14 +111,14 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
 
     const uniqueExamTypes = [...new Set((sessions || []).map(s => s.exam_type).filter(Boolean))];
     if (uniqueExamTypes.length === 0) {
-      await sendMessage(chatId, '📭 Tidak ada data ujian untuk filter ini.');
+      await sendMessage(chatId, '📭 Data ujian tidak ditemukan.');
       userConversations.delete(chatId);
       return;
     }
 
     const keyboard = uniqueExamTypes.map(e => [{ text: `📝 ${e}`, callback_data: `user_exam::${e}` }]);
     conv.step = 'waiting_exam';
-    await sendInlineKeyboard(chatId, '📝 Pilih <b>jenis ujian</b>:', keyboard);
+    await sendInlineKeyboard(chatId, '📝 <b>Langkah 3:</b> Pilih <b>Jenis Ujian</b>:', keyboard);
     return;
   }
 
@@ -127,21 +133,21 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
 
     const uniqueYears = [...new Set((sessions || []).map(s => s.academic_year).filter(Boolean))];
     if (uniqueYears.length === 0) {
-      await sendMessage(chatId, '📭 Tidak ada data tahun ajaran untuk filter ini.');
+      await sendMessage(chatId, '📭 Data tahun ajaran tidak dtemukan.');
       userConversations.delete(chatId);
       return;
     }
 
     const keyboard = uniqueYears.map(y => [{ text: `📅 ${y}`, callback_data: `user_year::${y}` }]);
     conv.step = 'waiting_year';
-    await sendInlineKeyboard(chatId, '📅 Pilih <b>tahun ajaran</b>:', keyboard);
+    await sendInlineKeyboard(chatId, '📅 <b>Langkah 4:</b> Pilih <b>Tahun Ajaran</b>:', keyboard);
     return;
   }
 
   if (action === 'user_year' && value && conv) {
     conv.data.academicYear = value;
     conv.step = 'waiting_name';
-    await sendMessage(chatId, '👤 Masukkan <b>nama Anda</b> (sesuai nama di daftar absen):');
+    await sendMessage(chatId, '👤 <b>Langkah Terakhir:</b>\n\nSilakan masukkan <b>Nama Lengkap Anda</b> (sesuai daftar absen):');
     return;
   }
 }
@@ -164,7 +170,7 @@ async function handleUserConversation(
       .single();
 
     if (!session) {
-      await sendMessage(chatId, '❌ Sesi tidak ditemukan dengan filter tersebut.');
+      await sendMessage(chatId, '❌ <b>Sesi tidak ditemukan.</b> Silakan ulangi pencarian dengan filter yang benar.');
       userConversations.delete(chatId);
       return;
     }
@@ -176,7 +182,7 @@ async function handleUserConversation(
       .order('final_score', { ascending: false });
 
     if (!students || students.length === 0) {
-      await sendMessage(chatId, '📭 Belum ada data nilai untuk sesi ini.');
+      await sendMessage(chatId, '📭 <b>Maaf,</b> data nilai belum dimasukkan oleh admin untuk sesi ini.');
       userConversations.delete(chatId);
       return;
     }
@@ -186,7 +192,7 @@ async function handleUserConversation(
     if (!match) {
       await sendMessage(
         chatId,
-        `❌ Nama "<b>${text.trim()}</b>" tidak ditemukan.\n\nPastikan nama sesuai daftar absen.`
+        `❌ Nama "<b>${text.trim()}</b>" tidak ditemukan di <b>Kelas ${session.class_name}</b>.\n\nPastikan nama sesuai daftar absen.`
       );
       userConversations.delete(chatId);
       return;
@@ -207,23 +213,30 @@ async function handleUserConversation(
 
     await sendMessage(
       chatId,
-      `📊 <b>Hasil Nilai</b>\n\n` +
-      `🏫 ${session.class_name} (${session.school_level}) • ${session.subject}\n` +
+      `📊 <b>HASIL NILAI EXAM</b>\n\n` +
+      `🏫 <b>${session.class_name}</b> (${session.school_level}) • ${session.subject}\n` +
       `📝 ${session.exam_type} • TA ${session.academic_year}\n` +
       `👤 Guru: ${session.teacher}\n` +
       `━━━━━━━━━━━━━━━━\n\n` +
-      `👤 <b>${match.name}</b>\n` +
+      `👤 Nama: <b>${match.name}</b>\n` +
       `${emoji} Nilai Akhir: <b>${finalScore}</b>\n` +
       `📋 PG: ${match.mcq_score} • Essay: ${match.essay_score}\n` +
       `✅ Benar: ${match.correct} • ❌ Salah: ${match.wrong}\n` +
       `🏆 Ranking: <b>${rank}</b> dari ${totalStudents} siswa\n\n` +
       `━━━━━━━━━━━━━━━━\n` +
-      `📈 <b>Statistik Kelas</b>\n` +
-      `📊 Rata-rata (Mean): ${avg}\n` +
+      `📈 <b>STATISTIK KELAS</b>\n` +
+      `📊 Rata-rata: ${avg}\n` +
       `📊 Median: ${median}\n` +
-      `📊 Nilai Tertinggi: ${maxScore}\n\n` +
-      `Ketik /nilai untuk mencari nilai lain.`
+      `📊 Tertinggi: ${maxScore}\n\n` +
+      `<i>Jika ingin melihat nilai yang lain, silakan klik tombol di bawah untuk memilih kelas kembali.</i>`
     );
+    
+    // Suggest next actions
+    await sendInlineKeyboard(chatId, '⬇️ <b>Navigasi:</b>', [
+      [{ text: `🏫 Kembali ke Kelas ${session.class_name}`, callback_data: `user_class::${session.class_name}` }],
+      [{ text: `🔍 Cari Nilai Lain`, callback_data: `/nilai` }]
+    ]);
+
     userConversations.delete(chatId);
     return;
   }
