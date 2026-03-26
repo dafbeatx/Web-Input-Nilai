@@ -74,32 +74,7 @@ export default function SetupLayer(props: SetupLayerProps) {
   const parsedPreview = parseAnswerKey(keyInput);
   const parsedCount = parsedPreview.length;
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingDoc(true);
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const res = await fetch('/api/parse-document', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Gagal memproses file');
-      if (data.students?.length > 0) {
-        setStudentList(data.students);
-        setToast({ message: `${data.students.length} siswa berhasil dimuat!`, type: 'success' });
-      } else {
-        throw new Error('Tidak ada nama siswa ditemukan');
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Gagal';
-      setToast({ message, type: 'error' });
-    } finally {
-      setUploadingDoc(false);
-      if (e.target) e.target.value = '';
-    }
-  };
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!teacherName.trim()) { setToast({ message: 'Nama guru wajib diisi', type: 'error' }); return; }
     if (!subject.trim()) { setToast({ message: 'Mata pelajaran wajib diisi', type: 'error' }); return; }
     if (!studentClass.trim()) { setToast({ message: 'Kelas wajib diisi', type: 'error' }); return; }
@@ -107,14 +82,24 @@ export default function SetupLayer(props: SetupLayerProps) {
     if (!sessionPassword.trim()) { setToast({ message: 'Password sesi wajib diisi', type: 'error' }); return; }
     if (parsedCount === 0) { setToast({ message: 'Kunci jawaban belum valid', type: 'error' }); return; }
 
-    // Merge manual student input
-    const extraStudents = studentManualInput
-      .split(/\r?\n/)
-      .map(line => line.trim().replace(/^[\d.\-*]+\s*/, ''))
-      .filter(line => line.length > 2 && line.length < 50);
-    const finalList = Array.from(new Set([...studentList, ...extraStudents]));
-    setStudentList(finalList);
-    onSubmit();
+    try {
+      // Auto-fetch students from the global registry (gm_behaviors)
+      const res = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(studentClass)}&year=${encodeURIComponent(academicYear)}`);
+      const data = await res.json();
+      
+      const students = data.students?.map((s: any) => s.student_name) || [];
+      if (students.length === 0) {
+        setToast({ message: `Peringatan: Tidak ada data siswa di kelas ${studentClass} tahun ${academicYear}. Harap isi di menu Kehadiran & Perilaku.`, type: 'error' });
+      } else {
+        setToast({ message: `${students.length} siswa otomatis termuat dari data pusat.`, type: 'success' });
+      }
+
+      setStudentList(students);
+      onSubmit();
+    } catch (err: any) {
+      setToast({ message: 'Gagal memuat sinkronisasi data siswa otomatis', type: 'error' });
+      onSubmit(); // Proceed anyway with empty list
+    }
   };
 
   const inputClass = "w-full bg-slate-50 border-2 border-slate-100 rounded-xl md:rounded-2xl p-3 md:p-4 text-xs md:text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300";
@@ -204,37 +189,7 @@ export default function SetupLayer(props: SetupLayerProps) {
             </div>
           </div>
 
-          {/* Student upload */}
-          <div>
-            <label className="flex items-center justify-between text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2">
-              <div className="flex items-center gap-1.5 md:gap-2"><User size={12} className="md:w-3.5 md:h-3.5" /> Daftar Siswa ({studentList.length} Anak)</div>
-              {uploadingDoc && <Loader2 size={12} className="animate-spin text-indigo-500" />}
-            </label>
-            <div className="relative">
-              <input type="file" accept=".txt,.csv,.xml,.pdf,.docx" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-              <div className="w-full bg-slate-50 border-2 border-slate-100 border-dashed rounded-xl md:rounded-2xl p-3 md:p-4 text-xs md:text-sm font-bold text-slate-500 text-center transition-all hover:bg-slate-100 flex flex-col items-center justify-center gap-1.5 md:gap-2">
-                {studentList.length > 0 ? (
-                  <span className="text-indigo-600 flex items-center gap-1.5 md:gap-2"><CheckCircle2 size={20} className="md:w-6 md:h-6" /> {studentList.length} Nama Terekstrak</span>
-                ) : (
-                  <>
-                    <ClipboardList size={20} className="text-slate-400 md:w-6 md:h-6" />
-                    <span>Klik / Seret file daftar siswa ke sini</span>
-                    <span className="text-[9px] md:text-[10px] font-normal text-slate-400">Mendukung .PDF, .DOCX, .TXT, .CSV, .XML</span>
-                  </>
-                )}
-              </div>
-            </div>
-            <label className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mt-3 md:mt-4 mb-1.5 md:mb-2">
-              <ClipboardList size={12} className="md:w-3.5 md:h-3.5" /> Atau Input Manual
-            </label>
-            <textarea
-              value={studentManualInput}
-              onChange={(e) => setStudentManualInput(e.target.value)}
-              placeholder={"Contoh:\n1. Budi Santoso\n2. Siti Aminah"}
-              rows={3}
-              className={`${inputClass} resize-none font-mono`}
-            />
-          </div>
+
 
           {/* Answer key */}
           <div>
