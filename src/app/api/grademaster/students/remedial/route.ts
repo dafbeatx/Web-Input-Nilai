@@ -10,8 +10,8 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { sessionId, studentName, status } = body;
-    // status: 'COMPLETED' | 'CHEATED' | 'TIMEOUT'
+    const { sessionId, studentName, status, location } = body;
+    // status: 'STARTED' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT'
 
     if (!sessionId || !studentName || !status) {
       return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 });
@@ -20,7 +20,7 @@ export async function PUT(req: NextRequest) {
     // Find the student
     const { data: student, error: fetchErr } = await supabase
       .from('gm_students')
-      .select('id, final_score, remedial_status, remedial_ip')
+      .select('id, final_score, remedial_status, remedial_location')
       .eq('session_id', sessionId)
       .eq('name', studentName)
       .single();
@@ -29,40 +29,52 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Siswa tidak ditemukan' }, { status: 404 });
     }
 
-    // Check if already did remedial
-    if (student.remedial_status === 'COMPLETED' || student.remedial_status === 'CHEATED' || student.remedial_status === 'TIMEOUT') {
+    // Check if already did remedial or locked out
+    if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(student.remedial_status)) {
+      if (status === 'STARTED') {
+        return NextResponse.json({ error: 'Remedial sudah pernah dilakukan atau akses telah diblokir secara permanen untuk nama ini.' }, { status: 403 });
+      }
       return NextResponse.json({ error: 'Remedial sudah pernah dilakukan atau dikunci.' }, { status: 403 });
     }
-    
-    // Check IP just in case (optional protection)
-    if (student.remedial_ip && student.remedial_ip !== ip && student.remedial_status !== 'NONE') {
-      return NextResponse.json({ error: 'Sesi remedial ini sudah diakses dari perangkat lain.' }, { status: 403 });
+
+    // Enforce location checks if it's an ongoing exam attempting to cheat with different location (optional strictness)
+    if (status !== 'STARTED' && student.remedial_location && location && student.remedial_location !== location) {
+      // Different location mid-exam means they swapped devices
+      return NextResponse.json({ error: 'Perangkat atau lokasi terdeteksi berpindah di tengah ujian.' }, { status: 403 });
     }
 
-    // Get the KKM from session if completed
     let newFinalScore = Number(student.final_score);
-    if (status === 'COMPLETED') {
-        const { data: session } = await supabase.from('gm_sessions').select('kkm').eq('id', sessionId).single();
-        if (session) {
-            newFinalScore = Number(session.kkm);
-        }
+    let newStatus = status;
+
+    if (status === 'STARTED') {
+      newStatus = 'IN_PROGRESS';
+    } else if (status === 'COMPLETED') {
+      const { data: session } = await supabase.from('gm_sessions').select('kkm').eq('id', sessionId).single();
+      if (session) {
+        newFinalScore = Number(session.kkm);
+      }
     } else if (status === 'CHEATED') {
-        newFinalScore = 0; // Penalty
+      newFinalScore = 0; // Penalty
+    }
+
+    const updateData: any = {
+      final_score: newFinalScore,
+      remedial_status: newStatus,
+    };
+
+    if (location) {
+      updateData.remedial_location = location;
     }
 
     // Update the student
     const { error: updateErr } = await supabase
       .from('gm_students')
-      .update({
-        final_score: newFinalScore,
-        remedial_status: status,
-        remedial_ip: ip,
-      })
+      .update(updateData)
       .eq('id', student.id);
 
     if (updateErr) throw updateErr;
 
-    return NextResponse.json({ message: 'Remedial status tersimpan', newFinalScore, status });
+    return NextResponse.json({ message: 'Remedial status tersimpan', newFinalScore, status: newStatus });
 
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Gagal menyimpan data remedial';
@@ -70,3 +82,4 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

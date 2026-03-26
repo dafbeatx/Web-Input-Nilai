@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ToastType } from '@/lib/grademaster/types';
-import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin } from 'lucide-react';
 
 interface StudentRemedialLayerProps {
   studentName: string;
@@ -29,6 +29,7 @@ export default function StudentRemedialLayer({
   const [answers, setAnswers] = useState<string[]>(new Array(remedialEssayCount).fill(""));
   const [timeLeft, setTimeLeft] = useState(remedialTimer * 60);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<string>('');
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Stop camera when unmounting
@@ -46,6 +47,50 @@ export default function StudentRemedialLayer({
   };
 
   const startExam = async () => {
+    setIsSubmitting(true);
+    
+    // 1. Get Location (Mandatory)
+    let locStr = '';
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        });
+      });
+      locStr = `${pos.coords.latitude},${pos.coords.longitude}`;
+      setCurrentLocation(locStr);
+    } catch (e) {
+      setToast({ message: "Akses Lokasi (GPS) wajib diizinkan untuk memulai ujian!", type: "error" });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // 2. Start Session on Server
+    try {
+      const res = await fetch('/api/grademaster/students/remedial', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, studentName, status: 'STARTED', location: locStr })
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        setToast({ message: data.error || "Gagal memulai sesi", type: "error" });
+        if (data.error?.includes('permanen')) {
+            setStep('CHEATED'); 
+        }
+        setIsSubmitting(false);
+        return;
+      }
+    } catch (e) {
+      setToast({ message: "Koneksi terputus!", type: "error" });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // 3. Get Camera (Optional Gimmick)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       if (videoRef.current) {
@@ -54,6 +99,8 @@ export default function StudentRemedialLayer({
     } catch (e) {
       setToast({ message: "Kamera gagal diakses, namun ujian tetap dilanjutkan dengan pengawasan sistem.", type: "error" });
     }
+    
+    setIsSubmitting(false);
     setStep('EXAM');
   };
 
@@ -108,13 +155,13 @@ export default function StudentRemedialLayer({
       const res = await fetch('/api/grademaster/students/remedial', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, studentName, status })
+        body: JSON.stringify({ sessionId, studentName, status, location: currentLocation })
       });
       const data = await res.json();
       
       if (!res.ok) {
         setToast({ message: data.error || "Terjadi kesalahan saat menyimpan", type: "error" });
-        if (data.error?.includes('sudah pernah dilakukan')) {
+        if (data.error?.includes('sudah pernah dilakukan') || data.error?.includes('permanen')) {
             setStep('CHEATED'); // generic lock screen
         }
       } else {
@@ -169,6 +216,10 @@ export default function StudentRemedialLayer({
               <span>Sistem akan meminta akses kamera untuk <strong>memantau pergerakan Anda</strong> selama ujian berlangsung.</span>
             </li>
             <li className="flex gap-3 text-sm text-slate-600 font-bold items-start">
+              <MapPin className="text-emerald-500 shrink-0 mt-0.5" size={18} />
+              <span>Akses <strong>Lokasi (GPS) wajib diizinkan</strong> untuk memverifikasi keaslian perangkat Anda.</span>
+            </li>
+            <li className="flex gap-3 text-sm text-slate-600 font-bold items-start">
               <Clock className="text-amber-500 shrink-0 mt-0.5" size={18} />
               <span>Waktu ujian adalah <strong>{remedialTimer} Menit</strong>. Jawaban otomatis terkunci jika waktu habis.</span>
             </li>
@@ -180,9 +231,10 @@ export default function StudentRemedialLayer({
 
           <button
             onClick={startExam}
-            className="w-full py-4 bg-indigo-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all"
+            disabled={isSubmitting}
+            className="w-full py-4 bg-indigo-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
           >
-            SAYA MENGERTI, MULAI REMEDIAL
+            {isSubmitting ? 'MEMPROSES...' : 'SAYA MENGERTI, MULAI REMEDIAL'}
           </button>
         </div>
       </div>

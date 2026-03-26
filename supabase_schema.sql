@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS public.gm_students (
     wrong INTEGER NOT NULL DEFAULT 0,
     remedial_status TEXT DEFAULT 'NONE',
     remedial_ip TEXT,
+    remedial_location TEXT,
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 

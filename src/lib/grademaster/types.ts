@@ -37,7 +37,8 @@ export interface GradedStudent {
   percentage: number;
   csi: number;
   lps: number;
-  remedialStatus?: 'NONE' | 'IN_PROGRESS' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT';
+  remedialStatus?: 'NONE' | 'STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT';
+  remedialLocation?: string;
 }
 
 export interface SessionData {
