@@ -10,8 +10,11 @@ import {
   Loader2,
   AlertCircle,
   FileText,
+  Settings,
+  User,
+  Key,
 } from 'lucide-react';
-import { ModalType } from '@/lib/grademaster/types';
+import { ModalType, ToastType } from '@/lib/grademaster/types';
 
 interface ModalsProps {
   modal: ModalType;
@@ -26,6 +29,7 @@ interface ModalsProps {
   onLoadPublic?: () => void;
   onDelete: () => void;
   onClose: () => void;
+  onUpdateAdmin?: (username: string, pass: string) => Promise<void>;
 }
 
 export default function Modals(props: ModalsProps) {
@@ -33,8 +37,22 @@ export default function Modals(props: ModalsProps) {
     modal, sessionName, setSessionName,
     sessionPassword, setSessionPassword,
     modalLoading, modalError,
-    onSave, onLoad, onLoadPublic, onDelete, onClose,
+    onSave, onLoad, onLoadPublic, onDelete, onClose, onUpdateAdmin
   } = props;
+
+  const [newUsername, setNewUsername] = React.useState('');
+  const [newPassword, setNewPassword] = React.useState('');
+  const [isUpdatingAdmin, setIsUpdatingAdmin] = React.useState(false);
+  const [adminError, setAdminError] = React.useState('');
+
+  // Reset local state when modal opens
+  React.useEffect(() => {
+    if (modal === 'adminSettings') {
+      setNewUsername('');
+      setNewPassword('');
+      setAdminError('');
+    }
+  }, [modal]);
 
   if (!modal) return null;
 
@@ -98,6 +116,84 @@ export default function Modals(props: ModalsProps) {
           <button onClick={onClose} className="w-full py-3.5 bg-rose-500 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-rose-500/20 hover:scale-[1.02] active:scale-95 transition-all">
             Mengerti & Tutup
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (modal === 'adminSettings') {
+    const handleAdminSave = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!onUpdateAdmin) return;
+      if (!newUsername || newUsername.length < 3) return setAdminError('Username minimal 3 karakter.');
+      if (!newPassword || newPassword.length < 6) return setAdminError('Password minimal 6 karakter.');
+      
+      setIsUpdatingAdmin(true);
+      setAdminError('');
+      try {
+        await onUpdateAdmin(newUsername, newPassword);
+        onClose();
+      } catch (err: any) {
+        setAdminError(err.message || 'Gagal mengubah profil admin.');
+      } finally {
+        setIsUpdatingAdmin(false);
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}></div>
+        <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-2xl p-6 md:p-8 animate-in zoom-in duration-300">
+          <button onClick={onClose} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-rose-100 hover:text-rose-600 transition-colors">
+            <X size={16} />
+          </button>
+
+          <div className="flex flex-col items-center mb-6">
+            <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-3">
+              <Settings size={28} />
+            </div>
+            <h3 className="font-black text-xl text-slate-800">Ubah Profil Admin</h3>
+            <p className="text-xs font-bold text-slate-500 mt-1 text-center">Ubah username dan password untuk keamanan sistem.</p>
+          </div>
+
+          <form onSubmit={handleAdminSave} className="space-y-4">
+            {adminError && (
+              <div className="flex gap-2 p-3 bg-rose-50 rounded-xl text-rose-600 text-xs font-bold animate-in fade-in">
+                <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                <p>{adminError}</p>
+              </div>
+            )}
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Username Baru</label>
+              <div className="relative group">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors"><User size={16} /></div>
+                <input
+                  type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)}
+                  placeholder="admin123"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-300"
+                  disabled={isUpdatingAdmin}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Password Baru</label>
+              <div className="relative group">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors"><Key size={16} /></div>
+                <input
+                  type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Minimal 6 karakter"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-300"
+                  disabled={isUpdatingAdmin}
+                />
+              </div>
+            </div>
+            <button
+              type="submit" disabled={isUpdatingAdmin}
+              className="w-full py-3.5 bg-indigo-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all mt-6 flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isUpdatingAdmin ? <><Loader2 size={16} className="animate-spin" /> Menyimpan...</> : 'Simpan Profil'}
+            </button>
+          </form>
         </div>
       </div>
     );

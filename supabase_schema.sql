@@ -150,3 +150,16 @@ BEGIN
   DELETE FROM public.gm_admin_sessions WHERE token = p_token;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION public.update_admin_user(p_user_id UUID, p_username TEXT, p_password_hash TEXT)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- We allow updating only the username and password hash for a specific user ID
+  UPDATE public.admin_users 
+  SET username = p_username, password_hash = p_password_hash
+  WHERE id = p_user_id;
+END;
+$$;

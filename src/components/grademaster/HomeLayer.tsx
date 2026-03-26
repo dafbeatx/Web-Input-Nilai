@@ -11,6 +11,7 @@ import {
   HelpCircle,
   FileText,
   CheckCircle2,
+  Settings,
 } from 'lucide-react';
 import { SessionMeta, ModalType } from '@/lib/grademaster/types';
 
@@ -24,6 +25,7 @@ interface HomeLayerProps {
   isAdmin: boolean;
   onLoginClick: () => void;
   onLogout: () => void;
+  onOpenSettings: () => void;
 }
 
 export default function HomeLayer({
@@ -36,6 +38,7 @@ export default function HomeLayer({
   isAdmin,
   onLoginClick,
   onLogout,
+  onOpenSettings,
 }: HomeLayerProps) {
   return (
     <div className="min-h-screen p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in">
@@ -55,9 +58,18 @@ export default function HomeLayer({
               <HelpCircle size={16} className="md:w-5 md:h-5" />
             </button>
             {isAdmin && (
-              <span className="ml-3 px-3 py-1 bg-emerald-100 text-emerald-700 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-full flex items-center gap-1.5 shadow-sm border border-emerald-200 animate-in fade-in zoom-in duration-300">
-                <CheckCircle2 size={12} /> Admin
-              </span>
+              <div className="ml-3 flex items-center gap-2">
+                <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-full flex items-center gap-1.5 shadow-sm border border-emerald-200 animate-in fade-in zoom-in duration-300">
+                  <CheckCircle2 size={12} /> Admin
+                </span>
+                <button
+                  onClick={onOpenSettings}
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center transition-colors shadow-inner animate-in fade-in zoom-in duration-300"
+                  title="Pengaturan Admin"
+                >
+                  <Settings size={16} className="md:w-5 md:h-5" />
+                </button>
+              </div>
             )}
           </h1>
           <p className="text-sm md:text-base text-slate-500 font-bold mt-1 md:mt-2">Pilih sesi kelas Anda atau buat sesi baru untuk mulai evaluasi.</p>

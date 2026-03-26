@@ -139,6 +139,18 @@ export default function GradeMaster() {
     }
   };
 
+  const handleUpdateAdmin = async (username: string, pass: string) => {
+    const res = await fetch('/api/admin/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password: pass }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal mengubah profil admin');
+    setToast({ message: 'Profil admin berhasil diperbarui!', type: 'success' });
+    setAdminUser(username);
+  };
+
   const handleSaveSession = async () => {
     if (!sessionName.trim() || !sessionPassword.trim()) {
       setModalError("Nama sesi dan password wajib diisi");
@@ -411,6 +423,7 @@ export default function GradeMaster() {
           isAdmin={isAdmin}
           onLoginClick={() => setLayer("login")}
           onLogout={handleAdminLogout}
+          onOpenSettings={() => setModal("adminSettings")}
         />
       )}
 
@@ -514,6 +527,7 @@ export default function GradeMaster() {
         onLoadPublic={handleLoadPublicSession}
         onDelete={handleDeleteSession}
         onClose={closeModal}
+        onUpdateAdmin={handleUpdateAdmin}
       />
 
       {/* Toast */}
