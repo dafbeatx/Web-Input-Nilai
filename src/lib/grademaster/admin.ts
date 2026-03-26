@@ -10,13 +10,11 @@ export async function createAdminSession(userId: string) {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + SESSION_EXPIRY_DAYS);
 
-  const { error } = await supabase
-    .from('gm_admin_sessions')
-    .insert({
-      user_id: userId,
-      token,
-      expires_at: expiresAt.toISOString(),
-    });
+  const { error } = await supabase.rpc('create_admin_session', {
+    p_user_id: userId,
+    p_token: token,
+    p_expires_at: expiresAt.toISOString(),
+  });
 
   if (error) throw error;
 
@@ -37,16 +35,16 @@ export async function getAdminSession() {
 
   if (!token) return null;
 
-  const { data: session, error } = await supabase
-    .from('gm_admin_sessions')
-    .select('user_id, admin_users(username)')
-    .eq('token', token)
-    .gt('expires_at', new Date().toISOString())
-    .single();
+  const { data: sessionData, error } = await supabase.rpc('get_admin_session_data', {
+    p_token: token,
+  });
 
-  if (error || !session) return null;
+  if (error || !sessionData || sessionData.length === 0) return null;
 
-  return session;
+  return {
+    user_id: sessionData[0].user_id,
+    admin_users: { username: sessionData[0].username },
+  };
 }
 
 export async function clearAdminSession() {
@@ -54,10 +52,7 @@ export async function clearAdminSession() {
   const token = cookieStore.get(SESSION_COOKIE)?.value;
 
   if (token) {
-    await supabase
-      .from('gm_admin_sessions')
-      .delete()
-      .eq('token', token);
+    await supabase.rpc('delete_admin_session', { p_token: token });
   }
 
   cookieStore.delete(SESSION_COOKIE);

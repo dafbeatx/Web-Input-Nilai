@@ -101,3 +101,52 @@ CREATE TABLE IF NOT EXISTS public.gm_admin_sessions (
 
 ALTER TABLE public.gm_admin_sessions ENABLE ROW LEVEL SECURITY;
 -- No public access to sessions table
+
+-- ============================================================
+-- secure admin rpc functions
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.get_admin_user(p_username TEXT)
+RETURNS TABLE(id UUID, password_hash TEXT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY SELECT a.id, a.password_hash FROM public.admin_users a WHERE a.username = p_username;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.create_admin_session(p_user_id UUID, p_token TEXT, p_expires_at TIMESTAMPTZ)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  INSERT INTO public.gm_admin_sessions (user_id, token, expires_at)
+  VALUES (p_user_id, p_token, p_expires_at);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_admin_session_data(p_token TEXT)
+RETURNS TABLE(user_id UUID, username TEXT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY 
+  SELECT s.user_id, u.username 
+  FROM public.gm_admin_sessions s 
+  JOIN public.admin_users u ON s.user_id = u.id 
+  WHERE s.token = p_token AND s.expires_at > now();
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.delete_admin_session(p_token TEXT)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  DELETE FROM public.gm_admin_sessions WHERE token = p_token;
+END;
+$$;

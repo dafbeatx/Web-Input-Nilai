@@ -11,15 +11,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Username dan password wajib diisi' }, { status: 400 });
     }
 
-    const { data: user, error } = await supabase
-      .from('admin_users')
-      .select('id, password_hash')
-      .eq('username', username)
-      .single();
+    const { data: userArray, error } = await supabase.rpc('get_admin_user', {
+      p_username: username,
+    });
 
-    if (error || !user) {
+    if (error || !userArray || userArray.length === 0) {
       return NextResponse.json({ error: 'Username atau password salah' }, { status: 401 });
     }
+    
+    const user = userArray[0];
 
     const valid = await verifyPassword(password, user.password_hash);
     if (!valid) {
