@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   XCircle,
   Undo2,
+  ScanSearch,
+  Loader2,
 } from 'lucide-react';
 import { GradedStudent, ScoringConfig, DEFAULT_SCORING_CONFIG, ToastType } from '@/lib/grademaster/types';
 import { calculateStudentResult, getScoreLabel } from '@/lib/grademaster/scoring';
@@ -51,7 +53,46 @@ export default function GradingLayer(props: GradingLayerProps) {
   const undoStack = useRef<{ qNum: number; prev: string | undefined }[]>([]);
   const questionRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
+  const [isDetecting, setIsDetecting] = React.useState(false);
   const result = calculateStudentResult(answerKey, userAnswers, essayScores, scoringConfig);
+
+  const handleAutoDetect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsDetecting(true);
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('studentList', JSON.stringify(studentList));
+
+    try {
+      const res = await fetch('/api/grademaster/auto-detect', {
+          method: 'POST',
+          body: formData
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      if (data.studentName) setStudentName(data.studentName);
+      
+      const warnings = [];
+      if (data.studentClass && !data.studentClass.toLowerCase().includes(studentClass.toLowerCase()) && !studentClass.toLowerCase().includes(data.studentClass.toLowerCase())) {
+        warnings.push(`Kelas (${data.studentClass}) berbeda dari target sesi (${studentClass}).`);
+      }
+      
+      if (warnings.length > 0) {
+         setToast({ message: `Siswa terdeteksi: ${data.studentName}. Perhatian: ${warnings.join(' ')}`, type: 'error' });
+      } else {
+         setToast({ message: `Data siswa berhasil dideteksi: ${data.studentName}!`, type: 'success' });
+      }
+    } catch (err: any) {
+      setToast({ message: err.message || 'Gagal mendeteksi dokumen', type: 'error' });
+    } finally {
+      setIsDetecting(false);
+      if (e.target) e.target.value = '';
+    }
+  };
 
   const handleAnswerSelect = useCallback((questionNum: number, option: string) => {
     undoStack.current.push({ qNum: questionNum, prev: userAnswers[questionNum] });
@@ -147,7 +188,15 @@ export default function GradingLayer(props: GradingLayerProps) {
       <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-start">
         <div className="lg:col-span-8 space-y-4 md:space-y-6">
           {/* Student Identity */}
-          <section className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-100 shadow-sm">
+          <section className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-100 shadow-sm relative overflow-hidden">
+            {isDetecting && (
+              <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-40 flex items-center justify-center">
+                <div className="flex flex-col items-center justify-center text-indigo-600 bg-white/90 p-4 rounded-xl shadow-lg border border-indigo-100">
+                  <Loader2 size={24} className="animate-spin mb-2" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Memproses LJK...</span>
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-2.5 md:gap-3 mb-4">
               <div className="w-8 h-8 md:w-10 md:h-10 bg-sky-100 text-sky-600 rounded-lg flex items-center justify-center">
                 <User size={16} className="md:w-5 md:h-5" />
@@ -157,7 +206,14 @@ export default function GradingLayer(props: GradingLayerProps) {
                 <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kelas {studentClass}</p>
               </div>
             </div>
-            <label className="block text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Siswa</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest">Nama Siswa</label>
+              <label className="cursor-pointer flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 transition-colors bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full border border-indigo-200 shadow-sm active:scale-95">
+                <ScanSearch size={12} className="md:w-3.5 md:h-3.5" />
+                <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider">Auto-Detect LJK</span>
+                <input type="file" accept="image/*,.pdf,.doc,.docx" className="hidden" onChange={handleAutoDetect} />
+              </label>
+            </div>
             {studentList.length > 0 ? (
               <select value={studentName} onChange={(e) => setStudentName(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-xs md:text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all">
                 <option value="">-- Pilih Siswa --</option>
