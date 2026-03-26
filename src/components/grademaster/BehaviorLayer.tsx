@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Users, Search, PlusCircle, MinusCircle, AlertCircle, Save, Loader2, UserPlus, FileText, LayoutGrid, Trash2 } from 'lucide-react';
+import { ArrowLeft, Users, Search, PlusCircle, MinusCircle, AlertCircle, Save, Loader2, UserPlus, FileText, LayoutGrid, Trash2, Pencil } from 'lucide-react';
 import { ToastType } from '@/lib/grademaster/types';
 
 interface BehaviorStudent {
@@ -54,6 +54,38 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
       // ignore
     } finally {
       setIsLoadingClasses(false);
+    }
+  };
+
+  const handleDeleteClass = async (cls: string) => {
+    if (!window.confirm(`Yakin ingin menghapus SELURUH kelas "${cls}" beserta semua data siswa dan poin di tahun ajaran ${academicYear}? Tindakan ini TIDAK BISA dibatalkan.`)) return;
+    try {
+      const res = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(cls)}&year=${encodeURIComponent(academicYear)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setAvailableClasses(prev => prev.filter(c => c !== cls));
+      setToast({ message: `Kelas ${cls} berhasil dihapus`, type: 'success' });
+    } catch (err: any) {
+      setToast({ message: err.message || 'Gagal menghapus kelas', type: 'error' });
+    }
+  };
+
+  const handleRenameClass = async (oldName: string) => {
+    const newName = window.prompt(`Ubah nama kelas "${oldName}" menjadi:`, oldName);
+    if (!newName || newName.trim() === oldName) return;
+    try {
+      const res = await fetch('/api/grademaster/behaviors', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldClassName: oldName, newClassName: newName.trim(), academicYear })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setAvailableClasses(prev => prev.map(c => c === oldName ? newName.trim() : c));
+      if (className === oldName) setClassName(newName.trim());
+      setToast({ message: data.message, type: 'success' });
+    } catch (err: any) {
+      setToast({ message: err.message || 'Gagal mengubah nama kelas', type: 'error' });
     }
   };
 
@@ -214,16 +246,37 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
           ) : availableClasses.length > 0 ? (
             <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
               {availableClasses.map(cls => (
-                <button
+                <div
                   key={cls}
-                  onClick={() => loadClassDirectly(cls, academicYear)}
-                  className="bg-white border-2 border-slate-100 p-4 md:p-6 rounded-2xl md:rounded-3xl hover:border-indigo-500 hover:shadow-xl hover:shadow-indigo-500/10 transition-all text-center group flex flex-col items-center justify-center outline-none focus:border-indigo-500"
+                  className="bg-white border-2 border-slate-100 p-4 md:p-6 rounded-2xl md:rounded-3xl hover:border-indigo-500 hover:shadow-xl hover:shadow-indigo-500/10 transition-all text-center group flex flex-col items-center justify-center relative"
                 >
-                  <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mb-3 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                    <Users size={20} className="md:w-6 md:h-6" />
+                  {/* Action buttons */}
+                  <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleRenameClass(cls); }}
+                      className="w-7 h-7 flex items-center justify-center bg-amber-50 text-amber-500 rounded-lg hover:bg-amber-100 transition-colors"
+                      title="Ubah Nama Kelas"
+                    >
+                      <Pencil size={12} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteClass(cls); }}
+                      className="w-7 h-7 flex items-center justify-center bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-100 transition-colors"
+                      title="Hapus Kelas"
+                    >
+                      <Trash2 size={12} />
+                    </button>
                   </div>
-                  <h3 className="font-black text-slate-800 text-base md:text-lg">{cls}</h3>
-                </button>
+                  <button
+                    onClick={() => loadClassDirectly(cls, academicYear)}
+                    className="w-full flex flex-col items-center justify-center outline-none"
+                  >
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mb-3 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                      <Users size={20} className="md:w-6 md:h-6" />
+                    </div>
+                    <h3 className="font-black text-slate-800 text-base md:text-lg">{cls}</h3>
+                  </button>
+                </div>
               ))}
             </div>
           ) : (

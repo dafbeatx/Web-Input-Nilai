@@ -105,14 +105,51 @@ export async function DELETE(req: NextRequest) {
     
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'ID wajib diisi' }, { status: 400 });
+    const cls = searchParams.get('class');
+    const year = searchParams.get('year');
 
+    // Delete entire class
+    if (cls && year) {
+      const { error } = await supabase.from('gm_behaviors').delete().eq('class_name', cls).eq('academic_year', year);
+      if (error) throw error;
+      return NextResponse.json({ message: `Kelas ${cls} berhasil dihapus` });
+    }
+
+    // Delete single student
+    if (!id) return NextResponse.json({ error: 'ID wajib diisi' }, { status: 400 });
     const { error } = await supabase.from('gm_behaviors').delete().eq('id', id);
     if (error) throw error;
-
     return NextResponse.json({ message: 'Siswa berhasil dihapus' });
   } catch (err: any) {
     console.error('Delete behaviors error:', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const ip = req.headers.get('x-forwarded-for') || 'unknown';
+    if (!checkRateLimit(`behaviors_post:${ip}`)) {
+      return NextResponse.json({ error: 'Terlalu banyak permintaan' }, { status: 429 });
+    }
+
+    const body = await req.json();
+    const { oldClassName, newClassName, academicYear } = body;
+
+    if (!oldClassName || !newClassName || !academicYear) {
+      return NextResponse.json({ error: 'Data kelas lama, baru, dan tahun ajaran wajib diisi' }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from('gm_behaviors')
+      .update({ class_name: newClassName })
+      .eq('class_name', oldClassName)
+      .eq('academic_year', academicYear);
+
+    if (error) throw error;
+    return NextResponse.json({ message: `Kelas berhasil diubah dari ${oldClassName} ke ${newClassName}` });
+  } catch (err: any) {
+    console.error('Patch behaviors error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
