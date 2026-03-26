@@ -26,7 +26,9 @@ export default function RootLayout({
   return (
     <html lang="id">
       <body className={`${inter.variable} ${outfit.variable} ${amiri.variable} font-sans`}>
-        {children}
+        <main className="w-full min-h-screen overflow-x-hidden relative">
+          {children}
+        </main>
       </body>
     </html>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 
 import {
@@ -24,7 +24,34 @@ import Modals from "./grademaster/Modals";
 const ESSAY_COUNT = 5;
 
 export default function GradeMaster() {
-  const [layer, setLayer] = useState<Layer>("home");
+  const [layer, setInternalLayer] = useState<Layer>("home");
+
+  const setLayer = useCallback((newLayer: Layer) => {
+    window.history.pushState({ layer: newLayer }, '', `#${newLayer}`);
+    setInternalLayer(newLayer);
+  }, []);
+
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (['home', 'setup', 'dashboard', 'grading'].includes(hash)) {
+      setInternalLayer(hash as Layer);
+      window.history.replaceState({ layer: hash }, '', `#${hash}`);
+    } else {
+      window.history.replaceState({ layer: 'home' }, '', '#home');
+    }
+
+    const handlePopState = (e: PopStateEvent) => {
+      const stateLayer = e.state?.layer || window.location.hash.replace('#', '') || 'home';
+      if (['home', 'setup', 'dashboard', 'grading'].includes(stateLayer)) {
+        setInternalLayer(stateLayer as Layer);
+      } else {
+        setInternalLayer('home');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Session list
   const [sessions, setSessions] = useState<SessionMeta[]>([]);
