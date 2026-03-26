@@ -81,9 +81,10 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ message: 'Sesi berhasil dibuat', sessionId: newSession?.id });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Gagal menyimpan sesi';
-    console.error('Session save error:', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    const message = err instanceof Error ? err.message : (typeof err === 'object' && err !== null && 'message' in err) ? String((err as Record<string, unknown>).message) : 'Gagal menyimpan sesi';
+    const code = (typeof err === 'object' && err !== null && 'code' in err) ? String((err as Record<string, unknown>).code) : '';
+    console.error('Session save error:', code, message, err);
+    return NextResponse.json({ error: `${code ? `[${code}] ` : ''}${message}` }, { status: 500 });
   }
 }
 
@@ -178,9 +179,10 @@ export async function GET(req: NextRequest) {
       })),
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Gagal memuat sesi';
-    console.error('Session load error:', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    const message = err instanceof Error ? err.message : (typeof err === 'object' && err !== null && 'message' in err) ? String((err as Record<string, unknown>).message) : 'Gagal memuat sesi';
+    const code = (typeof err === 'object' && err !== null && 'code' in err) ? String((err as Record<string, unknown>).code) : '';
+    console.error('Session load error:', code, message, err);
+    return NextResponse.json({ error: `${code ? `[${code}] ` : ''}${message}` }, { status: 500 });
   }
 }
 
