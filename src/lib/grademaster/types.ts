@@ -106,4 +106,4 @@ export interface AnalyticsResult {
 
 export type ModalType = 'save' | 'load' | 'delete' | 'about' | 'error' | 'adminSettings' | null;
 export type ToastType = { message: string; type: 'success' | 'error' } | null;
-export type Layer = 'home' | 'setup' | 'dashboard' | 'grading' | 'login' | 'remedial';
+export type Layer = 'home' | 'setup' | 'dashboard' | 'grading' | 'login' | 'remedial' | 'behavior';

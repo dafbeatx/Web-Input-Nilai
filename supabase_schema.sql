@@ -169,3 +169,24 @@ BEGIN
   WHERE id = p_user_id;
 END;
 $$;
+
+-- Behaviors & Attendance
+CREATE TABLE IF NOT EXISTS public.gm_behaviors (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    student_name TEXT NOT NULL,
+    class_name TEXT NOT NULL,
+    academic_year TEXT NOT NULL DEFAULT '2025/2026',
+    total_points INTEGER NOT NULL DEFAULT 100,
+    behavior_logs JSONB NOT NULL DEFAULT '[]',
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    UNIQUE(student_name, class_name, academic_year)
+);
+
+ALTER TABLE public.gm_behaviors ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "gm_behaviors_anon_access" ON public.gm_behaviors;
+CREATE POLICY "gm_behaviors_anon_access" ON public.gm_behaviors
+    FOR ALL TO anon
+    USING (true) WITH CHECK (true);
+
