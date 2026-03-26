@@ -19,6 +19,7 @@ import HomeLayer from "./grademaster/HomeLayer";
 import SetupLayer from "./grademaster/SetupLayer";
 import DashboardLayer from "./grademaster/DashboardLayer";
 import GradingLayer from "./grademaster/GradingLayer";
+import LoginLayer from "./grademaster/LoginLayer";
 import Modals from "./grademaster/Modals";
 
 const ESSAY_COUNT = 5;
@@ -84,6 +85,8 @@ export default function GradeMaster() {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState("");
   const [toast, setToast] = useState<ToastType>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminUser, setAdminUser] = useState<string | null>(null);
 
   // Auto-dismiss toast
   useEffect(() => {
@@ -92,9 +95,20 @@ export default function GradeMaster() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  // Fetch sessions on mount
+  const checkAdmin = async () => {
+    try {
+      const res = await fetch("/api/admin/check");
+      const data = await res.json();
+      setIsAdmin(data.authenticated);
+      setAdminUser(data.username || null);
+    } catch (err) {
+      setIsAdmin(false);
+    }
+  };
+
   useEffect(() => {
     fetchSessions();
+    checkAdmin();
   }, []);
 
   const analytics = generateAnalytics(gradedStudents, answerKey);
@@ -108,9 +122,20 @@ export default function GradeMaster() {
       const data = await res.json();
       if (data.sessions) setSessions(data.sessions);
     } catch (err) {
-      console.error("Failed to load sessions:", err);
+      console.error(err);
     } finally {
       setIsLoadingSessions(false);
+    }
+  };
+
+  const handleAdminLogout = async () => {
+    try {
+      await fetch("/api/admin/logout", { method: "POST" });
+      setIsAdmin(false);
+      setAdminUser(null);
+      setToast({ message: "Logout berhasil", type: "success" });
+    } catch (err) {
+      setToast({ message: "Gagal logout", type: "error" });
     }
   };
 
@@ -360,15 +385,19 @@ export default function GradeMaster() {
           sessions={sessions}
           isLoading={isLoadingSessions}
           onCreateNew={() => {
-            setLayer("setup");
-            setSessionName("");
-            setSessionPassword("");
-            setKeyInput("");
-            setAnswerKey([]);
-            resetGrading();
-            setGradedStudents([]);
-            setStudentList([]);
-            setSessionId("");
+            if (isAdmin) {
+              setLayer("setup");
+              setSessionId("");
+              setSessionName("");
+              setSessionPassword("");
+              setKeyInput("");
+              setAnswerKey([]);
+              resetGrading();
+              setGradedStudents([]);
+              setStudentList([]);
+            } else {
+              setLayer("login");
+            }
           }}
           onSessionClick={(name) => {
             setSessionName(name);
@@ -379,6 +408,21 @@ export default function GradeMaster() {
             setModal("delete");
           }}
           onOpenAbout={() => setModal("about")}
+          isAdmin={isAdmin}
+          onLoginClick={() => setLayer("login")}
+          onLogout={handleAdminLogout}
+        />
+      )}
+
+      {layer === "login" && (
+        <LoginLayer
+          onBack={() => setLayer("home")}
+          onSuccess={(user) => {
+            setIsAdmin(true);
+            setAdminUser(user);
+            setLayer("setup");
+          }}
+          setToast={setToast}
         />
       )}
 

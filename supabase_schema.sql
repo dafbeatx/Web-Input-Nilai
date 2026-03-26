@@ -75,3 +75,29 @@ CREATE POLICY "gm_answers_anon_access" ON public.gm_answers
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_gm_students_session ON public.gm_students(session_id);
 CREATE INDEX IF NOT EXISTS idx_gm_answers_student ON public.gm_answers(student_id);
+
+-- Admin Users
+CREATE TABLE IF NOT EXISTS public.admin_users (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
+-- Note: Admin users are managed via SQL for security, 
+-- or via a protected backend-only logic.
+-- To create first admin: 
+-- INSERT INTO public.admin_users (username, password_hash) VALUES ('admin', 'hashed_password');
+
+-- Admin Sessions (Backend-only)
+CREATE TABLE IF NOT EXISTS public.gm_admin_sessions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES public.admin_users(id) ON DELETE CASCADE,
+    token TEXT NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.gm_admin_sessions ENABLE ROW LEVEL SECURITY;
+-- No public access to sessions table

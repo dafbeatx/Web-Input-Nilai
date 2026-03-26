@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { hashPassword, verifyPassword, validateSessionInput, checkRateLimit } from '@/lib/grademaster/security';
+import { getAdminSession } from '@/lib/grademaster/admin';
 
 export async function POST(req: NextRequest) {
   try {
+    const adminSession = await getAdminSession();
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(ip)) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan. Coba lagi nanti.' }, { status: 429 });
@@ -59,6 +61,13 @@ export async function POST(req: NextRequest) {
 
       if (error) throw error;
       return NextResponse.json({ message: 'Sesi berhasil diperbarui', sessionId: existing.id });
+    }
+
+    // New session creation - REQUIRE ADMIN LOGIN
+    if (!adminSession) {
+      return NextResponse.json({ 
+        error: 'Hanya Admin yang diizinkan membuat sesi kelas baru. Silakan login terlebih dahulu.' 
+      }, { status: 401 });
     }
 
     const passwordHash = await hashPassword(password.trim());

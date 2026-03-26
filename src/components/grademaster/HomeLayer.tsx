@@ -21,6 +21,9 @@ interface HomeLayerProps {
   onSessionClick: (name: string) => void;
   onDeleteSession: (name: string) => void;
   onOpenAbout: () => void;
+  isAdmin: boolean;
+  onLoginClick: () => void;
+  onLogout: () => void;
 }
 
 export default function HomeLayer({
@@ -30,6 +33,9 @@ export default function HomeLayer({
   onSessionClick,
   onDeleteSession,
   onOpenAbout,
+  isAdmin,
+  onLoginClick,
+  onLogout,
 }: HomeLayerProps) {
   return (
     <div className="min-h-screen p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in">
@@ -48,15 +54,37 @@ export default function HomeLayer({
             >
               <HelpCircle size={16} className="md:w-5 md:h-5" />
             </button>
+            {isAdmin && (
+              <span className="ml-3 px-3 py-1 bg-emerald-100 text-emerald-700 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-full flex items-center gap-1.5 shadow-sm border border-emerald-200 animate-in fade-in zoom-in duration-300">
+                <CheckCircle2 size={12} /> Admin
+              </span>
+            )}
           </h1>
           <p className="text-sm md:text-base text-slate-500 font-bold mt-1 md:mt-2">Pilih sesi kelas Anda atau buat sesi baru untuk mulai evaluasi.</p>
         </div>
-        <button
-          onClick={onCreateNew}
-          className="px-4 py-3 md:px-6 md:py-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
-        >
-          <Plus size={16} className="md:w-[18px] md:h-[18px]" /> Buat Sesi Baru
-        </button>
+        <div className="flex items-center gap-3">
+          {isAdmin ? (
+            <button
+              onClick={onLogout}
+              className="px-4 py-3 md:px-5 md:py-4 bg-slate-100 text-slate-600 rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest hover:bg-rose-50 hover:text-rose-600 transition-all flex items-center justify-center gap-2"
+            >
+              Logout
+            </button>
+          ) : (
+            <button
+              onClick={onLoginClick}
+              className="px-4 py-3 md:px-5 md:py-4 bg-slate-100 text-slate-600 rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest hover:bg-indigo-50 hover:text-indigo-600 transition-all flex items-center justify-center gap-2"
+            >
+              Login Admin
+            </button>
+          )}
+          <button
+            onClick={onCreateNew}
+            className="px-4 py-3 md:px-6 md:py-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+          >
+            <Plus size={16} className="md:w-[18px] md:h-[18px]" /> Buat Sesi Baru
+          </button>
+        </div>
       </header>
 
       {isLoading ? (

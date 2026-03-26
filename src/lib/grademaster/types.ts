@@ -98,4 +98,4 @@ export interface AnalyticsResult {
 
 export type ModalType = 'save' | 'load' | 'delete' | 'about' | 'error' | null;
 export type ToastType = { message: string; type: 'success' | 'error' } | null;
-export type Layer = 'home' | 'setup' | 'dashboard' | 'grading';
+export type Layer = 'home' | 'setup' | 'dashboard' | 'grading' | 'login';
