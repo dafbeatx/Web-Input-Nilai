@@ -46,14 +46,14 @@ export default function HomeLayer({
         <div>
           <div className="flex items-center gap-2 md:gap-3 text-indigo-600 mb-1 md:mb-2">
             <GraduationCap size={24} className="md:w-8 md:h-8" />
-            <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em]">GradeMaster OS</span>
+            <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em]">SMP Terpadu Al-Ittihadiyah</span>
           </div>
           <h1 className="text-2xl md:text-4xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-            Kumpulan Kelas
+            Penilaian Ujian
             <button
               onClick={onOpenAbout}
               className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center transition-colors shadow-inner"
-              title="Tentang GradeMaster"
+              title="Tentang Sistem"
             >
               <HelpCircle size={16} className="md:w-5 md:h-5" />
             </button>
@@ -106,43 +106,51 @@ export default function HomeLayer({
           <Loader2 size={32} className="animate-spin text-indigo-500 md:w-10 md:h-10" />
         </div>
       ) : sessions.length === 0 ? (
-        <div className="text-center py-10 md:py-16 bg-white rounded-2xl md:rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/50 w-full max-w-4xl mx-auto px-4 md:px-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-indigo-50 text-indigo-600 rounded-2xl mb-4 md:mb-6">
-            <GraduationCap size={28} className="md:w-8 md:h-8" />
-          </div>
-          <h3 className="text-xl md:text-3xl font-black text-slate-800 mb-2 md:mb-3 font-outfit">Selamat Datang di GradeMaster OS</h3>
-          <p className="text-xs md:text-sm text-slate-500 font-bold mb-6 md:mb-10 max-w-2xl mx-auto leading-relaxed">
-            Platform koreksi lembar jawaban dan analitik performa cerdas untuk pendidik modern.
-            Tinggalkan cara manual, kini Anda dapat mengelola puluhan kelas hanya dengan beberapa klik.
-          </p>
+        isAdmin ? (
+          <div className="text-center py-10 md:py-16 bg-white rounded-2xl md:rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/50 w-full max-w-4xl mx-auto px-4 md:px-8">
+            <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-indigo-50 text-indigo-600 rounded-2xl mb-4 md:mb-6">
+              <GraduationCap size={28} className="md:w-8 md:h-8" />
+            </div>
+            <h3 className="text-xl md:text-3xl font-black text-slate-800 mb-2 md:mb-3 font-outfit">Selamat Datang di SMP Terpadu Al-Ittihadiyah</h3>
+            <p className="text-xs md:text-sm text-slate-500 font-bold mb-6 md:mb-10 max-w-2xl mx-auto leading-relaxed">
+              Platform koreksi lembar jawaban dan analitik performa cerdas untuk pendidik modern.
+              Tinggalkan cara manual, kini Anda dapat mengelola puluhan kelas hanya dengan beberapa klik.
+            </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12 text-left">
-            <div className="p-4 md:p-6 bg-slate-50 rounded-2xl border border-slate-100">
-              <FileText size={20} className="text-sky-500 mb-3 md:w-6 md:h-6" />
-              <h4 className="text-sm font-black text-slate-700 mb-1.5">Ekstraksi Pintar</h4>
-              <p className="text-[10px] md:text-xs text-slate-500 font-bold leading-relaxed">Upload file absen format PDF, Word, atau Excel. GradeMaster akan membersihkan dan menyusunnya otomatis.</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12 text-left">
+              <div className="p-4 md:p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                <FileText size={20} className="text-sky-500 mb-3 md:w-6 md:h-6" />
+                <h4 className="text-sm font-black text-slate-700 mb-1.5">Ekstraksi Pintar</h4>
+                <p className="text-[10px] md:text-xs text-slate-500 font-bold leading-relaxed">Upload file absen format PDF, Word, atau Excel. Sistem akan membersihkan dan menyusunnya otomatis.</p>
+              </div>
+              <div className="p-4 md:p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                <CheckCircle2 size={20} className="text-emerald-500 mb-3 md:w-6 md:h-6" />
+                <h4 className="text-sm font-black text-slate-700 mb-1.5">Koreksi Kilat</h4>
+                <p className="text-[10px] md:text-xs text-slate-500 font-bold leading-relaxed">Ketik kunci jawaban secara acak atau tempel dari sumber mana saja, sistem akan memahaminya dalam sedetik.</p>
+              </div>
+              <div className="p-4 md:p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                <GraduationCap size={20} className="text-indigo-500 mb-3 md:w-6 md:h-6" />
+                <h4 className="text-sm font-black text-slate-700 mb-1.5">Analitik Performa</h4>
+                <p className="text-[10px] md:text-xs text-slate-500 font-bold leading-relaxed">Dapatkan Indeks Kesulitan, distribusi nilai, dan insight otomatis dari hasil setiap siswa.</p>
+              </div>
             </div>
-            <div className="p-4 md:p-6 bg-slate-50 rounded-2xl border border-slate-100">
-              <CheckCircle2 size={20} className="text-emerald-500 mb-3 md:w-6 md:h-6" />
-              <h4 className="text-sm font-black text-slate-700 mb-1.5">Koreksi Kilat</h4>
-              <p className="text-[10px] md:text-xs text-slate-500 font-bold leading-relaxed">Ketik kunci jawaban secara acak atau tempel dari sumber mana saja, sistem akan memahaminya dalam sedetik.</p>
-            </div>
-            <div className="p-4 md:p-6 bg-slate-50 rounded-2xl border border-slate-100">
-              <GraduationCap size={20} className="text-indigo-500 mb-3 md:w-6 md:h-6" />
-              <h4 className="text-sm font-black text-slate-700 mb-1.5">Analitik Performa</h4>
-              <p className="text-[10px] md:text-xs text-slate-500 font-bold leading-relaxed">Dapatkan CSI, distribusi nilai, tingkat kesulitan soal, dan insight otomatis dari hasil setiap siswa.</p>
-            </div>
-          </div>
 
-          {isAdmin && (
             <button
               onClick={onCreateNew}
               className="px-6 py-3.5 md:px-8 md:py-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-indigo-600/20 inline-flex items-center gap-2"
             >
               <Plus size={16} /> Buat Sesi Kelas Perdana
             </button>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="text-center py-12 md:py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-200 shadow-sm w-full max-w-2xl mx-auto px-4">
+            <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-white shadow-sm text-slate-300 rounded-full mb-4">
+              <GraduationCap size={28} className="md:w-8 md:h-8" />
+            </div>
+            <h3 className="text-lg md:text-xl font-black text-slate-800 mb-1">Belum Ada Data</h3>
+            <p className="text-xs md:text-sm text-slate-500 font-bold">Saat ini tidak ada sesi evaluasi yang aktif untuk ditampilkan.</p>
+          </div>
+        )
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {sessions.map(s => (
