@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   GraduationCap,
   BookOpen,
@@ -12,6 +12,11 @@ import {
   FileText,
   CheckCircle2,
   Settings,
+  Users,
+  ChevronRight,
+  ArrowLeft,
+  ShieldCheck,
+  Calendar,
 } from 'lucide-react';
 import { SessionMeta, ModalType } from '@/lib/grademaster/types';
 
@@ -28,6 +33,13 @@ interface HomeLayerProps {
   onOpenSettings: () => void;
 }
 
+interface ClassGroup {
+  className: string;
+  academicYear: string;
+  schoolLevel: string;
+  sessions: SessionMeta[];
+}
+
 export default function HomeLayer({
   sessions,
   isLoading,
@@ -40,6 +52,60 @@ export default function HomeLayer({
   onLogout,
   onOpenSettings,
 }: HomeLayerProps) {
+  const [expandedClass, setExpandedClass] = useState<string | null>(null);
+  const [behaviorSummary, setBehaviorSummary] = useState<Record<string, { count: number; avgPoints: number }>>({});
+
+  const classGroups = useMemo(() => {
+    const map: Record<string, ClassGroup> = {};
+    for (const s of sessions) {
+      const key = `${s.class_name || 'Umum'}__${s.academic_year || '2025/2026'}`;
+      if (!map[key]) {
+        map[key] = {
+          className: s.class_name || 'Umum',
+          academicYear: s.academic_year || '2025/2026',
+          schoolLevel: s.school_level || 'SMP',
+          sessions: [],
+        };
+      }
+      map[key].sessions.push(s);
+    }
+    return Object.values(map).sort((a, b) => a.className.localeCompare(b.className));
+  }, [sessions]);
+
+  useEffect(() => {
+    const uniqueKeys = classGroups.map(g => `${g.className}__${g.academicYear}`);
+    const fetchAll = async () => {
+      const summaryMap: Record<string, { count: number; avgPoints: number }> = {};
+      await Promise.all(
+        classGroups.map(async (g) => {
+          try {
+            const res = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(g.className)}&year=${encodeURIComponent(g.academicYear)}`);
+            const data = await res.json();
+            const students = data.students || [];
+            const avg = students.length > 0
+              ? Math.round(students.reduce((sum: number, s: any) => sum + (s.total_points || 0), 0) / students.length)
+              : 0;
+            summaryMap[`${g.className}__${g.academicYear}`] = { count: students.length, avgPoints: avg };
+          } catch {
+            summaryMap[`${g.className}__${g.academicYear}`] = { count: 0, avgPoints: 0 };
+          }
+        })
+      );
+      setBehaviorSummary(summaryMap);
+    };
+    if (classGroups.length > 0) fetchAll();
+  }, [classGroups]);
+
+  const getBehaviorLabel = (avg: number) => {
+    if (avg >= 100) return { text: 'Sangat Baik', color: 'text-emerald-600 bg-emerald-50' };
+    if (avg >= 80) return { text: 'Baik', color: 'text-emerald-600 bg-emerald-50' };
+    if (avg >= 60) return { text: 'Cukup', color: 'text-amber-600 bg-amber-50' };
+    if (avg >= 40) return { text: 'Kurang', color: 'text-rose-600 bg-rose-50' };
+    return { text: '-', color: 'text-slate-400 bg-slate-50' };
+  };
+
+  const expandedGroup = expandedClass ? classGroups.find(g => `${g.className}__${g.academicYear}` === expandedClass) : null;
+
   return (
     <div className="min-h-screen p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in">
       <header className="mb-8 md:mb-12 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
@@ -49,15 +115,26 @@ export default function HomeLayer({
             <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em]">SMP Terpadu Al-Ittihadiyah</span>
           </div>
           <h1 className="text-2xl md:text-4xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-            Penilaian Ujian
-            <button
-              onClick={onOpenAbout}
-              className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center transition-colors shadow-inner"
-              title="Tentang Sistem"
-            >
-              <HelpCircle size={16} className="md:w-5 md:h-5" />
-            </button>
-            {isAdmin && (
+            {expandedGroup ? (
+              <>
+                <button onClick={() => setExpandedClass(null)} className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-100 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center transition-colors">
+                  <ArrowLeft size={16} className="md:w-5 md:h-5" />
+                </button>
+                Kelas {expandedGroup.className}
+              </>
+            ) : (
+              <>
+                Daftar Kelas
+                <button
+                  onClick={onOpenAbout}
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center transition-colors shadow-inner"
+                  title="Tentang Sistem"
+                >
+                  <HelpCircle size={16} className="md:w-5 md:h-5" />
+                </button>
+              </>
+            )}
+            {isAdmin && !expandedGroup && (
               <div className="ml-3 flex items-center gap-2">
                 <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-full flex items-center gap-1.5 shadow-sm border border-emerald-200 animate-in fade-in zoom-in duration-300">
                   <CheckCircle2 size={12} /> Admin
@@ -72,7 +149,12 @@ export default function HomeLayer({
               </div>
             )}
           </h1>
-          <p className="text-sm md:text-base text-slate-500 font-bold mt-1 md:mt-2">Pilih sesi kelas Anda atau buat sesi baru untuk mulai evaluasi.</p>
+          <p className="text-sm md:text-base text-slate-500 font-bold mt-1 md:mt-2">
+            {expandedGroup
+              ? `Tahun Ajaran ${expandedGroup.academicYear} • ${expandedGroup.schoolLevel}`
+              : 'Pilih kelas untuk melihat sesi ujian dan data kehadiran siswa.'
+            }
+          </p>
         </div>
         <div className="flex items-center gap-3">
           {isAdmin ? (
@@ -151,46 +233,127 @@ export default function HomeLayer({
             <p className="text-xs md:text-sm text-slate-500 font-bold">Saat ini tidak ada sesi evaluasi yang aktif untuk ditampilkan.</p>
           </div>
         )
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {sessions.map(s => (
-            <div
-              key={s.id}
-              onClick={() => onSessionClick(s.session_name)}
-              className="bg-white p-4 sm:p-5 md:p-6 rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-500/10 transition-all cursor-pointer group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex justify-between items-start mb-3 md:mb-4">
-                  <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-50 text-indigo-600 rounded-lg md:rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                    <BookOpen size={20} className="md:w-6 md:h-6" />
+      ) : expandedGroup ? (
+        /* ── Expanded Class View ── */
+        <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+          {/* Sessions */}
+          <div className="mb-6">
+            <h2 className="text-xs md:text-sm font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <BookOpen size={16} /> Sesi Ujian
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+              {expandedGroup.sessions.map(s => (
+                <div
+                  key={s.id}
+                  onClick={() => onSessionClick(s.session_name)}
+                  className="bg-white p-4 md:p-5 rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-500/10 transition-all cursor-pointer group"
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                      <BookOpen size={18} />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isAdmin && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onDeleteSession(s.session_name); }}
+                          className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                          title="Hapus Sesi"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                      <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">
+                        {s.exam_type || 'UJIAN'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onDeleteSession(s.session_name); }}
-                      className="p-1 md:p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                      title="Hapus Sesi"
-                    >
-                      <Trash2 size={14} className="md:w-4 md:h-4" />
-                    </button>
-                    <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-2 py-0.5 md:px-2.5 md:py-1 rounded-full">
-                      {s.school_level || 'N/A'}
+                  <h3 className="text-base md:text-lg font-black text-slate-800 mb-0.5 truncate">{s.session_name}</h3>
+                  <p className="text-xs font-bold text-slate-500 truncate">{s.subject || 'Mapel'}</p>
+                  <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                      <User size={12} />
+                      <span className="truncate max-w-[100px]">{s.teacher || 'Guru'}</span>
+                    </div>
+                    <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                      {s.student_count !== undefined ? `${s.student_count} siswa` : '-'}
                     </span>
                   </div>
                 </div>
-                <h3 className="text-lg md:text-xl font-black text-slate-800 mb-0.5 md:mb-1 truncate">{s.session_name}</h3>
-                <p className="text-xs md:text-sm font-bold text-slate-500 truncate">{s.subject || 'Mapel tidak diketahui'}</p>
-              </div>
-              <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-slate-50 flex items-center justify-between">
-                <div className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs font-bold text-slate-400">
-                  <User size={12} className="md:w-[14px] md:h-[14px]" />
-                  <span className="truncate max-w-[100px] md:max-w-[120px]">{s.teacher || 'Guru'}</span>
-                </div>
-                <div className="text-[10px] md:text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-1 md:px-3 md:py-1.5 rounded-md md:rounded-lg border border-indigo-100">
-                  {s.student_count !== undefined ? `${s.student_count} siswa` : `Kls ${s.class_name || '-'}`}
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
+          </div>
+
+          {/* Behavior Summary */}
+          {(() => {
+            const key = `${expandedGroup.className}__${expandedGroup.academicYear}`;
+            const bData = behaviorSummary[key];
+            if (!bData || bData.count === 0) return null;
+            const label = getBehaviorLabel(bData.avgPoints);
+            return (
+              <div className="mb-6">
+                <h2 className="text-xs md:text-sm font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <ShieldCheck size={16} /> Kehadiran & Perilaku
+                </h2>
+                <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+                      <Users size={28} />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-black text-slate-800">{bData.count}</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Siswa Terdaftar</p>
+                    </div>
+                  </div>
+                  <div className="h-px md:h-12 md:w-px bg-slate-100" />
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="text-2xl font-black text-slate-800">{bData.avgPoints}</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rata-Rata Poin</p>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-black ${label.color}`}>{label.text}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      ) : (
+        /* ── Class Cards Grid ── */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
+          {classGroups.map(g => {
+            const key = `${g.className}__${g.academicYear}`;
+            const bData = behaviorSummary[key];
+            const label = bData ? getBehaviorLabel(bData.avgPoints) : null;
+            return (
+              <button
+                key={key}
+                onClick={() => setExpandedClass(key)}
+                className="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border-2 border-slate-100 hover:border-indigo-500 hover:shadow-xl hover:shadow-indigo-500/10 transition-all text-left group outline-none focus:border-indigo-500"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-12 h-12 md:w-14 md:h-14 bg-indigo-50 text-indigo-600 rounded-xl md:rounded-2xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    <Users size={24} className="md:w-7 md:h-7" />
+                  </div>
+                  <ChevronRight size={18} className="text-slate-300 group-hover:text-indigo-500 transition-colors mt-1" />
+                </div>
+                <h3 className="text-xl md:text-2xl font-black text-slate-800 mb-1">Kelas {g.className}</h3>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-[9px] md:text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full uppercase tracking-widest">{g.schoolLevel}</span>
+                  <span className="text-[9px] md:text-[10px] font-bold text-slate-400 flex items-center gap-1"><Calendar size={10} />{g.academicYear}</span>
+                </div>
+                <div className="pt-3 border-t border-slate-50 flex items-center justify-between">
+                  <span className="text-[10px] md:text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                    {g.sessions.length} Sesi Ujian
+                  </span>
+                  {label && bData && bData.count > 0 && (
+                    <span className={`text-[10px] md:text-xs font-black px-2 py-0.5 rounded-md ${label.color}`}>
+                      {bData.count} Siswa
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

@@ -66,6 +66,8 @@ export interface SessionMeta {
   subject: string;
   class_name: string;
   school_level: string;
+  exam_type?: string;
+  academic_year?: string;
   kkm: number;
   remedial_essay_count: number;
   remedial_timer?: number;
