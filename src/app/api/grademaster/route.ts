@@ -113,8 +113,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ sessions: sessionsWithCounts });
     }
 
-    if (!name || !password) {
-      return NextResponse.json({ error: 'Nama sesi dan password wajib diisi' }, { status: 400 });
+    if (!name) {
+      return NextResponse.json({ error: 'Nama sesi wajib diisi' }, { status: 400 });
     }
 
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
@@ -132,9 +132,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Sesi tidak ditemukan' }, { status: 404 });
     }
 
-    const valid = await verifyPassword(password.trim(), session.password_hash);
-    if (!valid) {
-      return NextResponse.json({ error: 'Password salah' }, { status: 403 });
+    let isPublic = false;
+    if (password) {
+      const valid = await verifyPassword(password.trim(), session.password_hash);
+      if (!valid) {
+        return NextResponse.json({ error: 'Password salah' }, { status: 403 });
+      }
+    } else {
+      isPublic = true;
     }
 
     // Fetch students for this session
@@ -147,7 +152,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       sessionId: session.id,
       sessionName: session.session_name,
-      answerKey: session.answer_key,
+      answerKey: isPublic ? [] : session.answer_key,
       teacher: session.teacher,
       subject: session.subject,
       className: session.class_name,

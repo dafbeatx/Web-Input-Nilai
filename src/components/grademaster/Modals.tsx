@@ -23,6 +23,7 @@ interface ModalsProps {
   modalError: string;
   onSave: () => void;
   onLoad: () => void;
+  onLoadPublic?: () => void;
   onDelete: () => void;
   onClose: () => void;
 }
@@ -32,7 +33,7 @@ export default function Modals(props: ModalsProps) {
     modal, sessionName, setSessionName,
     sessionPassword, setSessionPassword,
     modalLoading, modalError,
-    onSave, onLoad, onDelete, onClose,
+    onSave, onLoad, onLoadPublic, onDelete, onClose,
   } = props;
 
   if (!modal) return null;
@@ -153,6 +154,16 @@ export default function Modals(props: ModalsProps) {
               <><FolderOpen size={14} /> Muat</>
             }
           </button>
+
+          {modal === 'load' && onLoadPublic && (
+            <button
+              onClick={onLoadPublic}
+              disabled={modalLoading}
+              className="w-full py-3 rounded-lg text-indigo-600 bg-indigo-50 border border-indigo-100 text-xs md:text-sm font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 hover:bg-indigo-100 hover:scale-[1.02] active:scale-95 mt-2"
+            >
+              <FolderOpen size={14} /> Lihat Publik (Tanpa Password)
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -50,6 +50,7 @@ export default function GradeMaster() {
   const [gradedStudents, setGradedStudents] = useState<GradedStudent[]>([]);
 
   // UI state
+  const [isPublicView, setIsPublicView] = useState(false);
   const [modal, setModal] = useState<ModalType>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState("");
@@ -152,10 +153,48 @@ export default function GradeMaster() {
       }
 
       setToast({ message: `Sesi "${data.sessionName}" berhasil dimuat!`, type: "success" });
+      setIsPublicView(false);
       setLayer("dashboard");
       closeModal();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal memuat";
+      setModalError(msg);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleLoadPublicSession = async () => {
+    if (!sessionName.trim()) {
+      setModalError("Nama sesi wajib diisi");
+      return;
+    }
+    setModalLoading(true);
+    setModalError("");
+    try {
+      const params = new URLSearchParams({
+        name: sessionName.trim(),
+      });
+      const res = await fetch(`/api/grademaster?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setSessionId(data.sessionId || "");
+      setAnswerKey([]);
+      setTeacherName(data.teacher || "");
+      setSubject(data.subject || "");
+      setStudentClass(data.className || "");
+      setSchoolLevel(data.schoolLevel || "SMA");
+      setStudentList(data.studentList || []);
+      setGradedStudents(data.gradedStudents || []);
+      setKeyInput("");
+
+      setToast({ message: `Sesi "${data.sessionName}" dimuat sebagai publik!`, type: "success" });
+      setIsPublicView(true);
+      setLayer("dashboard");
+      closeModal();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal memuat sesi publik";
       setModalError(msg);
     } finally {
       setModalLoading(false);
@@ -340,11 +379,16 @@ export default function GradeMaster() {
           schoolLevel={schoolLevel}
           gradedStudents={gradedStudents}
           analytics={analytics}
+          isPublicView={isPublicView}
+          sessionName={sessionName}
           onGradeStudent={() => {
             resetGrading();
             setLayer("grading");
           }}
-          onBack={() => setLayer("setup")}
+          onBack={() => {
+            setLayer(isPublicView ? "home" : "setup");
+            if (isPublicView) fetchSessions();
+          }}
         />
       )}
 
@@ -380,6 +424,7 @@ export default function GradeMaster() {
         modalError={modalError}
         onSave={handleSaveSession}
         onLoad={handleLoadSession}
+        onLoadPublic={handleLoadPublicSession}
         onDelete={handleDeleteSession}
         onClose={closeModal}
       />

@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Plus,
   User,
+  Download,
 } from 'lucide-react';
 import { GradedStudent, AnalyticsResult } from '@/lib/grademaster/types';
 import { getCsiLabel, getLpsLabel } from '@/lib/grademaster/scoring';
@@ -20,6 +21,8 @@ interface DashboardLayerProps {
   schoolLevel: string;
   gradedStudents: GradedStudent[];
   analytics: AnalyticsResult;
+  isPublicView?: boolean;
+  sessionName?: string;
   onGradeStudent: () => void;
   onBack: () => void;
 }
@@ -34,9 +37,60 @@ export default function DashboardLayer({
   schoolLevel,
   gradedStudents,
   analytics,
+  isPublicView,
+  sessionName,
   onGradeStudent,
   onBack,
 }: DashboardLayerProps) {
+  const handleExportXML = () => {
+    const xmlHeader = `<?xml version="1.0" encoding="UTF-8"?>\n<Report>\n`;
+    
+    let xml = xmlHeader + `  <SchoolIdentity>\n`;
+    xml += `    <SessionName>${sessionName || 'Sesi'}</SessionName>\n`;
+    const tagMatch = (sessionName || '').match(/UTS|UAS|USBN|UN|PAT|PAS/i);
+    const tag = tagMatch ? tagMatch[0].toUpperCase() : 'UJIAN';
+    xml += `    <Tag>${tag}</Tag>\n`;
+    xml += `    <SchoolLevel>${schoolLevel}</SchoolLevel>\n`;
+    xml += `    <Teacher>${teacherName}</Teacher>\n`;
+    xml += `    <Subject>${subject}</Subject>\n`;
+    xml += `    <Class>${studentClass}</Class>\n`;
+    xml += `  </SchoolIdentity>\n`;
+
+    xml += `  <Statistics>\n`;
+    xml += `    <Mean>${analytics.avgScore}</Mean>\n`;
+    xml += `    <Median>${analytics.median}</Median>\n`;
+    xml += `    <Max>${analytics.highestScore}</Max>\n`;
+    xml += `    <Min>${analytics.lowestScore}</Min>\n`;
+    xml += `  </Statistics>\n`;
+
+    xml += `  <Students>\n`;
+    gradedStudents.forEach(s => {
+      xml += `    <Student>\n`;
+      xml += `      <Name>${s.name}</Name>\n`;
+      xml += `      <Score>${s.finalScore}</Score>\n`;
+      xml += `    </Student>\n`;
+    });
+    xml += `  </Students>\n`;
+
+    xml += `  <DistributionGraph>\n`;
+    analytics.distribution.forEach(d => {
+      xml += `    <Range name="${d.range}" count="${d.count}" />\n`;
+    });
+    xml += `  </DistributionGraph>\n`;
+    
+    xml += `</Report>`;
+
+    const blob = new Blob([xml], { type: "text/xml" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Nilai_${tag}_${studentClass}_${subject.replace(/\\s+/g, '_')}.xml`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="p-3 sm:p-5 lg:p-8 max-w-6xl mx-auto animate-in">
       <header className="mb-8 md:mb-10 text-center">
@@ -124,19 +178,31 @@ export default function DashboardLayer({
               {gradedStudents.length} siswa • Rata-rata: {analytics.avgScore}
             </p>
           </div>
-          <button
-            onClick={onGradeStudent}
-            className="px-3 md:px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors flex items-center justify-center gap-1.5 md:gap-2"
-          >
-            <Plus size={12} className="md:w-3.5 md:h-3.5" /> Koreksi Siswa
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportXML}
+              className="px-3 md:px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-emerald-100 transition-colors flex items-center justify-center gap-1.5 md:gap-2"
+            >
+              <Download size={12} className="md:w-3.5 md:h-3.5" /> Export XML
+            </button>
+            {!isPublicView && (
+              <button
+                onClick={onGradeStudent}
+                className="px-3 md:px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors flex items-center justify-center gap-1.5 md:gap-2"
+              >
+                <Plus size={12} className="md:w-3.5 md:h-3.5" /> Koreksi Siswa
+              </button>
+            )}
+          </div>
         </div>
 
         {gradedStudents.length === 0 ? (
           <div className="text-center py-6 md:py-10 bg-slate-50 rounded-xl border border-dashed border-slate-200">
             <User size={24} className="mx-auto text-slate-300 mb-2 md:mb-3" />
             <p className="text-slate-500 font-bold text-xs md:text-sm">Belum ada nilai tersimpan.</p>
-            <p className="text-slate-400 text-[10px] md:text-xs mt-1">Klik &quot;Koreksi Siswa&quot; untuk memulai evaluasi.</p>
+            {!isPublicView && (
+              <p className="text-slate-400 text-[10px] md:text-xs mt-1">Klik &quot;Koreksi Siswa&quot; untuk memulai evaluasi.</p>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
