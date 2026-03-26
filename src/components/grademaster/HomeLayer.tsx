@@ -90,12 +90,14 @@ export default function HomeLayer({
               Login Admin
             </button>
           )}
-          <button
-            onClick={onCreateNew}
-            className="px-4 py-3 md:px-6 md:py-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
-          >
-            <Plus size={16} className="md:w-[18px] md:h-[18px]" /> Buat Sesi Baru
-          </button>
+          {isAdmin && (
+            <button
+              onClick={onCreateNew}
+              className="px-4 py-3 md:px-6 md:py-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              <Plus size={16} className="md:w-[18px] md:h-[18px]" /> Buat Sesi Baru
+            </button>
+          )}
         </div>
       </header>
 
@@ -132,12 +134,14 @@ export default function HomeLayer({
             </div>
           </div>
 
-          <button
-            onClick={onCreateNew}
-            className="px-6 py-3.5 md:px-8 md:py-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-indigo-600/20 inline-flex items-center gap-2"
-          >
-            <Plus size={16} /> Buat Sesi Kelas Perdana
-          </button>
+          {isAdmin && (
+            <button
+              onClick={onCreateNew}
+              className="px-6 py-3.5 md:px-8 md:py-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-indigo-600/20 inline-flex items-center gap-2"
+            >
+              <Plus size={16} /> Buat Sesi Kelas Perdana
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">

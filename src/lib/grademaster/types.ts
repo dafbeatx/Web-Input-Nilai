@@ -50,6 +50,8 @@ export interface SessionData {
   studentList: string[];
   gradedStudents: GradedStudent[];
   scoringConfig: ScoringConfig;
+  kkm: number;
+  remedialEssayCount: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -61,6 +63,8 @@ export interface SessionMeta {
   subject: string;
   class_name: string;
   school_level: string;
+  kkm: number;
+  remedial_essay_count: number;
   updated_at: string;
   student_count?: number;
 }
@@ -98,4 +102,4 @@ export interface AnalyticsResult {
 
 export type ModalType = 'save' | 'load' | 'delete' | 'about' | 'error' | 'adminSettings' | null;
 export type ToastType = { message: string; type: 'success' | 'error' } | null;
-export type Layer = 'home' | 'setup' | 'dashboard' | 'grading' | 'login';
+export type Layer = 'home' | 'setup' | 'dashboard' | 'grading' | 'login' | 'remedial';

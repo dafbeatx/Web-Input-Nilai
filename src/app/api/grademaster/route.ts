@@ -24,6 +24,8 @@ export async function POST(req: NextRequest) {
       scoringConfig,
       examType,
       academicYear,
+      kkm,
+      remedialEssayCount,
     } = body;
 
     const validationError = validateSessionInput({ sessionName, password, teacher, subject });
@@ -55,6 +57,8 @@ export async function POST(req: NextRequest) {
           scoring_config: scoringConfig || undefined,
           exam_type: examType || 'UTS',
           academic_year: academicYear || '2025/2026',
+          kkm: kkm || 70,
+          remedial_essay_count: remedialEssayCount || 5,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
@@ -86,6 +90,8 @@ export async function POST(req: NextRequest) {
         scoring_config: scoringConfig || undefined,
         exam_type: examType || 'UTS',
         academic_year: academicYear || '2025/2026',
+        kkm: kkm || 70,
+        remedial_essay_count: remedialEssayCount || 5,
       })
       .select('id')
       .single();
@@ -113,7 +119,7 @@ export async function GET(req: NextRequest) {
     if (!name && !password) {
       const { data, error } = await supabase
         .from('gm_sessions')
-        .select('id, session_name, teacher, subject, class_name, school_level, exam_type, academic_year, updated_at')
+        .select('id, session_name, teacher, subject, class_name, school_level, exam_type, academic_year, updated_at, kkm, remedial_essay_count')
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
@@ -180,6 +186,8 @@ export async function GET(req: NextRequest) {
       scoringConfig: session.scoring_config,
       examType: session.exam_type || 'UTS',
       academicYear: session.academic_year || '2025/2026',
+      kkm: session.kkm || 70,
+      remedialEssayCount: session.remedial_essay_count || 5,
       gradedStudents: (students || []).map(s => ({
         id: s.id,
         name: s.name,

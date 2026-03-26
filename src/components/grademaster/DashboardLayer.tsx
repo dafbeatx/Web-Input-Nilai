@@ -23,7 +23,10 @@ interface DashboardLayerProps {
   analytics: AnalyticsResult;
   isPublicView?: boolean;
   sessionName?: string;
+  kkm: number;
+  remedialEssayCount: number;
   onGradeStudent: () => void;
+  onStudentRemedial?: (name: string) => void;
   onBack: () => void;
 }
 
@@ -39,7 +42,10 @@ export default function DashboardLayer({
   analytics,
   isPublicView,
   sessionName,
+  kkm,
+  remedialEssayCount,
   onGradeStudent,
+  onStudentRemedial,
   onBack,
 }: DashboardLayerProps) {
   const handleExportXML = () => {
@@ -104,9 +110,9 @@ export default function DashboardLayer({
       {/* Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
         <StatCard label="Rata-rata" value={analytics.avgScore} suffix="%" color="indigo" />
-        <StatCard label="CSI Avg" value={analytics.avgCsi} suffix="" sublabel={getCsiLabel(analytics.avgCsi)} color="sky" />
-        <StatCard label="LPS Avg" value={analytics.avgLps} suffix="" sublabel={getLpsLabel(analytics.avgLps)} color="purple" />
-        <StatCard label="Std Deviasi" value={analytics.standardDeviation} suffix="" color="slate" />
+        <StatCard label={isPublicView ? "Rata Rata Pemahaman" : "CSI Avg"} value={analytics.avgCsi} suffix="" sublabel={isPublicView ? "" : getCsiLabel(analytics.avgCsi)} color="sky" />
+        <StatCard label={isPublicView ? "Performa Belajar" : "LPS Avg"} value={analytics.avgLps} suffix="" sublabel={isPublicView ? "" : getLpsLabel(analytics.avgLps)} color="purple" />
+        <StatCard label={isPublicView ? "Varietas Penguasaan" : "Std Deviasi"} value={analytics.standardDeviation} suffix="" color="slate" />
       </div>
 
       {/* Charts Row */}
@@ -212,24 +218,34 @@ export default function DashboardLayer({
                   <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">#</th>
                   <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Nama Siswa</th>
                   <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Nilai Akhir</th>
-                  <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">CSI</th>
-                  <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">LPS</th>
+                  <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">{isPublicView ? "Keterangan" : "CSI"}</th>
+                  {!isPublicView && <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">LPS</th>}
                 </tr>
               </thead>
               <tbody>
                 {analytics.ranking.map(r => (
-                  <tr key={r.rank} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                  <tr key={r.rank} className={`border-b border-slate-50 hover:bg-slate-50/50 transition-colors ${r.finalScore < kkm ? 'bg-rose-50/30' : ''}`}>
                     <td className="py-3 text-xs font-black text-slate-400">{r.rank}</td>
                     <td className="py-3 text-xs font-bold text-slate-700">{r.name}</td>
                     <td className="py-3">
-                      <span className={`px-2 py-0.5 rounded-md text-xs font-black ${r.finalScore >= 80 ? 'bg-emerald-50 text-emerald-600' : r.finalScore >= 60 ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600'}`}>
+                      <span className={`px-2 py-0.5 rounded-md text-xs font-black ${r.finalScore >= kkm ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
                         {r.finalScore}
                       </span>
                     </td>
-                    <td className="py-3 text-xs font-bold text-sky-600">{r.csi}</td>
-                    <td className="py-3 text-xs font-bold text-purple-600">
-                      {gradedStudents.find(s => s.name === r.name)?.lps ?? '-'}
+                    <td className="py-3 text-xs font-bold text-sky-600">
+                      {isPublicView ? (
+                        r.finalScore < kkm ? (
+                          <button onClick={() => onStudentRemedial?.(r.name)} className="px-3 py-1 text-[10px] bg-rose-500 text-white rounded shadow-sm font-black uppercase tracking-wider hover:bg-rose-600 transition-colors active:scale-95">Remedial</button>
+                        ) : (
+                          <span className="text-emerald-500 font-black text-[10px] uppercase tracking-widest">Tuntas</span>
+                        )
+                      ) : (r.csi)}
                     </td>
+                    {!isPublicView && (
+                      <td className="py-3 text-xs font-bold text-purple-600">
+                        {gradedStudents.find(s => s.name === r.name)?.lps ?? '-'}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

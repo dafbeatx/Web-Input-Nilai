@@ -21,6 +21,7 @@ import DashboardLayer from "./grademaster/DashboardLayer";
 import GradingLayer from "./grademaster/GradingLayer";
 import LoginLayer from "./grademaster/LoginLayer";
 import Modals from "./grademaster/Modals";
+import StudentRemedialLayer from "./grademaster/StudentRemedialLayer";
 
 const ESSAY_COUNT = 5;
 
@@ -43,7 +44,7 @@ export default function GradeMaster() {
 
     const handlePopState = (e: PopStateEvent) => {
       const stateLayer = e.state?.layer || window.location.hash.replace('#', '') || 'home';
-      if (['home', 'setup', 'dashboard', 'grading'].includes(stateLayer)) {
+      if (['home', 'setup', 'dashboard', 'grading', 'remedial'].includes(stateLayer)) {
         setInternalLayer(stateLayer as Layer);
       } else {
         setInternalLayer('home');
@@ -72,6 +73,8 @@ export default function GradeMaster() {
   const [scoringConfig] = useState<ScoringConfig>(DEFAULT_SCORING_CONFIG);
   const [examType, setExamType] = useState("UTS");
   const [academicYear, setAcademicYear] = useState("2025/2026");
+  const [kkm, setKkm] = useState<number>(70);
+  const [remedialEssayCount, setRemedialEssayCount] = useState<number>(5);
 
   // Grading state
   const [studentName, setStudentName] = useState("");
@@ -174,6 +177,8 @@ export default function GradeMaster() {
           scoringConfig,
           examType,
           academicYear,
+          kkm,
+          remedialEssayCount,
         }),
       });
       const data = await res.json();
@@ -214,6 +219,8 @@ export default function GradeMaster() {
       setSchoolLevel(data.schoolLevel || "SMA");
       setExamType(data.examType || "UTS");
       setAcademicYear(data.academicYear || "2025/2026");
+      setKkm(data.kkm || 70);
+      setRemedialEssayCount(data.remedialEssayCount || 5);
       setStudentList(data.studentList || []);
       setGradedStudents(data.gradedStudents || []);
 
@@ -258,6 +265,8 @@ export default function GradeMaster() {
       setSchoolLevel(data.schoolLevel || "SMA");
       setExamType(data.examType || "UTS");
       setAcademicYear(data.academicYear || "2025/2026");
+      setKkm(data.kkm || 70);
+      setRemedialEssayCount(data.remedialEssayCount || 5);
       setStudentList(data.studentList || []);
       setGradedStudents(data.gradedStudents || []);
       setKeyInput("");
@@ -372,6 +381,8 @@ export default function GradeMaster() {
           scoringConfig,
           examType,
           academicYear,
+          kkm,
+          remedialEssayCount,
         }),
       });
       const data = await res.json();
@@ -407,6 +418,8 @@ export default function GradeMaster() {
               resetGrading();
               setGradedStudents([]);
               setStudentList([]);
+              setKkm(70);
+              setRemedialEssayCount(5);
             } else {
               setLayer("login");
             }
@@ -461,6 +474,10 @@ export default function GradeMaster() {
           setExamType={setExamType}
           academicYear={academicYear}
           setAcademicYear={setAcademicYear}
+          kkm={kkm}
+          setKkm={setKkm}
+          remedialEssayCount={remedialEssayCount}
+          setRemedialEssayCount={setRemedialEssayCount}
           onSubmit={handleSetupSubmit}
           onBack={() => {
             setLayer("home");
@@ -481,6 +498,8 @@ export default function GradeMaster() {
           analytics={analytics}
           isPublicView={isPublicView}
           sessionName={sessionName}
+          kkm={kkm}
+          remedialEssayCount={remedialEssayCount}
           onGradeStudent={() => {
             resetGrading();
             setLayer("grading");
@@ -488,6 +507,10 @@ export default function GradeMaster() {
           onBack={() => {
             setLayer(isPublicView ? "home" : "setup");
             if (isPublicView) fetchSessions();
+          }}
+          onStudentRemedial={(name) => {
+            setStudentName(name);
+            setLayer("remedial");
           }}
         />
       )}
@@ -510,6 +533,17 @@ export default function GradeMaster() {
           onSaveStudent={handleSaveStudent}
           onBack={() => setLayer("dashboard")}
           onReset={resetGrading}
+          setToast={setToast}
+        />
+      )}
+
+      {layer === "remedial" && (
+        <StudentRemedialLayer
+          studentName={studentName}
+          subject={subject}
+          remedialEssayCount={remedialEssayCount}
+          sessionId={sessionId}
+          onBack={() => setLayer("dashboard")}
           setToast={setToast}
         />
       )}

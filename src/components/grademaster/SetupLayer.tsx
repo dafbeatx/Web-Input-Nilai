@@ -38,6 +38,10 @@ interface SetupLayerProps {
   setExamType: (v: string) => void;
   academicYear: string;
   setAcademicYear: (v: string) => void;
+  kkm: number;
+  setKkm: (v: number) => void;
+  remedialEssayCount: number;
+  setRemedialEssayCount: (v: number) => void;
   onSubmit: () => void;
   onBack: () => void;
   isLoading: boolean;
@@ -56,6 +60,8 @@ export default function SetupLayer(props: SetupLayerProps) {
     studentList, setStudentList,
     examType, setExamType,
     academicYear, setAcademicYear,
+    kkm, setKkm,
+    remedialEssayCount, setRemedialEssayCount,
     onSubmit, onBack, isLoading, setToast,
   } = props;
 
@@ -172,6 +178,17 @@ export default function SetupLayer(props: SetupLayerProps) {
             <div>
               <label className={labelClass}><BookOpen size={12} className="md:w-3.5 md:h-3.5" /> Tahun Ajaran</label>
               <input type="text" value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} placeholder="2025/2026" className={inputClass} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 md:gap-4">
+            <div>
+              <label className={labelClass}><CheckCircle2 size={12} className="md:w-3.5 md:h-3.5" /> Nilai Minimal (KKM)</label>
+              <input type="number" min="0" max="100" value={kkm} onChange={(e) => setKkm(Number(e.target.value))} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}><BookOpen size={12} className="md:w-3.5 md:h-3.5" /> Jumlah Soal Remedial (Essay)</label>
+              <input type="number" min="1" max="20" value={remedialEssayCount} onChange={(e) => setRemedialEssayCount(Number(e.target.value))} className={inputClass} />
             </div>
           </div>
 
