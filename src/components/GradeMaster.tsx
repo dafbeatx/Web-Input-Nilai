@@ -553,6 +553,7 @@ export default function GradeMaster() {
           sessionName={sessionName}
           kkm={kkm}
           remedialEssayCount={remedialEssayCount}
+          academicYear={academicYear}
           onGradeStudent={() => {
             resetGrading();
             setLayer("grading");

@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutGrid,
   ArrowRight,
@@ -13,6 +13,13 @@ import { GradedStudent, AnalyticsResult } from '@/lib/grademaster/types';
 import { getCsiLabel, getLpsLabel } from '@/lib/grademaster/scoring';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import InsightPanel from './InsightPanel';
+import { ShieldCheck, ThumbsUp, ThumbsDown } from 'lucide-react';
+
+interface BehaviorRecord {
+  student_name: string;
+  total_points: number;
+  behavior_logs: { reason: string; points: number; type: string; date: string }[];
+}
 
 interface DashboardLayerProps {
   teacherName: string;
@@ -28,6 +35,7 @@ interface DashboardLayerProps {
   onGradeStudent: () => void;
   onStudentRemedial?: (name: string) => void;
   onBack: () => void;
+  academicYear?: string;
 }
 
 const CHART_COLORS = ['#e2e8f0', '#94a3b8', '#6366f1', '#818cf8', '#4f46e5'];
@@ -47,7 +55,49 @@ export default function DashboardLayer({
   onGradeStudent,
   onStudentRemedial,
   onBack,
+  academicYear,
 }: DashboardLayerProps) {
+  const [behaviorMap, setBehaviorMap] = useState<Record<string, BehaviorRecord>>({});
+
+  useEffect(() => {
+    if (!studentClass || !isPublicView) return;
+    const year = academicYear || '2025/2026';
+    fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(studentClass)}&year=${encodeURIComponent(year)}`)
+      .then(r => r.json())
+      .then(data => {
+        const map: Record<string, BehaviorRecord> = {};
+        (data.students || []).forEach((s: BehaviorRecord) => {
+          map[s.student_name.toLowerCase()] = s;
+        });
+        setBehaviorMap(map);
+      })
+      .catch(() => {});
+  }, [studentClass, academicYear, isPublicView]);
+
+  const getBehavior = (name: string): BehaviorRecord | null => {
+    return behaviorMap[name.toLowerCase()] || null;
+  };
+
+  const getBehaviorLabel = (points: number): string => {
+    if (points >= 100) return 'Sangat Baik';
+    if (points >= 80) return 'Baik';
+    if (points >= 60) return 'Cukup';
+    if (points >= 40) return 'Kurang';
+    return 'Sangat Kurang';
+  };
+
+  const getBehaviorSummary = (logs: BehaviorRecord['behavior_logs']): { good: string[]; bad: string[] } => {
+    const good: string[] = [];
+    const bad: string[] = [];
+    const seen = new Set<string>();
+    for (const log of logs) {
+      if (seen.has(log.reason)) continue;
+      seen.add(log.reason);
+      if (log.points > 0) good.push(log.reason);
+      else bad.push(log.reason);
+    }
+    return { good: good.slice(0, 3), bad: bad.slice(0, 3) };
+  };
   const handleExportXML = () => {
     const xmlHeader = `<?xml version="1.0" encoding="UTF-8"?>\n<Report>\n`;
     
@@ -253,6 +303,64 @@ export default function DashboardLayer({
           </div>
         )}
       </div>
+
+      {/* Behavior Section (Public View Only) */}
+      {isPublicView && Object.keys(behaviorMap).length > 0 && (
+        <div className="mt-4 md:mt-6 bg-white rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
+          <div className="flex items-center gap-2 mb-4 md:mb-6">
+            <ShieldCheck size={18} className="text-indigo-600" />
+            <h3 className="text-base md:text-lg font-black text-slate-800 font-outfit">Rapor Perilaku Siswa</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            {analytics.ranking.map(r => {
+              const b = getBehavior(r.name);
+              if (!b) return null;
+              const summary = getBehaviorSummary(b.behavior_logs || []);
+              const label = getBehaviorLabel(b.total_points);
+              return (
+                <div key={r.name} className="border border-slate-100 rounded-2xl p-4 md:p-5 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-black text-sm text-slate-700 truncate mr-4">{r.name}</h4>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`px-3 py-1 rounded-full text-xs font-black ${
+                        b.total_points >= 100 ? 'bg-emerald-50 text-emerald-600' :
+                        b.total_points >= 60 ? 'bg-amber-50 text-amber-600' :
+                        'bg-rose-50 text-rose-600'
+                      }`}>{b.total_points} Poin</span>
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${
+                        b.total_points >= 80 ? 'text-emerald-500' :
+                        b.total_points >= 60 ? 'text-amber-500' :
+                        'text-rose-500'
+                      }`}>{label}</span>
+                    </div>
+                  </div>
+
+                  {(summary.good.length > 0 || summary.bad.length > 0) && (
+                    <div className="space-y-2">
+                      {summary.good.length > 0 && (
+                        <div className="flex items-start gap-2">
+                          <ThumbsUp size={12} className="text-emerald-500 mt-0.5 shrink-0" />
+                          <p className="text-[11px] text-emerald-700 font-bold leading-relaxed">{summary.good.join(', ')}</p>
+                        </div>
+                      )}
+                      {summary.bad.length > 0 && (
+                        <div className="flex items-start gap-2">
+                          <ThumbsDown size={12} className="text-rose-500 mt-0.5 shrink-0" />
+                          <p className="text-[11px] text-rose-700 font-bold leading-relaxed">{summary.bad.join(', ')}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {summary.good.length === 0 && summary.bad.length === 0 && (
+                    <p className="text-[11px] text-slate-400 font-bold">Belum ada catatan perilaku.</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Question Difficulty */}
       {analytics.questionDifficulties.length > 0 && (
