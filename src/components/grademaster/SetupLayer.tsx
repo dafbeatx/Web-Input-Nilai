@@ -34,6 +34,10 @@ interface SetupLayerProps {
   setKeyInput: (v: string) => void;
   studentList: string[];
   setStudentList: (v: string[]) => void;
+  examType: string;
+  setExamType: (v: string) => void;
+  academicYear: string;
+  setAcademicYear: (v: string) => void;
   onSubmit: () => void;
   onBack: () => void;
   isLoading: boolean;
@@ -50,6 +54,8 @@ export default function SetupLayer(props: SetupLayerProps) {
     schoolLevel, setSchoolLevel,
     keyInput, setKeyInput,
     studentList, setStudentList,
+    examType, setExamType,
+    academicYear, setAcademicYear,
     onSubmit, onBack, isLoading, setToast,
   } = props;
 
@@ -149,6 +155,23 @@ export default function SetupLayer(props: SetupLayerProps) {
                 <option value="SMP">SMP</option>
                 <option value="SMA">SMA</option>
               </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 md:gap-4">
+            <div>
+              <label className={labelClass}><BookOpen size={12} className="md:w-3.5 md:h-3.5" /> Jenis Ujian</label>
+              <select value={examType} onChange={(e) => setExamType(e.target.value)} className={`${inputClass} cursor-pointer`}>
+                <option value="UTS">UTS</option>
+                <option value="UAS">UAS</option>
+                <option value="PAT">PAT</option>
+                <option value="PAS">PAS</option>
+                <option value="Ulangan Harian">Ulangan Harian</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}><BookOpen size={12} className="md:w-3.5 md:h-3.5" /> Tahun Ajaran</label>
+              <input type="text" value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} placeholder="2025/2026" className={inputClass} />
             </div>
           </div>
 

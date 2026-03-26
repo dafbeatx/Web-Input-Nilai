@@ -20,6 +20,8 @@ export async function POST(req: NextRequest) {
       schoolLevel,
       studentList,
       scoringConfig,
+      examType,
+      academicYear,
     } = body;
 
     const validationError = validateSessionInput({ sessionName, password, teacher, subject });
@@ -49,6 +51,8 @@ export async function POST(req: NextRequest) {
           school_level: schoolLevel || 'SMA',
           student_list: studentList || [],
           scoring_config: scoringConfig || undefined,
+          exam_type: examType || 'UTS',
+          academic_year: academicYear || '2025/2026',
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
@@ -71,6 +75,8 @@ export async function POST(req: NextRequest) {
         school_level: schoolLevel || 'SMA',
         student_list: studentList || [],
         scoring_config: scoringConfig || undefined,
+        exam_type: examType || 'UTS',
+        academic_year: academicYear || '2025/2026',
       })
       .select('id')
       .single();
@@ -98,7 +104,7 @@ export async function GET(req: NextRequest) {
     if (!name && !password) {
       const { data, error } = await supabase
         .from('gm_sessions')
-        .select('id, session_name, teacher, subject, class_name, school_level, updated_at')
+        .select('id, session_name, teacher, subject, class_name, school_level, exam_type, academic_year, updated_at')
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
@@ -163,6 +169,8 @@ export async function GET(req: NextRequest) {
       schoolLevel: session.school_level,
       studentList: session.student_list,
       scoringConfig: session.scoring_config,
+      examType: session.exam_type || 'UTS',
+      academicYear: session.academic_year || '2025/2026',
       gradedStudents: (students || []).map(s => ({
         id: s.id,
         name: s.name,

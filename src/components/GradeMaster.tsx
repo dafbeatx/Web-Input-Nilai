@@ -69,6 +69,8 @@ export default function GradeMaster() {
   const [answerKey, setAnswerKey] = useState<string[]>([]);
   const [studentList, setStudentList] = useState<string[]>([]);
   const [scoringConfig] = useState<ScoringConfig>(DEFAULT_SCORING_CONFIG);
+  const [examType, setExamType] = useState("UTS");
+  const [academicYear, setAcademicYear] = useState("2025/2026");
 
   // Grading state
   const [studentName, setStudentName] = useState("");
@@ -133,6 +135,8 @@ export default function GradeMaster() {
           schoolLevel,
           studentList,
           scoringConfig,
+          examType,
+          academicYear,
         }),
       });
       const data = await res.json();
@@ -171,6 +175,8 @@ export default function GradeMaster() {
       setSubject(data.subject || "");
       setStudentClass(data.className || "");
       setSchoolLevel(data.schoolLevel || "SMA");
+      setExamType(data.examType || "UTS");
+      setAcademicYear(data.academicYear || "2025/2026");
       setStudentList(data.studentList || []);
       setGradedStudents(data.gradedStudents || []);
 
@@ -213,6 +219,8 @@ export default function GradeMaster() {
       setSubject(data.subject || "");
       setStudentClass(data.className || "");
       setSchoolLevel(data.schoolLevel || "SMA");
+      setExamType(data.examType || "UTS");
+      setAcademicYear(data.academicYear || "2025/2026");
       setStudentList(data.studentList || []);
       setGradedStudents(data.gradedStudents || []);
       setKeyInput("");
@@ -325,6 +333,8 @@ export default function GradeMaster() {
           schoolLevel,
           studentList,
           scoringConfig,
+          examType,
+          academicYear,
         }),
       });
       const data = await res.json();
@@ -390,6 +400,10 @@ export default function GradeMaster() {
           setKeyInput={setKeyInput}
           studentList={studentList}
           setStudentList={setStudentList}
+          examType={examType}
+          setExamType={setExamType}
+          academicYear={academicYear}
+          setAcademicYear={setAcademicYear}
           onSubmit={handleSetupSubmit}
           onBack={() => {
             setLayer("home");

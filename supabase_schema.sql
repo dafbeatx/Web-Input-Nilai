@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS public.gm_sessions (
     student_list JSONB NOT NULL DEFAULT '[]',
     password_hash TEXT NOT NULL,
     scoring_config JSONB NOT NULL DEFAULT '{"pgWeight":0.7,"essayWeight":0.3,"essayMaxScore":20,"essayCount":5}',
+    exam_type TEXT NOT NULL DEFAULT 'UTS',
+    academic_year TEXT NOT NULL DEFAULT '2025/2026',
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     UNIQUE(session_name)
