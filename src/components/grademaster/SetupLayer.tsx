@@ -42,6 +42,8 @@ interface SetupLayerProps {
   setKkm: (v: number) => void;
   remedialEssayCount: number;
   setRemedialEssayCount: (v: number) => void;
+  remedialTimer: number;
+  setRemedialTimer: (v: number) => void;
   onSubmit: () => void;
   onBack: () => void;
   isLoading: boolean;
@@ -62,6 +64,7 @@ export default function SetupLayer(props: SetupLayerProps) {
     academicYear, setAcademicYear,
     kkm, setKkm,
     remedialEssayCount, setRemedialEssayCount,
+    remedialTimer, setRemedialTimer,
     onSubmit, onBack, isLoading, setToast,
   } = props;
 
@@ -181,7 +184,7 @@ export default function SetupLayer(props: SetupLayerProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
             <div>
               <label className={labelClass}><CheckCircle2 size={12} className="md:w-3.5 md:h-3.5" /> Nilai Minimal (KKM)</label>
               <input type="number" min="0" max="100" value={kkm} onChange={(e) => setKkm(Number(e.target.value))} className={inputClass} />
@@ -189,6 +192,15 @@ export default function SetupLayer(props: SetupLayerProps) {
             <div>
               <label className={labelClass}><BookOpen size={12} className="md:w-3.5 md:h-3.5" /> Jumlah Soal Remedial (Essay)</label>
               <input type="number" min="1" max="20" value={remedialEssayCount} onChange={(e) => setRemedialEssayCount(Number(e.target.value))} className={inputClass} />
+            </div>
+            <div className="col-span-2 md:col-span-1">
+              <label className={labelClass}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-clock md:w-3.5 md:h-3.5 mr-1 inline-block text-slate-400">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                Waktu Ujian (Menit)
+              </label>
+              <input type="number" min="1" max="180" value={remedialTimer} onChange={(e) => setRemedialTimer(Number(e.target.value))} className={inputClass} />
             </div>
           </div>
 

@@ -75,6 +75,7 @@ export default function GradeMaster() {
   const [academicYear, setAcademicYear] = useState("2025/2026");
   const [kkm, setKkm] = useState<number>(70);
   const [remedialEssayCount, setRemedialEssayCount] = useState<number>(5);
+  const [remedialTimer, setRemedialTimer] = useState<number>(15);
 
   // Grading state
   const [studentName, setStudentName] = useState("");
@@ -179,6 +180,7 @@ export default function GradeMaster() {
           academicYear,
           kkm,
           remedialEssayCount,
+          remedialTimer,
         }),
       });
       const data = await res.json();
@@ -221,6 +223,7 @@ export default function GradeMaster() {
       setAcademicYear(data.academicYear || "2025/2026");
       setKkm(data.kkm || 70);
       setRemedialEssayCount(data.remedialEssayCount || 5);
+      setRemedialTimer(data.remedialTimer || 15);
       setStudentList(data.studentList || []);
       setGradedStudents(data.gradedStudents || []);
 
@@ -267,6 +270,7 @@ export default function GradeMaster() {
       setAcademicYear(data.academicYear || "2025/2026");
       setKkm(data.kkm || 70);
       setRemedialEssayCount(data.remedialEssayCount || 5);
+      setRemedialTimer(data.remedialTimer || 15);
       setStudentList(data.studentList || []);
       setGradedStudents(data.gradedStudents || []);
       setKeyInput("");
@@ -383,6 +387,7 @@ export default function GradeMaster() {
           academicYear,
           kkm,
           remedialEssayCount,
+          remedialTimer,
         }),
       });
       const data = await res.json();
@@ -420,6 +425,7 @@ export default function GradeMaster() {
               setStudentList([]);
               setKkm(70);
               setRemedialEssayCount(5);
+              setRemedialTimer(15);
             } else {
               setLayer("login");
             }
@@ -478,6 +484,8 @@ export default function GradeMaster() {
           setKkm={setKkm}
           remedialEssayCount={remedialEssayCount}
           setRemedialEssayCount={setRemedialEssayCount}
+          remedialTimer={remedialTimer}
+          setRemedialTimer={setRemedialTimer}
           onSubmit={handleSetupSubmit}
           onBack={() => {
             setLayer("home");
@@ -542,6 +550,7 @@ export default function GradeMaster() {
           studentName={studentName}
           subject={subject}
           remedialEssayCount={remedialEssayCount}
+          remedialTimer={remedialTimer}
           sessionId={sessionId}
           onBack={() => setLayer("dashboard")}
           setToast={setToast}

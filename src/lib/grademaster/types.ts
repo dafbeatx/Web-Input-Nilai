@@ -37,6 +37,7 @@ export interface GradedStudent {
   percentage: number;
   csi: number;
   lps: number;
+  remedialStatus?: 'NONE' | 'IN_PROGRESS' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT';
 }
 
 export interface SessionData {
@@ -52,6 +53,7 @@ export interface SessionData {
   scoringConfig: ScoringConfig;
   kkm: number;
   remedialEssayCount: number;
+  remedialTimer: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -65,6 +67,7 @@ export interface SessionMeta {
   school_level: string;
   kkm: number;
   remedial_essay_count: number;
+  remedial_timer?: number;
   updated_at: string;
   student_count?: number;
 }

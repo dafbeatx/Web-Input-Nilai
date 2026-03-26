@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
       academicYear,
       kkm,
       remedialEssayCount,
+      remedialTimer,
     } = body;
 
     const validationError = validateSessionInput({ sessionName, password, teacher, subject });
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest) {
           academic_year: academicYear || '2025/2026',
           kkm: kkm || 70,
           remedial_essay_count: remedialEssayCount || 5,
+          remedial_timer: remedialTimer || 15,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
@@ -92,6 +94,7 @@ export async function POST(req: NextRequest) {
         academic_year: academicYear || '2025/2026',
         kkm: kkm || 70,
         remedial_essay_count: remedialEssayCount || 5,
+        remedial_timer: remedialTimer || 15,
       })
       .select('id')
       .single();
@@ -119,7 +122,7 @@ export async function GET(req: NextRequest) {
     if (!name && !password) {
       const { data, error } = await supabase
         .from('gm_sessions')
-        .select('id, session_name, teacher, subject, class_name, school_level, exam_type, academic_year, updated_at, kkm, remedial_essay_count')
+        .select('id, session_name, teacher, subject, class_name, school_level, exam_type, academic_year, updated_at, kkm, remedial_essay_count, remedial_timer')
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
@@ -188,6 +191,7 @@ export async function GET(req: NextRequest) {
       academicYear: session.academic_year || '2025/2026',
       kkm: session.kkm || 70,
       remedialEssayCount: session.remedial_essay_count || 5,
+      remedialTimer: session.remedial_timer || 15,
       gradedStudents: (students || []).map(s => ({
         id: s.id,
         name: s.name,
