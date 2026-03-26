@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Users, Search, PlusCircle, MinusCircle, AlertCircle, Save, Loader2, UserPlus, FileText, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, Users, Search, PlusCircle, MinusCircle, AlertCircle, Save, Loader2, UserPlus, FileText, LayoutGrid, Trash2 } from 'lucide-react';
 import { ToastType } from '@/lib/grademaster/types';
 
 interface BehaviorStudent {
@@ -31,6 +31,10 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
 
   // Modal State
   const [selectedStudent, setSelectedStudent] = useState<BehaviorStudent | null>(null);
+
+  // Individual Edit
+  const [newStudentName, setNewStudentName] = useState('');
+  const [isAddingStudent, setIsAddingStudent] = useState(false);
 
   // Class Overview
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
@@ -107,6 +111,42 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
       setToast({ message: err.message || "Gagal menyimpan data siswa", type: "error" });
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleAddSingleStudent = async () => {
+    if (!newStudentName.trim()) return;
+    setIsAddingStudent(true);
+    try {
+      const res = await fetch('/api/grademaster/behaviors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ className, academicYear, students: [newStudentName] })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setStudents(data.students || []);
+      setNewStudentName('');
+      setToast({ message: "Siswa berhasil ditambahkan", type: "success" });
+    } catch (err: any) {
+      setToast({ message: err.message || "Gagal menambah siswa", type: "error" });
+    } finally {
+      setIsAddingStudent(false);
+    }
+  };
+
+  const handleDeleteStudent = async (id: string, name: string) => {
+    if (!window.confirm(`Yakin ingin menghapus ${name} dari kelas ${className}? Semua rekam jejak poin akan hilang permanen.`)) return;
+    try {
+      const res = await fetch(`/api/grademaster/behaviors?id=${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setStudents(prev => prev.filter(s => s.id !== id));
+      setToast({ message: "Siswa berhasil dihapus", type: "success" });
+    } catch (err: any) {
+      setToast({ message: err.message || "Gagal menghapus siswa", type: "error" });
     }
   };
 
@@ -219,6 +259,29 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
 
       {isLoaded && students.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-10">
+          <div className="p-4 md:p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50">
+            <div>
+              <h3 className="font-black text-slate-700 text-lg">Daftar Kelas {className}</h3>
+              <p className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest">{students.length} Siswa Terdaftar</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <input 
+                type="text" 
+                placeholder="Nama Siswa Baru..." 
+                value={newStudentName}
+                onChange={(e) => setNewStudentName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddSingleStudent()}
+                className="bg-white border-2 border-slate-100 rounded-xl px-4 py-2 text-xs md:text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 w-full md:w-56"
+              />
+              <button 
+                onClick={handleAddSingleStudent}
+                disabled={isAddingStudent || !newStudentName.trim()}
+                className="bg-indigo-600 text-white rounded-xl px-4 py-2 text-[10px] md:text-xs font-black uppercase tracking-widest shadow-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center shrink-0"
+              >
+                {isAddingStudent ? <Loader2 size={16} className="animate-spin" /> : <><PlusCircle size={14} className="mr-1.5 hidden md:block" /> Tambah</>}
+              </button>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -242,9 +305,12 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
                         {s.total_points}
                       </span>
                     </td>
-                    <td className="p-4 text-center">
+                    <td className="p-4 flex items-center justify-center gap-2">
                       <button onClick={() => setSelectedStudent(s)} className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors">
-                        Kelola Poin
+                        Kelola
+                      </button>
+                      <button onClick={() => handleDeleteStudent(s.id, s.student_name)} className="w-8 h-8 flex items-center justify-center bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-100 transition-colors shrink-0" title="Hapus Siswa">
+                        <Trash2 size={14} />
                       </button>
                     </td>
                   </tr>

@@ -95,3 +95,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const ip = req.headers.get('x-forwarded-for') || 'unknown';
+    if (!checkRateLimit(`behaviors_post:${ip}`)) {
+      return NextResponse.json({ error: 'Terlalu banyak permintaan' }, { status: 429 });
+    }
+    
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'ID wajib diisi' }, { status: 400 });
+
+    const { error } = await supabase.from('gm_behaviors').delete().eq('id', id);
+    if (error) throw error;
+
+    return NextResponse.json({ message: 'Siswa berhasil dihapus' });
+  } catch (err: any) {
+    console.error('Delete behaviors error:', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
