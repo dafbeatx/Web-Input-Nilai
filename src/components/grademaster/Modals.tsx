@@ -83,6 +83,26 @@ export default function Modals(props: ModalsProps) {
     );
   }
 
+  if (modal === 'error') {
+    return (
+      <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}></div>
+        <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 md:p-8 animate-in text-center">
+          <div className="w-16 h-16 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle size={32} />
+          </div>
+          <h3 className="font-outfit font-black text-xl text-slate-800 tracking-tight">Gagal Menyimpan</h3>
+          <p className="text-xs md:text-sm font-bold text-slate-500 mt-2 mb-6 leading-relaxed">
+            {modalError || 'Terjadi kesalahan sistem yang tidak diketahui.'}
+          </p>
+          <button onClick={onClose} className="w-full py-3.5 bg-rose-500 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-rose-500/20 hover:scale-[1.02] active:scale-95 transition-all">
+            Mengerti & Tutup
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const handleAction = modal === 'save' ? onSave : modal === 'delete' ? onDelete : onLoad;
   const colors = {
     save: { bg: 'bg-indigo-600', shadow: 'shadow-indigo-600/20' },

@@ -143,6 +143,7 @@ export default function GradeMaster() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal menyimpan";
       setModalError(msg);
+      setModal('error');
     } finally {
       setModalLoading(false);
     }
@@ -333,7 +334,8 @@ export default function GradeMaster() {
       setLayer("dashboard");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal menyimpan sesi";
-      setToast({ message: msg, type: "error" });
+      setModalError(msg);
+      setModal('error');
     } finally {
       setModalLoading(false);
     }

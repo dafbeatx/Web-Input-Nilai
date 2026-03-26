@@ -75,7 +75,10 @@ export async function POST(req: NextRequest) {
       .select('id')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === '23505') throw new Error('Nama sesi kelas ini sudah digunakan. Vercel/Supabase mewajibkan nama sesi yang unik. Silakan tambahkan kode unik, misal: "UTS SMA N 1 - Kelas 10A".');
+      throw new Error(`Error Basis Data (${error.code || 'Unknown'}): ${error.message}`);
+    }
     return NextResponse.json({ message: 'Sesi berhasil dibuat', sessionId: newSession?.id });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Gagal menyimpan sesi';

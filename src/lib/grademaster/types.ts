@@ -96,6 +96,6 @@ export interface AnalyticsResult {
   correctVsWrong: { correct: number; wrong: number };
 }
 
-export type ModalType = 'save' | 'load' | 'delete' | 'about' | null;
+export type ModalType = 'save' | 'load' | 'delete' | 'about' | 'error' | null;
 export type ToastType = { message: string; type: 'success' | 'error' } | null;
 export type Layer = 'home' | 'setup' | 'dashboard' | 'grading';
