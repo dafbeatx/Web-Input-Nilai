@@ -11,12 +11,21 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan' }, { status: 429 });
     }
 
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
+    
+    if (!body) {
+      console.error('Remedial error: Invalid JSON payload');
+      return NextResponse.json({ error: 'Format data tidak valid' }, { status: 400 });
+    }
+
+    console.log('Incoming remedial request:', JSON.stringify(body, null, 2));
+
     const { sessionId, studentId, studentName, status, location, answers, note, elapsedTimeMs, clientCheatingFlags } = body;
     // status: 'STARTED' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT'
 
     if (!sessionId || (!studentName && !studentId) || !status) {
-      return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 });
+      console.error('Remedial error: Missing required fields', { sessionId, studentName, studentId, status });
+      return NextResponse.json({ error: 'Data wajib tidak lengkap. Periksa pengiriman session dan nama.' }, { status: 400 });
     }
 
     // Since old API used name mainly, let's first get ID if we only have name

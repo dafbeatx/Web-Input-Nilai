@@ -345,10 +345,10 @@ export default function StudentRemedialLayer({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, studentName, status: 'STARTED', location: locStr })
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       
       if (!res.ok) {
-        setToast({ message: data.error || "Gagal memulai sesi", type: "error" });
+        setToast({ message: data.error || "Terjadi kesalahan saat memulai ujian. Coba lagi.", type: "error" });
         if (data.error?.includes('permanen')) {
             setStep('CHEATED'); 
         }
@@ -356,7 +356,7 @@ export default function StudentRemedialLayer({
         return;
       }
     } catch (e) {
-      setToast({ message: "Koneksi terputus!", type: "error" });
+      setToast({ message: "Terjadi kesalahan saat menghubungi server. Coba lagi.", type: "error" });
       setIsSubmitting(false);
       return;
     }
@@ -460,10 +460,10 @@ export default function StudentRemedialLayer({
             clientCheatingFlags: clientCheatingFlags.length > 0 ? clientCheatingFlags : undefined
         })
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       
       if (!res.ok) {
-        setToast({ message: data.error || "Terjadi kesalahan saat menyimpan", type: "error" });
+        setToast({ message: data.error || "Terjadi kesalahan saat mengirim jawaban. Coba lagi.", type: "error" });
         if (data.error?.includes('sudah pernah dilakukan') || data.error?.includes('permanen')) {
             setStep('CHEATED');
         }
@@ -474,7 +474,7 @@ export default function StudentRemedialLayer({
         }
       }
     } catch (e) {
-      setToast({ message: "Koneksi terputus! Hubungi guru pengawas.", type: "error" });
+      setToast({ message: "Terjadi kesalahan jaringan saat mengirim jawaban. Coba lagi.", type: "error" });
     } finally {
       setIsSubmitting(false);
     }
