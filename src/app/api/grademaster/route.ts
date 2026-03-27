@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
       kkm,
       remedialEssayCount,
       remedialTimer,
+      isDemo,
     } = body;
 
     // Determine if we are updating or creating
@@ -127,6 +128,7 @@ export async function POST(req: NextRequest) {
           remedial_essay_count: remedialEssayCount || undefined,
           remedial_timer: remedialTimer || undefined,
           is_public: body.isPublic === undefined ? undefined : body.isPublic,
+          is_demo: body.isDemo === undefined ? undefined : body.isDemo,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
@@ -168,6 +170,7 @@ export async function POST(req: NextRequest) {
         remedial_essay_count: remedialEssayCount || 5,
         remedial_timer: remedialTimer || 15,
         is_public: body.isPublic === true,
+        is_demo: body.isDemo === true,
       })
       .select('id')
       .single();
@@ -185,20 +188,27 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const name = searchParams.get('name');
-    const password = searchParams.get('password');
+  export async function GET(req: NextRequest) {
+    try {
+      const adminSession = await getAdminSession();
+      const { searchParams } = new URL(req.url);
+      const name = searchParams.get('name');
+      const password = searchParams.get('password');
+  
+      // List all sessions (auth conditionally modifies results)
+      if (!name && !password) {
+        let query = supabase
+          .from('gm_sessions')
+          .select('id, session_name, teacher, subject, class_name, school_level, exam_type, academic_year, updated_at, kkm, remedial_essay_count, remedial_timer, is_public, is_demo')
+          .order('updated_at', { ascending: false });
 
-    // List all sessions (no auth needed)
-    if (!name && !password) {
-      const { data, error } = await supabase
-        .from('gm_sessions')
-        .select('id, session_name, teacher, subject, class_name, school_level, exam_type, academic_year, updated_at, kkm, remedial_essay_count, remedial_timer, is_public')
-        .order('updated_at', { ascending: false });
+        if (!adminSession) {
+          query = query.eq('is_demo', false);
+        }
 
-      if (error) throw error;
+        const { data, error } = await query;
+  
+        if (error) throw error;
 
       // Attach student count per session
       const sessionsWithCounts = await Promise.all(
@@ -231,6 +241,11 @@ export async function GET(req: NextRequest) {
       .single();
 
     if (sessError || !session) return NextResponse.json({ error: 'Sesi tidak ditemukan' }, { status: 404 });
+
+    // Block non-admins from direct-linking to demo sessions
+    if (session.is_demo && !adminSession) {
+      return NextResponse.json({ error: 'Sesi tidak ditemukan' }, { status: 404 });
+    }
 
     let isReadOnly = false;
     
@@ -306,6 +321,7 @@ export async function GET(req: NextRequest) {
       remedialEssayCount: session.remedial_essay_count || 5,
       remedialTimer: session.remedial_timer || 15,
       isPublic: session.is_public,
+      isDemo: session.is_demo,
       isReadOnly,
       questionDifficulties, // Pre-calculated for students
       gradedStudents,

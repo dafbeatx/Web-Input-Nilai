@@ -43,6 +43,8 @@ interface DashboardLayerProps {
   academicYear?: string;
   semester?: string;
   examType?: string;
+  isDemo?: boolean;
+  sessionId?: string;
 }
 
 const CHART_COLORS = ['#e2e8f0', '#94a3b8', '#6366f1', '#818cf8', '#4f46e5'];
@@ -66,6 +68,8 @@ export default function DashboardLayer({
   academicYear,
   semester,
   examType,
+  isDemo,
+  sessionId,
 }: DashboardLayerProps) {
   const [behaviorMap, setBehaviorMap] = useState<Record<string, BehaviorRecord>>({});
 
@@ -189,6 +193,31 @@ export default function DashboardLayer({
     }
   };
 
+  const [isResettingDemo, setIsResettingDemo] = useState(false);
+  const handleResetDemo = async () => {
+    if (!sessionId || !isDemo) return;
+    if (!window.confirm("Yakin ingin menghapus SEMUA data siswa pada sesi demo ini?\nTindakan ini akan mengosongkan leaderboard dan hasil simulasi.")) return;
+    
+    setIsResettingDemo(true);
+    try {
+      const res = await fetch('/api/grademaster/students/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId })
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || 'Gagal mereset demo');
+      }
+      alert('Data simulasi berhasil di-reset!');
+      window.location.reload();
+    } catch (err: any) {
+      alert(`Gagal mereset: ${err.message}`);
+    } finally {
+      setIsResettingDemo(false);
+    }
+  };
+
   return (
     <div className="p-3 sm:p-5 lg:p-8 max-w-6xl mx-auto animate-in">
       <header className="mb-8 md:mb-10 text-center">
@@ -199,6 +228,9 @@ export default function DashboardLayer({
           {isPublicView ? 'Hasil Evaluasi Siswa' : 'Ikhtisar Kelas'}
         </h1>
         <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
+           {isDemo && (
+             <Badge color="amber"><span className="flex items-center gap-1">🧪 DEMO MODE</span></Badge>
+           )}
            <Badge color="emerald">Kelas {studentClass} ({schoolLevel})</Badge>
            <Badge color="amber">{academicYear || '2025/2026'}</Badge>
            <Badge color="indigo">Semester {semester || getSemester(sessionName || '')}</Badge>
@@ -206,6 +238,18 @@ export default function DashboardLayer({
         </div>
         {!isPublicView && (
            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Pusat Data: {teacherName}</p>
+        )}
+        {!isPublicView && isDemo && (
+          <div className="mt-4 flex justify-center">
+             <button 
+               onClick={handleResetDemo}
+               disabled={isResettingDemo}
+               className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl text-xs font-black uppercase tracking-widest transition-colors disabled:opacity-50"
+             >
+               <RefreshCcw size={14} className={isResettingDemo ? "animate-spin" : ""} />
+               {isResettingDemo ? "Mereset..." : "Reset Data Demo"}
+             </button>
+          </div>
         )}
       </header>
 

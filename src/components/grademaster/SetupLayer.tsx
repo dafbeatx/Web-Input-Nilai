@@ -58,6 +58,8 @@ interface SetupLayerProps {
   onAnswerKeysInputChange: (v: string) => void;
   isPublic: boolean;
   setIsPublic: (v: boolean) => void;
+  isDemo?: boolean;
+  setIsDemo?: (v: boolean) => void;
   onSubmit: () => void;
   onBack: () => void;
   isLoading: boolean;
@@ -85,6 +87,7 @@ export default function SetupLayer(props: SetupLayerProps) {
     remedialAnswerKeys, setRemedialAnswerKeys,
     remedialAnswerKeysInput, onAnswerKeysInputChange,
     isPublic, setIsPublic,
+    isDemo, setIsDemo,
     onSubmit, onBack, isLoading, setToast,
   } = props;
 
@@ -342,6 +345,28 @@ export default function SetupLayer(props: SetupLayerProps) {
                     </button>
                   </div>
                 </div>
+                {setIsDemo && (
+                  <div>
+                    <label className={labelClass}>Mode Sandbox</label>
+                    <div className="flex items-center justify-between p-3.5 bg-amber-50 rounded-xl border-2 border-amber-100">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isDemo ? 'bg-amber-200 text-amber-600' : 'bg-slate-200 text-slate-500'}`}>
+                          {isDemo ? '🧪' : '🛑'}
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-black text-amber-700">Mode Demo (Testing)</h4>
+                          <p className="text-[9px] font-bold text-amber-600/70">Sembunyikan dari list siswa</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setIsDemo(!isDemo)}
+                        className={`w-12 h-6 rounded-full transition-all relative ${isDemo ? 'bg-amber-500' : 'bg-slate-300'}`}
+                      >
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isDemo ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

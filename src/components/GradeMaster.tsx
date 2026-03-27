@@ -68,6 +68,7 @@ export default function GradeMaster() {
   const [layer, setInternalLayer] = useState<Layer>("home");
   const [isPublicView, setIsPublicView] = useState(false);
   const [isSessionPublic, setIsSessionPublic] = useState(true);
+  const [isDemo, setIsDemo] = useState(false);
   const [modal, setModal] = useState<ModalType>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState("");
@@ -182,6 +183,7 @@ export default function GradeMaster() {
               setRemedialAnswerKeysInput(formatEssayQuestions(ansKeys));
               setApiQuestionDifficulties(data.questionDifficulties || []);
               setIsSessionPublic(data.isPublic);
+              setIsDemo(data.isDemo === true);
 
               const key = data.answerKey as string[];
               if (Array.isArray(key)) {
@@ -349,6 +351,7 @@ export default function GradeMaster() {
           kkm,
           remedialEssayCount,
           remedialTimer,
+          isDemo,
         }),
       });
       const data = await res.json();
@@ -441,6 +444,7 @@ export default function GradeMaster() {
       setRemedialAnswerKeysInput(formatEssayQuestions(ansKeys));
       setApiQuestionDifficulties(data.questionDifficulties || []);
       setIsSessionPublic(data.isPublic);
+      setIsDemo(data.isDemo === true);
       setIsPublicView(true);
       setLayer("dashboard");
       closeModal();
@@ -670,6 +674,7 @@ export default function GradeMaster() {
           kkm,
           remedialEssayCount,
           remedialTimer,
+          isDemo,
         }),
       });
       const data = await res.json();
@@ -806,6 +811,8 @@ export default function GradeMaster() {
           onAnswerKeysInputChange={handleAnswerKeysInputChange}
           isPublic={isSessionPublic}
           setIsPublic={setIsSessionPublic}
+          isDemo={isDemo}
+          setIsDemo={setIsDemo}
           onSubmit={handleSetupSubmit}
           onBack={() => {
             setLayer("home");
@@ -828,6 +835,8 @@ export default function GradeMaster() {
           sessionName={sessionName}
           kkm={kkm}
           remedialEssayCount={remedialEssayCount}
+          isDemo={isDemo}
+          sessionId={sessionId}
           academicYear={academicYear}
           semester={semester}
           onGradeStudent={() => {

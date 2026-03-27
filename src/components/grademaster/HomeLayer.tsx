@@ -226,6 +226,11 @@ export default function HomeLayer({
                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${s.is_public ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-slate-400 bg-slate-50 border border-slate-100'}`}>
                         {s.is_public ? 'Public' : 'Private'}
                       </span>
+                      {s.is_demo && (
+                        <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full text-amber-600 bg-amber-50 border border-amber-100 flex items-center gap-1">
+                          🧪 Demo
+                        </span>
+                      )}
                       {isAdmin && (
                         <button
                           onClick={(e) => { e.stopPropagation(); onDeleteSession(s.session_name); }}

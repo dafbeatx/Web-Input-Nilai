@@ -73,6 +73,7 @@ export interface SessionData {
   remedialTimer: number;
   semester: string;
   isPublic: boolean;
+  isDemo?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -93,6 +94,7 @@ export interface SessionMeta {
   updated_at: string;
   student_count?: number;
   is_public: boolean;
+  is_demo?: boolean;
 }
 
 export interface QuestionDifficulty {
