@@ -55,11 +55,10 @@ export function generateAnalytics(
 
 function generateDistribution(scores: number[]): { range: string; count: number }[] {
   const ranges = [
-    { range: '0-20', min: 0, max: 20 },
-    { range: '21-40', min: 21, max: 40 },
-    { range: '41-60', min: 41, max: 60 },
-    { range: '61-80', min: 61, max: 80 },
-    { range: '81-100', min: 81, max: 100 },
+    { range: '0-59 (Perlu Bimbingan)', min: 0, max: 59 },
+    { range: '60-74 (Cukup)', min: 60, max: 74 },
+    { range: '75-89 (Baik)', min: 75, max: 89 },
+    { range: '90-100 (Sangat Baik)', min: 90, max: 100 },
   ];
 
   return ranges.map(r => ({
@@ -143,8 +142,8 @@ function generateInsights(
     const nums = hardest.map(h => `#${h.questionNumber}`).join(', ');
     insights.push({
       type: 'warning',
-      title: 'Soal Sangat Sulit',
-      description: `Soal ${nums} salah dijawab oleh mayoritas siswa. Evaluasi ulang kualitas soal atau materi pengajaran.`,
+      title: 'Perlu Perhatian Khusus',
+      description: `Sebagian besar siswa kesulitan pada soal ${nums}. Materi ini mungkin perlu diulang kembali.`,
     });
   }
 
@@ -161,20 +160,20 @@ function generateInsights(
   if (avgScore >= 80) {
     insights.push({
       type: 'success',
-      title: 'Performa Kelas Baik',
-      description: `Rata-rata kelas ${avgScore} menunjukkan pemahaman materi yang solid.`,
+      title: 'Belajar Mengajar Berjalan Sangat Baik',
+      description: `Sebagian besar siswa meraih nilai memuaskan dengan rata-rata kelas ${avgScore}. Tren pembelajaran positif.`,
     });
   } else if (avgScore < 60) {
     insights.push({
       type: 'warning',
-      title: 'Performa Kelas Rendah',
-      description: `Rata-rata kelas hanya ${avgScore}. Pertimbangkan remedial atau penyesuaian metode pengajaran.`,
+      title: 'Perlu Pendampingan Belajar',
+      description: `Rata-rata kelas saat ini ${avgScore}. Disarankan adanya program remedial untuk memperkuat pemahaman.`,
     });
   } else {
     insights.push({
       type: 'info',
-      title: 'Performa Kelas Cukup',
-      description: `Rata-rata kelas ${avgScore}. Ada ruang perbaikan untuk meningkatkan pemahaman siswa.`,
+      title: 'Pencapaian Belajar Cukup',
+      description: `Rata-rata kelas ${avgScore}. Ada ruang perbaikan agar pemahaman siswa lebih optimal.`,
     });
   }
 

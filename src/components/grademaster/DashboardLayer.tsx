@@ -13,7 +13,7 @@ import { GradedStudent, AnalyticsResult } from '@/lib/grademaster/types';
 import { getCsiLabel, getLpsLabel } from '@/lib/grademaster/scoring';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import InsightPanel from './InsightPanel';
-import { ShieldCheck, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { ShieldCheck, ThumbsUp, ThumbsDown, Trophy, Medal, Star } from 'lucide-react';
 
 interface BehaviorRecord {
   student_name: string;
@@ -157,107 +157,163 @@ export default function DashboardLayer({
         <p className="text-xs md:text-sm text-slate-500 font-bold">Halo, {teacherName} • {subject} • Kelas {studentClass} ({schoolLevel})</p>
       </header>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
-        <StatCard label="Rata-rata" value={analytics.avgScore} suffix="%" color="indigo" />
-        <StatCard label={isPublicView ? "Rata Rata Pemahaman" : "CSI Avg"} value={analytics.avgCsi} suffix="" sublabel={isPublicView ? "" : getCsiLabel(analytics.avgCsi)} color="sky" />
-        <StatCard label={isPublicView ? "Performa Belajar" : "LPS Avg"} value={analytics.avgLps} suffix="" sublabel={isPublicView ? "" : getLpsLabel(analytics.avgLps)} color="purple" />
-        <StatCard label={isPublicView ? "Varietas Penguasaan" : "Std Deviasi"} value={analytics.standardDeviation} suffix="" color="slate" />
-      </div>
-
-      {/* Charts Row */}
-      {gradedStudents.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
-          {/* Distribution Histogram */}
-          <div className="bg-white rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Distribusi Nilai</h4>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={analytics.distribution}>
-                <XAxis dataKey="range" tick={{ fontSize: 10, fill: '#94a3b8' }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 12 }} />
-                <Bar dataKey="count" name="Siswa" radius={[6, 6, 0, 0]}>
-                  {analytics.distribution.map((_, i) => (
-                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Pie Chart: Correct vs Wrong */}
-          <div className="bg-white rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Rasio Benar / Salah (Total)</h4>
-            <div className="flex items-center justify-center gap-6">
-              <ResponsiveContainer width={140} height={140}>
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: 'Benar', value: analytics.correctVsWrong.correct },
-                      { name: 'Salah', value: analytics.correctVsWrong.wrong },
-                    ]}
-                    cx="50%" cy="50%"
-                    innerRadius={35} outerRadius={60}
-                    paddingAngle={3} dataKey="value"
-                  >
-                    {PIE_COLORS.map((c, i) => <Cell key={i} fill={c} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ fontSize: 12, borderRadius: 12 }} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                  <span className="text-xs font-bold text-slate-600">Benar: {analytics.correctVsWrong.correct}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-rose-500" />
-                  <span className="text-xs font-bold text-slate-600">Salah: {analytics.correctVsWrong.wrong}</span>
-                </div>
-              </div>
+      {/* Top 3 Siswa */}
+      {gradedStudents.length >= 3 && analytics.ranking.length >= 3 && (
+        <div className="mb-6 md:mb-10 animate-in slide-in-from-bottom-4 fade-in">
+          <h3 className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-400 mb-4 text-center">🏆 Bintang Kelas (Top 3)</h3>
+          <div className="flex flex-col md:flex-row items-end justify-center gap-4 max-w-3xl mx-auto">
+            {/* Juara 2 */}
+            <div className="order-2 md:order-1 flex-1 bg-slate-50 border border-slate-200 rounded-3xl p-5 text-center transform md:-translate-y-4 hover:-translate-y-6 transition-transform shadow-sm relative w-full">
+              <div className="w-12 h-12 md:w-14 md:h-14 mx-auto bg-slate-200 rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner">🥈</div>
+              <h4 className="font-bold text-slate-700 text-sm md:text-base truncate px-2">{analytics.ranking[1].name}</h4>
+              <p className="text-slate-500 font-black text-xl mt-1">{analytics.ranking[1].finalScore}</p>
+            </div>
+            {/* Juara 1 */}
+            <div className="order-1 md:order-2 flex-1 bg-gradient-to-b from-amber-50 to-amber-100 border border-amber-200 rounded-3xl p-6 text-center transform md:-translate-y-8 hover:-translate-y-10 transition-transform shadow-md relative z-10 w-full mb-4 md:mb-0">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-sm flex items-center gap-1"><Trophy size={12}/> Juara 1</div>
+              <div className="w-14 h-14 md:w-16 md:h-16 mx-auto bg-amber-200 rounded-full flex items-center justify-center text-3xl mb-3 shadow-inner">🥇</div>
+              <h4 className="font-black text-amber-900 text-base md:text-lg truncate px-2">{analytics.ranking[0].name}</h4>
+              <p className="text-amber-600 font-black text-2xl mt-1">{analytics.ranking[0].finalScore}</p>
+            </div>
+            {/* Juara 3 */}
+            <div className="order-3 md:order-3 flex-1 bg-orange-50 border border-orange-200 rounded-3xl p-5 text-center transform hover:-translate-y-2 transition-transform shadow-sm relative w-full">
+              <div className="w-12 h-12 md:w-14 md:h-14 mx-auto bg-orange-200 rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner">🥉</div>
+              <h4 className="font-bold text-orange-900 text-sm md:text-base truncate px-2">{analytics.ranking[2].name}</h4>
+              <p className="text-orange-600 font-black text-xl mt-1">{analytics.ranking[2].finalScore}</p>
             </div>
           </div>
         </div>
       )}
+
+      {/* Progress Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-10">
+        <ProgressCard label="Nilai Rata-rata Kelas" value={analytics.avgScore} max={100} />
+        <ProgressCard label="Kemampuan Belajar" value={analytics.avgCsi} max={100} />
+        <ProgressCard label="Tingkat Pemahaman" value={analytics.avgLps} max={100} />
+        <ProgressCard label="Konsistensi Nilai" value={Math.max(0, 100 - (analytics.standardDeviation * 2))} max={100} isConsistency={true} realValue={analytics.standardDeviation} />
+      </div>
 
       {/* Insights */}
       {analytics.insights.length > 0 && (
         <InsightPanel insights={analytics.insights} />
       )}
 
+      {/* Charts Row */}
+      {gradedStudents.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-10">
+          {/* Distribution Histogram */}
+          <div className="bg-white rounded-3xl p-5 md:p-6 border border-slate-100 shadow-sm col-span-1">
+            <h4 className="text-sm font-black text-slate-800 mb-1">Distribusi Nilai Siswa</h4>
+            <p className="text-[10px] md:text-xs font-bold text-slate-400 mb-6 leading-relaxed">Kelompok jumlah siswa berdasarkan rentang nilai akhir yang diperoleh.</p>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={analytics.distribution} margin={{ left: -25, right: 0, top: 0, bottom: 0 }}>
+                <XAxis dataKey="range" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(val: string) => val.split(' ')[0]} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ fontSize: 12, borderRadius: 16, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                <Bar dataKey="count" name="Siswa" radius={[6, 6, 6, 6]} barSize={36}>
+                  {analytics.distribution.map((d, i) => (
+                    <Cell key={i} fill={d.range.includes('Sangat Baik') ? '#10b981' : d.range.includes('Baik') ? '#3b82f6' : d.range.includes('Cukup') ? '#f59e0b' : '#f43f5e'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Question Difficulty / Analisis Per Soal */}
+          <div className="bg-white rounded-3xl p-5 md:p-6 border border-slate-100 shadow-sm col-span-1 lg:col-span-2">
+            <h4 className="text-sm font-black text-slate-800 mb-1">Analisis Tingkat Kesulitan Soal</h4>
+            <p className="text-[10px] md:text-xs font-bold text-slate-400 mb-6 leading-relaxed">Persentase tingkat kesulitan. Semakin tinggi persentase, semakin banyak siswa yang salah menjawab soal tersebut.</p>
+            
+            <div className="flex flex-col md:flex-row gap-6 items-start">
+              <div className="w-full md:flex-1">
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={analytics.questionDifficulties} margin={{ left: -25, right: 0, top: 0, bottom: 0 }}>
+                    <XAxis dataKey="questionNumber" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <Tooltip 
+                      cursor={{ fill: '#f8fafc' }}
+                      contentStyle={{ fontSize: 12, borderRadius: 16, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+                      formatter={(value: any) => [`${value}% salah`, 'Tingkat Kesulitan']}
+                      labelFormatter={(label) => `Soal Nomor ${label}`}
+                    />
+                    <Bar dataKey="difficultyPercent" name="% Salah" radius={[4, 4, 4, 4]}>
+                      {analytics.questionDifficulties.map((d, i) => (
+                        <Cell key={i} fill={d.difficultyPercent >= 75 ? '#f43f5e' : d.difficultyPercent >= 50 ? '#f59e0b' : '#10b981'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              
+              {/* Highlight Soal Tersulit */}
+              <div className="w-full md:w-64 shrink-0">
+                {(() => {
+                  const hardest = [...analytics.questionDifficulties].sort((a,b) => b.difficultyPercent - a.difficultyPercent)[0];
+                  if (hardest && hardest.difficultyPercent > 0) {
+                    return (
+                      <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100 shadow-sm">
+                        <div className="w-10 h-10 rounded-full bg-rose-200 flex items-center justify-center shrink-0 mb-3 text-rose-600">
+                          <Star size={20} fill="currentColor" />
+                        </div>
+                        <h5 className="font-black text-rose-900 text-sm mb-1">Fokus Perbaikan</h5>
+                        <p className="text-xs font-bold text-rose-800 leading-relaxed">
+                          Soal <b>Nomor {hardest.questionNumber}</b> paling banyak dijawab salah ({hardest.difficultyPercent}% siswa).
+                        </p>
+                        <p className="text-[10px] text-rose-600 font-bold mt-2 leading-relaxed opacity-80">Rekomendasi: Bahas ulang materi terkait soal ini di pertemuan berikutnya agar siswa lebih paham.</p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 shadow-sm">
+                      <div className="w-10 h-10 rounded-full bg-emerald-200 flex items-center justify-center shrink-0 mb-3 text-emerald-600">
+                        <ThumbsUp size={20} />
+                      </div>
+                      <h5 className="font-black text-emerald-900 text-sm mb-1">Semua Terkendali</h5>
+                      <p className="text-xs font-bold text-emerald-800 leading-relaxed">
+                        Siswa dapat menjawab seluruh soal dengan sangat baik. Pertahankan!
+                      </p>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Ranking Table */}
-      <div className="mt-4 md:mt-6 bg-white rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-3xl p-5 md:p-6 border border-slate-100 shadow-sm overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
           <div>
-            <h3 className="text-base md:text-lg font-black text-slate-800 font-outfit">Ranking Siswa</h3>
+            <h3 className="text-base md:text-lg font-black text-slate-800 font-outfit">Daftar Lengkap Nilai Siswa</h3>
             <p className="text-[10px] md:text-xs font-bold text-slate-400">
-              {gradedStudents.length} siswa • Rata-rata: {analytics.avgScore}
+              Total: {gradedStudents.length} siswa terdaftar
             </p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleExportXML}
-              className="px-3 md:px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-emerald-100 transition-colors flex items-center justify-center gap-1.5 md:gap-2"
+              className="px-3 md:px-4 py-2 bg-slate-50 text-slate-600 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-colors flex items-center justify-center gap-1.5 md:gap-2"
             >
-              <Download size={12} className="md:w-3.5 md:h-3.5" /> Export XML
+              <Download size={14} /> Ekspor Data
             </button>
             {!isPublicView && (
               <button
                 onClick={onGradeStudent}
                 className="px-3 md:px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors flex items-center justify-center gap-1.5 md:gap-2"
               >
-                <Plus size={12} className="md:w-3.5 md:h-3.5" /> Koreksi Siswa
+                <Plus size={14} /> Koreksi Manual
               </button>
             )}
           </div>
         </div>
 
         {gradedStudents.length === 0 ? (
-          <div className="text-center py-6 md:py-10 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-            <User size={24} className="mx-auto text-slate-300 mb-2 md:mb-3" />
-            <p className="text-slate-500 font-bold text-xs md:text-sm">Belum ada nilai tersimpan.</p>
+          <div className="text-center py-8 md:py-12 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+            <User size={32} className="mx-auto text-slate-300 mb-3" />
+            <p className="text-slate-500 font-bold text-sm">Belum ada nilai yang dimasukkan.</p>
             {!isPublicView && (
-              <p className="text-slate-400 text-[10px] md:text-xs mt-1">Klik &quot;Koreksi Siswa&quot; untuk memulai evaluasi.</p>
+              <p className="text-slate-400 text-[10px] mt-1.5">Mulai koreksi siswa untuk melihat rekapan nilai di sini.</p>
             )}
           </div>
         ) : (
@@ -265,37 +321,43 @@ export default function DashboardLayer({
             <table className="w-full text-left border-collapse min-w-[500px]">
               <thead>
                 <tr className="border-b-2 border-slate-100">
-                  <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">#</th>
+                  <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Rank</th>
                   <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Nama Siswa</th>
                   <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Nilai Akhir</th>
-                  <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">{isPublicView ? "Keterangan" : "CSI"}</th>
-                  {!isPublicView && <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">LPS</th>}
+                  <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">{isPublicView ? "Status Tuntas" : "Keterangan"}</th>
                 </tr>
               </thead>
               <tbody>
                 {analytics.ranking.map(r => (
-                  <tr key={r.rank} className={`border-b border-slate-50 hover:bg-slate-50/50 transition-colors ${r.finalScore < kkm ? 'bg-rose-50/30' : ''}`}>
-                    <td className="py-3 text-xs font-black text-slate-400">{r.rank}</td>
-                    <td className="py-3 text-xs font-bold text-slate-700">{r.name}</td>
-                    <td className="py-3">
-                      <span className={`px-2 py-0.5 rounded-md text-xs font-black ${r.finalScore >= kkm ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                  <tr key={r.rank} className={`border-b border-slate-50 hover:bg-slate-50/80 transition-colors`}>
+                    <td className="py-3.5 text-xs font-black text-slate-400 pl-2">
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center ${r.rank <= 3 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>{r.rank}</span>
+                    </td>
+                    <td className="py-3.5 text-xs font-bold text-slate-700">{r.name}</td>
+                    <td className="py-3.5">
+                      <span className={`px-2.5 py-1 rounded-lg text-xs font-black ${r.finalScore >= kkm ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
                         {r.finalScore}
                       </span>
                     </td>
-                    <td className="py-3 text-xs font-bold text-sky-600">
+                    <td className="py-3.5 text-xs font-bold">
                       {isPublicView ? (
                         r.finalScore < kkm ? (
-                          <button onClick={() => onStudentRemedial?.(r.name)} className="px-3 py-1 text-[10px] bg-rose-500 text-white rounded shadow-sm font-black uppercase tracking-wider hover:bg-rose-600 transition-colors active:scale-95">Remedial</button>
+                          <div className="flex items-center gap-1.5 text-rose-500">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"/> Perlu Bimbingan (Remedial)
+                          </div>
                         ) : (
-                          <span className="text-emerald-500 font-black text-[10px] uppercase tracking-widest">Tuntas</span>
+                          <div className="flex items-center gap-1.5 text-emerald-500">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"/> Tuntas
+                          </div>
                         )
-                      ) : (r.csi)}
+                      ) : (
+                        r.finalScore < kkm ? (
+                          <button onClick={() => onStudentRemedial?.(r.name)} className="px-3 py-1 text-[10px] bg-rose-50 text-rose-600 rounded-lg font-black uppercase tracking-wider hover:bg-rose-100 transition-colors border border-rose-100 active:scale-95">Remedial Siswa</button>
+                        ) : (
+                          <span className="text-emerald-500 font-bold text-[11px]">Memenuhi KKM ({kkm})</span>
+                        )
+                      )}
                     </td>
-                    {!isPublicView && (
-                      <td className="py-3 text-xs font-bold text-purple-600">
-                        {gradedStudents.find(s => s.name === r.name)?.lps ?? '-'}
-                      </td>
-                    )}
                   </tr>
                 ))}
               </tbody>
@@ -306,37 +368,37 @@ export default function DashboardLayer({
 
       {/* Behavior Section (Public View Only) */}
       {isPublicView && Object.keys(behaviorMap).length > 0 && (
-        <div className="mt-4 md:mt-6 bg-white rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
+        <div className="mt-6 md:mt-10 bg-white rounded-3xl p-5 md:p-6 border border-slate-100 shadow-sm">
           <div className="flex items-center gap-2 mb-4 md:mb-6">
-            <ShieldCheck size={18} className="text-indigo-600" />
-            <h3 className="text-base md:text-lg font-black text-slate-800 font-outfit">Rapor Perilaku Siswa</h3>
+            <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+              <ShieldCheck size={20} />
+            </div>
+            <div>
+              <h3 className="text-base md:text-lg font-black text-slate-800 font-outfit">Rapor Kedisiplinan & Perilaku</h3>
+              <p className="text-[10px] md:text-xs font-bold text-slate-400">Catatan sikap siswa selama proses pembelajaran</p>
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {analytics.ranking.map(r => {
               const b = getBehavior(r.name);
               if (!b) return null;
               const summary = getBehaviorSummary(b.behavior_logs || []);
               const label = getBehaviorLabel(b.total_points);
               return (
-                <div key={r.name} className="border border-slate-100 rounded-2xl p-4 md:p-5 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-black text-sm text-slate-700 truncate mr-4">{r.name}</h4>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`px-3 py-1 rounded-full text-xs font-black ${
-                        b.total_points >= 100 ? 'bg-emerald-50 text-emerald-600' :
-                        b.total_points >= 60 ? 'bg-amber-50 text-amber-600' :
-                        'bg-rose-50 text-rose-600'
-                      }`}>{b.total_points} Poin</span>
-                      <span className={`text-[10px] font-black uppercase tracking-widest ${
+                <div key={r.name} className="border border-slate-100 bg-slate-50/50 rounded-2xl p-4 md:p-5 hover:bg-white hover:shadow-md transition-all">
+                  <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
+                    <h4 className="font-black text-sm text-slate-700 truncate mr-3">{r.name}</h4>
+                    <div className="flex items-center gap-1.5 shrink-0 bg-white px-2 py-1 rounded-lg border border-slate-100 shadow-sm">
+                      <span className={`text-sm font-black ${
                         b.total_points >= 80 ? 'text-emerald-500' :
                         b.total_points >= 60 ? 'text-amber-500' :
                         'text-rose-500'
-                      }`}>{label}</span>
+                      }`}>{b.total_points}</span>
                     </div>
                   </div>
 
                   {(summary.good.length > 0 || summary.bad.length > 0) && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 mt-2">
                       {summary.good.length > 0 && (
                         <div className="flex items-start gap-2">
                           <ThumbsUp size={12} className="text-emerald-500 mt-0.5 shrink-0" />
@@ -353,7 +415,9 @@ export default function DashboardLayer({
                   )}
 
                   {summary.good.length === 0 && summary.bad.length === 0 && (
-                    <p className="text-[11px] text-slate-400 font-bold">Belum ada catatan perilaku.</p>
+                    <div className="text-center py-2">
+                      <p className="text-[10px] text-slate-400 font-bold">Belum ada catatan sikap khusus.</p>
+                    </div>
                   )}
                 </div>
               );
@@ -362,50 +426,51 @@ export default function DashboardLayer({
         </div>
       )}
 
-      {/* Question Difficulty */}
-      {analytics.questionDifficulties.length > 0 && (
-        <div className="mt-4 md:mt-6 bg-white rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Tingkat Kesulitan Soal</h4>
-          <ResponsiveContainer width="100%" height={Math.max(150, analytics.questionDifficulties.length * 8)}>
-            <BarChart data={analytics.questionDifficulties} layout="vertical">
-              <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-              <YAxis dataKey="questionNumber" type="category" tick={{ fontSize: 10, fill: '#94a3b8' }} width={30} />
-              <Tooltip
-                contentStyle={{ fontSize: 12, borderRadius: 12 }}
-                formatter={(value: unknown) => [`${value}% salah`, 'Kesulitan']}
-              />
-              <Bar dataKey="difficultyPercent" name="% Salah" radius={[0, 6, 6, 0]}>
-                {analytics.questionDifficulties.map((d, i) => (
-                  <Cell key={i} fill={d.difficultyPercent >= 75 ? '#f43f5e' : d.difficultyPercent >= 50 ? '#f59e0b' : d.difficultyPercent <= 15 ? '#10b981' : '#6366f1'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      <div className="mt-6 flex justify-center">
-        <button onClick={onBack} className="py-3 px-6 text-slate-400 font-bold hover:text-indigo-600 transition-colors uppercase tracking-widest text-xs flex items-center gap-2">
-          <ArrowLeft size={14} /> Kembali
+      <div className="mt-8 flex justify-center pb-8">
+        <button onClick={onBack} className="py-3 px-6 text-slate-400 bg-slate-50 rounded-xl font-bold hover:bg-slate-100 hover:text-indigo-600 transition-all uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-2 border border-slate-200">
+          <ArrowLeft size={16} /> Kembali ke Menu Sebelumnya
         </button>
       </div>
     </div>
   );
 }
 
-function StatCard({ label, value, suffix, sublabel, color }: { label: string; value: number; suffix: string; sublabel?: string; color: string }) {
-  const colorMap: Record<string, string> = {
-    indigo: 'bg-indigo-50 text-indigo-600',
-    sky: 'bg-sky-50 text-sky-600',
-    purple: 'bg-purple-50 text-purple-600',
-    slate: 'bg-slate-50 text-slate-600',
-  };
+function ProgressCard({ label, value, max = 100, isConsistency = false, realValue = 0 }: { label: string; value: number; max?: number; isConsistency?: boolean; realValue?: number }) {
+  const percentage = Math.min(100, Math.max(0, (value / max) * 100));
+  
+  let colorClass = 'bg-rose-500';
+  let bgLight = 'bg-rose-50';
+  let textClass = 'text-rose-600';
+  let statusText = 'Perlu Bimbingan';
+
+  if (percentage >= 80) {
+    colorClass = 'bg-emerald-500';
+    bgLight = 'bg-emerald-50';
+    textClass = 'text-emerald-600';
+    statusText = 'Sangat Baik';
+  } else if (percentage >= 60) {
+    colorClass = 'bg-amber-500';
+    bgLight = 'bg-amber-50';
+    textClass = 'text-amber-600';
+    statusText = 'Cukup Baik';
+  }
+
+  const displayValue = isConsistency ? realValue : value;
 
   return (
-    <div className={`${colorMap[color] || colorMap.slate} rounded-2xl p-4 md:p-5 text-center`}>
-      <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">{label}</p>
-      <p className="text-2xl md:text-3xl font-black">{value}{suffix}</p>
-      {sublabel && <p className="text-[9px] md:text-[10px] font-bold opacity-60 mt-1">{sublabel}</p>}
+    <div className={`rounded-3xl p-5 border shadow-sm ${bgLight} border-white relative overflow-hidden transition-all hover:shadow-md hover:-translate-y-1`}>
+      <div className="relative z-10">
+        <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">{label}</p>
+        <div className="flex items-end justify-between mb-4">
+          <p className={`text-3xl font-black ${textClass}`}>{displayValue}{!isConsistency && '%'}</p>
+          <span className={`text-[9px] font-black px-2.5 py-1 rounded-lg bg-white shadow-sm uppercase tracking-widest ${textClass}`}>
+            {statusText}
+          </span>
+        </div>
+        <div className="h-2 w-full bg-black/5 rounded-full overflow-hidden">
+          <div className={`h-full ${colorClass} rounded-full transition-all duration-1000`} style={{ width: `${percentage}%` }} />
+        </div>
+      </div>
     </div>
   );
 }
