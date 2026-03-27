@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS public.gm_sessions (
     remedial_timer INTEGER NOT NULL DEFAULT 15,
     exam_type TEXT NOT NULL DEFAULT 'UTS',
     academic_year TEXT NOT NULL DEFAULT '2025/2026',
+    is_public BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     UNIQUE(session_name)

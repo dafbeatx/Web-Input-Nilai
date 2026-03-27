@@ -46,6 +46,8 @@ interface SetupLayerProps {
   setRemedialTimer: (v: number) => void;
   remedialQuestions: string[];
   setRemedialQuestions: (v: string[]) => void;
+  isPublic: boolean;
+  setIsPublic: (v: boolean) => void;
   onSubmit: () => void;
   onBack: () => void;
   isLoading: boolean;
@@ -68,6 +70,7 @@ export default function SetupLayer(props: SetupLayerProps) {
     remedialEssayCount, setRemedialEssayCount,
     remedialTimer, setRemedialTimer,
     remedialQuestions, setRemedialQuestions,
+    isPublic, setIsPublic,
     onSubmit, onBack, isLoading, setToast,
   } = props;
 
@@ -129,6 +132,24 @@ export default function SetupLayer(props: SetupLayerProps) {
               <label className={labelClass}><Key size={12} className="md:w-3.5 md:h-3.5" /> Password Sesi</label>
               <input type="password" value={sessionPassword} onChange={(e) => setSessionPassword(e.target.value)} placeholder="Untuk akses & edit" className={inputClass} />
             </div>
+          </div>
+
+          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border-2 border-slate-100/50">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isPublic ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-200 text-slate-500'}`}>
+                {isPublic ? '🔓' : '🔒'}
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-slate-700">Sesi Publik</h4>
+                <p className="text-[10px] font-bold text-slate-400">Siswa bisa melihat hasil tanpa password</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsPublic(!isPublic)}
+              className={`w-12 h-6 rounded-full transition-all relative ${isPublic ? 'bg-emerald-500' : 'bg-slate-300'}`}
+            >
+              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isPublic ? 'left-7' : 'left-1'}`} />
+            </button>
           </div>
 
           <div>

@@ -98,6 +98,7 @@ export default function GradeMaster() {
 
   // UI state
   const [isPublicView, setIsPublicView] = useState(false);
+  const [isSessionPublic, setIsSessionPublic] = useState(false);
   const [modal, setModal] = useState<ModalType>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState("");
@@ -253,6 +254,44 @@ export default function GradeMaster() {
     }
   };
 
+  const handleLoadPublicSession = async (name?: string) => {
+    const targetName = name || sessionName.trim();
+    if (!targetName) {
+      setModalError("Nama sesi wajib diisi");
+      return;
+    }
+    setModalLoading(true);
+    setModalError("");
+    try {
+      const res = await fetch(`/api/grademaster?name=${encodeURIComponent(targetName)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setSessionId(data.sessionId || "");
+      setSessionName(data.sessionName);
+      setTeacherName(data.teacher || "");
+      setSubject(data.subject || "");
+      setStudentClass(data.className || "");
+      setSchoolLevel(data.schoolLevel || "SMA");
+      setStudentList(data.studentList || []);
+      setGradedStudents(data.gradedStudents || []);
+      setKkm(data.kkm || 70);
+      setRemedialEssayCount(data.remedialEssayCount || 5);
+      setRemedialTimer(data.remedialTimer || 15);
+      setRemedialQuestions(data.scoringConfig?.remedialQuestions || []);
+      setIsSessionPublic(data.isPublic);
+      setIsPublicView(true);
+      setLayer("dashboard");
+      closeModal();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal memuat sesi publik";
+      setToast({ message: msg, type: "error" });
+      setModalError(msg);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
   const handleLoadSession = async () => {
     if (!sessionName.trim() || !sessionPassword.trim()) {
       setModalError("Nama sesi dan password wajib diisi");
@@ -283,7 +322,9 @@ export default function GradeMaster() {
       setStudentList(data.studentList || []);
       setGradedStudents(data.gradedStudents || []);
       setRemedialQuestions(data.scoringConfig?.remedialQuestions || []);
-
+      setIsSessionPublic(data.isPublic);
+      setIsPublicView(false); // Admin/Teacher view
+      
       // Reconstruct keyInput for display
       const key = data.answerKey as string[];
       if (Array.isArray(key)) {
@@ -291,59 +332,17 @@ export default function GradeMaster() {
       }
 
       setToast({ message: `Sesi "${data.sessionName}" berhasil dimuat!`, type: "success" });
-      setIsPublicView(false);
       setLayer("dashboard");
       closeModal();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal memuat";
       setModalError(msg);
+      setModal('error');
     } finally {
       setModalLoading(false);
     }
   };
 
-  const handleLoadPublicSession = async () => {
-    if (!sessionName.trim()) {
-      setModalError("Nama sesi wajib diisi");
-      return;
-    }
-    setModalLoading(true);
-    setModalError("");
-    try {
-      const params = new URLSearchParams({
-        name: sessionName.trim(),
-      });
-      const res = await fetch(`/api/grademaster?${params.toString()}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
-      setSessionId(data.sessionId || "");
-      setAnswerKey([]);
-      setTeacherName(data.teacher || "");
-      setSubject(data.subject || "");
-      setStudentClass(data.className || "");
-      setSchoolLevel(data.schoolLevel || "SMA");
-      setExamType(data.examType || "UTS");
-      setAcademicYear(data.academicYear || "2025/2026");
-      setKkm(data.kkm || 70);
-      setRemedialEssayCount(data.remedialEssayCount || 5);
-      setRemedialTimer(data.remedialTimer || 15);
-      setStudentList(data.studentList || []);
-      setGradedStudents(data.gradedStudents || []);
-      setKeyInput("");
-      setRemedialQuestions(data.scoringConfig?.remedialQuestions || []);
-
-      setToast({ message: `Sesi "${data.sessionName}" dimuat sebagai publik!`, type: "success" });
-      setIsPublicView(true);
-      setLayer("dashboard");
-      closeModal();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Gagal memuat sesi publik";
-      setModalError(msg);
-    } finally {
-      setModalLoading(false);
-    }
-  };
 
   const handleDeleteSession = async () => {
     if (!sessionName.trim() || !sessionPassword.trim()) {
@@ -498,7 +497,7 @@ export default function GradeMaster() {
 
       <div className="flex-1">
         {layer === "home" && (
-          <HomeLayer
+        <HomeLayer
           sessions={sessions}
           isLoading={isLoadingSessions}
           onCreateNew={() => {
@@ -511,18 +510,22 @@ export default function GradeMaster() {
               setAnswerKey([]);
               resetGrading();
               setGradedStudents([]);
-              setStudentList([]);
-              setKkm(70);
-              setRemedialEssayCount(5);
-              setRemedialTimer(15);
-              setRemedialQuestions([]);
+              setIsSessionPublic(false);
             } else {
               setLayer("login");
             }
           }}
-          onSessionClick={(name) => {
-            setSessionName(name);
-            setModal("load");
+          onSessionClick={(session: SessionMeta) => {
+            if (isAdmin) {
+              setSessionName(session.session_name);
+              setModal("load");
+            } else {
+              if (session.is_public) {
+                handleLoadPublicSession(session.session_name);
+              } else {
+                setToast({ message: "Data ini bersifat privat oleh guru.", type: "error" });
+              }
+            }
           }}
           onDeleteSession={(name) => {
             setSessionName(name);
@@ -578,6 +581,8 @@ export default function GradeMaster() {
           setRemedialTimer={setRemedialTimer}
           remedialQuestions={remedialQuestions}
           setRemedialQuestions={setRemedialQuestions}
+          isPublic={isSessionPublic}
+          setIsPublic={setIsSessionPublic}
           onSubmit={handleSetupSubmit}
           onBack={() => {
             setLayer("home");

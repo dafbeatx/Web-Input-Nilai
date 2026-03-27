@@ -58,6 +58,7 @@ export interface SessionData {
   kkm: number;
   remedialEssayCount: number;
   remedialTimer: number;
+  isPublic: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -76,6 +77,7 @@ export interface SessionMeta {
   remedial_timer?: number;
   updated_at: string;
   student_count?: number;
+  is_public: boolean;
 }
 
 export interface QuestionDifficulty {

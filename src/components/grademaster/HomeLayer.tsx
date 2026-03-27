@@ -23,7 +23,7 @@ interface HomeLayerProps {
   sessions: SessionMeta[];
   isLoading: boolean;
   onCreateNew: () => void;
-  onSessionClick: (name: string) => void;
+  onSessionClick: (session: SessionMeta) => void;
   onDeleteSession: (name: string) => void;
   onOpenAbout: () => void;
   isAdmin: boolean;
@@ -212,14 +212,20 @@ export default function HomeLayer({
               {expandedGroup.sessions.map(s => (
                 <div
                   key={s.id}
-                  onClick={() => onSessionClick(s.session_name)}
-                  className="bg-white p-4 md:p-5 rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-500/10 transition-all cursor-pointer group"
+                  onClick={() => onSessionClick(s)}
+                  className="bg-white p-4 md:p-5 rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-500/10 transition-all cursor-pointer group animate-in zoom-in-95 duration-200"
                 >
                   <div className="flex justify-between items-start mb-3">
-                    <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors relative">
                       <BookOpen size={18} />
+                      <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center text-[8px] shadow-sm ${s.is_public ? 'bg-emerald-500 text-white' : 'bg-slate-400 text-white'}`}>
+                        {s.is_public ? '🔓' : '🔒'}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
+                       <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${s.is_public ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-slate-400 bg-slate-50 border border-slate-100'}`}>
+                        {s.is_public ? 'Public' : 'Private'}
+                      </span>
                       {isAdmin && (
                         <button
                           onClick={(e) => { e.stopPropagation(); onDeleteSession(s.session_name); }}

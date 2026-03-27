@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
           kkm: kkm || 70,
           remedial_essay_count: remedialEssayCount || 5,
           remedial_timer: remedialTimer || 15,
+          is_public: body.isPublic === true,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
@@ -95,6 +96,7 @@ export async function POST(req: NextRequest) {
         kkm: kkm || 70,
         remedial_essay_count: remedialEssayCount || 5,
         remedial_timer: remedialTimer || 15,
+        is_public: body.isPublic === true,
       })
       .select('id')
       .single();
@@ -122,7 +124,7 @@ export async function GET(req: NextRequest) {
     if (!name && !password) {
       const { data, error } = await supabase
         .from('gm_sessions')
-        .select('id, session_name, teacher, subject, class_name, school_level, exam_type, academic_year, updated_at, kkm, remedial_essay_count, remedial_timer')
+        .select('id, session_name, teacher, subject, class_name, school_level, exam_type, academic_year, updated_at, kkm, remedial_essay_count, remedial_timer, is_public')
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
@@ -150,27 +152,38 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan' }, { status: 429 });
     }
 
-    const { data: session, error } = await supabase
+    const { data: session, error: sessError } = await supabase
       .from('gm_sessions')
-      .select('*')
+      .select('*, gm_students(*)')
       .eq('session_name', name.trim())
       .single();
 
-    if (error || !session) {
-      return NextResponse.json({ error: 'Sesi tidak ditemukan' }, { status: 404 });
-    }
+    if (sessError || !session) return NextResponse.json({ error: 'Sesi tidak ditemukan' }, { status: 404 });
 
-    let isPublic = false;
-    if (password) {
-      const valid = await verifyPassword(password.trim(), session.password_hash);
-      if (!valid) {
-        return NextResponse.json({ error: 'Password salah' }, { status: 403 });
+    let isReadOnly = false;
+    
+    // Check access:
+    // 1. If session is private, password is mandatory.
+    // 2. If session is public:
+    //    - No password provided -> Read-only (Student)
+    //    - Password provided -> Validate. If correct, Full Access (Teacher).
+    if (!session.is_public) {
+      if (!password) {
+        return NextResponse.json({ error: 'Sesi ini bersifat privat. Silakan masukkan password guru.' }, { status: 403 });
       }
+      const isMatch = await verifyPassword(password.trim(), session.password_hash);
+      if (!isMatch) return NextResponse.json({ error: 'Password salah' }, { status: 401 });
+      isReadOnly = false;
     } else {
-      isPublic = true;
+      if (password) {
+        const isMatch = await verifyPassword(password.trim(), session.password_hash);
+        if (!isMatch) return NextResponse.json({ error: 'Password salah' }, { status: 401 });
+        isReadOnly = false;
+      } else {
+        isReadOnly = true;
+      }
     }
 
-    // Fetch students for this session
     const { data: students } = await supabase
       .from('gm_students')
       .select('*')
@@ -180,7 +193,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       sessionId: session.id,
       sessionName: session.session_name,
-      answerKey: isPublic ? [] : session.answer_key,
+      answerKey: isReadOnly ? [] : session.answer_key,
       teacher: session.teacher,
       subject: session.subject,
       className: session.class_name,
@@ -192,6 +205,8 @@ export async function GET(req: NextRequest) {
       kkm: session.kkm || 70,
       remedialEssayCount: session.remedial_essay_count || 5,
       remedialTimer: session.remedial_timer || 15,
+      isPublic: session.is_public,
+      isReadOnly,
       gradedStudents: (students || []).map(s => ({
         id: s.id,
         name: s.name,
@@ -201,17 +216,21 @@ export async function GET(req: NextRequest) {
         wrong: s.wrong,
         mcqScore: Number(s.mcq_score),
         essayScore: Number(s.essay_score),
+        final_score: Number(s.final_score), // Backwards compatibility for some versions
         finalScore: Number(s.final_score),
         percentage: Number(s.final_score),
         csi: s.csi,
         lps: s.lps,
+        remedialStatus: s.remedial_status,
+        remedialLocation: s.remedial_location,
+        remedialAnswers: s.remedial_answers,
+        remedialNote: s.remedial_note
       })),
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : (typeof err === 'object' && err !== null && 'message' in err) ? String((err as Record<string, unknown>).message) : 'Gagal memuat sesi';
-    const code = (typeof err === 'object' && err !== null && 'code' in err) ? String((err as Record<string, unknown>).code) : '';
-    console.error('Session load error:', code, message, err);
-    return NextResponse.json({ error: `${code ? `[${code}] ` : ''}${message}` }, { status: 500 });
+    const message = err instanceof Error ? err.message : 'Gagal memuat sesi';
+    console.error('Session load error:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
