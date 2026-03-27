@@ -59,4 +59,24 @@ export async function PUT(req: NextRequest) {
   }
 }
 
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const studentId = searchParams.get('studentId');
+
+    if (!studentId) {
+      return NextResponse.json({ error: 'Student ID wajib diisi' }, { status: 400 });
+    }
+
+    const { resetRemedial } = await import('@/lib/grademaster/services/remedial.service');
+    await resetRemedial(studentId);
+
+    return NextResponse.json({ message: 'Data remedial berhasil direset' });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Gagal mereset data remedial';
+    console.error('Remedial reset error:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
 

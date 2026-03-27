@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { 
-  ArrowLeft, RefreshCcw, User, MapPin, Clock, Eye, CheckCircle2, AlertTriangle, FileText, Search, ChevronDown, ChevronUp, Plus, Trash2, Save, Settings2, ShieldAlert, Check
+  ArrowLeft, RefreshCcw, User, MapPin, Clock, Eye, CheckCircle2, AlertTriangle, FileText, Search, ChevronDown, ChevronUp, Plus, Trash2, Save, Settings2, ShieldAlert, Check, RotateCcw
 } from 'lucide-react';
 import { GradedStudent, ScoringConfig } from '@/lib/grademaster/types';
 
@@ -68,21 +68,20 @@ export default function RemedialDashboardLayer({
     setIsEditing(false);
   };
 
-  const handleDeleteStudent = async (e: React.MouseEvent, id: string, name: string) => {
+  const handleResetRemedial = async (e: React.MouseEvent, id: string, name: string) => {
     e.stopPropagation();
-    if (!window.confirm(`Yakin ingin menghapus siswa "${name}"?\nData nilai akan dihapus (soft delete).`)) return;
+    if (!window.confirm(`Yakin ingin mereset data remedial siswa "${name}"?\nNilai siswa akan dikembalikan ke nilai utama.`)) return;
     
     setIsDeleting(id);
     try {
-      const res = await fetch('/api/grademaster/students', {
+      const res = await fetch(`/api/grademaster/students/remedial?studentId=${id}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId: id })
+        headers: { 'Content-Type': 'application/json' }
       });
-      if (!res.ok) throw new Error('Gagal menghapus');
+      if (!res.ok) throw new Error('Gagal mereset');
       setDeletedIds(prev => [...prev, id]);
     } catch (err) {
-      alert('Gagal menghapus siswa. Silakan coba lagi.');
+      alert('Gagal mereset data remedial. Silakan coba lagi.');
     } finally {
       setIsDeleting(null);
     }
@@ -345,12 +344,12 @@ export default function RemedialDashboardLayer({
                   </div>
                   <div className="flex items-center gap-2">
                     <button 
-                      onClick={(e) => handleDeleteStudent(e, student.id, student.name)}
+                      onClick={(e) => handleResetRemedial(e, student.id, student.name)}
                       disabled={isDeleting === student.id}
-                      className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-400 hover:bg-rose-100 hover:text-rose-600 transition-colors"
-                      title="Hapus Siswa"
+                      className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-500 hover:bg-amber-100 hover:text-amber-600 transition-colors"
+                      title="Reset Remedial"
                     >
-                      {isDeleting === student.id ? <div className="w-4 h-4 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" /> : <Trash2 size={16} />}
+                      {isDeleting === student.id ? <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" /> : <RotateCcw size={16} />}
                     </button>
                     <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
                       {selectedStudentId === student.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}

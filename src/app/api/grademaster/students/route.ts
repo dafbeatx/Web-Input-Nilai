@@ -134,6 +134,21 @@ export async function GET(req: NextRequest) {
       percentage: Number(s.final_score),
       csi: s.csi,
       lps: s.lps,
+      remedialStatus: s.remedial_status,
+      remedialLocation: s.remedial_location,
+      remedialAnswers: s.remedial_answers,
+      remedialNote: s.remedial_note,
+      originalScore: s.original_score,
+      remedialScore: s.remedial_score,
+      finalScoreLocked: s.final_score_locked,
+      isCheated: s.is_cheated,
+      teacherReviewed: s.teacher_reviewed,
+      cheatingFlags: s.cheating_flags,
+      remedialAttempts: s.remedial_attempts,
+      essayScoreAuto: s.essay_score_auto,
+      essayScoreManual: s.essay_score_manual,
+      essayScoreFinal: s.essay_score_final,
+      essayAutoDetails: s.essay_auto_details,
     }));
 
     return NextResponse.json({ students });

@@ -168,3 +168,41 @@ export async function finalizeRemedial(
   
   return finalScore;
 }
+
+export async function resetRemedial(studentId: string) {
+  const { data: student, error: fetchErr } = await supabase
+    .from('gm_students')
+    .select('original_score, final_score')
+    .eq('id', studentId)
+    .single();
+
+  if (fetchErr || !student) throw new Error('Siswa tidak ditemukan');
+
+  // Revert to original score if it exists, otherwise use current final_score (which should be the original if remedial never finished)
+  const scoreToRestore = student.original_score !== null ? student.original_score : student.final_score;
+
+  const { error } = await supabase
+    .from('gm_students')
+    .update({
+       remedial_status: null,
+       remedial_score: null,
+       remedial_answers: null,
+       remedial_note: null,
+       remedial_location: null,
+       remedial_attempts: 0,
+       is_cheated: false,
+       cheating_flags: null,
+       teacher_reviewed: false,
+       essay_score_auto: null,
+       essay_score_manual: null,
+       essay_score_final: null,
+       essay_auto_details: null,
+       final_score: scoreToRestore,
+       final_score_locked: null
+    })
+    .eq('id', studentId);
+
+  if (error) throw error;
+  
+  return true;
+}
