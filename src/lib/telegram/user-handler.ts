@@ -195,7 +195,7 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
 
     const { data: sessionInfo } = await supabase
       .from('gm_sessions')
-      .select('session_name, teacher, subject, class_name, exam_type, academic_year, school_level, kkm')
+      .select('session_name, teacher, subject, class_name, exam_type, academic_year, school_level, kkm, answer_key, scoring_config')
       .eq('id', sessionId)
       .single();
 
@@ -207,7 +207,7 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
 
     const { data: students } = await supabase
       .from('gm_students')
-      .select('name, final_score, mcq_score, essay_score, csi, lps, correct, wrong')
+      .select('name, final_score, mcq_score, essay_score, csi, lps, correct, wrong, essay_scores')
       .eq('session_id', sessionId)
       .order('final_score', { ascending: false });
 
@@ -246,6 +246,11 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
       remedialWarning = `\n⚠️ <b>TIDAK MEMENUHI KKM (${kkm})</b>\nAnda diwajibkan mengikuti Remedial. Silakan klik link berikut dan pilih sesi kelas Anda:\n🌐 <a href="${webUrl}">${webUrl}</a>\n`;
     }
 
+    const totalPG = Array.isArray(sessionInfo.answer_key) ? sessionInfo.answer_key.length : 0;
+    const essayMax = sessionInfo.scoring_config?.essayMaxScore || 0;
+    const essayCount = sessionInfo.scoring_config?.essayCount || 0;
+    const essayRaw = Array.isArray(match.essay_scores) ? match.essay_scores.reduce((a: number, b: number) => a + b, 0) : 0;
+
     await sendMessage(
       chatId,
       `📊 <b>HASIL NILAI EXAM</b>\n\n` +
@@ -255,7 +260,8 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
       `━━━━━━━━━━━━━━━━\n\n` +
       `👤 Nama: <b>${match.name}</b>\n` +
       `${emoji} Nilai Akhir: <b>${finalScore}</b>\n` +
-      `📋 PG: ${match.mcq_score} • Essay: ${match.essay_score}\n` +
+      `📋 PG: <b>${match.mcq_score}</b> (✅ ${match.correct}/${totalPG})\n` +
+      `📝 Essay: <b>${match.essay_score}</b> (Pts: ${essayRaw}/${essayMax})\n` +
       `✅ Benar: ${match.correct} • ❌ Salah: ${match.wrong}\n` +
       `🏆 Ranking: <b>${rank}</b> dari ${totalStudents} siswa\n` +
       remedialWarning +
