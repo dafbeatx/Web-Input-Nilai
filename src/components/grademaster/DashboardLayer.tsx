@@ -368,6 +368,24 @@ export default function DashboardLayer({
                 </button>
               </>
             )}
+        </div>
+
+        {/* Remedial Announcement Banner */}
+        <div className="mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-start gap-3 shadow-sm animate-in zoom-in-95">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-200">
+            <Bell size={20} className="animate-bounce" />
+          </div>
+          <div>
+            <h4 className="text-sm font-black text-indigo-900 mb-0.5 flex items-center gap-2 uppercase tracking-wide">
+              📢 Pengumuman Remedial Penting!
+            </h4>
+            <p className="text-xs font-bold text-indigo-700 leading-relaxed">
+              Sesuai kebijakan akademik, remedial diberikan waktu maksimal <span className="text-rose-600 font-extrabold underline">5 HARI</span> terhitung sejak nilai diinput oleh guru. 
+              Sistem akan otomatis menutup akses jika melewati batas waktu.
+            </p>
+            <div className="mt-2 flex items-center gap-2 text-[10px] font-black text-rose-600 bg-white/50 w-fit px-2 py-1 rounded-lg border border-rose-100">
+              <AlertCircle size={12} /> KONSEKUENSI: NILAI OTOMATIS 0 & PENALTI -10 POIN PERILAKU
+            </div>
           </div>
         </div>
 
