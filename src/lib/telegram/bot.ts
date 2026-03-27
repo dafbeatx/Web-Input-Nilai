@@ -72,7 +72,14 @@ export async function sendPhoto(
 ) {
   const formData = new FormData();
   formData.append('chat_id', String(chatId));
-  formData.append('photo', photo);
+  
+  // Telegram requires a filename when sending a blob/buffer
+  if (photo instanceof Blob) {
+    formData.append('photo', photo, 'student_photo.jpg');
+  } else {
+    formData.append('photo', photo);
+  }
+
   if (caption) formData.append('caption', caption);
   formData.append('parse_mode', 'HTML');
 

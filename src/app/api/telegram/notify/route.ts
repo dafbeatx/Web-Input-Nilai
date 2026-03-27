@@ -39,14 +39,10 @@ export async function POST(req: NextRequest) {
 
     let photoBlob: Blob | undefined;
     if (photo && photo.startsWith('data:image')) {
-      // Convert base64 to Blob
       const base64Data = photo.split(',')[1];
-      const binaryData = atob(base64Data);
-      const array = [];
-      for (let i = 0; i < binaryData.length; i++) {
-        array.push(binaryData.charCodeAt(i));
-      }
-      photoBlob = new Blob([new Uint8Array(array)], { type: 'image/jpeg' });
+      // Use Buffer for Node.js compatibility if available, else fallback
+      const buffer = Buffer.from(base64Data, 'base64');
+      photoBlob = new Blob([buffer], { type: 'image/jpeg' });
     }
 
     await sendAdminNotification(text, photoBlob);

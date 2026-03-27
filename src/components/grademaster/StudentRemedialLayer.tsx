@@ -77,6 +77,12 @@ export default function StudentRemedialLayer({
   const capturePhoto = (): string | undefined => {
     if (!videoRef.current) return undefined;
     try {
+      // Ensure video is ready and has dimensions
+      if (videoRef.current.readyState < 2 || videoRef.current.videoWidth === 0) {
+        console.warn('Video not ready for capture');
+        return undefined;
+      }
+
       const canvas = document.createElement('canvas');
       canvas.width = videoRef.current.videoWidth || 320;
       canvas.height = videoRef.current.videoHeight || 240;
@@ -393,8 +399,11 @@ export default function StudentRemedialLayer({
     });
     
     // Send Start Notification with Photo
-    const photo = capturePhoto();
-    sendTelegramNotify('START', photo);
+    // Tiny delay to ensure camera is stable if just switched step (though it should be already on)
+    setTimeout(() => {
+      const photo = capturePhoto();
+      sendTelegramNotify('START', photo);
+    }, 1000);
 
     setIsSubmitting(false);
     setStep('EXAM');
@@ -494,7 +503,7 @@ export default function StudentRemedialLayer({
         setStep(status);
         if (status === 'COMPLETED') {
           setToast({ message: "Jawaban Remedial berhasil dikumpulkan.", type: "success" });
-          const finalScore = data.score; // Assuming the score is returned in the response data
+          const finalScore = data.newFinalScore; // Match the API response key
           sendTelegramNotify('FINISH', undefined, undefined, finalScore);
         } else if (status === 'CHEATED') {
           const photo = capturePhoto();
