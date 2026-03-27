@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     // Fetch session details
     const { data: session, error: sessError } = await supabase
       .from('gm_sessions')
-      .select('answer_key, scoring_config, is_demo')
+      .select('answer_key, scoring_config, is_demo, remedial_essay_count')
       .eq('id', sessionId)
       .single();
 
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     }
 
     const answerKey = session.answer_key as string[] || [];
-    const scoringConfig = (session.scoring_config as unknown as ScoringConfig) || DEFAULT_SCORING_CONFIG;
+    const scoringConfig = (session.scoring_config as any) || DEFAULT_SCORING_CONFIG;
     
     // Choose 12-18 random names
     const count = Math.floor(Math.random() * 7) + 12;
@@ -63,11 +63,16 @@ export async function POST(req: NextRequest) {
         }
       });
 
-      // Generate random essay scores
-      const essayCount = scoringConfig.remedialQuestions?.length || 5;
+      // Generate random essay scores based on config
+      const essayCount = session.remedial_essay_count || scoringConfig.essayCount || 5;
+      const totalPotentialRaw = scoringConfig.essayMaxScore || 20;
+      const pointsPerQuestion = totalPotentialRaw / essayCount;
+      
       const essayScores = Array.from({ length: essayCount }, () => {
-        const base = performanceFactor * 100;
-        return Math.max(0, Math.min(100, Math.round(base + (Math.random() * 40 - 20))));
+        // Points per question scaled by performance
+        const base = performanceFactor * pointsPerQuestion;
+        const randomVariation = (Math.random() * 0.4 - 0.2) * pointsPerQuestion;
+        return Math.max(0, Math.min(pointsPerQuestion, Math.round((base + randomVariation) * 10) / 10));
       });
 
       const result = calculateStudentResult(answerKey, studentAnswers, essayScores, scoringConfig);
