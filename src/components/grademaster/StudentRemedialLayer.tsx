@@ -55,7 +55,12 @@ export default function StudentRemedialLayer({
   // Pre-exam agreement
   const [agreedRules, setAgreedRules] = useState(false);
 
-  // Draggable camera
+  // Permission states
+  const [cameraOk, setCameraOk] = useState(false);
+  const [locationOk, setLocationOk] = useState(false);
+  const [checkingPerms, setCheckingPerms] = useState(false);
+
+  // Draggable camera — default top-left
   const [camPos, setCamPos] = useState({ x: -1, y: -1 });
   const draggingCam = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -64,7 +69,7 @@ export default function StudentRemedialLayer({
 
   useEffect(() => {
     if (camPos.x === -1) {
-      setCamPos({ x: window.innerWidth - CAM_W - 16, y: window.innerHeight - CAM_H - 16 });
+      setCamPos({ x: 12, y: 12 });
     }
   }, []);
 
@@ -101,6 +106,64 @@ export default function StudentRemedialLayer({
   }, [camPos]);
 
   const MAX_TAB_WARNINGS = 3;
+
+  // Navigation lock during exam
+  useEffect(() => {
+    if (step !== 'EXAM') return;
+
+    const handleBeforeUnload2 = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, '', window.location.href);
+      setToast({ message: '⛔ Anda tidak diperbolehkan keluar saat ujian berlangsung!', type: 'error' });
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload2);
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload2);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [step]);
+
+  // Check permissions (camera + location)
+  const checkPermissions = async () => {
+    setCheckingPerms(true);
+    let camReady = false;
+    let locReady = false;
+
+    // Check camera
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 160, height: 120, facingMode: 'user' } });
+      stream.getTracks().forEach(t => t.stop());
+      camReady = true;
+    } catch {
+      camReady = false;
+    }
+    setCameraOk(camReady);
+
+    // Check location
+    try {
+      await getPosition();
+      locReady = true;
+    } catch {
+      locReady = false;
+    }
+    setLocationOk(locReady);
+
+    setCheckingPerms(false);
+
+    if (!camReady || !locReady) {
+      const missing: string[] = [];
+      if (!camReady) missing.push('Kamera');
+      if (!locReady) missing.push('Lokasi (GPS)');
+      setToast({ message: `Anda harus mengaktifkan ${missing.join(' dan ')} untuk melanjutkan ujian.`, type: 'error' });
+    }
+  };
 
   // Restore session on mount
   useEffect(() => {
@@ -469,8 +532,10 @@ export default function StudentRemedialLayer({
     );
   }
 
-  // RENDER: INFO SCREEN (Camera/GPS/Timer confirmation)
+  // RENDER: INFO SCREEN (Camera/GPS/Timer confirmation + Permission Check)
   if (step === 'INFO') {
+    const allPermsOk = cameraOk && locationOk;
+
     return (
       <div className="min-h-screen flex items-center justify-center p-4 animate-in">
         <div className="bg-white max-w-lg w-full rounded-[2rem] p-8 md:p-10 shadow-2xl border border-slate-100">
@@ -512,7 +577,7 @@ export default function StudentRemedialLayer({
           <ul className="space-y-4 mb-6">
             <li className="flex gap-3 text-sm text-slate-600 font-bold items-start">
               <Camera className="text-indigo-500 shrink-0 mt-0.5" size={18} />
-              <span>Sistem akan meminta akses kamera untuk <strong>memantau pergerakan Anda</strong> selama ujian berlangsung. Anda bisa menggeser posisi kamera.</span>
+              <span>Kamera wajib aktif untuk <strong>pengawasan otomatis</strong>. Anda bisa menggeser posisi kamera selama ujian.</span>
             </li>
             <li className="flex gap-3 text-sm text-slate-600 font-bold items-start">
               <MapPin className="text-emerald-500 shrink-0 mt-0.5" size={18} />
@@ -528,24 +593,52 @@ export default function StudentRemedialLayer({
             </li>
           </ul>
 
-          {/* Camera Preview */}
-          <div className="mb-6 bg-slate-900 rounded-2xl overflow-hidden border-2 border-slate-700 aspect-video flex items-center justify-center">
-            <div className="text-center text-slate-400 p-4">
-              <Camera size={32} className="mx-auto mb-2 opacity-50" />
-              <p className="text-[10px] font-bold uppercase tracking-widest">Preview kamera akan aktif saat ujian dimulai</p>
-              <div className="mt-2 flex items-center justify-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                <span className="text-[9px] text-emerald-400 font-bold">Kamera Siap</span>
+          {/* Permission Status Indicators */}
+          <div className="mb-6 grid grid-cols-2 gap-3">
+            <div className={`p-3 rounded-xl border-2 flex items-center gap-2.5 ${cameraOk ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${cameraOk ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                <Camera size={16} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Kamera</p>
+                <p className={`text-xs font-bold ${cameraOk ? 'text-emerald-600' : 'text-slate-400'}`}>
+                  {cameraOk ? '🟢 Aktif' : '⚪ Belum diizinkan'}
+                </p>
+              </div>
+            </div>
+            <div className={`p-3 rounded-xl border-2 flex items-center gap-2.5 ${locationOk ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${locationOk ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                <MapPin size={16} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Lokasi</p>
+                <p className={`text-xs font-bold ${locationOk ? 'text-emerald-600' : 'text-slate-400'}`}>
+                  {locationOk ? '📍 Aktif' : '⚪ Belum diizinkan'}
+                </p>
               </div>
             </div>
           </div>
 
+          {!allPermsOk && (
+            <button
+              onClick={checkPermissions}
+              disabled={checkingPerms}
+              className="w-full py-3 bg-amber-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all mb-3 flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {checkingPerms ? (
+                <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Memeriksa...</>
+              ) : (
+                <><AlertTriangle size={14} /> Periksa Izin Kamera & Lokasi</>
+              )}
+            </button>
+          )}
+
           <button
             onClick={startExam}
-            disabled={isSubmitting}
-            className="w-full py-4 bg-indigo-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
+            disabled={isSubmitting || !allPermsOk}
+            className="w-full py-4 bg-indigo-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
           >
-            {isSubmitting ? 'MEMPROSES...' : 'SAYA MENGERTI, MULAI REMEDIAL'}
+            {isSubmitting ? 'MEMPROSES...' : !allPermsOk ? '⛔ AKTIFKAN IZIN TERLEBIH DAHULU' : 'SAYA MENGERTI, MULAI REMEDIAL'}
           </button>
         </div>
       </div>
