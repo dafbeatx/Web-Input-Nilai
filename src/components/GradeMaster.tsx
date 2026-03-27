@@ -336,7 +336,7 @@ export default function GradeMaster() {
     }
   };
 
-  const handleUpdateRemedialQuestions = async (newQuestions: string[]) => {
+  const handleUpdateRemedialQuestions = async (newQuestions: string[], newKeys: string[]) => {
     if (!sessionId) {
       setToast({ message: "Sesi belum dimuat. Silakan login ke sesi terlebih dahulu.", type: "error" });
       return;
@@ -356,7 +356,7 @@ export default function GradeMaster() {
           className: studentClass,
           schoolLevel,
           studentList,
-          scoringConfig: { ...scoringConfig, remedialQuestions: newQuestions, remedialAnswerKeys },
+          scoringConfig: { ...scoringConfig, remedialQuestions: newQuestions, remedialAnswerKeys: newKeys },
           examType,
           academicYear,
           kkm,
@@ -368,9 +368,10 @@ export default function GradeMaster() {
       if (!res.ok) throw new Error(data.error);
 
       setRemedialQuestions(newQuestions);
-      setToast({ message: "Soal remedial berhasil diperbarui!", type: "success" });
+      setRemedialAnswerKeys(newKeys);
+      setToast({ message: "Soal & Kunci remedial berhasil diperbarui!", type: "success" });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Gagal memperbarui soal";
+      const msg = err instanceof Error ? err.message : "Gagal menyimpan";
       setToast({ message: msg, type: "error" });
     } finally {
       setIsUpdatingQuestions(false);
@@ -874,7 +875,9 @@ export default function GradeMaster() {
           scoringConfig={{ ...scoringConfig, remedialQuestions, remedialAnswerKeys }}
           remedialQuestionsInput={remedialQuestionsInput}
           onBack={() => setLayer("home")}
-          onUpdateQuestions={handleUpdateRemedialQuestions}
+          remedialAnswerKeysInput={remedialAnswerKeysInput}
+          onAnswerKeysInputChange={handleAnswerKeysInputChange}
+          onUpdateRemedial={handleUpdateRemedialQuestions}
           onRemedialInputChange={handleRemedialInputChange}
           isSaving={isUpdatingQuestions}
         />

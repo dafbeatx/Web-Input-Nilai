@@ -17,9 +17,11 @@ interface RemedialDashboardLayerProps {
   schoolLevel?: string;
   semester?: string;
   onBack: () => void;
-  onUpdateQuestions?: (questions: string[]) => void;
+  onUpdateRemedial?: (questions: string[], keys: string[]) => void;
   remedialQuestionsInput?: string;
   onRemedialInputChange?: (v: string) => void;
+  remedialAnswerKeysInput?: string;
+  onAnswerKeysInputChange?: (v: string) => void;
   isSaving?: boolean;
 }
 
@@ -34,9 +36,11 @@ export default function RemedialDashboardLayer({
   schoolLevel = "SMA",
   semester = "Ganjil",
   onBack,
-  onUpdateQuestions,
+  onUpdateRemedial,
   remedialQuestionsInput = "",
   onRemedialInputChange,
+  remedialAnswerKeysInput = "",
+  onAnswerKeysInputChange,
   isSaving = false
 }: RemedialDashboardLayerProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,9 +52,17 @@ export default function RemedialDashboardLayer({
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const handleSaveQuestions = () => {
-    onUpdateQuestions?.(scoringConfig.remedialQuestions || []);
+    onUpdateRemedial?.(
+      parseEssayQuestions(remedialQuestionsInput),
+      parseEssayQuestions(remedialAnswerKeysInput)
+    );
     setIsEditing(false);
   };
+
+  function parseEssayQuestions(input: string): string[] {
+    const questions = input.split(/\d+\./).map(s => s.trim()).filter(Boolean);
+    return questions;
+  }
 
   const resetEditing = () => {
     setIsEditing(false);
@@ -202,30 +214,59 @@ export default function RemedialDashboardLayer({
            </div>
 
             <div className="space-y-4">
-               <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Ketik Soal (Format: 1. Soal A 2. Soal B)</label>
-                  <textarea 
-                     className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-sm font-medium text-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all resize-y"
-                     rows={6}
-                     value={remedialQuestionsInput}
-                     onChange={(e) => onRemedialInputChange?.(e.target.value)}
-                     placeholder="Contoh: 1. Jelaskan apa itu AI... 2. Sebutkan komponen PC..."
-                  />
-               </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Bagian Kiri: List Pertanyaan */}
+                  <div className="space-y-4">
+                     <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Ketik Soal (Format: 1. Soal A 2. Soal B)</label>
+                        <textarea 
+                           className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-sm font-medium text-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all resize-y"
+                           rows={6}
+                           placeholder="1. Jelaskan pengertian... 2. Sebutkan contoh..."
+                           value={remedialQuestionsInput}
+                           onChange={(e) => onRemedialInputChange?.(e.target.value)}
+                        />
+                     </div>
+                     <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Preview Deteksi Soal ({parseEssayQuestions(remedialQuestionsInput).length})</label>
+                        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 max-h-[220px] overflow-y-auto space-y-2">
+                           {parseEssayQuestions(remedialQuestionsInput).map((q, idx) => (
+                              <div key={idx} className="flex gap-3 text-[11px] text-slate-300">
+                                 <span className="font-black text-indigo-400">{idx + 1}.</span>
+                                 <span className="italic leading-relaxed">"{q}"</span>
+                              </div>
+                           ))}
+                           {parseEssayQuestions(remedialQuestionsInput).length === 0 && <p className="text-[10px] text-slate-600 font-bold italic">Belum ada soal terdeteksi.</p>}
+                        </div>
+                     </div>
+                  </div>
 
-               {scoringConfig.remedialQuestions && scoringConfig.remedialQuestions.length > 0 && (
-                 <div className="p-4 bg-slate-800/50 rounded-2xl border border-slate-800">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Preview Deteksi Soal ({scoringConfig.remedialQuestions.length})</p>
-                    <div className="space-y-3">
-                       {scoringConfig.remedialQuestions.map((q: string, idx: number) => (
-                          <div key={idx} className="flex gap-3 text-xs">
-                             <span className="font-black text-indigo-400 shrink-0">{idx + 1}.</span>
-                             <span className="text-slate-300 font-medium line-clamp-2 italic">"{q}"</span>
-                          </div>
-                       ))}
-                    </div>
-                 </div>
-               )}
+                  {/* Bagian Kanan: List Kunci Jawaban */}
+                  <div className="space-y-4">
+                     <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-emerald-500/70 mb-2 block">Ketik Kunci Jawaban (Format: 1. Kunci A 2. Kunci B)</label>
+                        <textarea 
+                           className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-sm font-medium text-emerald-100 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all resize-y"
+                           rows={6}
+                           placeholder="1. Jawaban dari soal 1 adalah... 2. Jawaban soal 2 adalah..."
+                           value={remedialAnswerKeysInput}
+                           onChange={(e) => onAnswerKeysInputChange?.(e.target.value)}
+                        />
+                     </div>
+                     <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-emerald-500/70 mb-2 block">Preview Deteksi Kunci ({parseEssayQuestions(remedialAnswerKeysInput).length})</label>
+                        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 max-h-[220px] overflow-y-auto space-y-2">
+                           {parseEssayQuestions(remedialAnswerKeysInput).map((ak, idx) => (
+                              <div key={idx} className="flex gap-3 text-[11px] text-emerald-200/60">
+                                 <span className="font-black text-emerald-500">{idx + 1}.</span>
+                                 <span className="italic leading-relaxed">"{ak}"</span>
+                              </div>
+                           ))}
+                           {parseEssayQuestions(remedialAnswerKeysInput).length === 0 && <p className="text-[10px] text-slate-600 font-bold italic">Belum ada kunci jawaban terdeteksi.</p>}
+                        </div>
+                     </div>
+                  </div>
+               </div>
             </div>
          </div>
        )}
