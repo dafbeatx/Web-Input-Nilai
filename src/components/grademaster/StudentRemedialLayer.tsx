@@ -21,7 +21,7 @@ interface StudentRemedialLayerProps {
   setToast: (t: ToastType) => void;
 }
 
-type RemedialStep = 'INFO' | 'EXAM' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT';
+type RemedialStep = 'RULES' | 'INFO' | 'EXAM' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT';
 
 export default function StudentRemedialLayer({
   studentName,
@@ -37,7 +37,7 @@ export default function StudentRemedialLayer({
   onBack,
   setToast,
 }: StudentRemedialLayerProps) {
-  const [step, setStep] = useState<RemedialStep>('INFO');
+  const [step, setStep] = useState<RemedialStep>('RULES');
   const [answers, setAnswers] = useState<string[]>(new Array(remedialEssayCount).fill(""));
   const [timeLeft, setTimeLeft] = useState(remedialTimer * 60);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,10 +46,61 @@ export default function StudentRemedialLayer({
   const [shuffledQuestions, setShuffledQuestions] = useState<{text: string, originalIndex: number}[]>([]);
   
   const [warningCount, setWarningCount] = useState(0);
+  const [tabWarningCount, setTabWarningCount] = useState(0);
   const [clientCheatingFlags, setClientCheatingFlags] = useState<string[]>([]);
   const hasTriggeredCheatingRef = useRef(false);
   const startedAtRef = useRef<number>(0);
   const isRefreshingRef = useRef(false);
+
+  // Pre-exam agreement
+  const [agreedRules, setAgreedRules] = useState(false);
+
+  // Draggable camera
+  const [camPos, setCamPos] = useState({ x: -1, y: -1 });
+  const draggingCam = useRef(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const CAM_W = 160;
+  const CAM_H = 208;
+
+  useEffect(() => {
+    if (camPos.x === -1) {
+      setCamPos({ x: window.innerWidth - CAM_W - 16, y: window.innerHeight - CAM_H - 16 });
+    }
+  }, []);
+
+  const clampPos = (x: number, y: number) => ({
+    x: Math.max(0, Math.min(window.innerWidth - CAM_W, x)),
+    y: Math.max(0, Math.min(window.innerHeight - CAM_H, y)),
+  });
+
+  const handleDragStart = (clientX: number, clientY: number) => {
+    draggingCam.current = true;
+    dragOffset.current = { x: clientX - camPos.x, y: clientY - camPos.y };
+  };
+  const handleDragMove = (clientX: number, clientY: number) => {
+    if (!draggingCam.current) return;
+    setCamPos(clampPos(clientX - dragOffset.current.x, clientY - dragOffset.current.y));
+  };
+  const handleDragEnd = () => { draggingCam.current = false; };
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => handleDragMove(e.clientX, e.clientY);
+    const onMouseUp = () => handleDragEnd();
+    const onTouchMove = (e: TouchEvent) => { if (draggingCam.current) { e.preventDefault(); handleDragMove(e.touches[0].clientX, e.touches[0].clientY); } };
+    const onTouchEnd = () => handleDragEnd();
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onTouchEnd);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [camPos]);
+
+  const MAX_TAB_WARNINGS = 3;
 
   // Restore session on mount
   useEffect(() => {
@@ -218,23 +269,34 @@ export default function StudentRemedialLayer({
     return () => clearInterval(timerId);
   }, [step, timeLeft]);
 
-  // Anti-cheat mechanism
+  // Anti-cheat mechanism — 3 warnings before ban
   useEffect(() => {
     if (step !== 'EXAM') return;
 
+    const handleTabLeave = () => {
+      if (isRefreshingRef.current || hasTriggeredCheatingRef.current) return;
+      setTabWarningCount(prev => {
+        const next = prev + 1;
+        if (next >= MAX_TAB_WARNINGS) {
+          hasTriggeredCheatingRef.current = true;
+          setClientCheatingFlags(f => [...f, `Meninggalkan halaman ${next} kali`]);
+          setToast({ message: 'Batas peringatan terlampaui. Ujian dihentikan.', type: 'error' });
+          handleStatusUpdate('CHEATED');
+        } else {
+          setToast({ message: `⚠️ PERINGATAN ${next}/${MAX_TAB_WARNINGS}: Jangan tinggalkan halaman ujian! (Sisa ${MAX_TAB_WARNINGS - next} peringatan)`, type: 'error' });
+        }
+        return next;
+      });
+    };
+
     const handleVisibilityChange = () => {
-      if (document.hidden && !isRefreshingRef.current) {
-        handleStatusUpdate('CHEATED');
-      }
+      if (document.hidden && !isRefreshingRef.current) handleTabLeave();
     };
 
     const handleBlur = () => {
-      // Don't trigger cheat on refresh — only on intentional tab-leave
       setTimeout(() => {
-        if (!isRefreshingRef.current && document.hidden) {
-          handleStatusUpdate('CHEATED');
-        }
-      }, 300);
+        if (!isRefreshingRef.current && document.hidden) handleTabLeave();
+      }, 500);
     };
 
     const handleCopyPaste = (e: ClipboardEvent) => {
@@ -314,8 +376,8 @@ export default function StudentRemedialLayer({
     await handleStatusUpdate('COMPLETED');
   };
 
-  // RENDER: INFO SCREEN
-  if (step === 'INFO') {
+  // RENDER: RULES SCREEN (Pre-exam instruction popup)
+  if (step === 'RULES') {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 animate-in">
         <div className="bg-white max-w-lg w-full rounded-[2rem] p-8 md:p-10 shadow-2xl border border-slate-100">
@@ -323,13 +385,76 @@ export default function StudentRemedialLayer({
             <ArrowLeft size={12} /> Kembali
           </button>
           
-          <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mb-6">
+          <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-6">
             <ShieldX size={32} />
           </div>
-          
-          <h2 className="text-2xl font-black text-slate-800 mb-2 font-outfit">Perhatian: Ujian Remedial Tersistem</h2>
+
+          <h2 className="text-2xl font-black text-slate-800 mb-2 font-outfit">📋 Peraturan Ujian Remedial</h2>
           <p className="text-sm text-slate-500 font-bold mb-6 leading-relaxed">
-            Anda akan memulai ujian remedial. Harap baca aturan berikut sebelum memulai:
+            Baca dan pahami seluruh aturan berikut sebelum memulai ujian.
+          </p>
+
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 mb-6 space-y-3">
+            <div className="flex gap-3 text-sm text-slate-700 font-bold items-start">
+              <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 text-xs font-black">1</span>
+              <span>Wajib mengenakan <strong>pakaian yang rapi dan sopan</strong>.</span>
+            </div>
+            <div className="flex gap-3 text-sm text-slate-700 font-bold items-start">
+              <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 text-xs font-black">2</span>
+              <span><strong>Wajah harus selalu terlihat jelas</strong> di kamera selama ujian berlangsung.</span>
+            </div>
+            <div className="flex gap-3 text-sm text-slate-700 font-bold items-start">
+              <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 text-xs font-black">3</span>
+              <span>Dilarang <strong>meninggalkan layar</strong> selama ujian. Anda mendapat <strong>3 peringatan</strong>, setelah itu ujian otomatis dihentikan.</span>
+            </div>
+            <div className="flex gap-3 text-sm text-slate-700 font-bold items-start">
+              <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 text-xs font-black">4</span>
+              <span>Dilarang <strong>membuka aplikasi lain</strong> atau tab baru di browser.</span>
+            </div>
+            <div className="flex gap-3 text-sm text-slate-700 font-bold items-start">
+              <span className="w-6 h-6 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 text-xs font-black">5</span>
+              <span>Pelanggaran akan <strong>terdeteksi otomatis</strong> oleh sistem. Nilai otomatis menjadi <strong className="text-rose-600">0 (NOL)</strong>.</span>
+            </div>
+          </div>
+
+          <label className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-xl mb-6 cursor-pointer select-none hover:bg-emerald-100 transition-colors">
+            <input
+              type="checkbox"
+              checked={agreedRules}
+              onChange={() => setAgreedRules(!agreedRules)}
+              className="w-5 h-5 rounded border-2 border-emerald-300 text-emerald-600 focus:ring-emerald-500 accent-emerald-600"
+            />
+            <span className="text-sm font-black text-emerald-800">Saya siap mengikuti ujian dengan jujur</span>
+          </label>
+
+          <button
+            onClick={() => setStep('INFO')}
+            disabled={!agreedRules}
+            className="w-full py-4 bg-indigo-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center gap-2"
+          >
+            <ArrowLeft size={14} className="rotate-180" /> Lanjutkan
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // RENDER: INFO SCREEN (Camera/GPS/Timer confirmation)
+  if (step === 'INFO') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 animate-in">
+        <div className="bg-white max-w-lg w-full rounded-[2rem] p-8 md:p-10 shadow-2xl border border-slate-100">
+          <button onClick={() => setStep('RULES')} className="flex items-center gap-1.5 md:gap-2 text-slate-400 hover:text-indigo-600 font-bold text-[10px] md:text-xs uppercase tracking-widest transition-colors mb-6 w-full">
+            <ArrowLeft size={12} /> Kembali ke Peraturan
+          </button>
+          
+          <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mb-6">
+            <Camera size={32} />
+          </div>
+          
+          <h2 className="text-2xl font-black text-slate-800 mb-2 font-outfit">Persiapan Teknis</h2>
+          <p className="text-sm text-slate-500 font-bold mb-6 leading-relaxed">
+            Pastikan perangkat Anda siap sebelum memulai ujian.
           </p>
 
           <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 mb-6 shadow-sm">
@@ -354,10 +479,10 @@ export default function StudentRemedialLayer({
             </div>
           </div>
 
-          <ul className="space-y-4 mb-8">
+          <ul className="space-y-4 mb-6">
             <li className="flex gap-3 text-sm text-slate-600 font-bold items-start">
               <Camera className="text-indigo-500 shrink-0 mt-0.5" size={18} />
-              <span>Sistem akan meminta akses kamera untuk <strong>memantau pergerakan Anda</strong> selama ujian berlangsung.</span>
+              <span>Sistem akan meminta akses kamera untuk <strong>memantau pergerakan Anda</strong> selama ujian berlangsung. Anda bisa menggeser posisi kamera.</span>
             </li>
             <li className="flex gap-3 text-sm text-slate-600 font-bold items-start">
               <MapPin className="text-emerald-500 shrink-0 mt-0.5" size={18} />
@@ -369,9 +494,21 @@ export default function StudentRemedialLayer({
             </li>
             <li className="flex gap-3 text-sm text-slate-600 font-bold items-start">
               <AlertTriangle className="text-rose-500 shrink-0 mt-0.5" size={18} />
-              <span>Dilarang keras menyalin/menempel (copy-paste), membuka tab baru, atau keluar dari layar ini. Pelanggaran mengakibatkan nilai <strong>otomatis 0 (NOL)</strong>.</span>
+              <span>Anda mendapat <strong>3 peringatan</strong> jika meninggalkan halaman. Setelah itu ujian otomatis dihentikan dan nilai menjadi <strong>0</strong>.</span>
             </li>
           </ul>
+
+          {/* Camera Preview */}
+          <div className="mb-6 bg-slate-900 rounded-2xl overflow-hidden border-2 border-slate-700 aspect-video flex items-center justify-center">
+            <div className="text-center text-slate-400 p-4">
+              <Camera size={32} className="mx-auto mb-2 opacity-50" />
+              <p className="text-[10px] font-bold uppercase tracking-widest">Preview kamera akan aktif saat ujian dimulai</p>
+              <div className="mt-2 flex items-center justify-center gap-1.5">
+                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                <span className="text-[9px] text-emerald-400 font-bold">Kamera Siap</span>
+              </div>
+            </div>
+          </div>
 
           <button
             onClick={startExam}
@@ -443,8 +580,21 @@ export default function StudentRemedialLayer({
          </div>
       </div>
 
-      {/* Camera Gimmick Bubble -> Now Real Proctoring */}
-      <div className="fixed bottom-4 right-4 md:bottom-8 md:right-8 w-32 h-40 md:w-40 md:h-52 bg-slate-900 rounded-2xl shadow-2xl border-4 border-slate-800 overflow-hidden z-50 transform hover:scale-105 transition-transform group">
+      {/* Draggable Camera Bubble */}
+      <div
+        className="bg-slate-900 rounded-2xl shadow-2xl border-4 border-slate-800 overflow-hidden z-50 cursor-grab active:cursor-grabbing select-none"
+        style={{
+          position: 'fixed',
+          left: camPos.x,
+          top: camPos.y,
+          width: CAM_W,
+          height: CAM_H,
+          zIndex: 50,
+          touchAction: 'none',
+        }}
+        onMouseDown={(e) => handleDragStart(e.clientX, e.clientY)}
+        onTouchStart={(e) => handleDragStart(e.touches[0].clientX, e.touches[0].clientY)}
+      >
         <ProctoringCamera onViolation={handleCameraViolation} />
         <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/50 px-2 py-1 rounded backdrop-blur-sm">
            <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse" />
@@ -452,11 +602,15 @@ export default function StudentRemedialLayer({
         </div>
         <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/50 px-2 py-1 rounded backdrop-blur-sm">
            <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-           <span className="text-[7px] text-emerald-300 font-black uppercase tracking-wider">Monitoring Aktif</span>
+           <span className="text-[7px] text-emerald-300 font-black uppercase tracking-wider">Aktif</span>
         </div>
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-8">
-           <span className="text-[10px] text-white/90 font-bold truncate block">{studentName} (Dipantau)</span>
-           {warningCount > 0 && <span className="text-[9px] text-rose-400 font-bold truncate block">Peringatan: {warningCount}/5</span>}
+           <span className="text-[10px] text-white/90 font-bold truncate block">{studentName}</span>
+           {(warningCount > 0 || tabWarningCount > 0) && (
+             <span className="text-[9px] text-rose-400 font-bold truncate block">
+               Tab: {tabWarningCount}/{MAX_TAB_WARNINGS} • Cam: {warningCount}/5
+             </span>
+           )}
         </div>
       </div>
 
