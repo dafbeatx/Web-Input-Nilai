@@ -40,6 +40,8 @@ export interface GradedStudent {
   lps: number;
   remedialStatus?: 'NONE' | 'STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT';
   remedialLocation?: string;
+  remedialAnswers?: string[];
+  remedialNote?: string;
 }
 
 export interface SessionData {
@@ -109,4 +111,4 @@ export interface AnalyticsResult {
 
 export type ModalType = 'save' | 'load' | 'delete' | 'about' | 'error' | 'adminSettings' | null;
 export type ToastType = { message: string; type: 'success' | 'error' } | null;
-export type Layer = 'home' | 'setup' | 'dashboard' | 'grading' | 'login' | 'remedial' | 'behavior';
+export type Layer = 'home' | 'setup' | 'dashboard' | 'grading' | 'login' | 'remedial' | 'behavior' | 'remedial_dashboard';

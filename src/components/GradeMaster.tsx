@@ -23,6 +23,7 @@ import LoginLayer from "./grademaster/LoginLayer";
 import Modals from "./grademaster/Modals";
 import StudentRemedialLayer from "./grademaster/StudentRemedialLayer";
 import BehaviorLayer from "./grademaster/BehaviorLayer";
+import RemedialDashboardLayer from "./grademaster/RemedialDashboardLayer";
 import Navbar from "./grademaster/Navbar";
 
 const ESSAY_COUNT = 5;
@@ -614,6 +615,15 @@ export default function GradeMaster() {
         <BehaviorLayer
           onBack={() => setLayer("home")}
           setToast={setToast}
+        />
+      )}
+
+      {layer === "remedial_dashboard" && (
+        <RemedialDashboardLayer
+          gradedStudents={gradedStudents}
+          kkm={kkm}
+          scoringConfig={scoringConfig}
+          onBack={() => setLayer("home")}
         />
       )}
 

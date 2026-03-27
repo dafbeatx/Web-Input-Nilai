@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Settings,
   LogIn,
+  RefreshCcw,
 } from 'lucide-react';
 import { Layer } from '@/lib/grademaster/types';
 
@@ -37,8 +38,9 @@ export default function Navbar({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const isActive = (target: string) => {
-    if (target === 'exam') return !['behavior', 'login'].includes(layer);
+    if (target === 'exam') return ['home', 'setup', 'dashboard', 'grading'].includes(layer);
     if (target === 'behavior') return layer === 'behavior';
+    if (target === 'remedial') return layer === 'remedial_dashboard';
     return false;
   };
 
@@ -79,6 +81,16 @@ export default function Navbar({
                   }`}
                 >
                   <Users size={14} /> Kehadiran & Perilaku
+                </button>
+                <button
+                  onClick={() => onNavigate('remedial_dashboard')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${
+                    isActive('remedial')
+                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-100'
+                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'
+                  }`}
+                >
+                  <RefreshCcw size={14} /> Remedial
                 </button>
               </div>
             )}
@@ -159,12 +171,12 @@ export default function Navbar({
                     <ClipboardList size={16} /> Penilaian Ujian
                   </button>
                   <button
-                    onClick={() => { onNavigate('behavior'); setIsMobileMenuOpen(false); }}
+                    onClick={() => { onNavigate('remedial_dashboard'); setIsMobileMenuOpen(false); }}
                     className={`p-3 rounded-xl text-left text-xs font-bold transition-all flex items-center gap-3 ${
-                      isActive('behavior') ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-600 hover:bg-slate-50 border border-transparent'
+                      isActive('remedial') ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-600 hover:bg-slate-50 border border-transparent'
                     }`}
                   >
-                    <Users size={16} /> Kehadiran & Perilaku
+                    <RefreshCcw size={16} /> Remedial
                   </button>
                   <div className="h-px bg-slate-100 my-2" />
                   <button

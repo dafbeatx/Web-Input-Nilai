@@ -10,7 +10,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { sessionId, studentName, status, location } = body;
+    const { sessionId, studentName, status, location, answers, note } = body;
     // status: 'STARTED' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT'
 
     if (!sessionId || !studentName || !status) {
@@ -61,6 +61,11 @@ export async function PUT(req: NextRequest) {
       final_score: newFinalScore,
       remedial_status: newStatus,
     };
+
+    if (status === 'COMPLETED') {
+        if (answers) updateData.remedial_answers = answers;
+        if (note) updateData.remedial_note = note;
+    }
 
     if (location) {
       updateData.remedial_location = location;

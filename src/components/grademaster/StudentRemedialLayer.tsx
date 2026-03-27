@@ -32,6 +32,7 @@ export default function StudentRemedialLayer({
   const [timeLeft, setTimeLeft] = useState(remedialTimer * 60);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<string>('');
+  const [note, setNote] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Stop camera when unmounting
@@ -157,7 +158,14 @@ export default function StudentRemedialLayer({
       const res = await fetch('/api/grademaster/students/remedial', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, studentName, status, location: currentLocation })
+        body: JSON.stringify({ 
+           sessionId, 
+           studentName, 
+           status, 
+           location: currentLocation,
+           answers: status === 'COMPLETED' ? answers : undefined,
+           note: status === 'COMPLETED' ? note : undefined
+        })
       });
       const data = await res.json();
       
@@ -347,6 +355,18 @@ export default function StudentRemedialLayer({
             />
           </div>
         ))}
+        <div className="bg-white rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm relative overflow-hidden group mt-8">
+           <div className="absolute top-0 left-0 w-1 h-full bg-slate-300" />
+           <h3 className="text-sm md:text-base font-black text-slate-800 mb-2">Catatan untuk Guru (Opsional)</h3>
+           <textarea
+             className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all resize-none"
+             rows={3}
+             placeholder="Tuliskan pesan atau catatan Anda jika ada..."
+             value={note}
+             onChange={(e) => setNote(e.target.value)}
+           />
+        </div>
+
       </div>
 
       <div className="mt-8 flex justify-end pb-24">
