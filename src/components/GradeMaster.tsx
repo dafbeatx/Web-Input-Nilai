@@ -660,6 +660,9 @@ export default function GradeMaster() {
           remedialTimer={remedialTimer}
           remedialQuestions={remedialQuestions}
           sessionId={sessionId}
+          className={studentClass}
+          academicYear={academicYear}
+          examType={examType}
           onBack={() => setLayer("dashboard")}
           setToast={setToast}
         />

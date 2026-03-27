@@ -11,6 +11,9 @@ interface StudentRemedialLayerProps {
   remedialTimer: number;
   remedialQuestions: string[];
   sessionId: string;
+  className: string;
+  academicYear: string;
+  examType: string;
   onBack: () => void;
   setToast: (t: ToastType) => void;
 }
@@ -24,6 +27,9 @@ export default function StudentRemedialLayer({
   remedialTimer,
   remedialQuestions,
   sessionId,
+  className,
+  academicYear,
+  examType,
   onBack,
   setToast,
 }: StudentRemedialLayerProps) {
@@ -238,8 +244,32 @@ export default function StudentRemedialLayer({
           
           <h2 className="text-2xl font-black text-slate-800 mb-2 font-outfit">Perhatian: Ujian Remedial Tersistem</h2>
           <p className="text-sm text-slate-500 font-bold mb-6 leading-relaxed">
-            Anda akan memulai ujian remedial untuk mata pelajaran <strong>{subject}</strong>. Harap baca aturan berikut sebelum memulai:
+            Anda akan memulai ujian remedial. Harap baca aturan berikut sebelum memulai:
           </p>
+
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Identitas Sesi Remedial</h3>
+            <div className="grid grid-cols-2 gap-y-3">
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Mata Pelajaran</p>
+                <p className="text-sm font-black text-slate-800">{subject}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Kelas</p>
+                <p className="text-sm font-black text-slate-800">{className}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Tahun Ajaran</p>
+                <p className="text-sm font-black text-slate-800">{academicYear}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Semester / Ujian</p>
+                <p className="text-sm font-black text-indigo-600">
+                  {["PAT", "UAS", "PAS"].includes(examType) ? (["PAT", "UAS"].includes(examType) ? "Genap" : "Ganjil") : "Ganjil"} ({examType})
+                </p>
+              </div>
+            </div>
+          </div>
 
           <ul className="space-y-4 mb-8">
             <li className="flex gap-3 text-sm text-slate-600 font-bold items-start">
