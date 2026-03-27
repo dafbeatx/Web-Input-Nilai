@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const {
+      sessionId,
       sessionName,
       password,
       answerKey,
@@ -32,39 +33,47 @@ export async function POST(req: NextRequest) {
       remedialTimer,
     } = body;
 
-    const validationError = validateSessionInput({ sessionName, password, teacher, subject });
-    if (validationError) {
-      return NextResponse.json({ error: validationError }, { status: 400 });
+    // Determine if we are updating or creating
+    let existing = null;
+    if (sessionId) {
+      const { data } = await supabase.from('gm_sessions').select('id, session_name, password_hash').eq('id', sessionId).single();
+      existing = data;
+    } else if (sessionName?.trim()) {
+      const { data } = await supabase.from('gm_sessions').select('id, session_name, password_hash').eq('session_name', sessionName.trim()).single();
+      existing = data;
     }
 
-    const { data: existing } = await supabase
-      .from('gm_sessions')
-      .select('id, password_hash')
-      .eq('session_name', sessionName.trim())
-      .single();
-
     if (existing) {
-      const valid = await verifyPassword(password.trim(), existing.password_hash);
-      if (!valid) {
-        return NextResponse.json({ error: 'Password salah untuk sesi ini' }, { status: 403 });
+      // UPDATE LOGIC
+      // 1. Verify Access: Either Global Admin or Correct Session Password
+      if (!adminSession) {
+        if (!password) {
+          return NextResponse.json({ error: 'Password wajib diisi untuk memperbarui sesi' }, { status: 400 });
+        }
+        const valid = await verifyPassword(password.trim(), existing.password_hash);
+        if (!valid) {
+          return NextResponse.json({ error: 'Password salah untuk sesi ini' }, { status: 403 });
+        }
       }
 
+      // 2. Performance update
       const { error } = await supabase
         .from('gm_sessions')
         .update({
-          answer_key: answerKey || [],
-          teacher: teacher || '',
-          subject: subject || '',
-          class_name: className || '',
-          school_level: schoolLevel || 'SMA',
-          student_list: studentList || [],
+          answer_key: answerKey || undefined,
+          teacher: teacher || undefined,
+          subject: subject || undefined,
+          class_name: className || undefined,
+          school_level: schoolLevel || undefined,
+          student_list: studentList || undefined,
           scoring_config: scoringConfig || undefined,
-          exam_type: examType || 'UTS',
-          academic_year: academicYear || '2025/2026',
-          kkm: kkm || 70,
-          remedial_essay_count: remedialEssayCount || 5,
-          remedial_timer: remedialTimer || 15,
-          is_public: body.isPublic === true,
+          exam_type: examType || undefined,
+          academic_year: academicYear || undefined,
+          semester: semester || undefined,
+          kkm: kkm || undefined,
+          remedial_essay_count: remedialEssayCount || undefined,
+          remedial_timer: remedialTimer || undefined,
+          is_public: body.isPublic === undefined ? undefined : body.isPublic,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
@@ -73,11 +82,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Sesi berhasil diperbarui', sessionId: existing.id });
     }
 
-    // New session creation - REQUIRE ADMIN LOGIN
+    // CREATE LOGIC - REQUIRE ADMIN LOGIN
     if (!adminSession) {
       return NextResponse.json({ 
         error: 'Hanya Admin yang diizinkan membuat sesi kelas baru. Silakan login terlebih dahulu.' 
       }, { status: 401 });
+    }
+
+    const validationError = validateSessionInput({ sessionName, password, teacher, subject });
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
     const passwordHash = await hashPassword(password.trim());
@@ -94,9 +108,9 @@ export async function POST(req: NextRequest) {
         school_level: schoolLevel || 'SMA',
         student_list: studentList || [],
         scoring_config: scoringConfig || undefined,
-        exam_type: examType,
-        academic_year: academicYear,
-        semester: semester,
+        exam_type: examType || 'UTS',
+        academic_year: academicYear || '2025/2026',
+        semester: semester || 'Ganjil',
         kkm: kkm || 70,
         remedial_essay_count: remedialEssayCount || 5,
         remedial_timer: remedialTimer || 15,
@@ -239,40 +253,44 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const adminSession = await getAdminSession();
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`del:${ip}`)) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan' }, { status: 429 });
     }
 
     const body = await req.json();
-    const { sessionName, password } = body;
+    const { sessionId, sessionName, password } = body;
 
-    if (!sessionName || !password) {
-      return NextResponse.json({ error: 'Nama sesi dan password wajib diisi' }, { status: 400 });
+    let existing = null;
+    if (sessionId) {
+      const { data } = await supabase.from('gm_sessions').select('id, session_name, password_hash').eq('id', sessionId).single();
+      existing = data;
+    } else if (sessionName?.trim()) {
+      const { data } = await supabase.from('gm_sessions').select('id, session_name, password_hash').eq('session_name', sessionName.trim()).single();
+      existing = data;
     }
 
-
-
-    const { data: session, error: fetchError } = await supabase
-      .from('gm_sessions')
-      .select('id, password_hash')
-      .eq('session_name', sessionName.trim())
-      .single();
-
-    if (fetchError || !session) {
+    if (!existing) {
       return NextResponse.json({ error: 'Sesi tidak ditemukan' }, { status: 404 });
     }
 
-    const valid = await verifyPassword(password.trim(), session.password_hash);
-    if (!valid) {
-      return NextResponse.json({ error: 'Password salah' }, { status: 403 });
+    // Verify Access: Global Admin OR Session Password
+    if (!adminSession) {
+      if (!password) {
+        return NextResponse.json({ error: 'Password wajib diisi untuk menghapus sesi' }, { status: 400 });
+      }
+      const valid = await verifyPassword(password.trim(), existing.password_hash);
+      if (!valid) {
+        return NextResponse.json({ error: 'Password salah' }, { status: 403 });
+      }
     }
 
     // CASCADE delete handles students & answers
     const { error: deleteError } = await supabase
       .from('gm_sessions')
       .delete()
-      .eq('id', session.id);
+      .eq('id', existing.id);
 
     if (deleteError) throw deleteError;
 

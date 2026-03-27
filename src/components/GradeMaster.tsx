@@ -204,6 +204,7 @@ export default function GradeMaster() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sessionId,
           sessionName: sessionName.trim(),
           password: sessionPassword.trim(),
           answerKey,
@@ -248,6 +249,7 @@ export default function GradeMaster() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sessionId,
           sessionName: sessionName.trim(),
           password: sessionPassword.trim(),
           answerKey,
@@ -382,6 +384,7 @@ export default function GradeMaster() {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sessionId,
           sessionName: sessionName.trim(),
           password: sessionPassword.trim(),
         }),
