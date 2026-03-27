@@ -16,6 +16,7 @@ import { parseAnswerKey, parseEssayQuestions, formatEssayQuestions } from "@/lib
 import { generateAnalytics, generateInsights } from '@/lib/grademaster/analytics';
 import { loadRemedialSession } from '@/lib/grademaster/session';
 import { saveActiveLayer, getActiveLayer } from '@/lib/grademaster/navigation';
+import { saveAdminSession, getAdminSession, clearAdminSession } from '@/lib/grademaster/adminSession';
 
 import HomeLayer from "./grademaster/HomeLayer";
 import SetupLayer from "./grademaster/SetupLayer";
@@ -99,6 +100,13 @@ export default function GradeMaster() {
 
     const hash = window.location.hash.replace('#', '');
     const validLayers = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard'];
+    
+    // Restore admin session
+    const adminSession = getAdminSession();
+    if (adminSession && adminSession.isAdmin) {
+      setIsAdmin(true);
+      setAdminUser(adminSession.adminUser);
+    }
     
     let initialLayer: Layer = 'home';
     const persistedLayer = getActiveLayer() || (savedLayer as Layer) || 'home';
@@ -263,6 +271,7 @@ export default function GradeMaster() {
       await fetch("/api/admin/logout", { method: "POST" });
       setIsAdmin(false);
       setAdminUser(null);
+      clearAdminSession();
       setToast({ message: "Logout berhasil", type: "success" });
     } catch (err) {
       setToast({ message: "Gagal logout", type: "error" });
@@ -718,6 +727,7 @@ export default function GradeMaster() {
           onSuccess={(user) => {
             setIsAdmin(true);
             setAdminUser(user);
+            saveAdminSession(user);
             setLayer("setup");
           }}
           setToast={setToast}
