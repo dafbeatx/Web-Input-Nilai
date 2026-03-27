@@ -174,8 +174,9 @@ export default function StudentRemedialLayer({
       note,
       location: currentLocation,
       refreshCount: loadRemedialSession()?.refreshCount || 0,
+      shuffledIndices: shuffledQuestions.map(q => q.originalIndex),
     });
-  }, [answers, note, step, sessionId, studentName, currentLocation]);
+  }, [answers, note, step, sessionId, studentName, currentLocation, shuffledQuestions]);
 
   const isSubmittingRef = useRef(isSubmitting);
   useEffect(() => { isSubmittingRef.current = isSubmitting; });
@@ -211,16 +212,26 @@ export default function StudentRemedialLayer({
 
   // Shuffle logic
   useEffect(() => {
-    if (remedialQuestions && remedialQuestions.length > 0) {
-      const mapped = remedialQuestions.map((q, i) => ({ text: q, originalIndex: i }));
-      // Fisher-Yates shuffle
-      for (let i = mapped.length - 1; i > 0; i--) {
+    if (!remedialQuestions || remedialQuestions.length === 0) return;
+
+    const saved = loadRemedialSession();
+    let indices: number[] = [];
+
+    // Prioritize indices from saved session to keep order consistent on refresh
+    if (saved && saved.sessionId === sessionId && saved.shuffledIndices && saved.shuffledIndices.length === remedialQuestions.length) {
+      indices = saved.shuffledIndices;
+    } else {
+      // Generate new shuffle
+      indices = remedialQuestions.map((_, i) => i);
+      for (let i = indices.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [mapped[i], mapped[j]] = [mapped[j], mapped[i]];
+        [indices[i], indices[j]] = [indices[j], indices[i]];
       }
-      setShuffledQuestions(mapped);
     }
-  }, [remedialQuestions]);
+
+    const mapped = indices.map(idx => ({ text: remedialQuestions[idx] || '', originalIndex: idx }));
+    setShuffledQuestions(mapped);
+  }, [remedialQuestions, sessionId]);
 
 
 
@@ -322,6 +333,14 @@ export default function StudentRemedialLayer({
 
     // MediaPipe ProctoringCamera will handle media access and stream locally
     startedAtRef.current = Date.now();
+    
+    // Generate initial shuffle on start
+    const indices = remedialQuestions.map((_, i) => i);
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+
     saveRemedialSession({
       sessionId,
       studentName,
@@ -331,6 +350,7 @@ export default function StudentRemedialLayer({
       note,
       location: locStr,
       refreshCount: 0,
+      shuffledIndices: indices,
     });
     setIsSubmitting(false);
     setStep('EXAM');

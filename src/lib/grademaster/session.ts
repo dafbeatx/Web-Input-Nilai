@@ -9,6 +9,7 @@ export interface RemedialSession {
   note: string;
   location: string;
   refreshCount: number;
+  shuffledIndices?: number[];
 }
 
 export function saveRemedialSession(data: RemedialSession): void {
