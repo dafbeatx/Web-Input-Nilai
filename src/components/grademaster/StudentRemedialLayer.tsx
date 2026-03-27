@@ -34,6 +34,20 @@ export default function StudentRemedialLayer({
   const [currentLocation, setCurrentLocation] = useState<string>('');
   const [note, setNote] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [shuffledQuestions, setShuffledQuestions] = useState<{text: string, originalIndex: number}[]>([]);
+
+  // Shuffle logic
+  useEffect(() => {
+    if (remedialQuestions && remedialQuestions.length > 0) {
+      const mapped = remedialQuestions.map((q, i) => ({ text: q, originalIndex: i }));
+      // Fisher-Yates shuffle
+      for (let i = mapped.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [mapped[i], mapped[j]] = [mapped[j], mapped[i]];
+      }
+      setShuffledQuestions(mapped);
+    }
+  }, [remedialQuestions]);
 
   // Stop camera when unmounting
   useEffect(() => {
@@ -163,8 +177,15 @@ export default function StudentRemedialLayer({
            studentName, 
            status, 
            location: currentLocation,
-           answers: status === 'COMPLETED' ? answers : undefined,
-           note: status === 'COMPLETED' ? note : undefined
+            answers: status === 'COMPLETED' ? (() => {
+               // Map shuffled answers back to original indices
+               const mappedAnswers = new Array(remedialEssayCount).fill("");
+               shuffledQuestions.forEach((sq, i) => {
+                 mappedAnswers[sq.originalIndex] = answers[i];
+               });
+               return mappedAnswers;
+            })() : undefined,
+            note: status === 'COMPLETED' ? note : undefined
         })
       });
       const data = await res.json();
@@ -337,9 +358,9 @@ export default function StudentRemedialLayer({
           <div key={idx} className="bg-white rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />
             <h3 className="text-sm md:text-base font-black text-slate-800 mb-2">Soal Essay #{idx + 1}</h3>
-            {remedialQuestions && remedialQuestions[idx] && remedialQuestions[idx].trim() !== "" && (
+            {shuffledQuestions[idx] && shuffledQuestions[idx].text.trim() !== "" && (
               <p className="text-xs md:text-sm text-slate-600 font-medium mb-4 p-3 bg-slate-50 border border-slate-100 rounded-lg whitespace-pre-wrap">
-                {remedialQuestions[idx]}
+                {shuffledQuestions[idx].text}
               </p>
             )}
             <textarea

@@ -25,6 +25,11 @@ interface RemedialDashboardLayerProps {
   gradedStudents: GradedStudent[];
   kkm: number;
   scoringConfig: ScoringConfig;
+  examType?: string;
+  academicYear?: string;
+  studentClass?: string;
+  subject?: string;
+  schoolLevel?: string;
   onBack: () => void;
   onUpdateQuestions?: (questions: string[]) => void;
   isSaving?: boolean;
@@ -34,6 +39,11 @@ export default function RemedialDashboardLayer({
   gradedStudents,
   kkm,
   scoringConfig,
+  examType = "UTS",
+  academicYear = "2025/2026",
+  studentClass = "10A",
+  subject = "Matematika",
+  schoolLevel = "SMA",
   onBack,
   onUpdateQuestions,
   isSaving = false
@@ -97,6 +107,13 @@ export default function RemedialDashboardLayer({
     }
   };
 
+  const getSemester = (type: string) => {
+    const t = type.toUpperCase();
+    if (t.includes('PAS') || t.includes('GANJIL') || (t.includes('UTS') && !t.includes('GENAP'))) return 'Ganjil';
+    if (t.includes('PAT') || t.includes('GENAP')) return 'Genap';
+    return '-';
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
       <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -104,8 +121,19 @@ export default function RemedialDashboardLayer({
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-3 border border-indigo-100">
             <RefreshCcw size={12} /> Management Remedial
           </div>
-          <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight font-outfit">Pusat Data Remedial</h1>
-          <p className="text-xs md:text-sm text-slate-500 font-bold mt-1">Pantau hasil pengerjaan ulang dan kejujuran siswa.</p>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight font-outfit uppercase">
+            Pusat Data Remedial <span className="text-indigo-600">{examType}</span>
+          </h1>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+            <p className="text-xs md:text-sm text-slate-500 font-bold">
+               {subject} • Kelas {studentClass}
+            </p>
+            <span className="w-1 h-1 rounded-full bg-slate-300 hidden md:block" />
+            <p className="text-xs md:text-sm text-slate-500 font-bold">
+               TA {academicYear} • Semester {getSemester(examType)}
+            </p>
+          </div>
+          <p className="text-[10px] text-slate-400 font-medium mt-1 italic">Tingkat: {schoolLevel} • Memantau hasil pengerjaan ulang dan kejujuran siswa.</p>
         </div>
         
         <div className="flex items-center gap-3">

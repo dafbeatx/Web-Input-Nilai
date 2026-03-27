@@ -147,16 +147,36 @@ export default function DashboardLayer({
     URL.revokeObjectURL(url);
   };
 
+  const getSemester = (type: string) => {
+    const t = type.toUpperCase();
+    if (t.includes('PAS') || t.includes('GANJIL') || (t.includes('UTS') && !t.includes('GENAP'))) return 'Ganjil';
+    if (t.includes('PAT') || t.includes('GENAP')) return 'Genap';
+    return '-';
+  };
+
   return (
     <div className="p-3 sm:p-5 lg:p-8 max-w-6xl mx-auto animate-in">
       <header className="mb-8 md:mb-10 text-center">
         <div className="inline-flex items-center gap-1.5 md:gap-2 px-3 py-1 md:px-4 md:py-1.5 bg-indigo-100 text-indigo-600 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-3 md:mb-4 border border-indigo-200">
           <LayoutGrid size={12} className="md:w-3.5 md:h-3.5" /> Dashboard Analitik
         </div>
-        <h1 className="text-2xl md:text-4xl font-black text-slate-800 tracking-tight font-outfit mb-2 md:mb-3">{isPublicView ? 'Hasil Evaluasi Siswa' : 'Ikhtisar Kelas'}</h1>
-        <p className="text-xs md:text-sm text-slate-500 font-bold">
-          {isPublicView ? `Guru: ${teacherName}` : `Halo, ${teacherName}`} • {subject} • Kelas {studentClass} ({schoolLevel})
-        </p>
+        <h1 className="text-2xl md:text-4xl font-black text-slate-800 tracking-tight font-outfit mb-2 md:mb-3">
+          {isPublicView ? 'Hasil Evaluasi Siswa' : 'Ikhtisar Kelas'}
+        </h1>
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 mb-2">
+           <p className="text-xs md:text-sm text-slate-500 font-bold">
+             {isPublicView ? `Guru: ${teacherName}` : `Halo, ${teacherName}`} • {subject}
+           </p>
+           <span className="w-1 h-1 rounded-full bg-slate-300 hidden md:block" />
+           <p className="text-xs md:text-sm text-slate-500 font-bold">
+             Kelas {studentClass} ({schoolLevel})
+           </p>
+        </div>
+        <div className="inline-flex items-center gap-3 px-4 py-1.5 bg-slate-50 rounded-2xl border border-slate-100">
+           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tahun Ajaran: <span className="text-slate-700">{academicYear || '-'}</span></span>
+           <span className="w-px h-3 bg-slate-200" />
+           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Semester: <span className="text-indigo-600">{getSemester(sessionName || '')}</span></span>
+        </div>
       </header>
 
       {/* Top 3 Siswa */}

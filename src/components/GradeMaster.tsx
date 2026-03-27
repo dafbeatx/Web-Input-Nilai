@@ -669,6 +669,11 @@ export default function GradeMaster() {
         <RemedialDashboardLayer
           gradedStudents={gradedStudents}
           kkm={kkm}
+          examType={examType}
+          academicYear={academicYear}
+          studentClass={studentClass}
+          subject={subject}
+          schoolLevel={schoolLevel}
           scoringConfig={{ ...scoringConfig, remedialQuestions }}
           onBack={() => setLayer("home")}
           onUpdateQuestions={handleUpdateRemedialQuestions}
