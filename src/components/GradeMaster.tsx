@@ -52,6 +52,8 @@ export default function GradeMaster() {
   const [remedialTimer, setRemedialTimer] = useState<number>(15);
   const [remedialQuestions, setRemedialQuestions] = useState<string[]>([]);
   const [remedialQuestionsInput, setRemedialQuestionsInput] = useState("");
+  const [remedialAnswerKeys, setRemedialAnswerKeys] = useState<string[]>([]);
+  const [remedialAnswerKeysInput, setRemedialAnswerKeysInput] = useState("");
 
   // Grading state
   const [studentName, setStudentName] = useState("");
@@ -130,6 +132,9 @@ export default function GradeMaster() {
               const questions = data.scoringConfig?.remedialQuestions || [];
               setRemedialQuestions(questions);
               setRemedialQuestionsInput(formatEssayQuestions(questions));
+              const ansKeys = data.scoringConfig?.remedialAnswerKeys || [];
+              setRemedialAnswerKeys(ansKeys);
+              setRemedialAnswerKeysInput(formatEssayQuestions(ansKeys));
               setApiQuestionDifficulties(data.questionDifficulties || []);
               setIsSessionPublic(data.isPublic);
 
@@ -274,7 +279,7 @@ export default function GradeMaster() {
           className: studentClass,
           schoolLevel,
           studentList,
-          scoringConfig: { ...scoringConfig, remedialQuestions },
+          scoringConfig: { ...scoringConfig, remedialQuestions, remedialAnswerKeys },
           examType,
           academicYear,
           semester,
@@ -319,7 +324,7 @@ export default function GradeMaster() {
           className: studentClass,
           schoolLevel,
           studentList,
-          scoringConfig: { ...scoringConfig, remedialQuestions: newQuestions },
+          scoringConfig: { ...scoringConfig, remedialQuestions: newQuestions, remedialAnswerKeys },
           examType,
           academicYear,
           kkm,
@@ -367,6 +372,9 @@ export default function GradeMaster() {
       const questions = data.scoringConfig?.remedialQuestions || [];
       setRemedialQuestions(questions);
       setRemedialQuestionsInput(formatEssayQuestions(questions));
+      const ansKeys = data.scoringConfig?.remedialAnswerKeys || [];
+      setRemedialAnswerKeys(ansKeys);
+      setRemedialAnswerKeysInput(formatEssayQuestions(ansKeys));
       setApiQuestionDifficulties(data.questionDifficulties || []);
       setIsSessionPublic(data.isPublic);
       setIsPublicView(true);
@@ -419,6 +427,9 @@ export default function GradeMaster() {
       const questions = data.scoringConfig?.remedialQuestions || [];
       setRemedialQuestions(questions);
       setRemedialQuestionsInput(formatEssayQuestions(questions));
+      const ansKeys = data.scoringConfig?.remedialAnswerKeys || [];
+      setRemedialAnswerKeys(ansKeys);
+      setRemedialAnswerKeysInput(formatEssayQuestions(ansKeys));
       setApiQuestionDifficulties(data.questionDifficulties || []);
       setIsSessionPublic(data.isPublic);
       setIsPublicView(false); // Admin/Teacher view
@@ -508,6 +519,12 @@ export default function GradeMaster() {
     const parsed = parseEssayQuestions(input);
     setRemedialQuestions(parsed);
     setRemedialEssayCount(parsed.length);
+  };
+
+  const handleAnswerKeysInputChange = (input: string) => {
+    setRemedialAnswerKeysInput(input);
+    const parsed = parseEssayQuestions(input);
+    setRemedialAnswerKeys(parsed);
   };
 
   const handleSaveStudent = async (student: GradedStudent) => {
@@ -718,6 +735,10 @@ export default function GradeMaster() {
           setRemedialQuestions={setRemedialQuestions}
           remedialQuestionsInput={remedialQuestionsInput}
           onRemedialInputChange={handleRemedialInputChange}
+          remedialAnswerKeys={remedialAnswerKeys}
+          setRemedialAnswerKeys={setRemedialAnswerKeys}
+          remedialAnswerKeysInput={remedialAnswerKeysInput}
+          onAnswerKeysInputChange={handleAnswerKeysInputChange}
           isPublic={isSessionPublic}
           setIsPublic={setIsSessionPublic}
           onSubmit={handleSetupSubmit}
@@ -817,7 +838,7 @@ export default function GradeMaster() {
           subject={subject}
           schoolLevel={schoolLevel}
           semester={semester}
-          scoringConfig={{ ...scoringConfig, remedialQuestions }}
+          scoringConfig={{ ...scoringConfig, remedialQuestions, remedialAnswerKeys }}
           remedialQuestionsInput={remedialQuestionsInput}
           onBack={() => setLayer("home")}
           onUpdateQuestions={handleUpdateRemedialQuestions}
