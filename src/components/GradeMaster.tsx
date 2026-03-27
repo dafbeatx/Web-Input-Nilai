@@ -669,7 +669,7 @@ export default function GradeMaster() {
   // ── Render ──
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="relative flex flex-col bg-slate-50 min-h-screen">
       {!['login', 'remedial'].includes(layer) && (
         <Navbar
           isAdmin={isAdmin}
@@ -682,7 +682,7 @@ export default function GradeMaster() {
         />
       )}
 
-      <div className="flex-1">
+      <div className="w-full">
         {layer === "home" && (
         <HomeLayer
           sessions={sessions}

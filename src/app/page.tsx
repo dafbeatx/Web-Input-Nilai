@@ -9,7 +9,7 @@ import GradeMaster from "@/components/GradeMaster";
  */
 export default function GradeMasterOS() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-slate-50">
+    <main className="relative min-h-screen bg-slate-50">
       <div className="bg-grid absolute inset-0 opacity-20 pointer-events-none"></div>
       
       {/* GradeMaster Component - Direct Interaction Layer */}
