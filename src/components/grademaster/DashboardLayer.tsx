@@ -9,6 +9,7 @@ import {
   User,
   Download,
   RefreshCcw,
+  Trash2,
 } from 'lucide-react';
 import { GradedStudent, AnalyticsResult } from '@/lib/grademaster/types';
 import { getCsiLabel, getLpsLabel } from '@/lib/grademaster/scoring';
@@ -159,6 +160,31 @@ export default function DashboardLayer({
     if (t.includes('PAS') || t.includes('GANJIL') || (t.includes('UTS') && !t.includes('GENAP'))) return 'Ganjil';
     if (t.includes('PAT') || t.includes('GENAP')) return 'Genap';
     return '-';
+  };
+  
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+  const handleDeleteStudent = async (name: string) => {
+    const student = gradedStudents.find(s => s.name === name);
+    if (!student) return;
+    
+    if (!window.confirm(`Yakin ingin menghapus data siswa "${name}"?\nTindakan ini tidak dapat dibatalkan (soft delete).`)) return;
+
+    setIsDeleting(student.id);
+    try {
+      const res = await fetch('/api/grademaster/students', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: student.id })
+      });
+      if (!res.ok) throw new Error('Gagal menghapus');
+      alert('Siswa berhasil dihapus');
+      window.location.reload(); 
+    } catch (err) {
+      alert('Gagal menghapus siswa. Silakan coba lagi.');
+    } finally {
+      setIsDeleting(null);
+    }
   };
 
   return (
@@ -386,16 +412,26 @@ export default function DashboardLayer({
                         <span className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">Tuntas ✨</span>
                       )
                     ) : (
-                      r.finalScore < kkm ? (
+                      <div className="flex items-center gap-2">
+                        {r.finalScore < kkm ? (
+                          <button 
+                            onClick={() => onStudentRemedial?.(r.name)} 
+                            className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-rose-100 active:scale-95 flex items-center gap-1.5"
+                          >
+                            <Plus size={10} /> Mulai Remedial
+                          </button>
+                        ) : (
+                          <span className="text-emerald-500 font-black text-[10px] uppercase tracking-widest">Lulus KKM</span>
+                        )}
                         <button 
-                          onClick={() => onStudentRemedial?.(r.name)} 
-                          className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-rose-100 active:scale-95 flex items-center gap-1.5"
+                          onClick={() => handleDeleteStudent(r.name)}
+                          disabled={isDeleting === (gradedStudents.find(s => s.name === r.name)?.id)}
+                          className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-rose-100"
+                          title="Hapus Data Siswa"
                         >
-                          <Plus size={10} /> Mulai Remedial
+                          {isDeleting === (gradedStudents.find(s => s.name === r.name)?.id) ? <div className="w-3.5 h-3.5 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" /> : <Trash2 size={14} />}
                         </button>
-                      ) : (
-                        <span className="text-emerald-500 font-black text-[10px] uppercase tracking-widest">Lulus KKM</span>
-                      )
+                      </div>
                     )}
                   </div>
                 </div>
@@ -445,13 +481,23 @@ export default function DashboardLayer({
                             </div>
                           )
                         ) : (
-                          r.finalScore < kkm ? (
-                            <button onClick={() => onStudentRemedial?.(r.name)} className="px-3 py-1.5 text-[10px] bg-rose-50 text-rose-600 rounded-lg font-black uppercase tracking-wider hover:bg-rose-100 transition-colors border border-rose-100 active:scale-95 flex items-center gap-1.5">
-                              <Plus size={12} /> Mulai Remedial
+                          <div className="flex items-center gap-3">
+                            {r.finalScore < kkm ? (
+                              <button onClick={() => onStudentRemedial?.(r.name)} className="px-3 py-1.5 text-[10px] bg-rose-50 text-rose-600 rounded-lg font-black uppercase tracking-wider hover:bg-rose-100 transition-colors border border-rose-100 active:scale-95 flex items-center gap-1.5">
+                                <Plus size={12} /> Mulai Remedial
+                              </button>
+                            ) : (
+                              <span className="text-emerald-500 font-bold text-[11px]">Memenuhi KKM ({kkm})</span>
+                            )}
+                            <button 
+                              onClick={() => handleDeleteStudent(r.name)}
+                              disabled={isDeleting === (gradedStudents.find(s => s.name === r.name)?.id)}
+                              className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-rose-100"
+                              title="Hapus Data Siswa"
+                            >
+                              {isDeleting === (gradedStudents.find(s => s.name === r.name)?.id) ? <div className="w-3.5 h-3.5 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" /> : <Trash2 size={16} />}
                             </button>
-                          ) : (
-                            <span className="text-emerald-500 font-bold text-[11px]">Memenuhi KKM ({kkm})</span>
-                          )
+                          </div>
                         )}
                       </td>
                     </tr>
