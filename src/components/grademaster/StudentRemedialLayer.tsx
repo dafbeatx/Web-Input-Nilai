@@ -100,8 +100,11 @@ export default function StudentRemedialLayer({
     });
   }, [answers, note, step, sessionId, studentName, currentLocation]);
 
-  const handleCameraViolation = (type: string) => {
-    if (hasTriggeredCheatingRef.current || isSubmitting) return;
+  const isSubmittingRef = useRef(isSubmitting);
+  useEffect(() => { isSubmittingRef.current = isSubmitting; });
+
+  const handleCameraViolation = useCallback((type: string) => {
+    if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
 
     setWarningCount(prev => {
       const newCount = prev + 1;
@@ -110,7 +113,6 @@ export default function StudentRemedialLayer({
       if (type === 'NO_FACE') flagMessage = "Wajah tidak terdeteksi";
       if (type === 'MULTIPLE_FACES') flagMessage = "Terdeteksi lebih dari satu orang";
 
-      // Add to string unique
       setClientCheatingFlags(oldFlags => {
         if (!oldFlags.includes(flagMessage)) {
            return [...oldFlags, flagMessage];
@@ -128,7 +130,7 @@ export default function StudentRemedialLayer({
 
       return newCount;
     });
-  };
+  }, []);
 
   // Shuffle logic
   useEffect(() => {
@@ -143,16 +145,7 @@ export default function StudentRemedialLayer({
     }
   }, [remedialQuestions]);
 
-  // Stop camera when unmounting
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
 
-  const stopCamera = () => {
-    // Removed direct videoRef logic as ProctoringCamera handles its own cleanup
-  };
 
   const startExam = async () => {
     setIsSubmitting(true);
@@ -264,7 +257,6 @@ export default function StudentRemedialLayer({
 
   const handleStatusUpdate = async (status: 'COMPLETED' | 'CHEATED' | 'TIMEOUT') => {
     setIsSubmitting(true);
-    stopCamera();
     clearRemedialSession();
     
     try {
@@ -457,6 +449,10 @@ export default function StudentRemedialLayer({
         <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/50 px-2 py-1 rounded backdrop-blur-sm">
            <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse" />
            <span className="text-[8px] text-white font-black uppercase tracking-wider">REC</span>
+        </div>
+        <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/50 px-2 py-1 rounded backdrop-blur-sm">
+           <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+           <span className="text-[7px] text-emerald-300 font-black uppercase tracking-wider">Monitoring Aktif</span>
         </div>
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-8">
            <span className="text-[10px] text-white/90 font-bold truncate block">{studentName} (Dipantau)</span>
