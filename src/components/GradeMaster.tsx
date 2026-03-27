@@ -404,7 +404,19 @@ export default function GradeMaster() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      if (data.sessionId) setSessionId(data.sessionId);
+      const savedSessionId = data.sessionId;
+      if (savedSessionId) {
+        setSessionId(savedSessionId);
+        try {
+          const studentsRes = await fetch(`/api/grademaster/students?sessionId=${savedSessionId}`);
+          const studentsData = await studentsRes.json();
+          if (studentsRes.ok && studentsData.students) {
+            setGradedStudents(studentsData.students);
+          }
+        } catch (err) {
+          console.error("Failed to reload students:", err);
+        }
+      }
       setToast({ message: "Sesi berhasil dibuat/disimpan", type: "success" });
       setLayer("dashboard");
     } catch (err: unknown) {
