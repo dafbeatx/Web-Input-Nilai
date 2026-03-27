@@ -8,6 +8,7 @@ import {
   Plus,
   User,
   Download,
+  RefreshCcw,
 } from 'lucide-react';
 import { GradedStudent, AnalyticsResult } from '@/lib/grademaster/types';
 import { getCsiLabel, getLpsLabel } from '@/lib/grademaster/scoring';
@@ -35,8 +36,10 @@ interface DashboardLayerProps {
   onGradeStudent: () => void;
   onStudentRemedial?: (name: string) => void;
   onBack: () => void;
+  onReSync?: () => void;
   academicYear?: string;
   semester?: string;
+  examType?: string;
 }
 
 const CHART_COLORS = ['#e2e8f0', '#94a3b8', '#6366f1', '#818cf8', '#4f46e5'];
@@ -56,8 +59,10 @@ export default function DashboardLayer({
   onGradeStudent,
   onStudentRemedial,
   onBack,
+  onReSync,
   academicYear,
   semester,
+  examType,
 }: DashboardLayerProps) {
   const [behaviorMap, setBehaviorMap] = useState<Record<string, BehaviorRecord>>({});
 
@@ -319,12 +324,21 @@ export default function DashboardLayer({
               <Download size={14} /> Ekspor Data
             </button>
             {!isPublicView && (
-              <button
-                onClick={onGradeStudent}
-                className="px-3 md:px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors flex items-center justify-center gap-1.5 md:gap-2"
-              >
-                <Plus size={14} /> Koreksi Manual
-              </button>
+              <>
+                <button
+                  onClick={onReSync}
+                  className="px-3 md:px-4 py-2 bg-amber-50 text-amber-600 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-amber-100 transition-colors flex items-center justify-center gap-1.5 md:gap-2"
+                  title="Hitung ulang semua nilai berdasarkan kunci jawaban terbaru"
+                >
+                  <RefreshCcw size={14} /> Sinkron Nilai
+                </button>
+                <button
+                  onClick={onGradeStudent}
+                  className="px-3 md:px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors flex items-center justify-center gap-1.5 md:gap-2"
+                >
+                  <Plus size={14} /> Koreksi Manual
+                </button>
+              </>
             )}
           </div>
         </div>

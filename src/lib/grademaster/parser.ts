@@ -91,12 +91,53 @@ export function legacyKeyToArray(legacy: Record<number, string>): string[] {
 }
 
 /**
- * Convert string[] to Record<number, string> for backward compatibility
+ * Parse essay questions from numbered text input
+ * Example: "1. Question one 2. Question two" -> ["Question one", "Question two"]
  */
-export function arrayToLegacyKey(arr: string[]): Record<number, string> {
-  const result: Record<number, string> = {};
-  arr.forEach((ans, idx) => {
-    if (ans) result[idx + 1] = ans;
-  });
-  return result;
+export function parseEssayQuestions(input: string): string[] {
+  if (!input || !input.trim()) return [];
+
+  const pattern = /(?:^|\n)\s*(\d+)\s*[.:\-)]\s*/g;
+  const matches = Array.from(input.matchAll(pattern));
+  
+  if (matches.length === 0) {
+    // If no numbers found, split by lines if multiple lines exist, 
+    // or return the whole thing as one question.
+    const lines = input.split('\n').map(l => l.trim()).filter(Boolean);
+    return lines.length > 0 ? lines : [];
+  }
+
+  const matchesInfo = matches.map(m => ({
+    num: parseInt(m[1]),
+    start: m.index! + m[0].length,
+    index: m.index!
+  }));
+
+  const result: { num: number; text: string }[] = [];
+  
+  for (let i = 0; i < matchesInfo.length; i++) {
+    const info = matchesInfo[i];
+    const end = i < matchesInfo.length - 1 ? matchesInfo[i + 1].index : input.length;
+    const text = input.slice(info.start, end).trim();
+    
+    if (text) {
+      result.push({ num: info.num, text });
+    }
+  }
+
+  // Sort by number and fill gaps to preserve user numbering if possible,
+  // but for remedial questions we usually want a dense array.
+  // We'll sort by number and return as a dense array.
+  result.sort((a, b) => a.num - b.num);
+  return result.map(r => r.text);
+}
+
+/**
+ * Format string[] questions back to numbered text
+ */
+export function formatEssayQuestions(questions: string[]): string {
+  if (!questions || questions.length === 0) return "";
+  return questions
+    .map((q, i) => `${i + 1}. ${q}`)
+    .join("\n");
 }

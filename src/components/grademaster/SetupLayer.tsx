@@ -48,6 +48,8 @@ interface SetupLayerProps {
   setRemedialTimer: (v: number) => void;
   remedialQuestions: string[];
   setRemedialQuestions: (v: string[]) => void;
+  remedialQuestionsInput: string;
+  onRemedialInputChange: (v: string) => void;
   isPublic: boolean;
   setIsPublic: (v: boolean) => void;
   onSubmit: () => void;
@@ -73,6 +75,7 @@ export default function SetupLayer(props: SetupLayerProps) {
     remedialEssayCount, setRemedialEssayCount,
     remedialTimer, setRemedialTimer,
     remedialQuestions, setRemedialQuestions,
+    remedialQuestionsInput, onRemedialInputChange,
     isPublic, setIsPublic,
     onSubmit, onBack, isLoading, setToast,
   } = props;
@@ -234,23 +237,40 @@ export default function SetupLayer(props: SetupLayerProps) {
               </select>
             </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-            <div>
-              <label className={labelClass}><CheckCircle2 size={12} className="md:w-3.5 md:h-3.5" /> Nilai Minimal (KKM)</label>
-              <input type="number" min="0" max="100" value={kkm} onChange={(e) => setKkm(Number(e.target.value))} className={inputClass} />
+          {/* Remedial Questions Input (Bulk) */}
+          <div className="space-y-4 pt-4 border-t border-slate-100">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-4">
+              <div>
+                <label className={labelClass}><CheckCircle2 size={12} className="md:w-3.5 md:h-3.5" /> Nilai Minimal (KKM)</label>
+                <input type="number" min="0" max="100" value={kkm} onChange={(e) => setKkm(Number(e.target.value))} className={inputClass} />
+              </div>
             </div>
-            <div>
-              <label className={labelClass}><BookOpen size={12} className="md:w-3.5 md:h-3.5" /> Jumlah Soal Remedial (Essay)</label>
-              <input type="number" min="1" max="20" value={remedialEssayCount} onChange={(e) => {
-                const count = Number(e.target.value);
-                setRemedialEssayCount(count);
-                if (count > remedialQuestions.length) {
-                  setRemedialQuestions([...remedialQuestions, ...Array(count - remedialQuestions.length).fill("")]);
-                } else {
-                  setRemedialQuestions(remedialQuestions.slice(0, count));
-                }
-              }} className={inputClass} />
+            <div className="flex items-center justify-between mb-2">
+               <label className={labelClass}><ClipboardList size={12} className="md:w-3.5 md:h-3.5" /> Soal Remedial (Bulk)</label>
+               <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${remedialEssayCount > 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                 {remedialEssayCount} Soal terdeteksi
+               </span>
             </div>
+            <textarea
+              value={remedialQuestionsInput}
+              onChange={(e) => onRemedialInputChange(e.target.value)}
+              placeholder={"Ketikkan semua soal remedial di sini.\nFormat bebas bermarker angka:\n1. Jelaskan definisi AI...\n2. Bagaimana cara kerja Next.js?\n3. Apa itu Supabase?"}
+              rows={6}
+              className={`${inputClass} resize-y font-normal`}
+            />
+            {remedialEssayCount > 0 && (
+              <div className="p-3 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Preview Soal</p>
+                <div className="space-y-2">
+                  {remedialQuestions.map((q, idx) => (
+                    <div key={idx} className="flex gap-2 text-[10px] md:text-xs">
+                      <span className="font-black text-indigo-500">{idx + 1}.</span>
+                      <span className="text-slate-600 font-medium line-clamp-1">{q}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="col-span-2 md:col-span-1">
               <label className={labelClass}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-clock md:w-3.5 md:h-3.5 mr-1 inline-block text-slate-400">
@@ -261,31 +281,6 @@ export default function SetupLayer(props: SetupLayerProps) {
               <input type="number" min="1" max="180" value={remedialTimer} onChange={(e) => setRemedialTimer(Number(e.target.value))} className={inputClass} />
             </div>
           </div>
-
-          {/* Remedial Questions Input */}
-          {remedialEssayCount > 0 && (
-            <div className="space-y-4 pt-4 border-t border-slate-100">
-              <h3 className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-500 mb-2">Soal Remedial (Opsional)</h3>
-              {Array.from({ length: remedialEssayCount }).map((_, idx) => (
-                <div key={idx}>
-                  <label className="text-[10px] md:text-xs font-bold text-slate-500 mb-1.5 md:mb-2 block">
-                    Pertanyaan #{idx + 1}
-                  </label>
-                  <textarea
-                    value={remedialQuestions[idx] || ""}
-                    onChange={(e) => {
-                      const newQuestions = [...remedialQuestions];
-                      newQuestions[idx] = e.target.value;
-                      setRemedialQuestions(newQuestions);
-                    }}
-                    placeholder={`Ketikkan instruksi soal #${idx + 1}...`}
-                    rows={2}
-                    className={`${inputClass} resize-y text-sm font-normal`}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
 
           {/* Answer key */}
           <div>

@@ -33,6 +33,8 @@ interface RemedialDashboardLayerProps {
   semester?: string;
   onBack: () => void;
   onUpdateQuestions?: (questions: string[]) => void;
+  remedialQuestionsInput?: string;
+  onRemedialInputChange?: (v: string) => void;
   isSaving?: boolean;
 }
 
@@ -48,34 +50,20 @@ export default function RemedialDashboardLayer({
   semester = "Ganjil",
   onBack,
   onUpdateQuestions,
+  remedialQuestionsInput = "",
+  onRemedialInputChange,
   isSaving = false
 }: RemedialDashboardLayerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedQuestions, setEditedQuestions] = useState<string[]>(scoringConfig.remedialQuestions || []);
-
-  const handleAddQuestion = () => {
-    setEditedQuestions([...editedQuestions, ""]);
-  };
-
-  const handleRemoveQuestion = (index: number) => {
-    setEditedQuestions(editedQuestions.filter((_, i) => i !== index));
-  };
-
-  const handleQuestionChange = (index: number, value: string) => {
-    const newQuestions = [...editedQuestions];
-    newQuestions[index] = value;
-    setEditedQuestions(newQuestions);
-  };
 
   const handleSaveQuestions = () => {
-    onUpdateQuestions?.(editedQuestions);
+    onUpdateQuestions?.(scoringConfig.remedialQuestions || []);
     setIsEditing(false);
   };
 
   const resetEditing = () => {
-    setEditedQuestions(scoringConfig.remedialQuestions || []);
     setIsEditing(false);
   };
 
@@ -182,34 +170,34 @@ export default function RemedialDashboardLayer({
               </div>
            </div>
 
-           <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-              {editedQuestions.map((q, idx) => (
-                 <div key={idx} className="flex gap-3 group">
-                    <div className="w-10 h-10 rounded-xl bg-slate-800 text-slate-400 flex items-center justify-center font-black shrink-0">{idx + 1}</div>
-                    <textarea 
-                       className="flex-1 bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm font-bold text-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all resize-none"
-                       rows={2}
-                       value={q}
-                       onChange={(e) => handleQuestionChange(idx, e.target.value)}
-                       placeholder={`Tuliskan soal nomor ${idx + 1}...`}
-                    />
-                    <button 
-                      onClick={() => handleRemoveQuestion(idx)}
-                      className="w-10 h-10 rounded-xl bg-slate-800/50 text-slate-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all shrink-0 opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+            <div className="space-y-4">
+               <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Ketik Soal (Format: 1. Soal A 2. Soal B)</label>
+                  <textarea 
+                     className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-sm font-medium text-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all resize-y"
+                     rows={6}
+                     value={remedialQuestionsInput}
+                     onChange={(e) => onRemedialInputChange?.(e.target.value)}
+                     placeholder="Contoh: 1. Jelaskan apa itu AI... 2. Sebutkan komponen PC..."
+                  />
+               </div>
+
+               {scoringConfig.remedialQuestions && scoringConfig.remedialQuestions.length > 0 && (
+                 <div className="p-4 bg-slate-800/50 rounded-2xl border border-slate-800">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Preview Deteksi Soal ({scoringConfig.remedialQuestions.length})</p>
+                    <div className="space-y-3">
+                       {scoringConfig.remedialQuestions.map((q: string, idx: number) => (
+                          <div key={idx} className="flex gap-3 text-xs">
+                             <span className="font-black text-indigo-400 shrink-0">{idx + 1}.</span>
+                             <span className="text-slate-300 font-medium line-clamp-2 italic">"{q}"</span>
+                          </div>
+                       ))}
+                    </div>
                  </div>
-              ))}
-              <button 
-                onClick={handleAddQuestion}
-                className="w-full py-4 border-2 border-dashed border-slate-800 rounded-2xl text-slate-500 hover:text-indigo-400 hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest"
-              >
-                <Plus size={16} /> Tambah Soal Essay Baru
-              </button>
-           </div>
-        </div>
-      )}
+               )}
+            </div>
+         </div>
+       )}
 
       {/* Search Bar */}
       <div className="mb-6 relative">

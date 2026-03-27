@@ -4,6 +4,7 @@ import { hashPassword, verifyPassword, validateSessionInput, checkRateLimit } fr
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { generateQuestionDifficulties } from '@/lib/grademaster/analytics';
 import { GradedStudent } from '@/lib/grademaster/types';
+import { calculateStudentResult } from '@/lib/grademaster/scoring';
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,6 +16,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const {
+      action,
       sessionId,
       sessionName,
       password,
@@ -41,6 +43,56 @@ export async function POST(req: NextRequest) {
     } else if (sessionName?.trim()) {
       const { data } = await supabase.from('gm_sessions').select('id, session_name, password_hash').eq('session_name', sessionName.trim()).single();
       existing = data;
+    }
+
+    // RESYNC LOGIC
+    if (action === 'resync') {
+      const targetId = sessionId || existing?.id;
+      if (!targetId) return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
+      
+      // 1. Fetch current session key and config
+      const { data: session, error: sessError } = await supabase
+        .from('gm_sessions')
+        .select('answer_key, scoring_config')
+        .eq('id', targetId)
+        .single();
+      
+      if (sessError || !session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+      
+      // 2. Fetch all students
+      const { data: students, error: stuError } = await supabase
+        .from('gm_students')
+        .select('*')
+        .eq('session_id', targetId);
+        
+      if (stuError || !students) return NextResponse.json({ error: 'Students not found' }, { status: 404 });
+      
+      // 3. Re-calculate and update each student
+      const updates = students.map(s => {
+        const result = calculateStudentResult(
+          session.answer_key, 
+          s.mcq_answers, 
+          s.essay_scores, 
+          session.scoring_config
+        );
+        
+        return supabase
+          .from('gm_students')
+          .update({
+            mcq_score: Math.round(result.score),
+            essay_score: Math.round(result.essayScore),
+            final_score: Math.round(result.finalScore),
+            correct: result.correct,
+            wrong: result.wrong,
+            csi: result.csi,
+            lps: result.lps
+          })
+          .eq('id', s.id);
+      });
+      
+      await Promise.all(updates);
+      
+      return NextResponse.json({ message: `Berhasil sinkronisasi ${students.length} siswa.` });
     }
 
     if (existing) {

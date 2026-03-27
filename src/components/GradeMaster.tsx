@@ -12,7 +12,7 @@ import {
   ToastType,
   Layer,
 } from "@/lib/grademaster/types";
-import { parseAnswerKey } from "@/lib/grademaster/parser";
+import { parseAnswerKey, parseEssayQuestions, formatEssayQuestions } from "@/lib/grademaster/parser";
 import { generateAnalytics, generateInsights } from '@/lib/grademaster/analytics';
 
 import HomeLayer from "./grademaster/HomeLayer";
@@ -90,6 +90,7 @@ export default function GradeMaster() {
   const [remedialEssayCount, setRemedialEssayCount] = useState<number>(5);
   const [remedialTimer, setRemedialTimer] = useState<number>(15);
   const [remedialQuestions, setRemedialQuestions] = useState<string[]>([]);
+  const [remedialQuestionsInput, setRemedialQuestionsInput] = useState("");
 
   // Grading state
   const [studentName, setStudentName] = useState("");
@@ -303,7 +304,9 @@ export default function GradeMaster() {
       setKkm(data.kkm || 70);
       setRemedialEssayCount(data.remedialEssayCount || 5);
       setRemedialTimer(data.remedialTimer || 15);
-      setRemedialQuestions(data.scoringConfig?.remedialQuestions || []);
+      const questions = data.scoringConfig?.remedialQuestions || [];
+      setRemedialQuestions(questions);
+      setRemedialQuestionsInput(formatEssayQuestions(questions));
       setApiQuestionDifficulties(data.questionDifficulties || []);
       setIsSessionPublic(data.isPublic);
       setIsPublicView(true);
@@ -318,6 +321,17 @@ export default function GradeMaster() {
     }
   };
 
+  const fetchSessionData = async (name: string, pass: string) => {
+    const params = new URLSearchParams({
+      name: name.trim(),
+      password: pass.trim(),
+    });
+    const res = await fetch(`/api/grademaster?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    return data;
+  };
+
   const handleLoadSession = async () => {
     if (!sessionName.trim() || !sessionPassword.trim()) {
       setModalError("Nama sesi dan password wajib diisi");
@@ -326,13 +340,7 @@ export default function GradeMaster() {
     setModalLoading(true);
     setModalError("");
     try {
-      const params = new URLSearchParams({
-        name: sessionName.trim(),
-        password: sessionPassword.trim(),
-      });
-      const res = await fetch(`/api/grademaster?${params.toString()}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await fetchSessionData(sessionName, sessionPassword);
 
       setSessionId(data.sessionId || "");
       setAnswerKey(data.answerKey || []);
@@ -348,7 +356,9 @@ export default function GradeMaster() {
       setRemedialTimer(data.remedialTimer || 15);
       setStudentList(data.studentList || []);
       setGradedStudents(data.gradedStudents || []);
-      setRemedialQuestions(data.scoringConfig?.remedialQuestions || []);
+      const questions = data.scoringConfig?.remedialQuestions || [];
+      setRemedialQuestions(questions);
+      setRemedialQuestionsInput(formatEssayQuestions(questions));
       setApiQuestionDifficulties(data.questionDifficulties || []);
       setIsSessionPublic(data.isPublic);
       setIsPublicView(false); // Admin/Teacher view
@@ -400,6 +410,44 @@ export default function GradeMaster() {
     } finally {
       setModalLoading(false);
     }
+  };
+
+  const handleReSync = async () => {
+    if (!sessionId) return;
+    setIsUpdatingQuestions(true);
+    try {
+      const res = await fetch("/api/grademaster", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: 'resync',
+          sessionId,
+          sessionName: sessionName.trim(),
+          password: sessionPassword.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setToast({ message: data.message || "Berhasil sinkronisasi nilai siswa!", type: "success" });
+      
+      // Refresh session data to get updated student records
+      const refreshed = await fetchSessionData(sessionName, sessionPassword);
+      if (refreshed) {
+        setGradedStudents(refreshed.gradedStudents || []);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal sinkronisasi";
+      setToast({ message: msg, type: "error" });
+    } finally {
+      setIsUpdatingQuestions(false);
+    }
+  };
+
+  const handleRemedialInputChange = (input: string) => {
+    setRemedialQuestionsInput(input);
+    const parsed = parseEssayQuestions(input);
+    setRemedialQuestions(parsed);
+    setRemedialEssayCount(parsed.length);
   };
 
   const handleSaveStudent = async (student: GradedStudent) => {
@@ -608,6 +656,8 @@ export default function GradeMaster() {
           setRemedialTimer={setRemedialTimer}
           remedialQuestions={remedialQuestions}
           setRemedialQuestions={setRemedialQuestions}
+          remedialQuestionsInput={remedialQuestionsInput}
+          onRemedialInputChange={handleRemedialInputChange}
           isPublic={isSessionPublic}
           setIsPublic={setIsSessionPublic}
           onSubmit={handleSetupSubmit}
@@ -708,8 +758,10 @@ export default function GradeMaster() {
           schoolLevel={schoolLevel}
           semester={semester}
           scoringConfig={{ ...scoringConfig, remedialQuestions }}
+          remedialQuestionsInput={remedialQuestionsInput}
           onBack={() => setLayer("home")}
           onUpdateQuestions={handleUpdateRemedialQuestions}
+          onRemedialInputChange={handleRemedialInputChange}
           isSaving={isUpdatingQuestions}
         />
       )}
