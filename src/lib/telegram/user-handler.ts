@@ -17,7 +17,7 @@ export async function handleUserCommand(chatId: number, text: string) {
       `3. Pilih <b>Mata Pelajaran</b>.\n` +
       `4. Pilih <b>Jenis Ujian</b> (UTS/UAS/PAS).\n` +
       `5. Pilih <b>Tahun Ajaran</b>.\n` +
-      `6. Masukkan <b>Nama Lengkap</b> Anda sesuai absen.\n\n` +
+      `6. Pilih <b>Nama</b> Anda dari daftar.\n\n` +
       `Sistem akan menampilkan Detail Nilai, Ranking, dan Statistik Kelas Anda secara otomatis.`
     );
     // Auto-trigger /nilai for better UX
@@ -146,40 +146,29 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
 
   if (action === 'user_year' && value && conv) {
     conv.data.academicYear = value;
-    conv.step = 'waiting_name';
-    await sendMessage(chatId, '👤 <b>Langkah Terakhir:</b>\n\nSilakan masukkan <b>Nama Lengkap Anda</b> (sesuai daftar absen):');
-    return;
-  }
-}
-
-async function handleUserConversation(
-  chatId: number,
-  text: string,
-  conv: { step: string; data: Record<string, unknown> }
-) {
-  if (conv.step === 'waiting_name') {
-    const searchName = text.trim().toLowerCase();
 
     const { data: session } = await supabase
       .from('gm_sessions')
-      .select('id, session_name, teacher, subject, class_name, exam_type, academic_year, school_level')
+      .select('id')
       .eq('class_name', conv.data.className as string)
       .eq('subject', conv.data.subject as string)
       .eq('exam_type', conv.data.examType as string)
-      .eq('academic_year', conv.data.academicYear as string)
+      .eq('academic_year', value)
       .single();
 
     if (!session) {
-      await sendMessage(chatId, '❌ <b>Sesi tidak ditemukan.</b> Silakan ulangi pencarian dengan filter yang benar.');
+      await sendMessage(chatId, '❌ <b>Sesi tidak ditemukan.</b> Silakan ulangi pencarian.');
       userConversations.delete(chatId);
       return;
     }
 
+    conv.data.sessionId = session.id;
+
     const { data: students } = await supabase
       .from('gm_students')
-      .select('name, final_score, mcq_score, essay_score, csi, lps, correct, wrong')
+      .select('name')
       .eq('session_id', session.id)
-      .order('final_score', { ascending: false });
+      .order('name');
 
     if (!students || students.length === 0) {
       await sendMessage(chatId, '📭 <b>Maaf,</b> data nilai belum dimasukkan oleh admin untuk sesi ini.');
@@ -187,13 +176,50 @@ async function handleUserConversation(
       return;
     }
 
-    const match = students.find(s => s.name.toLowerCase().includes(searchName));
+    const keyboard = [];
+    for (let i = 0; i < students.length; i += 2) {
+      const row = students.slice(i, i + 2).map(s => ({
+        text: `👤 ${s.name}`,
+        callback_data: `user_student::${s.name}`,
+      }));
+      keyboard.push(row);
+    }
 
+    conv.step = 'waiting_student';
+    await sendInlineKeyboard(chatId, '👤 <b>Langkah Terakhir:</b>\n\nSilakan pilih <b>Nama</b> Anda:', keyboard);
+    return;
+  }
+
+  if (action === 'user_student' && value && conv) {
+    const sessionId = conv.data.sessionId as string;
+
+    const { data: sessionInfo } = await supabase
+      .from('gm_sessions')
+      .select('session_name, teacher, subject, class_name, exam_type, academic_year, school_level')
+      .eq('id', sessionId)
+      .single();
+
+    if (!sessionInfo) {
+      await sendMessage(chatId, '❌ <b>Sesi tidak ditemukan.</b>');
+      userConversations.delete(chatId);
+      return;
+    }
+
+    const { data: students } = await supabase
+      .from('gm_students')
+      .select('name, final_score, mcq_score, essay_score, csi, lps, correct, wrong')
+      .eq('session_id', sessionId)
+      .order('final_score', { ascending: false });
+
+    if (!students || students.length === 0) {
+      await sendMessage(chatId, '📭 <b>Maaf,</b> data nilai tidak ditemukan.');
+      userConversations.delete(chatId);
+      return;
+    }
+
+    const match = students.find(s => s.name === value);
     if (!match) {
-      await sendMessage(
-        chatId,
-        `❌ Nama "<b>${text.trim()}</b>" tidak ditemukan di <b>Kelas ${session.class_name}</b>.\n\nPastikan nama sesuai daftar absen.`
-      );
+      await sendMessage(chatId, `❌ Nama "<b>${value}</b>" tidak ditemukan.`);
       userConversations.delete(chatId);
       return;
     }
@@ -214,9 +240,9 @@ async function handleUserConversation(
     await sendMessage(
       chatId,
       `📊 <b>HASIL NILAI EXAM</b>\n\n` +
-      `🏫 <b>${session.class_name}</b> (${session.school_level}) • ${session.subject}\n` +
-      `📝 ${session.exam_type} • TA ${session.academic_year}\n` +
-      `👤 Guru: ${session.teacher}\n` +
+      `🏫 <b>${sessionInfo.class_name}</b> (${sessionInfo.school_level}) • ${sessionInfo.subject}\n` +
+      `📝 ${sessionInfo.exam_type} • TA ${sessionInfo.academic_year}\n` +
+      `👤 Guru: ${sessionInfo.teacher}\n` +
       `━━━━━━━━━━━━━━━━\n\n` +
       `👤 Nama: <b>${match.name}</b>\n` +
       `${emoji} Nilai Akhir: <b>${finalScore}</b>\n` +
@@ -228,19 +254,29 @@ async function handleUserConversation(
       `📊 Rata-rata: ${avg}\n` +
       `📊 Median: ${median}\n` +
       `📊 Tertinggi: ${maxScore}\n\n` +
-      `<i>Jika ingin melihat nilai yang lain, silakan klik tombol di bawah untuk memilih kelas kembali.</i>`
+      `<i>Klik tombol di bawah untuk melihat nilai lainnya.</i>`
     );
-    
-    // Suggest next actions
+
     await sendInlineKeyboard(chatId, '⬇️ <b>Navigasi:</b>', [
-      [{ text: `🏫 Kembali ke Kelas ${session.class_name}`, callback_data: `user_class::${session.class_name}` }],
-      [{ text: `🔍 Cari Nilai Lain`, callback_data: `/nilai` }]
+      [{ text: `🏫 Kembali ke Kelas ${sessionInfo.class_name}`, callback_data: `user_class::${sessionInfo.class_name}` }],
+      [{ text: `🔍 Cari Nilai Lain`, callback_data: `user_restart::1` }]
     ]);
 
     userConversations.delete(chatId);
     return;
   }
 
+  if (action === 'user_restart') {
+    userConversations.delete(chatId);
+    return handleUserCommand(chatId, '/nilai');
+  }
+}
+
+async function handleUserConversation(
+  chatId: number,
+  text: string,
+  conv: { step: string; data: Record<string, unknown> }
+) {
   await sendMessage(chatId, '📊 Ketik /nilai untuk memulai pencarian nilai.');
   userConversations.delete(chatId);
 }
