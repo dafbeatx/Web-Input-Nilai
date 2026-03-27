@@ -44,6 +44,8 @@ interface SetupLayerProps {
   setRemedialEssayCount: (v: number) => void;
   remedialTimer: number;
   setRemedialTimer: (v: number) => void;
+  remedialQuestions: string[];
+  setRemedialQuestions: (v: string[]) => void;
   onSubmit: () => void;
   onBack: () => void;
   isLoading: boolean;
@@ -65,6 +67,7 @@ export default function SetupLayer(props: SetupLayerProps) {
     kkm, setKkm,
     remedialEssayCount, setRemedialEssayCount,
     remedialTimer, setRemedialTimer,
+    remedialQuestions, setRemedialQuestions,
     onSubmit, onBack, isLoading, setToast,
   } = props;
 
@@ -176,7 +179,15 @@ export default function SetupLayer(props: SetupLayerProps) {
             </div>
             <div>
               <label className={labelClass}><BookOpen size={12} className="md:w-3.5 md:h-3.5" /> Jumlah Soal Remedial (Essay)</label>
-              <input type="number" min="1" max="20" value={remedialEssayCount} onChange={(e) => setRemedialEssayCount(Number(e.target.value))} className={inputClass} />
+              <input type="number" min="1" max="20" value={remedialEssayCount} onChange={(e) => {
+                const count = Number(e.target.value);
+                setRemedialEssayCount(count);
+                if (count > remedialQuestions.length) {
+                  setRemedialQuestions([...remedialQuestions, ...Array(count - remedialQuestions.length).fill("")]);
+                } else {
+                  setRemedialQuestions(remedialQuestions.slice(0, count));
+                }
+              }} className={inputClass} />
             </div>
             <div className="col-span-2 md:col-span-1">
               <label className={labelClass}>
@@ -189,7 +200,30 @@ export default function SetupLayer(props: SetupLayerProps) {
             </div>
           </div>
 
-
+          {/* Remedial Questions Input */}
+          {remedialEssayCount > 0 && (
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <h3 className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-500 mb-2">Soal Remedial (Opsional)</h3>
+              {Array.from({ length: remedialEssayCount }).map((_, idx) => (
+                <div key={idx}>
+                  <label className="text-[10px] md:text-xs font-bold text-slate-500 mb-1.5 md:mb-2 block">
+                    Pertanyaan #{idx + 1}
+                  </label>
+                  <textarea
+                    value={remedialQuestions[idx] || ""}
+                    onChange={(e) => {
+                      const newQuestions = [...remedialQuestions];
+                      newQuestions[idx] = e.target.value;
+                      setRemedialQuestions(newQuestions);
+                    }}
+                    placeholder={`Ketikkan instruksi soal #${idx + 1}...`}
+                    rows={2}
+                    className={`${inputClass} resize-y text-sm font-normal`}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Answer key */}
           <div>

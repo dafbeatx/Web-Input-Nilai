@@ -9,6 +9,7 @@ interface StudentRemedialLayerProps {
   subject: string;
   remedialEssayCount: number;
   remedialTimer: number;
+  remedialQuestions: string[];
   sessionId: string;
   onBack: () => void;
   setToast: (t: ToastType) => void;
@@ -21,6 +22,7 @@ export default function StudentRemedialLayer({
   subject,
   remedialEssayCount,
   remedialTimer,
+  remedialQuestions,
   sessionId,
   onBack,
   setToast,
@@ -326,7 +328,12 @@ export default function StudentRemedialLayer({
         {answers.map((ans, idx) => (
           <div key={idx} className="bg-white rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />
-            <h3 className="text-sm md:text-base font-black text-slate-800 mb-3">Soal Essay #{idx + 1}</h3>
+            <h3 className="text-sm md:text-base font-black text-slate-800 mb-2">Soal Essay #{idx + 1}</h3>
+            {remedialQuestions && remedialQuestions[idx] && remedialQuestions[idx].trim() !== "" && (
+              <p className="text-xs md:text-sm text-slate-600 font-medium mb-4 p-3 bg-slate-50 border border-slate-100 rounded-lg whitespace-pre-wrap">
+                {remedialQuestions[idx]}
+              </p>
+            )}
             <textarea
               className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all resize-none"
               rows={5}

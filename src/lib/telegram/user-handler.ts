@@ -195,7 +195,7 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
 
     const { data: sessionInfo } = await supabase
       .from('gm_sessions')
-      .select('session_name, teacher, subject, class_name, exam_type, academic_year, school_level')
+      .select('session_name, teacher, subject, class_name, exam_type, academic_year, school_level, kkm')
       .eq('id', sessionId)
       .single();
 
@@ -235,7 +235,16 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
     const maxScore = sorted[sorted.length - 1];
 
     const finalScore = Number(match.final_score);
+    const kkm = Number(sessionInfo.kkm || 70);
+    const isRemedial = finalScore < kkm;
     const emoji = finalScore >= 80 ? '🟢' : finalScore >= 60 ? '🟡' : '🔴';
+
+    const webUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://(domain-web-anda)/';
+
+    let remedialWarning = '';
+    if (isRemedial) {
+      remedialWarning = `\n⚠️ <b>TIDAK MEMENUHI KKM (${kkm})</b>\nAnda diwajibkan mengikuti Remedial. Silakan klik link berikut dan pilih sesi kelas Anda:\n🌐 <a href="${webUrl}">${webUrl}</a>\n`;
+    }
 
     await sendMessage(
       chatId,
@@ -248,8 +257,9 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
       `${emoji} Nilai Akhir: <b>${finalScore}</b>\n` +
       `📋 PG: ${match.mcq_score} • Essay: ${match.essay_score}\n` +
       `✅ Benar: ${match.correct} • ❌ Salah: ${match.wrong}\n` +
-      `🏆 Ranking: <b>${rank}</b> dari ${totalStudents} siswa\n\n` +
-      `━━━━━━━━━━━━━━━━\n` +
+      `🏆 Ranking: <b>${rank}</b> dari ${totalStudents} siswa\n` +
+      remedialWarning +
+      `\n━━━━━━━━━━━━━━━━\n` +
       `📈 <b>STATISTIK KELAS</b>\n` +
       `📊 Rata-rata: ${avg}\n` +
       `📊 Median: ${median}\n` +

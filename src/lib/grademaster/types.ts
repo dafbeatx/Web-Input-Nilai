@@ -3,6 +3,7 @@ export interface ScoringConfig {
   essayWeight: number;
   essayMaxScore: number;
   essayCount: number;
+  remedialQuestions?: string[];
 }
 
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {

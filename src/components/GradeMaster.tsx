@@ -87,6 +87,7 @@ export default function GradeMaster() {
   const [kkm, setKkm] = useState<number>(70);
   const [remedialEssayCount, setRemedialEssayCount] = useState<number>(5);
   const [remedialTimer, setRemedialTimer] = useState<number>(15);
+  const [remedialQuestions, setRemedialQuestions] = useState<string[]>([]);
 
   // Grading state
   const [studentName, setStudentName] = useState("");
@@ -187,7 +188,7 @@ export default function GradeMaster() {
           className: studentClass,
           schoolLevel,
           studentList,
-          scoringConfig,
+          scoringConfig: { ...scoringConfig, remedialQuestions },
           examType,
           academicYear,
           kkm,
@@ -238,6 +239,7 @@ export default function GradeMaster() {
       setRemedialTimer(data.remedialTimer || 15);
       setStudentList(data.studentList || []);
       setGradedStudents(data.gradedStudents || []);
+      setRemedialQuestions(data.scoringConfig?.remedialQuestions || []);
 
       // Reconstruct keyInput for display
       const key = data.answerKey as string[];
@@ -286,6 +288,7 @@ export default function GradeMaster() {
       setStudentList(data.studentList || []);
       setGradedStudents(data.gradedStudents || []);
       setKeyInput("");
+      setRemedialQuestions(data.scoringConfig?.remedialQuestions || []);
 
       setToast({ message: `Sesi "${data.sessionName}" dimuat sebagai publik!`, type: "success" });
       setIsPublicView(true);
@@ -469,6 +472,7 @@ export default function GradeMaster() {
               setKkm(70);
               setRemedialEssayCount(5);
               setRemedialTimer(15);
+              setRemedialQuestions([]);
             } else {
               setLayer("login");
             }
@@ -529,6 +533,8 @@ export default function GradeMaster() {
           setRemedialEssayCount={setRemedialEssayCount}
           remedialTimer={remedialTimer}
           setRemedialTimer={setRemedialTimer}
+          remedialQuestions={remedialQuestions}
+          setRemedialQuestions={setRemedialQuestions}
           onSubmit={handleSetupSubmit}
           onBack={() => {
             setLayer("home");
@@ -597,6 +603,7 @@ export default function GradeMaster() {
           subject={subject}
           remedialEssayCount={remedialEssayCount}
           remedialTimer={remedialTimer}
+          remedialQuestions={remedialQuestions}
           sessionId={sessionId}
           onBack={() => setLayer("dashboard")}
           setToast={setToast}
