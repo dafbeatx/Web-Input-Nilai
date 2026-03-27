@@ -163,24 +163,17 @@ export async function GET(req: NextRequest) {
     let isReadOnly = false;
     
     // Check access:
-    // 1. If session is private, password is mandatory.
-    // 2. If session is public:
-    //    - No password provided -> Read-only (Student)
-    //    - Password provided -> Validate. If correct, Full Access (Teacher).
-    if (!session.is_public) {
-      if (!password) {
-        return NextResponse.json({ error: 'Sesi ini bersifat privat. Silakan masukkan password guru.' }, { status: 403 });
-      }
-      const isMatch = await verifyPassword(password.trim(), session.password_hash);
-      if (!isMatch) return NextResponse.json({ error: 'Password salah' }, { status: 401 });
-      isReadOnly = false;
+    // 1. If no password provided -> Read-only (Public Overview)
+    // 2. If password provided -> Validate. If correct, Full Access (Teacher).
+    if (!password) {
+      isReadOnly = true;
     } else {
-      if (password) {
-        const isMatch = await verifyPassword(password.trim(), session.password_hash);
-        if (!isMatch) return NextResponse.json({ error: 'Password salah' }, { status: 401 });
+      const isMatch = await verifyPassword(password.trim(), session.password_hash);
+      if (isMatch) {
         isReadOnly = false;
       } else {
-        isReadOnly = true;
+        // Fallback to read-only even on wrong password if user just wants to view
+        isReadOnly = true; 
       }
     }
 

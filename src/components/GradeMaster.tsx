@@ -98,7 +98,7 @@ export default function GradeMaster() {
 
   // UI state
   const [isPublicView, setIsPublicView] = useState(false);
-  const [isSessionPublic, setIsSessionPublic] = useState(false);
+  const [isSessionPublic, setIsSessionPublic] = useState(true);
   const [modal, setModal] = useState<ModalType>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState("");
@@ -507,10 +507,8 @@ export default function GradeMaster() {
               setSessionName("");
               setSessionPassword("");
               setKeyInput("");
-              setAnswerKey([]);
-              resetGrading();
               setGradedStudents([]);
-              setIsSessionPublic(false);
+              setIsSessionPublic(true);
             } else {
               setLayer("login");
             }
@@ -520,11 +518,8 @@ export default function GradeMaster() {
               setSessionName(session.session_name);
               setModal("load");
             } else {
-              if (session.is_public) {
-                handleLoadPublicSession(session.session_name);
-              } else {
-                setToast({ message: "Data ini bersifat privat oleh guru.", type: "error" });
-              }
+              // Always allow loading public view for all sessions
+              handleLoadPublicSession(session.session_name);
             }
           }}
           onDeleteSession={(name) => {
