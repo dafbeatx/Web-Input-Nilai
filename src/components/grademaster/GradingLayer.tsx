@@ -247,7 +247,7 @@ export default function GradingLayer(props: GradingLayerProps) {
       <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-start">
         <div className="lg:col-span-8 space-y-4 md:space-y-6">
           {/* Student Identity */}
-          <section className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-100 shadow-sm relative overflow-hidden">
+          <section className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-100 shadow-sm relative">
             {isDetecting && (
               <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-40 flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center text-indigo-600 bg-white/90 p-4 rounded-xl shadow-lg border border-indigo-100">
