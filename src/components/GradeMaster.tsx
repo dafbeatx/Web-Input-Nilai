@@ -13,7 +13,7 @@ import {
   Layer,
 } from "@/lib/grademaster/types";
 import { parseAnswerKey } from "@/lib/grademaster/parser";
-import { generateAnalytics } from "@/lib/grademaster/analytics";
+import { generateAnalytics, generateInsights } from '@/lib/grademaster/analytics';
 
 import HomeLayer from "./grademaster/HomeLayer";
 import SetupLayer from "./grademaster/SetupLayer";
@@ -136,9 +136,20 @@ export default function GradeMaster() {
 
   const analytics = React.useMemo(() => {
     const base = generateAnalytics(gradedStudents, answerKey);
-    // Merge API difficulties if answerKey is empty (student view)
+    // Student View: Answer key is hidden, so re-merge and re-calculate insights using pre-calculated API data
     if (answerKey.length === 0 && apiQuestionDifficulties.length > 0) {
-      return { ...base, questionDifficulties: apiQuestionDifficulties };
+      // Re-calculate insights specifically using the apiDifficulties
+      const studentInsights = generateInsights(
+        gradedStudents, 
+        apiQuestionDifficulties, 
+        base.standardDeviation, 
+        base.avgScore
+      );
+      return { 
+        ...base, 
+        questionDifficulties: apiQuestionDifficulties,
+        insights: studentInsights
+      };
     }
     return base;
   }, [gradedStudents, answerKey, apiQuestionDifficulties]);

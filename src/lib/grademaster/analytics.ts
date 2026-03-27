@@ -117,7 +117,7 @@ function generateRanking(students: GradedStudent[]): AnalyticsResult['ranking'] 
     }));
 }
 
-function generateInsights(
+export function generateInsights(
   students: GradedStudent[],
   difficulties: QuestionDifficulty[],
   stdDev: number,

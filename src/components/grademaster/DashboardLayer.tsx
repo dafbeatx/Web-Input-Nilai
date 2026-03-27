@@ -244,9 +244,10 @@ export default function DashboardLayer({
             <p className="text-[10px] md:text-xs font-bold text-slate-400 mb-6 leading-relaxed">Persentase tingkat kesulitan. Semakin tinggi persentase, semakin banyak siswa yang salah menjawab soal tersebut.</p>
             
             <div className="flex flex-col md:flex-row gap-6 items-start">
-              <div className="w-full md:flex-1">
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={analytics.questionDifficulties} margin={{ left: -25, right: 0, top: 0, bottom: 0 }}>
+              <div className="w-full md:flex-1 overflow-x-auto pb-2 custom-scrollbar">
+                <div className="min-w-[400px] md:min-w-0">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={analytics.questionDifficulties} margin={{ left: 0, right: 0, top: 0, bottom: 0 }}>
                     <XAxis dataKey="questionNumber" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                     <Tooltip 
@@ -262,6 +263,7 @@ export default function DashboardLayer({
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
+                </div>
               </div>
               
               {/* Highlight Soal Tersulit */}
