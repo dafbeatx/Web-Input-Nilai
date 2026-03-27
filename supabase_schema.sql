@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS public.gm_sessions (
     remedial_timer INTEGER NOT NULL DEFAULT 15,
     exam_type TEXT NOT NULL DEFAULT 'UTS',
     academic_year TEXT NOT NULL DEFAULT '2025/2026',
+    semester TEXT NOT NULL DEFAULT 'Ganjil',
     is_public BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,

@@ -38,6 +38,8 @@ interface SetupLayerProps {
   setExamType: (v: string) => void;
   academicYear: string;
   setAcademicYear: (v: string) => void;
+  semester: string;
+  setSemester: (v: string) => void;
   kkm: number;
   setKkm: (v: number) => void;
   remedialEssayCount: number;
@@ -66,6 +68,7 @@ export default function SetupLayer(props: SetupLayerProps) {
     studentList, setStudentList,
     examType, setExamType,
     academicYear, setAcademicYear,
+    semester, setSemester,
     kkm, setKkm,
     remedialEssayCount, setRemedialEssayCount,
     remedialTimer, setRemedialTimer,
@@ -82,8 +85,10 @@ export default function SetupLayer(props: SetupLayerProps) {
 
   const handleSubmit = async () => {
     if (!teacherName.trim()) { setToast({ message: 'Nama guru wajib diisi', type: 'error' }); return; }
-    if (!subject.trim()) { setToast({ message: 'Mata pelajaran wajib diisi', type: 'error' }); return; }
-    if (!studentClass.trim()) { setToast({ message: 'Kelas wajib diisi', type: 'error' }); return; }
+    if (!subject.trim()) { setToast({ message: 'Mata pelajaran wajib dipilih', type: 'error' }); return; }
+    if (!studentClass.trim()) { setToast({ message: 'Kelas wajib dipilih', type: 'error' }); return; }
+    if (!academicYear.trim()) { setToast({ message: 'Tahun ajaran wajib dipilih', type: 'error' }); return; }
+    if (!semester.trim()) { setToast({ message: 'Semester wajib dipilih', type: 'error' }); return; }
     if (!sessionName.trim()) { setToast({ message: 'Nama sesi wajib diisi', type: 'error' }); return; }
     if (!sessionPassword.trim()) { setToast({ message: 'Password sesi wajib diisi', type: 'error' }); return; }
     if (parsedCount === 0) { setToast({ message: 'Kunci jawaban belum valid', type: 'error' }); return; }
@@ -159,13 +164,37 @@ export default function SetupLayer(props: SetupLayerProps) {
 
           <div>
             <label className={labelClass}><BookOpen size={12} className="md:w-3.5 md:h-3.5" /> Mata Pelajaran</label>
-            <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Contoh: Matematika" className={inputClass} />
+            <select value={subject} onChange={(e) => setSubject(e.target.value)} className={`${inputClass} cursor-pointer`}>
+              <option value="">-- Pilih Mata Pelajaran --</option>
+              <option value="Informatika">Informatika</option>
+              <option value="Matematika">Matematika</option>
+              <option value="IPA">IPA (Sains)</option>
+              <option value="IPS">IPS (Sosial)</option>
+              <option value="Bahasa Indonesia">Bahasa Indonesia</option>
+              <option value="Bahasa Inggris">Bahasa Inggris</option>
+              <option value="PAI">PAI</option>
+              <option value="PJOK">PJOK</option>
+              <option value="Seni Budaya">Seni Budaya</option>
+              <option value="PKn">PKn</option>
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-3 md:gap-4">
             <div>
               <label className={labelClass}><LayoutGrid size={12} className="md:w-3.5 md:h-3.5" /> Kelas</label>
-              <input type="text" value={studentClass} onChange={(e) => setStudentClass(e.target.value)} placeholder="Contoh: 10A" className={inputClass} />
+              <select value={studentClass} onChange={(e) => setStudentClass(e.target.value)} className={`${inputClass} cursor-pointer`}>
+                <option value="">-- Pilih Kelas --</option>
+                <optgroup label="Tingkat SMP">
+                   <option value="7A">Kelas 7A</option><option value="7B">Kelas 7B</option><option value="7C">Kelas 7C</option>
+                   <option value="8A">Kelas 8A</option><option value="8B">Kelas 8B</option><option value="8C">Kelas 8C</option>
+                   <option value="9A">Kelas 9A</option><option value="9B">Kelas 9B</option><option value="9C">Kelas 9C</option>
+                </optgroup>
+                <optgroup label="Tingkat SMA">
+                   <option value="10A">Kelas 10A</option><option value="10B">Kelas 10B</option>
+                   <option value="11-IPA">Kelas 11 IPA</option><option value="11-IPS">Kelas 11 IPS</option>
+                   <option value="12-IPA">Kelas 12 IPA</option><option value="12-IPS">Kelas 12 IPS</option>
+                </optgroup>
+              </select>
             </div>
             <div>
               <label className={labelClass}><GraduationCap size={12} className="md:w-3.5 md:h-3.5" /> Tingkat</label>
@@ -176,22 +205,34 @@ export default function SetupLayer(props: SetupLayerProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 md:gap-4">
             <div>
-              <label className={labelClass}><BookOpen size={12} className="md:w-3.5 md:h-3.5" /> Jenis Ujian</label>
-              <select value={examType} onChange={(e) => setExamType(e.target.value)} className={`${inputClass} cursor-pointer`}>
-                <option value="UTS">UTS</option>
-                <option value="UAS">UAS</option>
-                <option value="PAT">PAT</option>
-                <option value="PAS">PAS</option>
-                <option value="Ulangan Harian">Ulangan Harian</option>
+              <label className={labelClass}><BookOpen size={12} className="md:w-3.5 md:h-3.5" /> Semester</label>
+              <select value={semester} onChange={(e) => setSemester(e.target.value)} className={`${inputClass} cursor-pointer`}>
+                <option value="Ganjil">Semester Ganjil</option>
+                <option value="Genap">Semester Genap</option>
               </select>
             </div>
             <div>
               <label className={labelClass}><BookOpen size={12} className="md:w-3.5 md:h-3.5" /> Tahun Ajaran</label>
-              <input type="text" value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} placeholder="2025/2026" className={inputClass} />
+              <select value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} className={`${inputClass} cursor-pointer`}>
+                <option value="2024/2025">2024/2025</option>
+                <option value="2025/2026">2025/2026</option>
+                <option value="2026/2027">2026/2027</option>
+              </select>
             </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-3 md:gap-4">
+            <div>
+              <label className={labelClass}><BookOpen size={12} className="md:w-3.5 md:h-3.5" /> Jenis Ujian</label>
+              <select value={examType} onChange={(e) => setExamType(e.target.value)} className={`${inputClass} cursor-pointer`}>
+                <option value="UTS">UTS (Tengah Semester)</option>
+                <option value="UAS">UAS (Akhir Semester)</option>
+                <option value="PAS">PAS (Penilaian Akhir Semester)</option>
+                <option value="PAT">PAT (Penilaian Akhir Tahun)</option>
+                <option value="Ulangan Harian">Ulangan Harian</option>
+              </select>
+            </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
             <div>

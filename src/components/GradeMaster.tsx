@@ -85,6 +85,7 @@ export default function GradeMaster() {
   const [scoringConfig] = useState<ScoringConfig>(DEFAULT_SCORING_CONFIG);
   const [examType, setExamType] = useState("UTS");
   const [academicYear, setAcademicYear] = useState("2025/2026");
+  const [semester, setSemester] = useState("Ganjil");
   const [kkm, setKkm] = useState<number>(70);
   const [remedialEssayCount, setRemedialEssayCount] = useState<number>(5);
   const [remedialTimer, setRemedialTimer] = useState<number>(15);
@@ -203,6 +204,7 @@ export default function GradeMaster() {
           scoringConfig: { ...scoringConfig, remedialQuestions },
           examType,
           academicYear,
+          semester,
           kkm,
           remedialEssayCount,
           remedialTimer,
@@ -327,6 +329,7 @@ export default function GradeMaster() {
       setSchoolLevel(data.schoolLevel || "SMA");
       setExamType(data.examType || "UTS");
       setAcademicYear(data.academicYear || "2025/2026");
+      setSemester(data.semester || "Ganjil");
       setKkm(data.kkm || 70);
       setRemedialEssayCount(data.remedialEssayCount || 5);
       setRemedialTimer(data.remedialTimer || 15);
@@ -460,6 +463,7 @@ export default function GradeMaster() {
           scoringConfig,
           examType,
           academicYear,
+          semester,
           kkm,
           remedialEssayCount,
           remedialTimer,
@@ -580,6 +584,8 @@ export default function GradeMaster() {
           setExamType={setExamType}
           academicYear={academicYear}
           setAcademicYear={setAcademicYear}
+          semester={semester}
+          setSemester={setSemester}
           kkm={kkm}
           setKkm={setKkm}
           remedialEssayCount={remedialEssayCount}
@@ -613,6 +619,7 @@ export default function GradeMaster() {
           kkm={kkm}
           remedialEssayCount={remedialEssayCount}
           academicYear={academicYear}
+          semester={semester}
           onGradeStudent={() => {
             resetGrading();
             setLayer("grading");
@@ -663,6 +670,7 @@ export default function GradeMaster() {
           className={studentClass}
           academicYear={academicYear}
           examType={examType}
+          semester={semester}
           onBack={() => setLayer("dashboard")}
           setToast={setToast}
         />
@@ -684,6 +692,7 @@ export default function GradeMaster() {
           studentClass={studentClass}
           subject={subject}
           schoolLevel={schoolLevel}
+          semester={semester}
           scoringConfig={{ ...scoringConfig, remedialQuestions }}
           onBack={() => setLayer("home")}
           onUpdateQuestions={handleUpdateRemedialQuestions}

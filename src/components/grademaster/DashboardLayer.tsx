@@ -36,6 +36,7 @@ interface DashboardLayerProps {
   onStudentRemedial?: (name: string) => void;
   onBack: () => void;
   academicYear?: string;
+  semester?: string;
 }
 
 const CHART_COLORS = ['#e2e8f0', '#94a3b8', '#6366f1', '#818cf8', '#4f46e5'];
@@ -56,6 +57,7 @@ export default function DashboardLayer({
   onStudentRemedial,
   onBack,
   academicYear,
+  semester,
 }: DashboardLayerProps) {
   const [behaviorMap, setBehaviorMap] = useState<Record<string, BehaviorRecord>>({});
 
@@ -163,20 +165,15 @@ export default function DashboardLayer({
         <h1 className="text-2xl md:text-4xl font-black text-slate-800 tracking-tight font-outfit mb-2 md:mb-3">
           {isPublicView ? 'Hasil Evaluasi Siswa' : 'Ikhtisar Kelas'}
         </h1>
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 mb-2">
-           <p className="text-xs md:text-sm text-slate-500 font-bold">
-             {isPublicView ? `Guru: ${teacherName}` : `Halo, ${teacherName}`} • {subject}
-           </p>
-           <span className="w-1 h-1 rounded-full bg-slate-300 hidden md:block" />
-           <p className="text-xs md:text-sm text-slate-500 font-bold">
-             Kelas {studentClass} ({schoolLevel})
-           </p>
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
+           <Badge color="emerald">Kelas {studentClass} ({schoolLevel})</Badge>
+           <Badge color="amber">{academicYear || '2025/2026'}</Badge>
+           <Badge color="indigo">Semester {semester || getSemester(sessionName || '')}</Badge>
+           <Badge color="slate">{subject}</Badge>
         </div>
-        <div className="inline-flex items-center gap-3 px-4 py-1.5 bg-slate-50 rounded-2xl border border-slate-100">
-           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tahun Ajaran: <span className="text-slate-700">{academicYear || '-'}</span></span>
-           <span className="w-px h-3 bg-slate-200" />
-           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Semester: <span className="text-indigo-600">{getSemester(sessionName || '')}</span></span>
-        </div>
+        {!isPublicView && (
+           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Pusat Data: {teacherName}</p>
+        )}
       </header>
 
       {/* Top 3 Siswa */}
@@ -556,5 +553,20 @@ function ProgressCard({ label, value, max = 100, isConsistency = false, realValu
         </div>
       </div>
     </div>
+  );
+}
+
+function Badge({ children, color = 'indigo' }: { children: React.ReactNode; color?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'rose' }) {
+  const colors = {
+    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    amber: 'bg-amber-50 text-amber-600 border-amber-100',
+    slate: 'bg-slate-50 text-slate-600 border-slate-100',
+    rose: 'bg-rose-50 text-rose-600 border-rose-100',
+  };
+  return (
+    <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-tight border shadow-sm ${colors[color]}`}>
+      {children}
+    </span>
   );
 }

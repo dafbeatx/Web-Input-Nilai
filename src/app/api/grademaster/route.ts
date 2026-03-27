@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
       scoringConfig,
       examType,
       academicYear,
+      semester,
       kkm,
       remedialEssayCount,
       remedialTimer,
@@ -93,8 +94,9 @@ export async function POST(req: NextRequest) {
         school_level: schoolLevel || 'SMA',
         student_list: studentList || [],
         scoring_config: scoringConfig || undefined,
-        exam_type: examType || 'UTS',
-        academic_year: academicYear || '2025/2026',
+        exam_type: examType,
+        academic_year: academicYear,
+        semester: semester,
         kkm: kkm || 70,
         remedial_essay_count: remedialEssayCount || 5,
         remedial_timer: remedialTimer || 15,
@@ -219,6 +221,7 @@ export async function GET(req: NextRequest) {
       scoringConfig: session.scoring_config,
       examType: session.exam_type || 'UTS',
       academicYear: session.academic_year || '2025/2026',
+      semester: session.semester || 'Ganjil',
       kkm: session.kkm || 70,
       remedialEssayCount: session.remedial_essay_count || 5,
       remedialTimer: session.remedial_timer || 15,
@@ -247,6 +250,8 @@ export async function DELETE(req: NextRequest) {
     if (!sessionName || !password) {
       return NextResponse.json({ error: 'Nama sesi dan password wajib diisi' }, { status: 400 });
     }
+
+
 
     const { data: session, error: fetchError } = await supabase
       .from('gm_sessions')

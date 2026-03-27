@@ -30,6 +30,7 @@ interface RemedialDashboardLayerProps {
   studentClass?: string;
   subject?: string;
   schoolLevel?: string;
+  semester?: string;
   onBack: () => void;
   onUpdateQuestions?: (questions: string[]) => void;
   isSaving?: boolean;
@@ -44,6 +45,7 @@ export default function RemedialDashboardLayer({
   studentClass = "10A",
   subject = "Matematika",
   schoolLevel = "SMA",
+  semester = "Ganjil",
   onBack,
   onUpdateQuestions,
   isSaving = false
@@ -124,16 +126,13 @@ export default function RemedialDashboardLayer({
           <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight font-outfit uppercase">
             Pusat Data Remedial <span className="text-indigo-600">{examType}</span>
           </h1>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-            <p className="text-xs md:text-sm text-slate-500 font-bold">
-               {subject} • Kelas {studentClass}
-            </p>
-            <span className="w-1 h-1 rounded-full bg-slate-300 hidden md:block" />
-            <p className="text-xs md:text-sm text-slate-500 font-bold">
-               TA {academicYear} • Semester {getSemester(examType)}
-            </p>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+             <Badge color="emerald">Kelas {studentClass} ({schoolLevel})</Badge>
+             <Badge color="amber">{academicYear}</Badge>
+             <Badge color="indigo">Semester {semester}</Badge>
+             <Badge color="slate">{subject}</Badge>
           </div>
-          <p className="text-[10px] text-slate-400 font-medium mt-1 italic">Tingkat: {schoolLevel} • Memantau hasil pengerjaan ulang dan kejujuran siswa.</p>
+          <p className="text-[10px] text-slate-400 font-medium mt-2 italic">Memantau hasil pengerjaan ulang dan kejujuran siswa.</p>
         </div>
         
         <div className="flex items-center gap-3">
@@ -334,5 +333,20 @@ export default function RemedialDashboardLayer({
         </button>
       </div>
     </div>
+  );
+}
+
+function Badge({ children, color = 'indigo' }: { children: React.ReactNode; color?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'rose' }) {
+  const colors = {
+    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    amber: 'bg-amber-50 text-amber-600 border-amber-100',
+    slate: 'bg-slate-50 text-slate-600 border-slate-100',
+    rose: 'bg-rose-50 text-rose-600 border-rose-100',
+  };
+  return (
+    <span className={`px-3 py-1 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-tight border shadow-sm ${colors[color]}`}>
+      {children}
+    </span>
   );
 }

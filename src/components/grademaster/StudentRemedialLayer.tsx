@@ -14,6 +14,7 @@ interface StudentRemedialLayerProps {
   className: string;
   academicYear: string;
   examType: string;
+  semester: string;
   onBack: () => void;
   setToast: (t: ToastType) => void;
 }
@@ -30,6 +31,7 @@ export default function StudentRemedialLayer({
   className,
   academicYear,
   examType,
+  semester,
   onBack,
   setToast,
 }: StudentRemedialLayerProps) {
@@ -247,26 +249,24 @@ export default function StudentRemedialLayer({
             Anda akan memulai ujian remedial. Harap baca aturan berikut sebelum memulai:
           </p>
 
-          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6">
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 mb-6 shadow-sm">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Identitas Sesi Remedial</h3>
-            <div className="grid grid-cols-2 gap-y-3">
+            <div className="grid grid-cols-2 gap-y-4 gap-x-2">
               <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase">Mata Pelajaran</p>
-                <p className="text-sm font-black text-slate-800">{subject}</p>
+                <p className="text-[9px] text-slate-400 font-black uppercase tracking-tighter mb-1">Mata Pelajaran</p>
+                <Badge color="slate">{subject}</Badge>
               </div>
               <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase">Kelas</p>
-                <p className="text-sm font-black text-slate-800">{className}</p>
+                <p className="text-[9px] text-slate-400 font-black uppercase tracking-tighter mb-1">Kelas</p>
+                <Badge color="emerald">{className}</Badge>
               </div>
               <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase">Tahun Ajaran</p>
-                <p className="text-sm font-black text-slate-800">{academicYear}</p>
+                <p className="text-[9px] text-slate-400 font-black uppercase tracking-tighter mb-1">Tahun Ajaran</p>
+                <Badge color="amber">{academicYear}</Badge>
               </div>
               <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase">Semester / Ujian</p>
-                <p className="text-sm font-black text-indigo-600">
-                  {["PAT", "UAS", "PAS"].includes(examType) ? (["PAT", "UAS"].includes(examType) ? "Genap" : "Ganjil") : "Ganjil"} ({examType})
-                </p>
+                <p className="text-[9px] text-slate-400 font-black uppercase tracking-tighter mb-1">Semester / Ujian</p>
+                <Badge color="indigo">{semester} ({examType})</Badge>
               </div>
             </div>
           </div>
@@ -430,5 +430,20 @@ export default function StudentRemedialLayer({
         </button>
       </div>
     </div>
+  );
+}
+
+function Badge({ children, color = 'indigo' }: { children: React.ReactNode; color?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'rose' }) {
+  const colors = {
+    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    amber: 'bg-amber-50 text-amber-600 border-amber-100',
+    slate: 'bg-slate-50 text-slate-600 border-slate-100',
+    rose: 'bg-rose-50 text-rose-600 border-rose-100',
+  };
+  return (
+    <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-tight border shadow-sm inline-block ${colors[color]}`}>
+      {children}
+    </span>
   );
 }
