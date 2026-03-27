@@ -597,9 +597,8 @@ export default function StudentRemedialLayer({
   };
 
   return (
-    <div className="p-3 sm:p-5 lg:p-8 max-w-4xl mx-auto animate-in pt-20">
-      
-      {/* Top Floating Bar */}
+    <>
+      {/* Top Floating Bar — outside animate-in so position:fixed works */}
       <div className="fixed top-0 left-0 right-0 bg-white border-b border-slate-200 shadow-sm z-40 px-4 py-3 flex items-center justify-between">
          <div className="font-outfit font-black text-slate-800 flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
@@ -610,9 +609,9 @@ export default function StudentRemedialLayer({
          </div>
       </div>
 
-      {/* Draggable Camera Bubble */}
+      {/* Draggable Camera Bubble — outside animate-in so position:fixed works */}
       <div
-        className="bg-slate-900 rounded-2xl shadow-2xl border-4 border-slate-800 overflow-hidden z-50 cursor-grab active:cursor-grabbing select-none"
+        className="bg-slate-900 rounded-2xl shadow-2xl border-4 border-slate-800 overflow-hidden cursor-grab active:cursor-grabbing select-none"
         style={{
           position: 'fixed',
           left: camPos.x,
@@ -643,6 +642,9 @@ export default function StudentRemedialLayer({
            )}
         </div>
       </div>
+
+      {/* Main Exam Content */}
+      <div className="p-3 sm:p-5 lg:p-8 max-w-4xl mx-auto animate-in pt-20">
 
       <header className="mb-6 md:mb-10 text-center">
         <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight font-outfit mb-2">Remedial {subject}</h1>
@@ -696,6 +698,7 @@ export default function StudentRemedialLayer({
         </button>
       </div>
     </div>
+    </>
   );
 }
 
