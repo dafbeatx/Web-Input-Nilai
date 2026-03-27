@@ -113,6 +113,8 @@ export default function GradeMaster() {
     return () => clearTimeout(timer);
   }, [toast]);
 
+  const [isUpdatingQuestions, setIsUpdatingQuestions] = useState(false);
+
   const checkAdmin = async () => {
     try {
       const res = await fetch("/api/admin/check");
@@ -208,6 +210,46 @@ export default function GradeMaster() {
       setModal('error');
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleUpdateRemedialQuestions = async (newQuestions: string[]) => {
+    if (!sessionId) {
+      setToast({ message: "Sesi belum dimuat. Silakan login ke sesi terlebih dahulu.", type: "error" });
+      return;
+    }
+    setIsUpdatingQuestions(true);
+    try {
+      const res = await fetch("/api/grademaster", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionName: sessionName.trim(),
+          password: sessionPassword.trim(),
+          answerKey,
+          teacher: teacherName,
+          subject,
+          className: studentClass,
+          schoolLevel,
+          studentList,
+          scoringConfig: { ...scoringConfig, remedialQuestions: newQuestions },
+          examType,
+          academicYear,
+          kkm,
+          remedialEssayCount,
+          remedialTimer,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setRemedialQuestions(newQuestions);
+      setToast({ message: "Soal remedial berhasil diperbarui!", type: "success" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal memperbarui soal";
+      setToast({ message: msg, type: "error" });
+    } finally {
+      setIsUpdatingQuestions(false);
     }
   };
 
@@ -622,8 +664,10 @@ export default function GradeMaster() {
         <RemedialDashboardLayer
           gradedStudents={gradedStudents}
           kkm={kkm}
-          scoringConfig={scoringConfig}
+          scoringConfig={{ ...scoringConfig, remedialQuestions }}
           onBack={() => setLayer("home")}
+          onUpdateQuestions={handleUpdateRemedialQuestions}
+          isSaving={isUpdatingQuestions}
         />
       )}
 
