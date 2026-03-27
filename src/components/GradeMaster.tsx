@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { CheckCircle2, AlertCircle, Menu, X, ClipboardList, ShieldCheck, Users } from "lucide-react";
+import { CheckCircle2, AlertCircle } from "lucide-react";
 
 import {
   SessionMeta,
@@ -23,6 +23,7 @@ import LoginLayer from "./grademaster/LoginLayer";
 import Modals from "./grademaster/Modals";
 import StudentRemedialLayer from "./grademaster/StudentRemedialLayer";
 import BehaviorLayer from "./grademaster/BehaviorLayer";
+import Navbar from "./grademaster/Navbar";
 
 const ESSAY_COUNT = 5;
 
@@ -101,7 +102,7 @@ export default function GradeMaster() {
   const [toast, setToast] = useState<ToastType>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminUser, setAdminUser] = useState<string | null>(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
 
   // Auto-dismiss toast
   useEffect(() => {
@@ -436,52 +437,22 @@ export default function GradeMaster() {
   // ── Render ──
 
   return (
-    <>
-      {isAdmin && !['login', 'remedial'].includes(layer) && (
-        <>
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="fixed top-4 md:top-6 left-4 md:left-6 z-[200] w-10 h-10 md:w-12 md:h-12 bg-white border border-slate-200 shadow-lg rounded-xl md:rounded-2xl flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:scale-105 active:scale-95 transition-all"
-          >
-            {isMenuOpen ? <X size={20} className="md:w-6 md:h-6" /> : <Menu size={20} className="md:w-6 md:h-6" />}
-          </button>
-          
-          {isMenuOpen && (
-            <div className="fixed inset-0 z-[190] flex">
-              <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => setIsMenuOpen(false)} />
-              <div className="relative w-72 md:w-80 bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-left-full duration-200 border-r border-slate-100">
-                <div className="p-6 md:p-8 border-b border-slate-100 bg-slate-50/50">
-                  <h2 className="font-black text-xl text-slate-800 tracking-tight flex items-center gap-2"><ShieldCheck className="text-indigo-600" /> Admin Panel</h2>
-                  <p className="text-[10px] md:text-xs font-bold text-emerald-500 uppercase tracking-widest mt-1.5 flex items-center gap-1.5"><CheckCircle2 size={12}/> Halo, {adminUser || 'Guru'}</p>
-                </div>
-                <div className="flex-1 p-4 md:p-6 flex flex-col gap-3">
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2 mb-1">Navigasi Utama</p>
-                  <button
-                    onClick={() => { setInternalLayer('home'); setIsMenuOpen(false); }}
-                    className={`p-3 md:p-4 rounded-xl md:rounded-2xl text-left text-xs md:text-sm font-bold transition-all flex items-center gap-3 ${layer !== 'behavior' ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-100/50' : 'text-slate-600 hover:bg-slate-50 border border-transparent'}`}
-                  >
-                    <ClipboardList size={18} /> Penilaian Ujian
-                  </button>
-                  <button
-                    onClick={() => { setInternalLayer('behavior'); setIsMenuOpen(false); }}
-                    className={`p-3 md:p-4 rounded-xl md:rounded-2xl text-left text-xs md:text-sm font-bold transition-all flex items-center gap-3 ${layer === 'behavior' ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-100/50' : 'text-slate-600 hover:bg-slate-50 border border-transparent'}`}
-                  >
-                    <Users size={18} /> Kehadiran & Perilaku
-                  </button>
-                </div>
-                <div className="p-6 border-t border-slate-100">
-                  <button onClick={() => { handleAdminLogout(); setIsMenuOpen(false); }} className="w-full p-3 md:p-4 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest transition-colors text-center shadow-sm border border-rose-100">
-                    Logout
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      {!['login', 'remedial'].includes(layer) && (
+        <Navbar
+          isAdmin={isAdmin}
+          adminUser={adminUser}
+          layer={layer}
+          onNavigate={(target) => setLayer(target)}
+          onLogout={handleAdminLogout}
+          onLoginClick={() => setLayer("login")}
+          onOpenSettings={() => setModal("adminSettings")}
+        />
       )}
 
-      {layer === "home" && (
-        <HomeLayer
+      <div className="flex-1">
+        {layer === "home" && (
+          <HomeLayer
           sessions={sessions}
           isLoading={isLoadingSessions}
           onCreateNew={() => {
@@ -516,7 +487,7 @@ export default function GradeMaster() {
           onLogout={handleAdminLogout}
           onOpenSettings={() => setModal("adminSettings")}
         />
-      )}
+        )}
 
       {layer === "login" && (
         <LoginLayer
@@ -672,6 +643,7 @@ export default function GradeMaster() {
           {toast.message}
         </div>
       )}
-    </>
+      </div>
+    </div>
   );
 }
