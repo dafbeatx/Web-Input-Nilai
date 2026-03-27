@@ -2,22 +2,7 @@
 
 import React, { useState } from 'react';
 import { 
-  ArrowLeft, 
-  RefreshCcw, 
-  User, 
-  MapPin, 
-  Clock, 
-  Eye, 
-  CheckCircle2, 
-  AlertTriangle,
-  FileText,
-  Search,
-  ChevronDown,
-  ChevronUp,
-  Plus,
-  Trash2,
-  Save,
-  Settings2
+  ArrowLeft, RefreshCcw, User, MapPin, Clock, Eye, CheckCircle2, AlertTriangle, FileText, Search, ChevronDown, ChevronUp, Plus, Trash2, Save, Settings2, ShieldAlert, Check
 } from 'lucide-react';
 import { GradedStudent, ScoringConfig } from '@/lib/grademaster/types';
 
@@ -57,6 +42,8 @@ export default function RemedialDashboardLayer({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [reviewScore, setReviewScore] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSaveQuestions = () => {
     onUpdateQuestions?.(scoringConfig.remedialQuestions || []);
@@ -67,7 +54,6 @@ export default function RemedialDashboardLayer({
     setIsEditing(false);
   };
 
-  // Filter students who have interacted with remedial
   const remedialStudents = gradedStudents.filter(s => 
     s.remedialStatus && s.remedialStatus !== 'NONE'
   ).filter(s => 
@@ -80,28 +66,52 @@ export default function RemedialDashboardLayer({
     inProgress: remedialStudents.filter(s => s.remedialStatus === 'IN_PROGRESS').length,
     cheated: remedialStudents.filter(s => s.remedialStatus === 'CHEATED').length,
     timeout: remedialStudents.filter(s => s.remedialStatus === 'TIMEOUT').length,
+    waitingReview: remedialStudents.filter(s => s.remedialStatus === 'REMEDIAL' && !s.teacherReviewed).length
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, teacherReviewed?: boolean) => {
     switch (status) {
       case 'COMPLETED':
-        return <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><CheckCircle2 size={10}/> SELESAI</span>;
+        return <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><CheckCircle2 size={10}/> FINAL (SELESAI)</span>;
       case 'IN_PROGRESS':
         return <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><Clock size={10}/> PROSES</span>;
       case 'CHEATED':
         return <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><AlertTriangle size={10}/> CURANG</span>;
       case 'TIMEOUT':
         return <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 border border-slate-200 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><Clock size={10}/> WAKTU HABIS</span>;
+      case 'REMEDIAL':
+        if (teacherReviewed) {
+           return <span className="px-2.5 py-1 rounded-lg bg-sky-50 text-sky-600 border border-sky-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><Check size={10}/> SUDAH DIKOREKSI</span>;
+        } else {
+           return <span className="px-2.5 py-1 rounded-lg bg-orange-50 text-orange-600 border border-orange-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><Clock size={10}/> BELUM DIKOREKSI</span>;
+        }
       default:
         return <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-400 border border-slate-200 text-[10px] font-black uppercase tracking-wider">{status}</span>;
     }
   };
 
-  const getSemester = (type: string) => {
-    const t = type.toUpperCase();
-    if (t.includes('PAS') || t.includes('GANJIL') || (t.includes('UTS') && !t.includes('GENAP'))) return 'Ganjil';
-    if (t.includes('PAT') || t.includes('GENAP')) return 'Genap';
-    return '-';
+  const submitReview = async (studentId: string, action: 'review' | 'finalize') => {
+    try {
+      setIsSubmitting(true);
+      const res = await fetch('/api/grademaster/students/remedial/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId,
+          action,
+          remedialScore: Number(reviewScore),
+          sessionKkm: kkm
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal menyimpan evaluasi');
+      alert(`Berhasil: ${data.message}`);
+      window.location.reload(); 
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -120,7 +130,6 @@ export default function RemedialDashboardLayer({
              <Badge color="indigo">Semester {semester}</Badge>
              <Badge color="slate">{subject}</Badge>
           </div>
-          <p className="text-[10px] text-slate-400 font-medium mt-2 italic">Memantau hasil pengerjaan ulang dan kejujuran siswa.</p>
         </div>
         
         <div className="flex items-center gap-3">
@@ -139,8 +148,8 @@ export default function RemedialDashboardLayer({
                 <span className="text-lg font-black text-slate-700">{stats.total}</span>
              </div>
              <div className="flex flex-col items-center px-4 py-2 border-r border-slate-50">
-                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-tighter leading-none mb-1">Lulus</span>
-                <span className="text-lg font-black text-emerald-600">{stats.completed}</span>
+                <span className="text-[10px] font-black text-orange-400 uppercase tracking-tighter leading-none mb-1">Antrean</span>
+                <span className="text-lg font-black text-orange-600">{stats.waitingReview}</span>
              </div>
              <div className="flex flex-col items-center px-4 py-2">
                 <span className="text-[10px] font-black text-rose-400 uppercase tracking-tighter leading-none mb-1">Isu</span>
@@ -199,7 +208,6 @@ export default function RemedialDashboardLayer({
          </div>
        )}
 
-      {/* Search Bar */}
       <div className="mb-6 relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
         <input 
@@ -253,12 +261,24 @@ export default function RemedialDashboardLayer({
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between md:justify-end gap-4 min-w-[200px]">
-                  <div className="flex flex-col items-end">
-                    <div className="mb-2">{getStatusBadge(student.remedialStatus || '')}</div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Nilai Akhir: <span className="text-indigo-600">{student.finalScore}</span>
-                    </p>
+                <div className="flex items-center justify-between md:justify-end gap-4 min-w-[300px]">
+                  <div className="flex items-center gap-4 text-right">
+                    <div className="flex flex-col">
+                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Nilai Awal</span>
+                       <span className="text-sm font-black text-slate-700">{student.originalScore || student.finalScore}</span>
+                    </div>
+                    {student.remedialStatus === 'COMPLETED' && (
+                      <div className="flex flex-col border-l border-slate-100 pl-4">
+                         <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">Remedial</span>
+                         <span className="text-sm font-black text-indigo-700">{student.remedialScore}</span>
+                      </div>
+                    )}
+                    <div className="flex flex-col border-l border-slate-200 pl-4 items-end">
+                      <div className="mb-2">{getStatusBadge(student.remedialStatus || '', student.teacherReviewed)}</div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Nilai Akhir: <span className="text-indigo-600">{student.finalScoreLocked || student.finalScore}</span>
+                      </p>
+                    </div>
                   </div>
                   <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
                     {selectedStudentId === student.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -267,8 +287,69 @@ export default function RemedialDashboardLayer({
               </div>
 
               {selectedStudentId === student.id && (
-                <div className="px-4 pb-6 md:px-6 md:pb-8 border-t border-slate-100 animate-in slide-in-from-top-2">
+                <div className="px-4 pb-6 md:px-6 md:pb-8 border-t border-slate-100 bg-slate-50/50">
                   <div className="mt-6 space-y-6">
+                    {/* Cheating Alerts */}
+                    {student.isCheated && student.cheatingFlags && student.cheatingFlags.length > 0 && (
+                      <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex gap-3">
+                         <ShieldAlert className="text-rose-600 shrink-0" size={20} />
+                         <div>
+                           <h4 className="text-sm font-black tracking-tight text-rose-800">Sistem Deteksi Kecurangan Terpicu</h4>
+                           <ul className="mt-2 list-disc list-inside text-xs font-bold text-rose-700 space-y-1">
+                             {student.cheatingFlags.map((flag, idx) => <li key={idx}>{flag}</li>)}
+                           </ul>
+                           <p className="mt-2 text-xs text-rose-600 font-medium">Nilai siswa otomatis menjadi 0 menurut algoritma penalti deteksi kecurangan.</p>
+                         </div>
+                      </div>
+                    )}
+
+                    {/* Teacher Action Panel */}
+                    {(student.remedialStatus === 'REMEDIAL' || student.remedialStatus === 'COMPLETED') && !student.isCheated && (
+                      <div className="p-5 bg-white border border-indigo-100 rounded-2xl shadow-sm">
+                         <h4 className="text-xs font-black uppercase tracking-widest text-indigo-600 mb-4 flex items-center gap-2">
+                           Evaluasi Guru
+                         </h4>
+                         
+                         <div className="flex flex-col md:flex-row gap-4 items-center">
+                            <div className="flex-1 w-full">
+                               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Input Nilai Remedial (0 - 100)</label>
+                               <input 
+                                 type="number" 
+                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-black text-slate-700" 
+                                 placeholder="Masukkan nilai murni remedial..."
+                                 value={reviewScore || (student.remedialScore || '')}
+                                 onChange={(e) => setReviewScore(e.target.value)}
+                                 disabled={student.remedialStatus === 'COMPLETED' || isSubmitting}
+                               />
+                            </div>
+                            
+                            {student.remedialStatus === 'REMEDIAL' && (
+                              <div className="flex gap-2 w-full md:w-auto mt-4 md:mt-0">
+                                <button 
+                                  onClick={() => submitReview(student.id, 'review')}
+                                  disabled={isSubmitting || !reviewScore}
+                                  className="flex-1 md:flex-none px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl disabled:opacity-50 transition-all shadow-md shadow-indigo-600/20"
+                                >
+                                  Simpan Koreksi
+                                </button>
+                                {student.teacherReviewed && (
+                                  <button 
+                                    onClick={() => submitReview(student.id, 'finalize')}
+                                    disabled={isSubmitting}
+                                    className="flex-1 md:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl disabled:opacity-50 transition-all shadow-md shadow-emerald-600/20"
+                                  >
+                                    Finalisasi Nilai
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                         </div>
+                         {student.teacherReviewed && student.remedialStatus !== 'COMPLETED' && (
+                           <p className="mt-3 text-xs text-indigo-500 font-bold italic">* KOREKSI PERTAMA DISIMPAN! Klik Finalisasi Nilai untuk merekap ke nilai akhir (maksimal sesuai KKM {kkm}).</p>
+                         )}
+                      </div>
+                    )}
+
                     {/* Remedial Answers */}
                     <div>
                       <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400 mb-4">
@@ -276,32 +357,21 @@ export default function RemedialDashboardLayer({
                       </h4>
                       <div className="space-y-4">
                         {scoringConfig.remedialQuestions?.map((q, idx) => (
-                           <div key={idx} className="bg-slate-50 rounded-2xl p-4 md:p-5 border border-slate-100">
+                           <div key={idx} className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200 shadow-sm">
                              <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Soal {idx + 1}</div>
                              <p className="text-sm font-black text-slate-800 mb-3">{q}</p>
-                             <div className="bg-white rounded-xl p-3 border border-slate-200 text-xs font-bold text-slate-600 leading-relaxed italic">
+                             <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 text-xs font-bold text-slate-600 leading-relaxed italic">
                                 "{student.remedialAnswers?.[idx] || '(Tidak ada jawaban)'}"
                              </div>
                            </div>
                         ))}
-                        {(scoringConfig.remedialQuestions?.length || 0) === 0 && (
-                          <div className="text-center py-4 text-slate-400 text-xs font-bold italic">
-                            Tidak ada soal essay remedial yang dikonfigurasi.
-                          </div>
-                        )}
                       </div>
                     </div>
 
-                    {/* Student Note */}
+                    {/* Note */}
                     {student.remedialNote && (
-                      <div className="p-5 bg-amber-50 rounded-2xl border border-amber-100 shadow-sm relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-2 text-amber-200">
-                           <FileText size={48} />
-                        </div>
-                        <h4 className="text-xs font-black uppercase tracking-widest text-amber-600 mb-2 relative z-10">Catatan dari Siswa</h4>
-                        <p className="text-sm font-bold text-amber-900 italic leading-relaxed relative z-10">
-                          "{student.remedialNote}"
-                        </p>
+                      <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 text-sm font-bold text-amber-900 italic">
+                        Catatan Siswa: "{student.remedialNote}"
                       </div>
                     )}
                   </div>

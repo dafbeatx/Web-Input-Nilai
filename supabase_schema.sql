@@ -56,6 +56,13 @@ CREATE TABLE IF NOT EXISTS public.gm_students (
     remedial_note TEXT,
     remedial_ip TEXT,
     remedial_location TEXT,
+    original_score NUMERIC(5,2) DEFAULT 0,
+    remedial_score NUMERIC(5,2) DEFAULT 0,
+    final_score_locked NUMERIC(5,2) DEFAULT 0,
+    is_cheated BOOLEAN DEFAULT FALSE,
+    teacher_reviewed BOOLEAN DEFAULT FALSE,
+    cheating_flags JSONB DEFAULT '[]'::jsonb,
+    remedial_attempts INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 

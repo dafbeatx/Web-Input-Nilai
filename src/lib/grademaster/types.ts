@@ -41,7 +41,15 @@ export interface GradedStudent {
   remedialStatus?: 'NONE' | 'STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT';
   remedialLocation?: string;
   remedialAnswers?: string[];
+  remedialEssayScores?: number[];
   remedialNote?: string;
+  originalScore?: number;
+  remedialScore?: number;
+  finalScoreLocked?: number;
+  isCheated?: boolean;
+  teacherReviewed?: boolean;
+  cheatingFlags?: string[];
+  remedialAttempts?: number;
 }
 
 export interface SessionData {
