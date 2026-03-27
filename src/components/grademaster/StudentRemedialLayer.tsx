@@ -146,31 +146,18 @@ export default function StudentRemedialLayer({
     }
     setCameraOk(camReady);
 
-    // Check location properly with callback wrap
-    await new Promise<void>((resolve) => {
-      if (!navigator.geolocation) {
-        locReady = false;
-        resolve();
-        return;
+    // Check location properly with fallback chain
+    try {
+      await getPosition();
+      locReady = true;
+      setLocationOk(true);
+    } catch (err: any) {
+      locReady = false;
+      setLocationOk(false);
+      if (err?.code === 1) {
+        setToast({ message: 'Izin lokasi ditolak browser. Mohon izinkan dari pengaturan.', type: 'error' });
       }
-      navigator.geolocation.getCurrentPosition(
-        // SUCCESS
-        () => {
-          locReady = true;
-          setLocationOk(true);
-          resolve();
-        },
-        // ERROR
-        (err) => {
-          locReady = false;
-          setLocationOk(false);
-          // Auto-show toast just for location context to help user
-          if (err.code === 1) setToast({ message: 'Izin lokasi ditolak browser. Mohon izinkan dari pengaturan.', type: 'error' });
-          resolve();
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-      );
-    });
+    }
 
     setCheckingPerms(false);
 
@@ -278,23 +265,45 @@ export default function StudentRemedialLayer({
 
 
 
-  const getPosition = (): Promise<GeolocationPosition> => {
+  const getPosition = (): Promise<{ coords: { latitude: number; longitude: number } }> => {
     return new Promise((resolve, reject) => {
+      
+      const fetchIpFallback = (fallbackErr: any) => {
+        fetch('https://get.geojs.io/v1/ip/geo.json')
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.latitude && data.longitude) {
+              resolve({ coords: { latitude: parseFloat(data.latitude), longitude: parseFloat(data.longitude) } });
+            } else {
+              reject(fallbackErr);
+            }
+          })
+          .catch(() => reject(fallbackErr));
+      };
+
       if (!navigator.geolocation) {
-        reject({ code: 0, message: 'Browser tidak mendukung Geolocation' });
+        fetchIpFallback({ code: 0, message: 'Browser tidak mendukung Geolocation' });
         return;
       }
+      
       // Try high accuracy first
       navigator.geolocation.getCurrentPosition(resolve, (errHigh) => {
         if (errHigh.code === 1) {
-          // PERMISSION_DENIED — no point retrying
+          // PERMISSION_DENIED — no point retrying IP, user explicitly denied.
           reject(errHigh);
           return;
         }
-        // Fallback: try without high accuracy (works on more browsers)
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
+        // Fallback: try without high accuracy
+        navigator.geolocation.getCurrentPosition(resolve, (errLow) => {
+          if (errLow.code === 1) {
+            reject(errLow);
+            return;
+          }
+          // Ultimate Fallback: IP-based location (fixes Chromium 400 Network location provider error)
+          fetchIpFallback(errLow);
+        }, {
           enableHighAccuracy: false,
-          timeout: 15000,
+          timeout: 10000,
           maximumAge: 60000,
         });
       }, {
