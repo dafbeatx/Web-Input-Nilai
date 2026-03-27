@@ -119,13 +119,18 @@ export default function GradeMaster() {
     }
     
     let initialLayer: Layer = 'home';
-    const persistedLayer = getActiveLayer() || (savedLayer as Layer) || 'home';
     
     // Hash takes precedence if valid, otherwise use persisted, otherwise home
     if (validLayers.includes(hash)) {
       initialLayer = hash as Layer;
-    } else if (validLayers.includes(persistedLayer)) {
-      initialLayer = persistedLayer as Layer;
+    } else if (!hash) {
+      // If no hash, force home to be the landing page
+      initialLayer = 'home';
+    } else {
+      const persistedLayer = getActiveLayer() || (savedLayer as Layer) || 'home';
+      if (validLayers.includes(persistedLayer)) {
+        initialLayer = persistedLayer as Layer;
+      }
     }
 
     // Apply route guard for setup
