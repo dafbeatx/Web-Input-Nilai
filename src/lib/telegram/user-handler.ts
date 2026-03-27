@@ -243,7 +243,13 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
 
     let remedialWarning = '';
     if (isRemedial) {
-      remedialWarning = `\n⚠️ <b>TIDAK MEMENUHI KKM (${kkm})</b>\nAnda diwajibkan mengikuti Remedial. Silakan klik link berikut dan pilih sesi kelas Anda:\n🌐 <a href="${webUrl}">${webUrl}</a>\n`;
+      remedialWarning = 
+        `\n⚠️ <b>TIDAK MEMENUHI KKM (${kkm})</b>\n` +
+        `Sesuai kebijakan, Remedial diberi waktu <b>5 HARI</b> dari penginputan nilai.\n\n` +
+        `🌐 <b>Lakukan melalui:</b> <a href="${webUrl}">${webUrl}</a>\n\n` +
+        `❌ <b>Konsekuensi Keterlambatan:</b>\n` +
+        `• Nilai otomatis diset menjadi <b>0</b>\n` +
+        `• Penalti <b>-10 Poin Perilaku</b>\n`;
     }
 
     const totalPG = Array.isArray(sessionInfo.answer_key) ? sessionInfo.answer_key.length : 0;
