@@ -1,90 +1,127 @@
 "use client";
 
-import React, { useEffect, useRef } from 'react';
-import { FaceDetection, Results } from '@mediapipe/face_detection';
-import { Camera } from '@mediapipe/camera_utils';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface ProctoringCameraProps {
   onViolation: (type: 'NO_FACE' | 'MULTIPLE_FACES' | 'FACE_UNALIGNED') => void;
 }
 
+function loadScript(src: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.crossOrigin = 'anonymous';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
 export default function ProctoringCamera({ onViolation }: ProctoringCameraProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    let camera: Camera | null = null;
-    let faceDetection: FaceDetection | null = null;
     let isActive = true;
+    let stream: MediaStream | null = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
-    const setupCamera = async () => {
-      if (!videoRef.current) return;
-
-      faceDetection = new FaceDetection({
-        locateFile: (file) => {
-          return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
-        }
-      });
-
-      faceDetection.setOptions({
-        model: 'short',
-        minDetectionConfidence: 0.5
-      });
-
-      faceDetection.onResults((results: Results) => {
-        if (!isActive) return;
-        
-        const faceCount = results.detections.length;
-        
-        if (faceCount === 0) {
-          onViolation('NO_FACE');
-        } else if (faceCount > 1) {
-          onViolation('MULTIPLE_FACES');
-        } else {
-          // Check alignment (optional, but requested in rules)
-          // For now, if faceCount === 1, we assume it's good unless it's way off screen 
-          // (but MediaPipe usually detects if it's partially in screen).
-        }
-      });
-
+    const setup = async () => {
       try {
-        camera = new Camera(videoRef.current, {
-          onFrame: async () => {
-            if (isActive && videoRef.current && faceDetection) {
-              await faceDetection.send({ image: videoRef.current });
-            }
-          },
-          width: 320,
-          height: 240
+        // Load MediaPipe scripts from CDN
+        await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js');
+        await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js');
+
+        if (!isActive || !videoRef.current) return;
+
+        // Get camera stream
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 320, height: 240, facingMode: 'user' }
         });
 
-        await camera.start();
+        if (!isActive || !videoRef.current) {
+          stream.getTracks().forEach(t => t.stop());
+          return;
+        }
+
+        videoRef.current.srcObject = stream;
+
+        // Access MediaPipe from global window scope
+        const win = window as any;
+        if (!win.FaceDetection) {
+          console.warn('FaceDetection not found on window after script load');
+          setIsLoading(false);
+          return;
+        }
+
+        const faceDetection = new win.FaceDetection({
+          locateFile: (file: string) =>
+            `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`
+        });
+
+        faceDetection.setOptions({
+          model: 'short',
+          minDetectionConfidence: 0.5
+        });
+
+        faceDetection.onResults((results: { detections: unknown[] }) => {
+          if (!isActive) return;
+
+          const count = results.detections.length;
+          if (count === 0) {
+            onViolation('NO_FACE');
+          } else if (count > 1) {
+            onViolation('MULTIPLE_FACES');
+          }
+        });
+
+        await faceDetection.initialize();
+        setIsLoading(false);
+
+        // Run detection every 1.5 seconds
+        intervalId = setInterval(async () => {
+          if (!isActive || !videoRef.current || videoRef.current.readyState < 2) return;
+
+          try {
+            await faceDetection.send({ image: videoRef.current });
+          } catch {
+            // Silently ignore send errors (e.g. video not ready)
+          }
+        }, 1500);
+
       } catch (err) {
-        console.error("Camera access denied or failed:", err);
+        console.error('ProctoringCamera setup failed:', err);
+        setIsLoading(false);
       }
     };
 
-    setupCamera();
+    setup();
 
     return () => {
       isActive = false;
-      if (camera) {
-        camera.stop();
-      }
-      if (faceDetection) {
-        faceDetection.close();
-      }
+      if (intervalId) clearInterval(intervalId);
+      if (stream) stream.getTracks().forEach(t => t.stop());
     };
   }, [onViolation]);
 
   return (
     <div className="w-full h-full relative">
-      <video 
-         ref={videoRef} 
-         className="w-full h-full object-cover rounded-xl"
-         playsInline
-         muted
-         autoPlay
+      <video
+        ref={videoRef}
+        className="w-full h-full object-cover rounded-xl"
+        playsInline
+        muted
+        autoPlay
       />
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl">
+          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
     </div>
   );
 }
