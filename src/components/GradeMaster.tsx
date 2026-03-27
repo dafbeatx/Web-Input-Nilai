@@ -579,6 +579,7 @@ export default function GradeMaster() {
           studentName={studentName}
           setStudentName={setStudentName}
           studentClass={studentClass}
+          academicYear={academicYear}
           schoolLevel={schoolLevel}
           studentList={studentList}
           userAnswers={userAnswers}

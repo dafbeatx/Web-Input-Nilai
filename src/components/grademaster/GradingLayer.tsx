@@ -29,6 +29,7 @@ interface GradingLayerProps {
   studentName: string;
   setStudentName: (v: string) => void;
   studentClass: string;
+  academicYear: string;
   schoolLevel: string;
   studentList: string[];
   userAnswers: Record<number, string>;
@@ -46,7 +47,7 @@ export default function GradingLayer(props: GradingLayerProps) {
   const {
     sessionId, teacherName, subject, answerKey,
     studentName, setStudentName,
-    studentClass, schoolLevel, studentList,
+    studentClass, academicYear, schoolLevel, studentList,
     userAnswers, setUserAnswers,
     essayScores, setEssayScores,
     scoringConfig, onSaveStudent, onBack, onReset, setToast,
@@ -66,23 +67,24 @@ export default function GradingLayer(props: GradingLayerProps) {
   const result = calculateStudentResult(answerKey, userAnswers, essayScores, scoringConfig);
 
   React.useEffect(() => {
-    if (!sessionId) return;
+    if (!studentClass || !academicYear) return;
     const fetchStudents = async () => {
       try {
         const { data } = await supabase
-          .from('gm_students')
-          .select('id, name')
-          .eq('session_id', sessionId)
-          .order('name');
+          .from('gm_behaviors')
+          .select('id, student_name')
+          .eq('class_name', studentClass)
+          .eq('academic_year', academicYear)
+          .order('student_name');
         if (data) {
-          setDbStudents(data);
+          setDbStudents(data.map((d: any) => ({ id: d.id, name: d.student_name })));
         }
       } catch (err) {
         console.error("Failed to fetch db students", err);
       }
     };
     fetchStudents();
-  }, [sessionId]);
+  }, [studentClass, academicYear]);
 
   React.useEffect(() => {
     if (!studentName) {
