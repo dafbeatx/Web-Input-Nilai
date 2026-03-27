@@ -27,6 +27,7 @@ export async function PUT(req: NextRequest) {
         .select('id')
         .eq('session_id', sessionId)
         .eq('name', studentName)
+        .eq('is_deleted', false)
         .single();
         
       if (!fetchStu) return NextResponse.json({ error: 'Siswa tidak ditemukan' }, { status: 404 });

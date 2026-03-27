@@ -44,6 +44,8 @@ export default function RemedialDashboardLayer({
   const [isEditing, setIsEditing] = useState(false);
   const [reviewScore, setReviewScore] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const handleSaveQuestions = () => {
     onUpdateQuestions?.(scoringConfig.remedialQuestions || []);
@@ -54,8 +56,28 @@ export default function RemedialDashboardLayer({
     setIsEditing(false);
   };
 
+  const handleDeleteStudent = async (e: React.MouseEvent, id: string, name: string) => {
+    e.stopPropagation();
+    if (!window.confirm(`Yakin ingin menghapus siswa "${name}"?\nData nilai akan dihapus (soft delete).`)) return;
+    
+    setIsDeleting(id);
+    try {
+      const res = await fetch('/api/grademaster/students', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: id })
+      });
+      if (!res.ok) throw new Error('Gagal menghapus');
+      setDeletedIds(prev => [...prev, id]);
+    } catch (err) {
+      alert('Gagal menghapus siswa. Silakan coba lagi.');
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
   const remedialStudents = gradedStudents.filter(s => 
-    s.remedialStatus && s.remedialStatus !== 'NONE'
+    s.remedialStatus && s.remedialStatus !== 'NONE' && !deletedIds.includes(s.id)
   ).filter(s => 
     s.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -280,8 +302,18 @@ export default function RemedialDashboardLayer({
                       </p>
                     </div>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                    {selectedStudentId === student.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={(e) => handleDeleteStudent(e, student.id, student.name)}
+                      disabled={isDeleting === student.id}
+                      className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-400 hover:bg-rose-100 hover:text-rose-600 transition-colors"
+                      title="Hapus Siswa"
+                    >
+                      {isDeleting === student.id ? <div className="w-4 h-4 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" /> : <Trash2 size={16} />}
+                    </button>
+                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                      {selectedStudentId === student.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                    </div>
                   </div>
                 </div>
               </div>

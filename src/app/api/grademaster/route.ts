@@ -63,7 +63,8 @@ export async function POST(req: NextRequest) {
       const { data: students, error: stuError } = await supabase
         .from('gm_students')
         .select('*')
-        .eq('session_id', targetId);
+        .eq('session_id', targetId)
+        .eq('is_deleted', false);
         
       if (stuError || !students) return NextResponse.json({ error: 'Students not found' }, { status: 404 });
       
@@ -205,7 +206,8 @@ export async function GET(req: NextRequest) {
           const { count } = await supabase
             .from('gm_students')
             .select('*', { count: 'exact', head: true })
-            .eq('session_id', s.id);
+            .eq('session_id', s.id)
+            .eq('is_deleted', false);
           return { ...s, student_count: count || 0 };
         })
       );
@@ -251,6 +253,7 @@ export async function GET(req: NextRequest) {
       .from('gm_students')
       .select('*')
       .eq('session_id', session.id)
+      .eq('is_deleted', false)
       .order('created_at', { ascending: true });
 
     const gradedStudents: GradedStudent[] = (students || []).map(s => ({
