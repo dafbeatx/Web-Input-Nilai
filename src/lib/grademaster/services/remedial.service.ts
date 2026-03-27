@@ -139,7 +139,7 @@ export async function finalizeRemedial(
 ) {
   const { data: student, error: fetchErr } = await supabase
     .from('gm_students')
-    .select('essay_score_final, remedial_score, is_cheated, teacher_reviewed')
+    .select('essay_score_final, remedial_score, is_cheated, teacher_reviewed, original_score, final_score')
     .eq('id', studentId)
     .single();
 
@@ -153,7 +153,10 @@ export async function finalizeRemedial(
     throw new Error('Guru belum mengoreksi nilai remedial');
   }
 
-  const finalScore = Math.min(student.essay_score_final || student.remedial_score || 0, sessionKkm);
+  // The new remedial score is already calculated (essay_score_final)
+  // We cap the remedial improvement at KKM, but ensure we don't LOWER their original score
+  const remedialResult = Math.min(student.essay_score_final || student.remedial_score || 0, sessionKkm);
+  const finalScore = Math.max(student.original_score || student.final_score || 0, remedialResult);
 
   const { error } = await supabase
     .from('gm_students')
