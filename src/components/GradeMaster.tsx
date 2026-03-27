@@ -333,12 +333,11 @@ export default function GradeMaster() {
     // Persist to DB if we have a session ID
     if (sessionId) {
       try {
-        await fetch("/api/grademaster/students", {
+        const res = await fetch("/api/grademaster/students", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             sessionId,
-            id: student.id,
             name: student.name,
             mcqAnswers: student.answers,
             essayScores: student.essayScores,
@@ -352,8 +351,14 @@ export default function GradeMaster() {
             answerKey,
           }),
         });
+        const data = await res.json();
+        if (!res.ok) {
+          console.error("Failed to persist student:", data.error);
+          setToast({ message: `Gagal menyimpan ke database: ${data.error}`, type: "error" });
+        }
       } catch (err) {
         console.error("Failed to persist student:", err);
+        setToast({ message: "Gagal menyimpan ke database. Periksa koneksi.", type: "error" });
       }
     }
   };

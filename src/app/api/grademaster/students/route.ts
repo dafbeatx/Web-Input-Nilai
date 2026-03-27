@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { checkRateLimit } from '@/lib/grademaster/security';
 
-const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-
 export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
@@ -19,14 +17,20 @@ export async function POST(req: NextRequest) {
     }
 
     let studentData: { id: string } | null = null;
-    const isExistingStudent = id && isUUID(id);
 
-    if (isExistingStudent) {
+    // Check if student with same name already exists in this session
+    const { data: existingStudent } = await supabase
+      .from('gm_students')
+      .select('id')
+      .eq('session_id', sessionId)
+      .eq('name', name.trim())
+      .single();
+
+    if (existingStudent) {
       // Update existing student
       const { data, error } = await supabase
         .from('gm_students')
         .update({
-          name: name.trim(),
           mcq_answers: mcqAnswers || {},
           essay_scores: essayScores || [],
           mcq_score: mcqScore || 0,
@@ -37,8 +41,7 @@ export async function POST(req: NextRequest) {
           correct: correct || 0,
           wrong: wrong || 0,
         })
-        .eq('id', id)
-        .eq('session_id', sessionId)
+        .eq('id', existingStudent.id)
         .select('id')
         .single();
 
@@ -91,7 +94,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ message: isExistingStudent ? 'Nilai siswa berhasil diperbarui' : 'Siswa berhasil ditambahkan', studentId: studentData?.id });
+    return NextResponse.json({ message: existingStudent ? 'Nilai siswa berhasil diperbarui' : 'Siswa berhasil ditambahkan', studentId: studentData?.id });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Gagal menyimpan siswa';
     console.error('Student save error:', message);

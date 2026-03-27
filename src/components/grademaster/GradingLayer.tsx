@@ -61,7 +61,6 @@ export default function GradingLayer(props: GradingLayerProps) {
   const [isDetecting, setIsDetecting] = React.useState(false);
   const [dbStudents, setDbStudents] = React.useState<{id: string, name: string}[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
-  const [selectedStudentId, setSelectedStudentId] = React.useState<string | null>(null);
   const [isNewStudent, setIsNewStudent] = React.useState(false);
 
   const result = calculateStudentResult(answerKey, userAnswers, essayScores, scoringConfig);
@@ -88,7 +87,6 @@ export default function GradingLayer(props: GradingLayerProps) {
 
   React.useEffect(() => {
     if (!studentName) {
-      setSelectedStudentId(null);
       setIsNewStudent(false);
     }
   }, [studentName]);
@@ -109,7 +107,6 @@ export default function GradingLayer(props: GradingLayerProps) {
   }, [dbStudents, studentName]);
 
   const selectStudent = (id: string, name: string) => {
-    setSelectedStudentId(id);
     setStudentName(name);
     setIsDropdownOpen(false);
     setIsNewStudent(false);
@@ -197,7 +194,7 @@ export default function GradingLayer(props: GradingLayerProps) {
     }
 
     const student: GradedStudent = {
-      id: selectedStudentId || Date.now().toString(),
+      id: Date.now().toString(),
       name: studentName.trim(),
       answers: { ...userAnswers },
       essayScores: [...essayScores],
@@ -279,7 +276,6 @@ export default function GradingLayer(props: GradingLayerProps) {
                 value={studentName}
                 onChange={(e) => {
                   setStudentName(e.target.value);
-                  setSelectedStudentId(null);
                   setIsDropdownOpen(true);
                 }}
                 onFocus={() => {
@@ -304,7 +300,6 @@ export default function GradingLayer(props: GradingLayerProps) {
                             className="w-full text-left px-3 py-2 text-xs md:text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg transition-colors flex items-center justify-between"
                           >
                             <span>{s.name}</span>
-                            {selectedStudentId === s.id && <CheckCircle2 size={14} className="text-indigo-600" />}
                           </button>
                         </li>
                       ))}
@@ -315,7 +310,6 @@ export default function GradingLayer(props: GradingLayerProps) {
                           onClick={() => {
                             setIsNewStudent(true);
                             setIsDropdownOpen(false);
-                            setSelectedStudentId(null);
                           }}
                           className="w-full text-left px-3 py-2 text-xs md:text-sm font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-2"
                         >
@@ -331,7 +325,6 @@ export default function GradingLayer(props: GradingLayerProps) {
                         onClick={() => {
                           setIsNewStudent(true);
                           setIsDropdownOpen(false);
-                          setSelectedStudentId(null);
                         }}
                         className="px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-lg hover:bg-indigo-100 transition-colors"
                       >
