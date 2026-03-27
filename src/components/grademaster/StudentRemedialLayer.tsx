@@ -197,12 +197,12 @@ export default function StudentRemedialLayer({
         return oldFlags;
       });
 
-      if (newCount >= 5) {
+      if (newCount >= 10) {
         hasTriggeredCheatingRef.current = true;
         setToast({ message: "Batas pelanggaran terlampaui. Ujian dihentikan.", type: "error" });
         handleStatusUpdate('CHEATED');
       } else {
-        setToast({ message: `Peringatan Kamera: ${flagMessage} (${newCount}/5)`, type: "error" });
+        setToast({ message: `Peringatan Kamera: ${flagMessage} (${newCount}/10)`, type: "error" });
       }
 
       return newCount;
@@ -703,7 +703,7 @@ export default function StudentRemedialLayer({
             )}
             {warningCount > 0 && (
               <span className="text-[7px] md:text-[8px] bg-rose-500/90 text-white px-1 rounded font-bold backdrop-blur-sm">
-                CAM: {warningCount}/5
+                CAM: {warningCount}/10
               </span>
             )}
           </div>

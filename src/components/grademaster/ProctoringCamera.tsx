@@ -75,13 +75,38 @@ export default function ProctoringCamera({ onViolation }: ProctoringCameraProps)
           minDetectionConfidence: 0.5
         });
 
+        const violationsRef = { type: '', count: 0 };
+
         faceDetection.onResults((results: { detections: unknown[] }) => {
           if (!isActive) return;
           const count = results.detections.length;
+          let currentViolation = '';
+
           if (count === 0) {
-            onViolationRef.current('NO_FACE');
+            currentViolation = 'NO_FACE';
           } else if (count > 1) {
-            onViolationRef.current('MULTIPLE_FACES');
+            currentViolation = 'MULTIPLE_FACES';
+          }
+
+          if (currentViolation) {
+            if (violationsRef.type === currentViolation) {
+              violationsRef.count++;
+            } else {
+              violationsRef.type = currentViolation;
+              violationsRef.count = 1;
+            }
+
+            // Only trigger if violation persists for 2 consecutive checks (~3 seconds total)
+            if (violationsRef.count >= 2) {
+              onViolationRef.current(currentViolation as any);
+              // Reset count after triggering to avoid continuous firing every 1.5s
+              // but keep type to detect next sequence if it persists
+              violationsRef.count = 0; 
+            }
+          } else {
+            // Valid state: reset violation tracker
+            violationsRef.type = '';
+            violationsRef.count = 0;
           }
         });
 
