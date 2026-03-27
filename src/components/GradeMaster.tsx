@@ -15,6 +15,7 @@ import {
 import { parseAnswerKey, parseEssayQuestions, formatEssayQuestions } from "@/lib/grademaster/parser";
 import { generateAnalytics, generateInsights } from '@/lib/grademaster/analytics';
 import { loadRemedialSession } from '@/lib/grademaster/session';
+import { saveActiveLayer, getActiveLayer } from '@/lib/grademaster/navigation';
 
 import HomeLayer from "./grademaster/HomeLayer";
 import SetupLayer from "./grademaster/SetupLayer";
@@ -97,9 +98,20 @@ export default function GradeMaster() {
     const savedIsPublicView = localStorage.getItem("gm_isPublicView") === "true";
 
     const hash = window.location.hash.replace('#', '');
-    const initialLayer = (['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard'].includes(hash) ? hash : (savedLayer || 'home')) as Layer;
+    const validLayers = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard'];
+    
+    let initialLayer: Layer = 'home';
+    const persistedLayer = getActiveLayer() || (savedLayer as Layer) || 'home';
+    
+    // Hash takes precedence if valid, otherwise use persisted, otherwise home
+    if (validLayers.includes(hash)) {
+      initialLayer = hash as Layer;
+    } else if (validLayers.includes(persistedLayer)) {
+      initialLayer = persistedLayer as Layer;
+    }
 
     setInternalLayer(initialLayer);
+    saveActiveLayer(initialLayer);
     window.history.replaceState({ layer: initialLayer }, '', `#${initialLayer}`);
 
     // Restore active remedial exam session
