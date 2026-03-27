@@ -146,14 +146,31 @@ export default function StudentRemedialLayer({
     }
     setCameraOk(camReady);
 
-    // Check location
-    try {
-      await getPosition();
-      locReady = true;
-    } catch {
-      locReady = false;
-    }
-    setLocationOk(locReady);
+    // Check location properly with callback wrap
+    await new Promise<void>((resolve) => {
+      if (!navigator.geolocation) {
+        locReady = false;
+        resolve();
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        // SUCCESS
+        () => {
+          locReady = true;
+          setLocationOk(true);
+          resolve();
+        },
+        // ERROR
+        (err) => {
+          locReady = false;
+          setLocationOk(false);
+          // Auto-show toast just for location context to help user
+          if (err.code === 1) setToast({ message: 'Izin lokasi ditolak browser. Mohon izinkan dari pengaturan.', type: 'error' });
+          resolve();
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    });
 
     setCheckingPerms(false);
 
@@ -595,25 +612,25 @@ export default function StudentRemedialLayer({
 
           {/* Permission Status Indicators */}
           <div className="mb-6 grid grid-cols-2 gap-3">
-            <div className={`p-3 rounded-xl border-2 flex items-center gap-2.5 ${cameraOk ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}>
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${cameraOk ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+            <div className={`p-3 rounded-xl border-2 flex items-center gap-2.5 ${checkingPerms ? 'bg-amber-50 border-amber-200' : cameraOk ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${checkingPerms ? 'bg-amber-500 text-white' : cameraOk ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
                 <Camera size={16} />
               </div>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Kamera</p>
-                <p className={`text-xs font-bold ${cameraOk ? 'text-emerald-600' : 'text-slate-400'}`}>
-                  {cameraOk ? '🟢 Aktif' : '⚪ Belum diizinkan'}
+                <p className={`text-xs font-bold ${checkingPerms ? 'text-amber-600' : cameraOk ? 'text-emerald-600' : 'text-slate-400'}`}>
+                  {checkingPerms ? '🟡 Sedang dicek...' : cameraOk ? '🟢 Aktif' : '🔴 Belum diizinkan'}
                 </p>
               </div>
             </div>
-            <div className={`p-3 rounded-xl border-2 flex items-center gap-2.5 ${locationOk ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}>
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${locationOk ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+            <div className={`p-3 rounded-xl border-2 flex items-center gap-2.5 ${checkingPerms ? 'bg-amber-50 border-amber-200' : locationOk ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${checkingPerms ? 'bg-amber-500 text-white' : locationOk ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
                 <MapPin size={16} />
               </div>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Lokasi</p>
-                <p className={`text-xs font-bold ${locationOk ? 'text-emerald-600' : 'text-slate-400'}`}>
-                  {locationOk ? '📍 Aktif' : '⚪ Belum diizinkan'}
+                <p className={`text-xs font-bold ${checkingPerms ? 'text-amber-600' : locationOk ? 'text-emerald-600' : 'text-slate-400'}`}>
+                  {checkingPerms ? '🟡 Sedang dicek...' : locationOk ? '📍 Aktif' : '🔴 Belum diizinkan'}
                 </p>
               </div>
             </div>
