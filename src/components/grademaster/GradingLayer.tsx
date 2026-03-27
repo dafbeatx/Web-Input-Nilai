@@ -13,13 +13,16 @@ import {
   Undo2,
   ScanSearch,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase/client';
 import { GradedStudent, ScoringConfig, DEFAULT_SCORING_CONFIG, ToastType } from '@/lib/grademaster/types';
 import { calculateStudentResult, getScoreLabel } from '@/lib/grademaster/scoring';
 
 const OPTIONS = ['A', 'B', 'C', 'D'];
 
 interface GradingLayerProps {
+  sessionId: string;
   teacherName: string;
   subject: string;
   answerKey: string[];
@@ -41,7 +44,7 @@ interface GradingLayerProps {
 
 export default function GradingLayer(props: GradingLayerProps) {
   const {
-    teacherName, subject, answerKey,
+    sessionId, teacherName, subject, answerKey,
     studentName, setStudentName,
     studentClass, schoolLevel, studentList,
     userAnswers, setUserAnswers,
@@ -52,9 +55,63 @@ export default function GradingLayer(props: GradingLayerProps) {
   const totalQuestions = answerKey.length;
   const undoStack = useRef<{ qNum: number; prev: string | undefined }[]>([]);
   const questionRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [isDetecting, setIsDetecting] = React.useState(false);
+  const [dbStudents, setDbStudents] = React.useState<{id: string, name: string}[]>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+  const [selectedStudentId, setSelectedStudentId] = React.useState<string | null>(null);
+  const [isNewStudent, setIsNewStudent] = React.useState(false);
+
   const result = calculateStudentResult(answerKey, userAnswers, essayScores, scoringConfig);
+
+  React.useEffect(() => {
+    if (!sessionId) return;
+    const fetchStudents = async () => {
+      try {
+        const { data } = await supabase
+          .from('gm_students')
+          .select('id, name')
+          .eq('session_id', sessionId)
+          .order('name');
+        if (data) {
+          setDbStudents(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch db students", err);
+      }
+    };
+    fetchStudents();
+  }, [sessionId]);
+
+  React.useEffect(() => {
+    if (!studentName) {
+      setSelectedStudentId(null);
+      setIsNewStudent(false);
+    }
+  }, [studentName]);
+
+  React.useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const filteredStudents = React.useMemo(() => {
+    if (!studentName) return dbStudents;
+    return dbStudents.filter(s => s.name.toLowerCase().includes(studentName.toLowerCase()));
+  }, [dbStudents, studentName]);
+
+  const selectStudent = (id: string, name: string) => {
+    setSelectedStudentId(id);
+    setStudentName(name);
+    setIsDropdownOpen(false);
+    setIsNewStudent(false);
+  };
 
   const handleAutoDetect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -138,7 +195,7 @@ export default function GradingLayer(props: GradingLayerProps) {
     }
 
     const student: GradedStudent = {
-      id: Date.now().toString(),
+      id: selectedStudentId || Date.now().toString(),
       name: studentName.trim(),
       answers: { ...userAnswers },
       essayScores: [...essayScores],
@@ -214,13 +271,85 @@ export default function GradingLayer(props: GradingLayerProps) {
                 <input type="file" accept="image/*,.pdf,.doc,.docx" className="hidden" onChange={handleAutoDetect} />
               </label>
             </div>
-            {studentList.length > 0 ? (
-              <select value={studentName} onChange={(e) => setStudentName(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-xs md:text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all">
-                <option value="">-- Pilih Siswa --</option>
-                {studentList.map((s, i) => (<option key={i} value={s}>{s}</option>))}
-              </select>
-            ) : (
-              <input type="text" value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="Contoh: Ahmad" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-xs md:text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all" />
+            <div className="relative" ref={dropdownRef}>
+              <input
+                type="text"
+                value={studentName}
+                onChange={(e) => {
+                  setStudentName(e.target.value);
+                  setSelectedStudentId(null);
+                  setIsDropdownOpen(true);
+                }}
+                onFocus={() => {
+                  if (!isNewStudent) setIsDropdownOpen(true);
+                }}
+                onClick={() => {
+                  if (!isNewStudent) setIsDropdownOpen(true);
+                }}
+                placeholder="Cari atau ketik nama siswa..."
+                className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-xs md:text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"
+              />
+              
+              {isDropdownOpen && !isNewStudent && (
+                <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 shadow-xl rounded-xl max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2">
+                  {filteredStudents.length > 0 ? (
+                    <ul className="p-2 space-y-1">
+                      {filteredStudents.map(s => (
+                        <li key={s.id}>
+                          <button
+                            type="button"
+                            onClick={() => selectStudent(s.id, s.name)}
+                            className="w-full text-left px-3 py-2 text-xs md:text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg transition-colors flex items-center justify-between"
+                          >
+                            <span>{s.name}</span>
+                            {selectedStudentId === s.id && <CheckCircle2 size={14} className="text-indigo-600" />}
+                          </button>
+                        </li>
+                      ))}
+                      <div className="h-px bg-slate-100 my-1" />
+                      <li>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsNewStudent(true);
+                            setIsDropdownOpen(false);
+                            setSelectedStudentId(null);
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs md:text-sm font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          <User size={14} /> Tambah "{studentName || 'baru'}" sebagai siswa baru
+                        </button>
+                      </li>
+                    </ul>
+                  ) : (
+                    <div className="p-4 text-center">
+                      <p className="text-xs font-bold text-slate-500 mb-2">Siswa tidak ditemukan</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsNewStudent(true);
+                          setIsDropdownOpen(false);
+                          setSelectedStudentId(null);
+                        }}
+                        className="px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-lg hover:bg-indigo-100 transition-colors"
+                      >
+                        Tambah siswa baru
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            {isNewStudent && (
+              <p className="text-[10px] mt-2 font-bold text-amber-500 flex items-center gap-1.5 animate-in fade-in pl-1">
+                <AlertCircle size={12} /> Mode tambah siswa baru
+                <button 
+                  onClick={() => setIsNewStudent(false)} 
+                  className="text-slate-400 hover:text-slate-600 underline ml-1"
+                >
+                  Batal
+                </button>
+              </p>
             )}
           </section>
 

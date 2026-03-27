@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { checkRateLimit } from '@/lib/grademaster/security';
 
+const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
 export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
@@ -10,37 +12,72 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { sessionId, name, mcqAnswers, essayScores, mcqScore, essayScore, finalScore, csi, lps, correct, wrong, answerKey } = body;
+    const { sessionId, id, name, mcqAnswers, essayScores, mcqScore, essayScore, finalScore, csi, lps, correct, wrong, answerKey } = body;
 
     if (!sessionId || !name) {
       return NextResponse.json({ error: 'Session ID dan nama siswa wajib diisi' }, { status: 400 });
     }
 
-    // Insert student
-    const { data: student, error: studentError } = await supabase
-      .from('gm_students')
-      .insert({
-        session_id: sessionId,
-        name: name.trim(),
-        mcq_answers: mcqAnswers || {},
-        essay_scores: essayScores || [],
-        mcq_score: mcqScore || 0,
-        essay_score: essayScore || 0,
-        final_score: finalScore || 0,
-        csi: csi || 0,
-        lps: lps || 0,
-        correct: correct || 0,
-        wrong: wrong || 0,
-      })
-      .select('id')
-      .single();
+    let studentData: { id: string } | null = null;
+    const isExistingStudent = id && isUUID(id);
 
-    if (studentError) throw studentError;
+    if (isExistingStudent) {
+      // Update existing student
+      const { data, error } = await supabase
+        .from('gm_students')
+        .update({
+          name: name.trim(),
+          mcq_answers: mcqAnswers || {},
+          essay_scores: essayScores || [],
+          mcq_score: mcqScore || 0,
+          essay_score: essayScore || 0,
+          final_score: finalScore || 0,
+          csi: csi || 0,
+          lps: lps || 0,
+          correct: correct || 0,
+          wrong: wrong || 0,
+        })
+        .eq('id', id)
+        .eq('session_id', sessionId)
+        .select('id')
+        .single();
+
+      if (error) throw error;
+      studentData = data;
+
+      // Delete old answers to avoid duplicates
+      if (studentData) {
+        await supabase.from('gm_answers').delete().eq('student_id', studentData.id);
+      }
+    } else {
+      // Insert new student
+      const { data, error } = await supabase
+        .from('gm_students')
+        .insert({
+          session_id: sessionId,
+          name: name.trim(),
+          mcq_answers: mcqAnswers || {},
+          essay_scores: essayScores || [],
+          mcq_score: mcqScore || 0,
+          essay_score: essayScore || 0,
+          final_score: finalScore || 0,
+          csi: csi || 0,
+          lps: lps || 0,
+          correct: correct || 0,
+          wrong: wrong || 0,
+        })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+      studentData = data;
+    }
 
     // Insert per-question answers for analytics
-    if (student && mcqAnswers && answerKey && Array.isArray(answerKey)) {
+    const returnedStudentId = studentData?.id;
+    if (returnedStudentId && mcqAnswers && answerKey && Array.isArray(answerKey)) {
       const answerRows = Object.entries(mcqAnswers as Record<string, string>).map(([qNum, selected]) => ({
-        student_id: student.id,
+        student_id: returnedStudentId,
         question_number: parseInt(qNum),
         selected_answer: selected,
         is_correct: answerKey[parseInt(qNum) - 1] === selected,
@@ -54,7 +91,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ message: 'Siswa berhasil ditambahkan', studentId: student?.id });
+    return NextResponse.json({ message: isExistingStudent ? 'Nilai siswa berhasil diperbarui' : 'Siswa berhasil ditambahkan', studentId: studentData?.id });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Gagal menyimpan siswa';
     console.error('Student save error:', message);

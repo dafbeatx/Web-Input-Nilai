@@ -329,6 +329,7 @@ export default function GradeMaster() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             sessionId,
+            id: student.id,
             name: student.name,
             mcqAnswers: student.answers,
             essayScores: student.essayScores,
@@ -571,6 +572,7 @@ export default function GradeMaster() {
 
       {layer === "grading" && (
         <GradingLayer
+          sessionId={sessionId}
           teacherName={teacherName}
           subject={subject}
           answerKey={answerKey}
