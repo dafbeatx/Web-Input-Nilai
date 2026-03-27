@@ -342,8 +342,16 @@ export default function DashboardLayer({
                     <td className="py-3.5 text-xs font-bold">
                       {isPublicView ? (
                         r.finalScore < kkm ? (
-                          <div className="flex items-center gap-1.5 text-rose-500">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"/> Perlu Bimbingan (Remedial)
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-1.5 text-rose-500">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500"/> Perlu Bimbingan
+                            </div>
+                            <button 
+                              onClick={() => onStudentRemedial?.(r.name)} 
+                              className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-rose-600 transition-all shadow-sm shadow-rose-200 flex items-center justify-center gap-1.5 w-fit active:scale-95"
+                            >
+                              <Plus size={12} /> Mulai Remedial
+                            </button>
                           </div>
                         ) : (
                           <div className="flex items-center gap-1.5 text-emerald-500">
@@ -352,7 +360,9 @@ export default function DashboardLayer({
                         )
                       ) : (
                         r.finalScore < kkm ? (
-                          <button onClick={() => onStudentRemedial?.(r.name)} className="px-3 py-1 text-[10px] bg-rose-50 text-rose-600 rounded-lg font-black uppercase tracking-wider hover:bg-rose-100 transition-colors border border-rose-100 active:scale-95">Remedial Siswa</button>
+                          <button onClick={() => onStudentRemedial?.(r.name)} className="px-3 py-1.5 text-[10px] bg-rose-50 text-rose-600 rounded-lg font-black uppercase tracking-wider hover:bg-rose-100 transition-colors border border-rose-100 active:scale-95 flex items-center gap-1.5">
+                            <Plus size={12} /> Mulai Remedial
+                          </button>
                         ) : (
                           <span className="text-emerald-500 font-bold text-[11px]">Memenuhi KKM ({kkm})</span>
                         )
