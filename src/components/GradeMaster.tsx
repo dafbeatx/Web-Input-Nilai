@@ -14,6 +14,7 @@ import {
 } from "@/lib/grademaster/types";
 import { parseAnswerKey, parseEssayQuestions, formatEssayQuestions } from "@/lib/grademaster/parser";
 import { generateAnalytics, generateInsights } from '@/lib/grademaster/analytics';
+import { loadRemedialSession } from '@/lib/grademaster/session';
 
 import HomeLayer from "./grademaster/HomeLayer";
 import SetupLayer from "./grademaster/SetupLayer";
@@ -100,6 +101,16 @@ export default function GradeMaster() {
 
     setInternalLayer(initialLayer);
     window.history.replaceState({ layer: initialLayer }, '', `#${initialLayer}`);
+
+    // Restore active remedial exam session
+    const remedialSession = loadRemedialSession();
+    if (remedialSession && remedialSession.step === 'EXAM') {
+      setStudentName(remedialSession.studentName);
+      if (initialLayer !== 'remedial') {
+        setInternalLayer('remedial');
+        window.history.replaceState({ layer: 'remedial' }, '', '#remedial');
+      }
+    }
 
     if (savedSessionName) {
       setSessionName(savedSessionName);

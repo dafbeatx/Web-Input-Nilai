@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ToastType } from '@/lib/grademaster/types';
 import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin } from 'lucide-react';
 import ProctoringCamera from './ProctoringCamera';
+import { saveRemedialSession, loadRemedialSession, clearRemedialSession } from '@/lib/grademaster/session';
 
 interface StudentRemedialLayerProps {
   studentName: string;
@@ -47,6 +48,57 @@ export default function StudentRemedialLayer({
   const [warningCount, setWarningCount] = useState(0);
   const [clientCheatingFlags, setClientCheatingFlags] = useState<string[]>([]);
   const hasTriggeredCheatingRef = useRef(false);
+  const startedAtRef = useRef<number>(0);
+  const isRefreshingRef = useRef(false);
+
+  // Restore session on mount
+  useEffect(() => {
+    const saved = loadRemedialSession();
+    if (saved && saved.sessionId === sessionId && saved.studentName === studentName) {
+      if (['EXAM'].includes(saved.step)) {
+        setStep(saved.step as RemedialStep);
+        setAnswers(saved.answers.length === remedialEssayCount ? saved.answers : new Array(remedialEssayCount).fill(""));
+        setNote(saved.note || '');
+        setCurrentLocation(saved.location || '');
+        startedAtRef.current = saved.startedAt;
+
+        // Calculate remaining time from startedAt
+        const elapsed = Math.floor((Date.now() - saved.startedAt) / 1000);
+        const remaining = Math.max(0, (remedialTimer * 60) - elapsed);
+        setTimeLeft(remaining);
+
+        // Track refresh
+        saveRemedialSession({ ...saved, refreshCount: (saved.refreshCount || 0) + 1 });
+      } else if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(saved.step)) {
+        setStep(saved.step as RemedialStep);
+        clearRemedialSession();
+      }
+    }
+  }, [sessionId, studentName, remedialEssayCount, remedialTimer]);
+
+  // Mark refresh vs tab-leave
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      isRefreshingRef.current = true;
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
+  // Persist answers whenever they change
+  useEffect(() => {
+    if (step !== 'EXAM' || !startedAtRef.current) return;
+    saveRemedialSession({
+      sessionId,
+      studentName,
+      step,
+      startedAt: startedAtRef.current,
+      answers,
+      note,
+      location: currentLocation,
+      refreshCount: loadRemedialSession()?.refreshCount || 0,
+    });
+  }, [answers, note, step, sessionId, studentName, currentLocation]);
 
   const handleCameraViolation = (type: string) => {
     if (hasTriggeredCheatingRef.current || isSubmitting) return;
@@ -147,6 +199,17 @@ export default function StudentRemedialLayer({
     }
 
     // MediaPipe ProctoringCamera will handle media access and stream locally
+    startedAtRef.current = Date.now();
+    saveRemedialSession({
+      sessionId,
+      studentName,
+      step: 'EXAM',
+      startedAt: startedAtRef.current,
+      answers,
+      note,
+      location: locStr,
+      refreshCount: 0,
+    });
     setIsSubmitting(false);
     setStep('EXAM');
   };
@@ -167,13 +230,18 @@ export default function StudentRemedialLayer({
     if (step !== 'EXAM') return;
 
     const handleVisibilityChange = () => {
-      if (document.hidden) {
+      if (document.hidden && !isRefreshingRef.current) {
         handleStatusUpdate('CHEATED');
       }
     };
 
     const handleBlur = () => {
-      handleStatusUpdate('CHEATED');
+      // Don't trigger cheat on refresh — only on intentional tab-leave
+      setTimeout(() => {
+        if (!isRefreshingRef.current && document.hidden) {
+          handleStatusUpdate('CHEATED');
+        }
+      }, 300);
     };
 
     const handleCopyPaste = (e: ClipboardEvent) => {
@@ -197,6 +265,7 @@ export default function StudentRemedialLayer({
   const handleStatusUpdate = async (status: 'COMPLETED' | 'CHEATED' | 'TIMEOUT') => {
     setIsSubmitting(true);
     stopCamera();
+    clearRemedialSession();
     
     try {
       const res = await fetch('/api/grademaster/students/remedial', {
@@ -208,7 +277,6 @@ export default function StudentRemedialLayer({
            status, 
            location: currentLocation,
             answers: status === 'COMPLETED' ? (() => {
-               // Map shuffled answers back to original indices
                const mappedAnswers = new Array(remedialEssayCount).fill("");
                shuffledQuestions.forEach((sq, i) => {
                  mappedAnswers[sq.originalIndex] = answers[i];
@@ -224,7 +292,7 @@ export default function StudentRemedialLayer({
       if (!res.ok) {
         setToast({ message: data.error || "Terjadi kesalahan saat menyimpan", type: "error" });
         if (data.error?.includes('sudah pernah dilakukan') || data.error?.includes('permanen')) {
-            setStep('CHEATED'); // generic lock screen
+            setStep('CHEATED');
         }
       } else {
         setStep(status);
