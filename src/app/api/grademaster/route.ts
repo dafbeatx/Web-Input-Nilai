@@ -269,7 +269,18 @@ export async function GET(req: NextRequest) {
       remedialStatus: s.remedial_status,
       remedialLocation: s.remedial_location,
       remedialAnswers: s.remedial_answers,
-      remedialNote: s.remedial_note
+      remedialNote: s.remedial_note,
+      originalScore: s.original_score ? Number(s.original_score) : undefined,
+      remedialScore: s.remedial_score ? Number(s.remedial_score) : undefined,
+      finalScoreLocked: s.final_score_locked ? Number(s.final_score_locked) : undefined,
+      isCheated: s.is_cheated,
+      teacherReviewed: s.teacher_reviewed,
+      cheatingFlags: s.cheating_flags,
+      remedialAttempts: s.remedial_attempts,
+      essayScoreAuto: s.essay_score_auto ? Number(s.essay_score_auto) : undefined,
+      essayScoreManual: s.essay_score_manual ? Number(s.essay_score_manual) : undefined,
+      essayScoreFinal: s.essay_score_final ? Number(s.essay_score_final) : undefined,
+      essayAutoDetails: s.essay_auto_details,
     }));
 
     // Calculate difficulties on server before hiding answerKey

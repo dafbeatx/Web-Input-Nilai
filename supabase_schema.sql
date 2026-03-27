@@ -63,6 +63,10 @@ CREATE TABLE IF NOT EXISTS public.gm_students (
     teacher_reviewed BOOLEAN DEFAULT FALSE,
     cheating_flags JSONB DEFAULT '[]'::jsonb,
     remedial_attempts INTEGER DEFAULT 0,
+    essay_score_auto NUMERIC(5,2) DEFAULT 0,
+    essay_score_manual NUMERIC(5,2),
+    essay_score_final NUMERIC(5,2) DEFAULT 0,
+    essay_auto_details JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 

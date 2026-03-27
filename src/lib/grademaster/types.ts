@@ -4,6 +4,7 @@ export interface ScoringConfig {
   essayMaxScore: number;
   essayCount: number;
   remedialQuestions?: string[];
+  remedialAnswerKeys?: string[];
 }
 
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
@@ -50,6 +51,10 @@ export interface GradedStudent {
   teacherReviewed?: boolean;
   cheatingFlags?: string[];
   remedialAttempts?: number;
+  essayScoreAuto?: number;
+  essayScoreManual?: number;
+  essayScoreFinal?: number;
+  essayAutoDetails?: { similarity: number; score: number }[];
 }
 
 export interface SessionData {

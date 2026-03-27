@@ -350,28 +350,64 @@ export default function RemedialDashboardLayer({
                       </div>
                     )}
 
-                    {/* Remedial Answers */}
+                    {/* Remedial Answers with Auto-Scoring */}
                     <div>
                       <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400 mb-4">
                         <FileText size={14} /> Jawaban Essay Remedial
+                        {student.essayScoreAuto !== undefined && (
+                          <span className="ml-auto text-indigo-600 normal-case tracking-normal">
+                            Skor Otomatis: <strong>{student.essayScoreAuto}</strong>
+                            {student.essayScoreManual !== undefined && (
+                              <span className="text-emerald-600 ml-2">| Override Guru: <strong>{student.essayScoreManual}</strong></span>
+                            )}
+                          </span>
+                        )}
                       </h4>
                       <div className="space-y-4">
-                        {scoringConfig.remedialQuestions?.map((q, idx) => (
-                           <div key={idx} className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200 shadow-sm">
-                             <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Soal {idx + 1}</div>
-                             <p className="text-sm font-black text-slate-800 mb-3">{q}</p>
-                             <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 text-xs font-bold text-slate-600 leading-relaxed italic">
-                                "{student.remedialAnswers?.[idx] || '(Tidak ada jawaban)'}"
-                             </div>
-                           </div>
-                        ))}
+                        {scoringConfig.remedialQuestions?.map((q, idx) => {
+                           const detail = student.essayAutoDetails?.[idx];
+                           const ansKey = scoringConfig.remedialAnswerKeys?.[idx];
+                           return (
+                            <div key={idx} className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200 shadow-sm">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Soal {idx + 1}</div>
+                                {detail && (
+                                  <div className="flex items-center gap-3">
+                                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg border ${
+                                      detail.similarity >= 0.85 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                      detail.similarity >= 0.70 ? 'bg-sky-50 text-sky-600 border-sky-100' :
+                                      detail.similarity >= 0.50 ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                      'bg-rose-50 text-rose-600 border-rose-100'
+                                    }`}>
+                                      Similarity: {Math.round(detail.similarity * 100)}%
+                                    </span>
+                                    <span className="text-[10px] font-black text-slate-500">Skor: {detail.score}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-sm font-black text-slate-800 mb-3">{q}</p>
+                              
+                              {ansKey && (
+                                <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100 text-xs font-bold text-emerald-700 leading-relaxed mb-2">
+                                  <span className="text-[9px] uppercase tracking-widest text-emerald-500 block mb-1">Kunci Jawaban:</span>
+                                  {ansKey}
+                                </div>
+                              )}
+
+                              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 text-xs font-bold text-slate-600 leading-relaxed italic">
+                                <span className="text-[9px] uppercase tracking-widest text-slate-400 block mb-1 not-italic">Jawaban Siswa:</span>
+                                &quot;{student.remedialAnswers?.[idx] || '(Tidak ada jawaban)'}&quot;
+                              </div>
+                            </div>
+                           );
+                        })}
                       </div>
                     </div>
 
                     {/* Note */}
                     {student.remedialNote && (
                       <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 text-sm font-bold text-amber-900 italic">
-                        Catatan Siswa: "{student.remedialNote}"
+                        Catatan Siswa: &quot;{student.remedialNote}&quot;
                       </div>
                     )}
                   </div>

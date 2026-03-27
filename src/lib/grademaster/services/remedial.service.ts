@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase/client';
 import { detectCheating } from '../security';
+import { calculateEssayScore } from '../scoring';
 
 export async function submitRemedial(
   sessionId: string,
@@ -12,7 +13,6 @@ export async function submitRemedial(
   elapsedTimeMs: number,
   clientCheatingFlags: string[] = []
 ) {
-  // 1. Fetch Student & Session
   const { data: student, error: fetchErr } = await supabase
     .from('gm_students')
     .select('*')
@@ -29,7 +29,6 @@ export async function submitRemedial(
 
   if (sessErr || !session) throw new Error('Sesi tidak ditemukan');
 
-  // Verify attempts and status
   if (student.remedial_attempts >= 1 && status === 'STARTED') {
     throw new Error('Maksimal kesempatan remedial hanya 1 kali.');
   }
@@ -38,22 +37,19 @@ export async function submitRemedial(
     throw new Error('Remedial sudah pernah disubmit atau dikunci.');
   }
 
-  let updateData: any = {
+  const updateData: Record<string, unknown> = {
     remedial_status: status,
     remedial_location: location
   };
 
   if (status === 'IN_PROGRESS') {
     updateData.remedial_attempts = student.remedial_attempts + 1;
-    // Set original_score to current final_score when starting
     if (student.original_score === 0 || student.original_score == null) {
        updateData.original_score = student.final_score;
     }
   } else if (status === 'COMPLETED' || status === 'CHEATED') {
-    // Determine cheating from server
     const { data: allStudents } = await supabase.from('gm_students').select('*').eq('session_id', sessionId);
     
-    // Build object format expected by detectCheating
     const currentStudentPayload = {
       id: student.id,
       name: student.name,
@@ -61,27 +57,32 @@ export async function submitRemedial(
       remedialAnswers: answers
     };
     
-    // Server-side check
     const serverCheatingResult = detectCheating(currentStudentPayload, allStudents || [], session, elapsedTimeMs);
-    
-    // Combine server flags with client flags (from ProctoringCamera, etc)
     const combinedFlags = [...serverCheatingResult.flags, ...clientCheatingFlags];
     const isCheated = serverCheatingResult.isCheated || clientCheatingFlags.length > 0 || status === 'CHEATED';
+
+    // Auto Essay Scoring
+    const answerKeys: string[] = session.scoring_config?.remedialAnswerKeys || [];
+    const essayResult = calculateEssayScore(answers, answerKeys);
     
     updateData.remedial_answers = answers;
     updateData.remedial_note = note;
     updateData.is_cheated = isCheated;
     updateData.cheating_flags = combinedFlags;
     updateData.teacher_reviewed = false;
+    updateData.essay_score_auto = essayResult.score;
+    updateData.essay_score_final = essayResult.score;
+    updateData.essay_auto_details = essayResult.details;
     
     if (isCheated) {
       updateData.remedial_score = 0;
       updateData.final_score = 0;
       updateData.final_score_locked = 0;
+      updateData.essay_score_final = 0;
       updateData.remedial_status = 'CHEATED';
     } else {
-      // Pending teacher review, just set the answers.
-      updateData.remedial_status = 'REMEDIAL'; // Belum dikoreksi
+      updateData.remedial_score = essayResult.score;
+      updateData.remedial_status = 'REMEDIAL';
     }
   } else if (status === 'TIMEOUT') {
     updateData.remedial_answers = answers;
@@ -102,12 +103,12 @@ export async function submitRemedial(
 
 export async function reviewRemedial(
   studentId: string,
-  newRemedialScore: number,
+  essayScoreManual: number,
   sessionKkm: number
 ) {
   const { data: student, error: fetchErr } = await supabase
     .from('gm_students')
-    .select('is_cheated')
+    .select('is_cheated, essay_score_auto')
     .eq('id', studentId)
     .single();
 
@@ -117,11 +118,12 @@ export async function reviewRemedial(
     throw new Error('Tidak bisa mengoreksi nilai siswa yang terdeteksi curang');
   }
 
-  // Teacher reviewed
   const { error } = await supabase
     .from('gm_students')
     .update({
-      remedial_score: newRemedialScore,
+      essay_score_manual: essayScoreManual,
+      essay_score_final: essayScoreManual,
+      remedial_score: essayScoreManual,
       teacher_reviewed: true
     })
     .eq('id', studentId);
@@ -137,7 +139,7 @@ export async function finalizeRemedial(
 ) {
   const { data: student, error: fetchErr } = await supabase
     .from('gm_students')
-    .select('remedial_score, is_cheated, teacher_reviewed')
+    .select('essay_score_final, remedial_score, is_cheated, teacher_reviewed')
     .eq('id', studentId)
     .single();
 
@@ -151,8 +153,7 @@ export async function finalizeRemedial(
     throw new Error('Guru belum mengoreksi nilai remedial');
   }
 
-  // Final score logic
-  const finalScore = Math.min(student.remedial_score || 0, sessionKkm);
+  const finalScore = Math.min(student.essay_score_final || student.remedial_score || 0, sessionKkm);
 
   const { error } = await supabase
     .from('gm_students')

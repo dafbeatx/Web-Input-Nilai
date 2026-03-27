@@ -86,3 +86,65 @@ export function getLpsLabel(lps: number): string {
   if (lps >= 55) return 'Di Bawah Rata-rata';
   return 'Perlu Perhatian';
 }
+
+import stringSimilarity from 'string-similarity';
+
+export interface EssayScoreResult {
+  score: number;
+  details: { similarity: number; score: number }[];
+}
+
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function similarityToScore(similarity: number): number {
+  if (similarity >= 0.85) return 100;
+  if (similarity >= 0.70) return 80;
+  if (similarity >= 0.50) return 60;
+  return 30;
+}
+
+export function calculateEssayScore(
+  studentAnswers: string[],
+  answerKeys: string[]
+): EssayScoreResult {
+  if (!answerKeys || answerKeys.length === 0) {
+    return { score: 0, details: [] };
+  }
+
+  const details: { similarity: number; score: number }[] = [];
+
+  for (let i = 0; i < answerKeys.length; i++) {
+    const studentAns = studentAnswers[i] || '';
+    const key = answerKeys[i] || '';
+
+    if (!studentAns.trim()) {
+      details.push({ similarity: 0, score: 0 });
+      continue;
+    }
+
+    const normalizedStudent = normalizeText(studentAns);
+    const normalizedKey = normalizeText(key);
+
+    if (!normalizedKey) {
+      details.push({ similarity: 0, score: 0 });
+      continue;
+    }
+
+    const similarity = stringSimilarity.compareTwoStrings(normalizedStudent, normalizedKey);
+    const score = similarityToScore(similarity);
+    details.push({ similarity: Math.round(similarity * 100) / 100, score });
+  }
+
+  const totalScore = details.length > 0
+    ? Math.round(details.reduce((sum, d) => sum + d.score, 0) / details.length)
+    : 0;
+
+  return { score: totalScore, details };
+}
+
