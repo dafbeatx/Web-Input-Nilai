@@ -60,50 +60,9 @@ export default function StudentRemedialLayer({
   const [locationOk, setLocationOk] = useState(false);
   const [checkingPerms, setCheckingPerms] = useState(false);
 
-  // Draggable camera — default top-left
-  const [camPos, setCamPos] = useState({ x: -1, y: -1 });
-  const draggingCam = useRef(false);
-  const dragOffset = useRef({ x: 0, y: 0 });
+  // Camera dimensions
   const CAM_W = 160;
-  const CAM_H = 208;
-
-  useEffect(() => {
-    if (camPos.x === -1) {
-      setCamPos({ x: 12, y: 12 });
-    }
-  }, []);
-
-  const clampPos = (x: number, y: number) => ({
-    x: Math.max(0, Math.min(window.innerWidth - CAM_W, x)),
-    y: Math.max(0, Math.min(window.innerHeight - CAM_H, y)),
-  });
-
-  const handleDragStart = (clientX: number, clientY: number) => {
-    draggingCam.current = true;
-    dragOffset.current = { x: clientX - camPos.x, y: clientY - camPos.y };
-  };
-  const handleDragMove = (clientX: number, clientY: number) => {
-    if (!draggingCam.current) return;
-    setCamPos(clampPos(clientX - dragOffset.current.x, clientY - dragOffset.current.y));
-  };
-  const handleDragEnd = () => { draggingCam.current = false; };
-
-  useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => handleDragMove(e.clientX, e.clientY);
-    const onMouseUp = () => handleDragEnd();
-    const onTouchMove = (e: TouchEvent) => { if (draggingCam.current) { e.preventDefault(); handleDragMove(e.touches[0].clientX, e.touches[0].clientY); } };
-    const onTouchEnd = () => handleDragEnd();
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('touchend', onTouchEnd);
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('touchend', onTouchEnd);
-    };
-  }, [camPos]);
+  const CAM_H = 112; // Adjusted to match h-28 for standardizing with tailwind classes (will mostly be handled by CSS now)
 
   const MAX_TAB_WARNINGS = 3;
 
@@ -717,53 +676,42 @@ export default function StudentRemedialLayer({
 
   return (
     <>
-      {/* Top Floating Bar — outside animate-in so position:fixed works */}
-      <div className="fixed top-0 left-0 right-0 bg-white border-b border-slate-200 shadow-sm z-40 px-4 py-3 flex items-center justify-between">
-         <div className="font-outfit font-black text-slate-800 flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-            LIVE PENGAMATAN
-         </div>
-         <div className="font-mono text-xl font-bold text-slate-800 bg-slate-100 px-4 py-1.5 rounded-lg border border-slate-200">
-            {formatTime(timeLeft)}
-         </div>
-      </div>
-
-      {/* Draggable Camera Bubble — outside animate-in so position:fixed works */}
+      {/* Fixed Responsive Camera Bubble */}
       <div
-        className="bg-slate-900 rounded-2xl shadow-2xl border-4 border-slate-800 overflow-hidden cursor-grab active:cursor-grabbing select-none"
-        style={{
-          position: 'fixed',
-          left: camPos.x,
-          top: camPos.y,
-          width: CAM_W,
-          height: CAM_H,
-          zIndex: 50,
-          touchAction: 'none',
-        }}
-        onMouseDown={(e) => handleDragStart(e.clientX, e.clientY)}
-        onTouchStart={(e) => handleDragStart(e.touches[0].clientX, e.touches[0].clientY)}
+        className="fixed z-50 rounded-xl md:rounded-2xl overflow-hidden border-2 md:border-4 border-slate-800 shadow-2xl bg-slate-900 pointer-events-none top-3 right-3 w-28 h-20 lg:top-auto lg:bottom-4 lg:right-4 lg:w-40 lg:h-28"
       >
         <ProctoringCamera onViolation={handleCameraViolation} />
-        <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/50 px-2 py-1 rounded backdrop-blur-sm">
-           <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse" />
-           <span className="text-[8px] text-white font-black uppercase tracking-wider">REC</span>
+        
+        {/* Timer Label */}
+        <div className="absolute top-1 left-1 bg-black/70 text-white font-mono text-[9px] md:text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm tracking-wider font-bold">
+          ⏱️ {formatTime(timeLeft)}
         </div>
-        <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/50 px-2 py-1 rounded backdrop-blur-sm">
+
+        {/* Monitoring Label */}
+        <div className="absolute bottom-1 left-1 flex items-center gap-1 bg-black/60 px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm">
            <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-           <span className="text-[7px] text-emerald-300 font-black uppercase tracking-wider">Aktif</span>
+           <span className="text-[7px] md:text-[8px] text-emerald-300 font-black uppercase tracking-wider">Monitoring</span>
         </div>
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-8">
-           <span className="text-[10px] text-white/90 font-bold truncate block">{studentName}</span>
-           {(warningCount > 0 || tabWarningCount > 0) && (
-             <span className="text-[9px] text-rose-400 font-bold truncate block">
-               Tab: {tabWarningCount}/{MAX_TAB_WARNINGS} • Cam: {warningCount}/5
-             </span>
-           )}
-        </div>
+
+        {/* Penalty Info (if any) */}
+        {(warningCount > 0 || tabWarningCount > 0) && (
+          <div className="absolute top-1 right-1 flex flex-col gap-0.5 items-end">
+            {tabWarningCount > 0 && (
+              <span className="text-[7px] md:text-[8px] bg-rose-500/90 text-white px-1 rounded font-bold backdrop-blur-sm">
+                TAB: {tabWarningCount}/{MAX_TAB_WARNINGS}
+              </span>
+            )}
+            {warningCount > 0 && (
+              <span className="text-[7px] md:text-[8px] bg-rose-500/90 text-white px-1 rounded font-bold backdrop-blur-sm">
+                CAM: {warningCount}/5
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Main Exam Content */}
-      <div className="p-3 sm:p-5 lg:p-8 max-w-4xl mx-auto animate-in pt-20">
+      <div className="p-3 sm:p-5 lg:p-8 max-w-4xl mx-auto animate-in pt-8 md:pt-10">
 
       <header className="mb-6 md:mb-10 text-center">
         <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight font-outfit mb-2">Remedial {subject}</h1>
