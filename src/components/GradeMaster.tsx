@@ -30,8 +30,16 @@ export default function GradeMaster() {
   const [layer, setInternalLayer] = useState<Layer>("home");
 
   const setLayer = useCallback((newLayer: Layer) => {
-    window.history.pushState({ layer: newLayer }, '', `#${newLayer}`);
-    setInternalLayer(newLayer);
+    setInternalLayer((prev) => {
+      if (prev === newLayer) return prev;
+      
+      if (prev === 'home' && newLayer !== 'home') {
+        window.history.pushState({ layer: newLayer }, '', `#${newLayer}`);
+      } else {
+        window.history.replaceState({ layer: newLayer }, '', `#${newLayer}`);
+      }
+      return newLayer;
+    });
   }, []);
 
   useEffect(() => {
@@ -44,12 +52,13 @@ export default function GradeMaster() {
     }
 
     const handlePopState = (e: PopStateEvent) => {
-      const stateLayer = e.state?.layer || window.location.hash.replace('#', '') || 'home';
-      if (['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior'].includes(stateLayer)) {
-        setInternalLayer(stateLayer as Layer);
-      } else {
-        setInternalLayer('home');
-      }
+      setInternalLayer((prev) => {
+        if (prev !== 'home') {
+          window.history.replaceState({ layer: 'home' }, '', '#home');
+          return 'home';
+        }
+        return prev;
+      });
     };
 
     window.addEventListener('popstate', handlePopState);
