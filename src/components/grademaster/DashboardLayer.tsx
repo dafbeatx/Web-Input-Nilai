@@ -218,6 +218,29 @@ export default function DashboardLayer({
     }
   };
 
+  const [isSeeding, setIsSeeding] = useState(false);
+  const handleSeedDemo = async () => {
+    if (!sessionId || !isDemo) return;
+    setIsSeeding(true);
+    try {
+      const res = await fetch('/api/grademaster/students/seed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId })
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || 'Gagal menanam data');
+      }
+      alert('Data simulasi berhasil ditanam!');
+      window.location.reload();
+    } catch (err: any) {
+      alert(`Gagal menanam: ${err.message}`);
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   return (
     <div className="p-3 sm:p-5 lg:p-8 max-w-6xl mx-auto animate-in">
       <header className="mb-8 md:mb-10 text-center">
@@ -240,7 +263,17 @@ export default function DashboardLayer({
            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Pusat Data: {teacherName}</p>
         )}
         {!isPublicView && isDemo && (
-          <div className="mt-4 flex justify-center">
+          <div className="mt-4 flex flex-wrap justify-center gap-3">
+             {gradedStudents.length === 0 && (
+               <button 
+                 onClick={handleSeedDemo}
+                 disabled={isSeeding}
+                 className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl text-xs font-black uppercase tracking-widest transition-colors disabled:opacity-50"
+               >
+                 <Plus size={14} className={isSeeding ? "animate-spin" : ""} />
+                 {isSeeding ? "Menanam..." : "Tanam Data Demo"}
+               </button>
+             )}
              <button 
                onClick={handleResetDemo}
                disabled={isResettingDemo}
