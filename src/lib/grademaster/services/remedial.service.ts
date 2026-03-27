@@ -69,7 +69,6 @@ export async function submitRemedial(
     updateData.remedial_note = note;
     updateData.is_cheated = isCheated;
     updateData.cheating_flags = combinedFlags;
-    updateData.teacher_reviewed = false;
     updateData.essay_score_auto = essayResult.score;
     updateData.essay_score_final = essayResult.score;
     updateData.essay_auto_details = essayResult.details;
@@ -80,9 +79,25 @@ export async function submitRemedial(
       updateData.final_score_locked = 0;
       updateData.essay_score_final = 0;
       updateData.remedial_status = 'CHEATED';
+      updateData.teacher_reviewed = false;
     } else {
       updateData.remedial_score = essayResult.score;
-      updateData.remedial_status = 'REMEDIAL';
+      
+      // If answer keys exist, we can AUTO-FINALIZE immediately
+      if (answerKeys.length > 0) {
+        const sessionKkm = session.kkm || 70;
+        const remedialResult = Math.min(essayResult.score, sessionKkm);
+        const finalScore = Math.max(student.original_score || student.final_score || 0, remedialResult);
+        
+        updateData.final_score = finalScore;
+        updateData.final_score_locked = finalScore;
+        updateData.remedial_status = 'COMPLETED';
+        updateData.teacher_reviewed = true; // Auto-reviewed by system
+      } else {
+        // No keys, wait for teacher review
+        updateData.remedial_status = 'REMEDIAL';
+        updateData.teacher_reviewed = false;
+      }
     }
   } else if (status === 'TIMEOUT') {
     updateData.remedial_answers = answers;

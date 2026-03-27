@@ -103,10 +103,10 @@ function normalizeText(text: string): string {
 }
 
 function similarityToScore(similarity: number): number {
-  if (similarity >= 0.85) return 100;
-  if (similarity >= 0.70) return 80;
-  if (similarity >= 0.50) return 60;
-  return 30;
+  if (similarity >= 0.80) return 100;
+  if (similarity >= 0.60) return 85;
+  if (similarity >= 0.40) return 70;
+  return 40;
 }
 
 export function calculateEssayScore(
