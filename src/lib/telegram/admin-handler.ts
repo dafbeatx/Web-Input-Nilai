@@ -46,7 +46,7 @@ export async function handleAdminCommand(chatId: number, text: string) {
     adminConversations.delete(chatId);
     const { data, error } = await supabase
       .from('gm_sessions')
-      .select('session_name, teacher, subject, class_name, exam_type, academic_year, school_level, updated_at')
+      .select('session_name, teacher, subject, class_name, exam_type, academic_year, school_level, updated_at, is_demo')
       .order('updated_at', { ascending: false })
       .limit(20);
 
@@ -57,7 +57,8 @@ export async function handleAdminCommand(chatId: number, text: string) {
 
     let msg = '📋 <b>Daftar Sesi Kelas</b>\n\n';
     data.forEach((s, i) => {
-      msg += `${i + 1}. <b>${s.session_name}</b>\n`;
+      const demoLabel = s.is_demo ? '🧪 <b>DEMO:</b> ' : '';
+      msg += `${i + 1}. ${demoLabel}<b>${s.session_name}</b>\n`;
       msg += `   📚 ${s.subject} • Kelas ${s.class_name} (${s.school_level})\n`;
       msg += `   📝 ${s.exam_type || 'UTS'} • TA ${s.academic_year || '-'}\n`;
       msg += `   👤 ${s.teacher}\n\n`;
@@ -327,7 +328,7 @@ async function handleConversationStep(
 async function showSessionSelector(chatId: number, action: string) {
   const { data } = await supabase
     .from('gm_sessions')
-    .select('session_name')
+    .select('session_name, is_demo')
     .order('updated_at', { ascending: false })
     .limit(10);
 
@@ -337,6 +338,9 @@ async function showSessionSelector(chatId: number, action: string) {
     return;
   }
 
-  const keyboard = data.map(s => [{ text: s.session_name, callback_data: `${action}::${s.session_name}` }]);
+  const keyboard = data.map(s => [{ 
+    text: s.is_demo ? `🧪 DEMO: ${s.session_name}` : s.session_name, 
+    callback_data: `${action}::${s.session_name}` 
+  }]);
   await sendInlineKeyboard(chatId, '📋 Pilih sesi:', keyboard);
 }

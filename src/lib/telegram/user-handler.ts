@@ -43,6 +43,7 @@ export async function handleUserCommand(chatId: number, text: string) {
     const { data: sessions } = await supabase
       .from('gm_sessions')
       .select('class_name')
+      .eq('is_demo', false)
       .order('class_name');
 
     if (!sessions || sessions.length === 0) {
@@ -86,7 +87,8 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
     const { data: sessions } = await supabase
       .from('gm_sessions')
       .select('subject')
-      .eq('class_name', value);
+      .eq('class_name', value)
+      .eq('is_demo', false);
 
     const uniqueSubjects = [...new Set((sessions || []).map(s => s.subject).filter(Boolean))];
     if (uniqueSubjects.length === 0) {
@@ -107,7 +109,8 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
       .from('gm_sessions')
       .select('exam_type')
       .eq('class_name', conv.data.className as string)
-      .eq('subject', value);
+      .eq('subject', value)
+      .eq('is_demo', false);
 
     const uniqueExamTypes = [...new Set((sessions || []).map(s => s.exam_type).filter(Boolean))];
     if (uniqueExamTypes.length === 0) {
@@ -129,7 +132,8 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
       .select('academic_year')
       .eq('class_name', conv.data.className as string)
       .eq('subject', conv.data.subject as string)
-      .eq('exam_type', value);
+      .eq('exam_type', value)
+      .eq('is_demo', false);
 
     const uniqueYears = [...new Set((sessions || []).map(s => s.academic_year).filter(Boolean))];
     if (uniqueYears.length === 0) {
@@ -154,6 +158,7 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
       .eq('subject', conv.data.subject as string)
       .eq('exam_type', conv.data.examType as string)
       .eq('academic_year', value)
+      .eq('is_demo', false)
       .single();
 
     if (!session) {
