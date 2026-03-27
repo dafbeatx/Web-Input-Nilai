@@ -198,23 +198,53 @@ export default function StudentRemedialLayer({
 
 
 
+  const getPosition = (): Promise<GeolocationPosition> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject({ code: 0, message: 'Browser tidak mendukung Geolocation' });
+        return;
+      }
+      // Try high accuracy first
+      navigator.geolocation.getCurrentPosition(resolve, (errHigh) => {
+        if (errHigh.code === 1) {
+          // PERMISSION_DENIED — no point retrying
+          reject(errHigh);
+          return;
+        }
+        // Fallback: try without high accuracy (works on more browsers)
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: false,
+          timeout: 15000,
+          maximumAge: 60000,
+        });
+      }, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      });
+    });
+  };
+
+  const getLocationErrorMessage = (err: any): string => {
+    const code = err?.code;
+    if (code === 1) return 'Akses Lokasi ditolak. Buka Pengaturan Browser → Izin Situs → Lokasi → Izinkan, lalu coba lagi.';
+    if (code === 2) return 'Lokasi tidak tersedia. Pastikan GPS aktif di Pengaturan HP Anda dan browser tidak dalam mode penyamaran/privat.';
+    if (code === 3) return 'Waktu permintaan lokasi habis. Pastikan Anda berada di area dengan sinyal GPS yang baik, lalu coba lagi.';
+    if (code === 0) return 'Browser Anda tidak mendukung fitur Lokasi. Gunakan browser Chrome, Firefox, atau Edge versi terbaru.';
+    return 'Gagal mendapatkan lokasi. Pastikan GPS aktif dan izin lokasi telah diberikan.';
+  };
+
   const startExam = async () => {
     setIsSubmitting(true);
     
-    // 1. Get Location (Mandatory)
+    // 1. Get Location (Mandatory) - with fallback
     let locStr = '';
     try {
-      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        });
-      });
+      const pos = await getPosition();
       locStr = `${pos.coords.latitude},${pos.coords.longitude}`;
       setCurrentLocation(locStr);
-    } catch (e) {
-      setToast({ message: "Akses Lokasi (GPS) wajib diizinkan untuk memulai ujian!", type: "error" });
+    } catch (e: any) {
+      setToast({ message: getLocationErrorMessage(e), type: "error" });
       setIsSubmitting(false);
       return;
     }
