@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ToastType } from '@/lib/grademaster/types';
 import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin } from 'lucide-react';
+import ProctoringCamera from './ProctoringCamera';
 
 interface StudentRemedialLayerProps {
   studentName: string;
@@ -41,8 +42,41 @@ export default function StudentRemedialLayer({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<string>('');
   const [note, setNote] = useState("");
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [shuffledQuestions, setShuffledQuestions] = useState<{text: string, originalIndex: number}[]>([]);
+  
+  const [warningCount, setWarningCount] = useState(0);
+  const [clientCheatingFlags, setClientCheatingFlags] = useState<string[]>([]);
+  const hasTriggeredCheatingRef = useRef(false);
+
+  const handleCameraViolation = (type: string) => {
+    if (hasTriggeredCheatingRef.current || isSubmitting) return;
+
+    setWarningCount(prev => {
+      const newCount = prev + 1;
+      
+      let flagMessage = "";
+      if (type === 'NO_FACE') flagMessage = "Wajah tidak terdeteksi";
+      if (type === 'MULTIPLE_FACES') flagMessage = "Terdeteksi lebih dari satu orang";
+
+      // Add to string unique
+      setClientCheatingFlags(oldFlags => {
+        if (!oldFlags.includes(flagMessage)) {
+           return [...oldFlags, flagMessage];
+        }
+        return oldFlags;
+      });
+
+      if (newCount >= 5) {
+        hasTriggeredCheatingRef.current = true;
+        setToast({ message: "Batas pelanggaran terlampaui. Ujian dihentikan.", type: "error" });
+        handleStatusUpdate('CHEATED');
+      } else {
+        setToast({ message: `Peringatan Kamera: ${flagMessage} (${newCount}/5)`, type: "error" });
+      }
+
+      return newCount;
+    });
+  };
 
   // Shuffle logic
   useEffect(() => {
@@ -65,10 +99,7 @@ export default function StudentRemedialLayer({
   }, []);
 
   const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-    }
+    // Removed direct videoRef logic as ProctoringCamera handles its own cleanup
   };
 
   const startExam = async () => {
@@ -115,16 +146,7 @@ export default function StudentRemedialLayer({
       return;
     }
 
-    // 3. Get Camera (Optional Gimmick)
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (e) {
-      setToast({ message: "Kamera gagal diakses, namun ujian tetap dilanjutkan dengan pengawasan sistem.", type: "error" });
-    }
-    
+    // MediaPipe ProctoringCamera will handle media access and stream locally
     setIsSubmitting(false);
     setStep('EXAM');
   };
@@ -193,7 +215,8 @@ export default function StudentRemedialLayer({
                });
                return mappedAnswers;
             })() : undefined,
-            note: status === 'COMPLETED' ? note : undefined
+            note: status === 'COMPLETED' ? note : undefined,
+            clientCheatingFlags: clientCheatingFlags.length > 0 ? clientCheatingFlags : undefined
         })
       });
       const data = await res.json();
@@ -360,21 +383,16 @@ export default function StudentRemedialLayer({
          </div>
       </div>
 
-      {/* Camera Gimmick Bubble */}
+      {/* Camera Gimmick Bubble -> Now Real Proctoring */}
       <div className="fixed bottom-4 right-4 md:bottom-8 md:right-8 w-32 h-40 md:w-40 md:h-52 bg-slate-900 rounded-2xl shadow-2xl border-4 border-slate-800 overflow-hidden z-50 transform hover:scale-105 transition-transform group">
-        <video 
-           ref={videoRef} 
-           autoPlay 
-           playsInline 
-           muted 
-           className="w-full h-full object-cover"
-        />
+        <ProctoringCamera onViolation={handleCameraViolation} />
         <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/50 px-2 py-1 rounded backdrop-blur-sm">
            <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse" />
            <span className="text-[8px] text-white font-black uppercase tracking-wider">REC</span>
         </div>
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-8">
            <span className="text-[10px] text-white/90 font-bold truncate block">{studentName} (Dipantau)</span>
+           {warningCount > 0 && <span className="text-[9px] text-rose-400 font-bold truncate block">Peringatan: {warningCount}/5</span>}
         </div>
       </div>
 

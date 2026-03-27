@@ -9,7 +9,8 @@ export async function submitRemedial(
   answers: string[],
   note: string,
   location: string,
-  elapsedTimeMs: number
+  elapsedTimeMs: number,
+  clientCheatingFlags: string[] = []
 ) {
   // 1. Fetch Student & Session
   const { data: student, error: fetchErr } = await supabase
@@ -29,7 +30,7 @@ export async function submitRemedial(
   if (sessErr || !session) throw new Error('Sesi tidak ditemukan');
 
   // Verify attempts and status
-  if (student.remedial_attempts >= 1) {
+  if (student.remedial_attempts >= 1 && status === 'STARTED') {
     throw new Error('Maksimal kesempatan remedial hanya 1 kali.');
   }
   
@@ -48,23 +49,29 @@ export async function submitRemedial(
     if (student.original_score === 0 || student.original_score == null) {
        updateData.original_score = student.final_score;
     }
-  } else if (status === 'COMPLETED') {
-    // Determine cheating
+  } else if (status === 'COMPLETED' || status === 'CHEATED') {
+    // Determine cheating from server
     const { data: allStudents } = await supabase.from('gm_students').select('*').eq('session_id', sessionId);
     
     // Build object format expected by detectCheating
     const currentStudentPayload = {
       id: student.id,
+      name: student.name,
       mcqAnswers: student.mcq_answers,
       remedialAnswers: answers
     };
     
-    const { isCheated, flags } = detectCheating(currentStudentPayload, allStudents || [], session, elapsedTimeMs);
+    // Server-side check
+    const serverCheatingResult = detectCheating(currentStudentPayload, allStudents || [], session, elapsedTimeMs);
+    
+    // Combine server flags with client flags (from ProctoringCamera, etc)
+    const combinedFlags = [...serverCheatingResult.flags, ...clientCheatingFlags];
+    const isCheated = serverCheatingResult.isCheated || clientCheatingFlags.length > 0 || status === 'CHEATED';
     
     updateData.remedial_answers = answers;
     updateData.remedial_note = note;
     updateData.is_cheated = isCheated;
-    updateData.cheating_flags = flags;
+    updateData.cheating_flags = combinedFlags;
     updateData.teacher_reviewed = false;
     
     if (isCheated) {

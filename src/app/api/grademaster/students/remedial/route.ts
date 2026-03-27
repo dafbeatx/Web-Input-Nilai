@@ -12,7 +12,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { sessionId, studentId, studentName, status, location, answers, note, elapsedTimeMs } = body;
+    const { sessionId, studentId, studentName, status, location, answers, note, elapsedTimeMs, clientCheatingFlags } = body;
     // status: 'STARTED' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT'
 
     if (!sessionId || (!studentName && !studentId) || !status) {
@@ -41,7 +41,8 @@ export async function PUT(req: NextRequest) {
        answers || [], 
        note || '', 
        location || '',
-       elapsedTimeMs || 1000 * 60 * 30 // Fallback to 30 mins if not provided
+       elapsedTimeMs || 1000 * 60 * 30, // Fallback to 30 mins if not provided
+       clientCheatingFlags || []
     );
 
     return NextResponse.json({ 

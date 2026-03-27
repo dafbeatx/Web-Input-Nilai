@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@mediapipe/camera_utils": "^0.3.1675466862",
+    "@mediapipe/face_detection": "^0.4.1646425229",
     "@supabase/supabase-js": "^2.39.7",
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
