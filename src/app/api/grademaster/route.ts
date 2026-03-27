@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { hashPassword, verifyPassword, validateSessionInput, checkRateLimit } from '@/lib/grademaster/security';
 import { getAdminSession } from '@/lib/grademaster/admin';
+import { generateQuestionDifficulties } from '@/lib/grademaster/analytics';
+import { GradedStudent } from '@/lib/grademaster/types';
 
 export async function POST(req: NextRequest) {
   try {
@@ -183,6 +185,28 @@ export async function GET(req: NextRequest) {
       .eq('session_id', session.id)
       .order('created_at', { ascending: true });
 
+    const gradedStudents: GradedStudent[] = (students || []).map(s => ({
+      id: s.id,
+      name: s.name,
+      answers: s.mcq_answers,
+      essayScores: s.essay_scores,
+      correct: s.correct,
+      wrong: s.wrong,
+      mcqScore: Number(s.mcq_score),
+      essayScore: Number(s.essay_score),
+      finalScore: Number(s.final_score),
+      percentage: Number(s.final_score),
+      csi: s.csi,
+      lps: s.lps,
+      remedialStatus: s.remedial_status,
+      remedialLocation: s.remedial_location,
+      remedialAnswers: s.remedial_answers,
+      remedialNote: s.remedial_note
+    }));
+
+    // Calculate difficulties on server before hiding answerKey
+    const questionDifficulties = generateQuestionDifficulties(gradedStudents, session.answer_key);
+
     return NextResponse.json({
       sessionId: session.id,
       sessionName: session.session_name,
@@ -200,25 +224,8 @@ export async function GET(req: NextRequest) {
       remedialTimer: session.remedial_timer || 15,
       isPublic: session.is_public,
       isReadOnly,
-      gradedStudents: (students || []).map(s => ({
-        id: s.id,
-        name: s.name,
-        answers: s.mcq_answers,
-        essayScores: s.essay_scores,
-        correct: s.correct,
-        wrong: s.wrong,
-        mcqScore: Number(s.mcq_score),
-        essayScore: Number(s.essay_score),
-        final_score: Number(s.final_score), // Backwards compatibility for some versions
-        finalScore: Number(s.final_score),
-        percentage: Number(s.final_score),
-        csi: s.csi,
-        lps: s.lps,
-        remedialStatus: s.remedial_status,
-        remedialLocation: s.remedial_location,
-        remedialAnswers: s.remedial_answers,
-        remedialNote: s.remedial_note
-      })),
+      questionDifficulties, // Pre-calculated for students
+      gradedStudents,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Gagal memuat sesi';

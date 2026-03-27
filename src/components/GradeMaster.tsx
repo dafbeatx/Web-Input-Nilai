@@ -105,6 +105,7 @@ export default function GradeMaster() {
   const [toast, setToast] = useState<ToastType>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminUser, setAdminUser] = useState<string | null>(null);
+  const [apiQuestionDifficulties, setApiQuestionDifficulties] = useState<any[]>([]);
 
 
   // Auto-dismiss toast
@@ -132,7 +133,14 @@ export default function GradeMaster() {
     checkAdmin();
   }, []);
 
-  const analytics = generateAnalytics(gradedStudents, answerKey);
+  const analytics = React.useMemo(() => {
+    const base = generateAnalytics(gradedStudents, answerKey);
+    // Merge API difficulties if answerKey is empty (student view)
+    if (answerKey.length === 0 && apiQuestionDifficulties.length > 0) {
+      return { ...base, questionDifficulties: apiQuestionDifficulties };
+    }
+    return base;
+  }, [gradedStudents, answerKey, apiQuestionDifficulties]);
 
   // ── API calls ──
 

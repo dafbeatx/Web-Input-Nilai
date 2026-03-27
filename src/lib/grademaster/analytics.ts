@@ -67,7 +67,7 @@ function generateDistribution(scores: number[]): { range: string; count: number 
   }));
 }
 
-function generateQuestionDifficulties(
+export function generateQuestionDifficulties(
   students: GradedStudent[],
   answerKey: string[]
 ): QuestionDifficulty[] {
