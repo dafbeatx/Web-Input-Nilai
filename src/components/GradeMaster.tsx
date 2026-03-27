@@ -77,6 +77,14 @@ export default function GradeMaster() {
   const [apiQuestionDifficulties, setApiQuestionDifficulties] = useState<any[]>([]);
 
   const setLayer = useCallback((newLayer: Layer) => {
+    // Route guard: only admin can access setup
+    if (newLayer === 'setup') {
+      const adminSession = getAdminSession();
+      if (!adminSession?.isAdmin) {
+        newLayer = 'login';
+      }
+    }
+
     setInternalLayer((prev) => {
       if (prev === newLayer) return prev;
       
@@ -103,9 +111,10 @@ export default function GradeMaster() {
     
     // Restore admin session
     const adminSession = getAdminSession();
-    if (adminSession && adminSession.isAdmin) {
+    const isUserAdmin = adminSession ? adminSession.isAdmin : false;
+    if (isUserAdmin) {
       setIsAdmin(true);
-      setAdminUser(adminSession.adminUser);
+      setAdminUser(adminSession!.adminUser);
     }
     
     let initialLayer: Layer = 'home';
@@ -116,6 +125,11 @@ export default function GradeMaster() {
       initialLayer = hash as Layer;
     } else if (validLayers.includes(persistedLayer)) {
       initialLayer = persistedLayer as Layer;
+    }
+
+    // Apply route guard for setup
+    if (initialLayer === 'setup' && !isUserAdmin) {
+      initialLayer = 'login';
     }
 
     setInternalLayer(initialLayer);
@@ -181,11 +195,22 @@ export default function GradeMaster() {
 
     const handlePopState = (e: PopStateEvent) => {
       const hash = window.location.hash.replace('#', '');
-      const validLayers = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard'];
+      const validLayers = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login'];
       
       setInternalLayer((prev) => {
-        if (validLayers.includes(hash)) {
-          return hash as Layer;
+        let dest = hash as Layer;
+
+        // Apply route guard for setup on popstate
+        if (dest === 'setup') {
+          const s = getAdminSession();
+          if (!s?.isAdmin) {
+            window.history.replaceState({ layer: 'login' }, '', '#login');
+            return 'login';
+          }
+        }
+
+        if (validLayers.includes(dest)) {
+          return dest;
         }
         if (prev !== 'home') {
           window.history.replaceState({ layer: 'home' }, '', '#home');
