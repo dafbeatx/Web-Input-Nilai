@@ -180,7 +180,13 @@ export default function GradeMaster() {
     }
 
     const handlePopState = (e: PopStateEvent) => {
+      const hash = window.location.hash.replace('#', '');
+      const validLayers = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard'];
+      
       setInternalLayer((prev) => {
+        if (validLayers.includes(hash)) {
+          return hash as Layer;
+        }
         if (prev !== 'home') {
           window.history.replaceState({ layer: 'home' }, '', '#home');
           return 'home';
