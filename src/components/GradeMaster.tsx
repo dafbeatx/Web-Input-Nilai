@@ -211,6 +211,8 @@ export default function GradeMaster() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       if (data.sessionId) setSessionId(data.sessionId);
+      setApiQuestionDifficulties([]); // Reset on new session since no students yet
+      
       setToast({ message: data.message || "Sesi berhasil disimpan!", type: "success" });
       closeModal();
     } catch (err: unknown) {
@@ -287,6 +289,7 @@ export default function GradeMaster() {
       setRemedialEssayCount(data.remedialEssayCount || 5);
       setRemedialTimer(data.remedialTimer || 15);
       setRemedialQuestions(data.scoringConfig?.remedialQuestions || []);
+      setApiQuestionDifficulties(data.questionDifficulties || []);
       setIsSessionPublic(data.isPublic);
       setIsPublicView(true);
       setLayer("dashboard");
@@ -330,6 +333,7 @@ export default function GradeMaster() {
       setStudentList(data.studentList || []);
       setGradedStudents(data.gradedStudents || []);
       setRemedialQuestions(data.scoringConfig?.remedialQuestions || []);
+      setApiQuestionDifficulties(data.questionDifficulties || []);
       setIsSessionPublic(data.isPublic);
       setIsPublicView(false); // Admin/Teacher view
       
