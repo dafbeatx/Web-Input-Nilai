@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { CameraOff } from 'lucide-react';
 
 interface ProctoringCameraProps {
@@ -22,12 +22,15 @@ function loadScript(src: string): Promise<void> {
   });
 }
 
-export default function ProctoringCamera({ onViolation }: ProctoringCameraProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(({ onViolation }, ref) => {
+  const internalVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const onViolationRef = useRef(onViolation);
   const [isLoading, setIsLoading] = useState(true);
   const [permissionDenied, setPermissionDenied] = useState(false);
+
+  // Expose the video element to the parent ref
+  useImperativeHandle(ref, () => internalVideoRef.current as HTMLVideoElement);
 
   // Keep the violation callback ref up-to-date without triggering re-init
   useEffect(() => {
@@ -44,19 +47,19 @@ export default function ProctoringCamera({ onViolation }: ProctoringCameraProps)
         await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js');
         await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js');
 
-        if (!isActive || !videoRef.current) return;
+        if (!isActive || !internalVideoRef.current) return;
 
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 320, height: 240, facingMode: 'user' }
         });
 
-        if (!isActive || !videoRef.current) {
+        if (!isActive || !internalVideoRef.current) {
           stream.getTracks().forEach(t => t.stop());
           return;
         }
 
         streamRef.current = stream;
-        videoRef.current.srcObject = stream;
+        internalVideoRef.current.srcObject = stream;
 
         const win = window as any;
         if (!win.FaceDetection) {
@@ -114,9 +117,9 @@ export default function ProctoringCamera({ onViolation }: ProctoringCameraProps)
         setIsLoading(false);
 
         intervalId = setInterval(async () => {
-          if (!isActive || !videoRef.current || videoRef.current.readyState < 2) return;
+          if (!isActive || !internalVideoRef.current || internalVideoRef.current.readyState < 2) return;
           try {
-            await faceDetection.send({ image: videoRef.current });
+            await faceDetection.send({ image: internalVideoRef.current });
           } catch {
             // Silently ignore send errors
           }
@@ -157,7 +160,7 @@ export default function ProctoringCamera({ onViolation }: ProctoringCameraProps)
   return (
     <div className="w-full h-full relative">
       <video
-        ref={videoRef}
+        ref={internalVideoRef}
         className="w-full h-full object-cover rounded-xl"
         playsInline
         muted
@@ -170,4 +173,7 @@ export default function ProctoringCamera({ onViolation }: ProctoringCameraProps)
       )}
     </div>
   );
-}
+});
+
+ProctoringCamera.displayName = 'ProctoringCamera';
+export default ProctoringCamera;

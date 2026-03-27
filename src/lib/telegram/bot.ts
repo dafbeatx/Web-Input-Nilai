@@ -65,4 +65,30 @@ export interface TelegramUpdate {
   };
 }
 
+export async function sendPhoto(
+  chatId: number | string,
+  photo: string | Blob,
+  caption?: string
+) {
+  const formData = new FormData();
+  formData.append('chat_id', String(chatId));
+  formData.append('photo', photo);
+  if (caption) formData.append('caption', caption);
+  formData.append('parse_mode', 'HTML');
+
+  const res = await fetch(`${API_BASE}/sendPhoto`, {
+    method: 'POST',
+    body: formData,
+  });
+  return res.json();
+}
+
+export async function sendAdminNotification(text: string, photo?: string | Blob) {
+  if (!ADMIN_CHAT_ID) return;
+  if (photo) {
+    return sendPhoto(ADMIN_CHAT_ID, photo, text);
+  }
+  return sendMessage(ADMIN_CHAT_ID, text);
+}
+
 export { supabase };

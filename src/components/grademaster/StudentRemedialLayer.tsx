@@ -51,6 +51,45 @@ export default function StudentRemedialLayer({
   const hasTriggeredCheatingRef = useRef(false);
   const startedAtRef = useRef<number>(0);
   const isRefreshingRef = useRef(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const sendTelegramNotify = async (event: string, photo?: string, message?: string, score?: number) => {
+    try {
+      await fetch('/api/telegram/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentName,
+          className,
+          subject,
+          event,
+          score,
+          kkm: 70, // Default KKM
+          photo,
+          message,
+        })
+      });
+    } catch (err) {
+      console.error('Failed to send Telegram notify:', err);
+    }
+  };
+
+  const capturePhoto = (): string | undefined => {
+    if (!videoRef.current) return undefined;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth || 320;
+      canvas.height = videoRef.current.videoHeight || 240;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', 0.6); // 60% quality to save bandwidth
+      }
+    } catch (err) {
+      console.error('Failed to capture photo:', err);
+    }
+    return undefined;
+  };
 
   // Pre-exam agreement
   const [agreedRules, setAgreedRules] = useState(false);
@@ -352,6 +391,11 @@ export default function StudentRemedialLayer({
       refreshCount: 0,
       shuffledIndices: indices,
     });
+    
+    // Send Start Notification with Photo
+    const photo = capturePhoto();
+    sendTelegramNotify('START', photo);
+
     setIsSubmitting(false);
     setStep('EXAM');
   };
@@ -450,6 +494,11 @@ export default function StudentRemedialLayer({
         setStep(status);
         if (status === 'COMPLETED') {
           setToast({ message: "Jawaban Remedial berhasil dikumpulkan.", type: "success" });
+          const finalScore = data.score; // Assuming the score is returned in the response data
+          sendTelegramNotify('FINISH', undefined, undefined, finalScore);
+        } else if (status === 'CHEATED') {
+          const photo = capturePhoto();
+          sendTelegramNotify('CHEATED', photo, clientCheatingFlags.join(', '));
         }
       }
     } catch (e) {
@@ -700,7 +749,12 @@ export default function StudentRemedialLayer({
       <div
         className="fixed z-50 rounded-xl md:rounded-2xl overflow-hidden border-2 md:border-4 border-slate-800 shadow-2xl bg-slate-900 pointer-events-none top-3 right-3 w-28 h-20 lg:top-auto lg:bottom-4 lg:right-4 lg:w-40 lg:h-28"
       >
-        <ProctoringCamera onViolation={handleCameraViolation} />
+        <div className="w-full h-full relative">
+            <ProctoringCamera 
+              ref={videoRef}
+              onViolation={handleCameraViolation} 
+            />
+          </div>
         
         {/* Timer Label */}
         <div className="absolute top-1 left-1 bg-black/70 text-white font-mono text-[9px] md:text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm tracking-wider font-bold">
