@@ -317,62 +317,114 @@ export default function DashboardLayer({
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[500px]">
-              <thead>
-                <tr className="border-b-2 border-slate-100">
-                  <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Rank</th>
-                  <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Nama Siswa</th>
-                  <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Nilai Akhir</th>
-                  <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">{isPublicView ? "Status Tuntas" : "Keterangan"}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analytics.ranking.map(r => (
-                  <tr key={r.rank} className={`border-b border-slate-50 hover:bg-slate-50/80 transition-colors`}>
-                    <td className="py-3.5 text-xs font-black text-slate-400 pl-2">
-                      <span className={`w-6 h-6 rounded-full flex items-center justify-center ${r.rank <= 3 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>{r.rank}</span>
-                    </td>
-                    <td className="py-3.5 text-xs font-bold text-slate-700">{r.name}</td>
-                    <td className="py-3.5">
-                      <span className={`px-2.5 py-1 rounded-lg text-xs font-black ${r.finalScore >= kkm ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                        {r.finalScore}
+          <>
+            {/* Mobile View (Card List) */}
+            <div className="md:hidden space-y-3">
+              {analytics.ranking.map(r => (
+                <div key={r.rank} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black ${r.rank <= 3 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>
+                        {r.rank}
                       </span>
-                    </td>
-                    <td className="py-3.5 text-xs font-bold">
-                      {isPublicView ? (
-                        r.finalScore < kkm ? (
-                          <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-1.5 text-rose-500">
-                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500"/> Perlu Bimbingan
+                      <span className="text-xs font-black text-slate-700 truncate max-w-[140px] uppercase tracking-tight">{r.name}</span>
+                    </div>
+                    <div className={`px-2.5 py-1 rounded-lg text-xs font-black ${r.finalScore >= kkm ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                      {r.finalScore}
+                    </div>
+                  </div>
+                  
+                  <div className="pt-3 border-t border-slate-50 flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Opsi / Status</span>
+                    {isPublicView ? (
+                      r.finalScore < kkm ? (
+                        <div className="flex flex-col items-end gap-2">
+                          <span className="text-rose-500 text-[9px] font-black uppercase tracking-widest">Perlu Bimbingan</span>
+                          <button 
+                            onClick={() => onStudentRemedial?.(r.name)} 
+                            className="px-3 py-2 bg-rose-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm shadow-rose-200 active:scale-95 flex items-center gap-1.5"
+                          >
+                            <Plus size={10} /> Mulai Remedial
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">Tuntas ✨</span>
+                      )
+                    ) : (
+                      r.finalScore < kkm ? (
+                        <button 
+                          onClick={() => onStudentRemedial?.(r.name)} 
+                          className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-rose-100 active:scale-95 flex items-center gap-1.5"
+                        >
+                          <Plus size={10} /> Mulai Remedial
+                        </button>
+                      ) : (
+                        <span className="text-emerald-500 font-black text-[10px] uppercase tracking-widest">Lulus KKM</span>
+                      )
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop View (Table) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-slate-100">
+                    <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Rank</th>
+                    <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Nama Siswa</th>
+                    <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Nilai Akhir</th>
+                    <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">{isPublicView ? "Status Tuntas" : "Keterangan"}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analytics.ranking.map(r => (
+                    <tr key={r.rank} className={`border-b border-slate-50 hover:bg-slate-50/80 transition-colors`}>
+                      <td className="py-3.5 text-xs font-black text-slate-400 pl-2">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center ${r.rank <= 3 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>{r.rank}</span>
+                      </td>
+                      <td className="py-3.5 text-xs font-bold text-slate-700">{r.name}</td>
+                      <td className="py-3.5">
+                        <span className={`px-2.5 py-1 rounded-lg text-xs font-black ${r.finalScore >= kkm ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                          {r.finalScore}
+                        </span>
+                      </td>
+                      <td className="py-3.5 text-xs font-bold">
+                        {isPublicView ? (
+                          r.finalScore < kkm ? (
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center gap-1.5 text-rose-500">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"/> Perlu Bimbingan
+                              </div>
+                              <button 
+                                onClick={() => onStudentRemedial?.(r.name)} 
+                                className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-rose-600 transition-all shadow-sm shadow-rose-200 flex items-center justify-center gap-1.5 w-fit active:scale-95"
+                              >
+                                <Plus size={12} /> Mulai Remedial
+                              </button>
                             </div>
-                            <button 
-                              onClick={() => onStudentRemedial?.(r.name)} 
-                              className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-rose-600 transition-all shadow-sm shadow-rose-200 flex items-center justify-center gap-1.5 w-fit active:scale-95"
-                            >
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-emerald-500">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"/> Tuntas
+                            </div>
+                          )
+                        ) : (
+                          r.finalScore < kkm ? (
+                            <button onClick={() => onStudentRemedial?.(r.name)} className="px-3 py-1.5 text-[10px] bg-rose-50 text-rose-600 rounded-lg font-black uppercase tracking-wider hover:bg-rose-100 transition-colors border border-rose-100 active:scale-95 flex items-center gap-1.5">
                               <Plus size={12} /> Mulai Remedial
                             </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-emerald-500">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"/> Tuntas
-                          </div>
-                        )
-                      ) : (
-                        r.finalScore < kkm ? (
-                          <button onClick={() => onStudentRemedial?.(r.name)} className="px-3 py-1.5 text-[10px] bg-rose-50 text-rose-600 rounded-lg font-black uppercase tracking-wider hover:bg-rose-100 transition-colors border border-rose-100 active:scale-95 flex items-center gap-1.5">
-                            <Plus size={12} /> Mulai Remedial
-                          </button>
-                        ) : (
-                          <span className="text-emerald-500 font-bold text-[11px]">Memenuhi KKM ({kkm})</span>
-                        )
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                          ) : (
+                            <span className="text-emerald-500 font-bold text-[11px]">Memenuhi KKM ({kkm})</span>
+                          )
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
