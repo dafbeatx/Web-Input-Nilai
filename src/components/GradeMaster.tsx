@@ -29,45 +29,6 @@ import Navbar from "./grademaster/Navbar";
 const ESSAY_COUNT = 5;
 
 export default function GradeMaster() {
-  const [layer, setInternalLayer] = useState<Layer>("home");
-
-  const setLayer = useCallback((newLayer: Layer) => {
-    setInternalLayer((prev) => {
-      if (prev === newLayer) return prev;
-      
-      if (prev === 'home' && newLayer !== 'home') {
-        window.history.pushState({ layer: newLayer }, '', `#${newLayer}`);
-      } else {
-        window.history.replaceState({ layer: newLayer }, '', `#${newLayer}`);
-      }
-      return newLayer;
-    });
-  }, []);
-
-  useEffect(() => {
-    const hash = window.location.hash.replace('#', '');
-    if (['home', 'setup', 'dashboard', 'grading'].includes(hash)) {
-      setInternalLayer(hash as Layer);
-      window.history.replaceState({ layer: hash }, '', `#${hash}`);
-    } else {
-      window.history.replaceState({ layer: 'home' }, '', '#home');
-    }
-
-    const handlePopState = (e: PopStateEvent) => {
-      setInternalLayer((prev) => {
-        if (prev !== 'home') {
-          window.history.replaceState({ layer: 'home' }, '', '#home');
-          return 'home';
-        }
-        return prev;
-      });
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  // Session list
   const [sessions, setSessions] = useState<SessionMeta[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
 
@@ -99,6 +60,7 @@ export default function GradeMaster() {
   const [gradedStudents, setGradedStudents] = useState<GradedStudent[]>([]);
 
   // UI state
+  const [layer, setInternalLayer] = useState<Layer>("home");
   const [isPublicView, setIsPublicView] = useState(false);
   const [isSessionPublic, setIsSessionPublic] = useState(true);
   const [modal, setModal] = useState<ModalType>(null);
@@ -108,6 +70,104 @@ export default function GradeMaster() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminUser, setAdminUser] = useState<string | null>(null);
   const [apiQuestionDifficulties, setApiQuestionDifficulties] = useState<any[]>([]);
+
+  const setLayer = useCallback((newLayer: Layer) => {
+    setInternalLayer((prev) => {
+      if (prev === newLayer) return prev;
+      
+      if (prev === 'home' && newLayer !== 'home') {
+        window.history.pushState({ layer: newLayer }, '', `#${newLayer}`);
+      } else {
+        window.history.replaceState({ layer: newLayer }, '', `#${newLayer}`);
+      }
+      return newLayer;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const savedLayer = localStorage.getItem("gm_layer");
+    const savedSessionId = localStorage.getItem("gm_sessionId");
+    const savedSessionName = localStorage.getItem("gm_sessionName");
+    const savedSessionPassword = localStorage.getItem("gm_sessionPassword");
+    const savedIsPublicView = localStorage.getItem("gm_isPublicView") === "true";
+
+    const hash = window.location.hash.replace('#', '');
+    const initialLayer = (['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard'].includes(hash) ? hash : (savedLayer || 'home')) as Layer;
+
+    setInternalLayer(initialLayer);
+    window.history.replaceState({ layer: initialLayer }, '', `#${initialLayer}`);
+
+    if (savedSessionName) {
+      setSessionName(savedSessionName);
+      if (savedSessionId) setSessionId(savedSessionId);
+      if (savedSessionPassword) setSessionPassword(savedSessionPassword);
+      setIsPublicView(savedIsPublicView);
+
+      // Auto-load session data if we have identifier
+      if (savedIsPublicView) {
+        handleLoadPublicSession(savedSessionName);
+      } else if (savedSessionPassword) {
+        // We use a small timeout to ensure state is settled
+        setTimeout(() => {
+          fetchSessionData(savedSessionName, savedSessionPassword)
+            .then(data => {
+              setSessionId(data.sessionId || "");
+              setAnswerKey(data.answerKey || []);
+              setTeacherName(data.teacher || "");
+              setSubject(data.subject || "");
+              setStudentClass(data.className || "");
+              setSchoolLevel(data.schoolLevel || "SMA");
+              setExamType(data.examType || "UTS");
+              setAcademicYear(data.academicYear || "2025/2026");
+              setSemester(data.semester || "Ganjil");
+              setKkm(data.kkm || 70);
+              setRemedialEssayCount(data.remedialEssayCount || 5);
+              setRemedialTimer(data.remedialTimer || 15);
+              setStudentList(data.studentList || []);
+              setGradedStudents(data.gradedStudents || []);
+              const questions = data.scoringConfig?.remedialQuestions || [];
+              setRemedialQuestions(questions);
+              setRemedialQuestionsInput(formatEssayQuestions(questions));
+              setApiQuestionDifficulties(data.questionDifficulties || []);
+              setIsSessionPublic(data.isPublic);
+
+              const key = data.answerKey as string[];
+              if (Array.isArray(key)) {
+                setKeyInput(key.map((ans: string, idx: number) => `${idx + 1}.${ans}`).join(" "));
+              }
+            })
+            .catch(console.error);
+        }, 100);
+      }
+    }
+
+    const handlePopState = (e: PopStateEvent) => {
+      setInternalLayer((prev) => {
+        if (prev !== 'home') {
+          window.history.replaceState({ layer: 'home' }, '', '#home');
+          return 'home';
+        }
+        return prev;
+      });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Save state to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("gm_layer", layer);
+      localStorage.setItem("gm_sessionId", sessionId);
+      localStorage.setItem("gm_sessionName", sessionName);
+      localStorage.setItem("gm_sessionPassword", sessionPassword);
+      localStorage.setItem("gm_isPublicView", String(isPublicView));
+    }
+  }, [layer, sessionId, sessionName, sessionPassword, isPublicView]);
+
 
 
   // Auto-dismiss toast
