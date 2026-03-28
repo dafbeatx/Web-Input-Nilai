@@ -14,7 +14,9 @@ import {
   AlertCircle,
   Eye,
   AlertOctagon,
-  Users
+  Users,
+  Timer,
+  Clock
 } from 'lucide-react';
 import { GradedStudent, AnalyticsResult } from '@/lib/grademaster/types';
 import { getCsiLabel, getLpsLabel } from '@/lib/grademaster/scoring';
@@ -269,6 +271,41 @@ export default function DashboardLayer({
     }
   };
 
+  const RemedialCountdown = ({ targetDate }: { targetDate: string }) => {
+    const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+    useEffect(() => {
+      const timer = setInterval(() => {
+        const diff = new Date(targetDate).getTime() - new Date().getTime();
+        if (diff <= 0) {
+          clearInterval(timer);
+          return;
+        }
+        setTimeLeft({
+          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((diff / 1000 / 60) % 60),
+          seconds: Math.floor((diff / 1000) % 60)
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }, [targetDate]);
+    return (
+      <div className="flex gap-2">
+        {[
+          { label: 'Hari', val: timeLeft.days },
+          { label: 'Jam', val: timeLeft.hours },
+          { label: 'Menit', val: timeLeft.minutes },
+          { label: 'Detik', val: timeLeft.seconds }
+        ].map((item, i) => (
+          <div key={i} className="flex flex-col items-center bg-white/80 backdrop-blur-sm px-3 py-2 rounded-xl border border-indigo-100 shadow-sm">
+            <span className="text-lg font-black text-indigo-900">{item.val.toString().padStart(2, '0')}</span>
+            <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">{item.label}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="p-3 sm:p-5 lg:p-8 w-full max-w-5xl mx-auto px-4 md:px-6 animate-in">
       <header className="mb-8 md:mb-10 text-center">
@@ -486,21 +523,38 @@ export default function DashboardLayer({
         </div>
 
         {/* Remedial Announcement Banner */}
-        <div className="mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-start gap-3 shadow-sm animate-in zoom-in-95">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-200">
-            <Bell size={20} className="animate-bounce" />
+        <div className="mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex flex-col md:flex-row items-center md:items-start gap-4 shadow-sm animate-in zoom-in-95 overflow-hidden group">
+          <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xl shadow-indigo-200 group-hover:rotate-12 transition-transform">
+            <Bell size={24} className="animate-bounce" />
           </div>
-          <div>
-            <h4 className="text-sm font-black text-indigo-900 mb-0.5 flex items-center gap-2 uppercase tracking-wide">
-              📢 Pengumuman Remedial Penting!
-            </h4>
-            <p className="text-xs font-bold text-indigo-700 leading-relaxed">
-              Sesuai kebijakan akademik, remedial diberikan waktu maksimal <span className="text-rose-600 font-extrabold underline">5 HARI</span> terhitung sejak nilai diinput oleh guru. 
-              Sistem akan otomatis menutup akses jika melewati batas waktu.
-            </p>
-            <div className="mt-2 flex items-center gap-2 text-[10px] font-black text-rose-600 bg-white/50 w-fit px-2 py-1 rounded-lg border border-rose-100">
-              <AlertCircle size={12} /> KONSEKUENSI: NILAI OTOMATIS 0 & PENALTI -10 POIN PERILAKU
-            </div>
+          <div className="flex-1 text-center md:text-left">
+             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-2">
+                <h4 className="text-sm font-black text-indigo-900 uppercase tracking-widest flex items-center justify-center md:justify-start gap-2">
+                  🚀 Pengumuman Remedial Penting!
+                </h4>
+                <div className="flex items-center justify-center gap-2">
+                   <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                   <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter">Live Countdown</span>
+                </div>
+             </div>
+             
+             <p className="text-xs font-bold text-indigo-700 leading-relaxed mb-4">
+                Batas waktu pengerjaan remedial telah ditetapkan. Pastikan seluruh siswa menyelesaikan tugas sebelum waktu habis.
+                Sistem akan menutup akses secara <b className="text-rose-600">permanen</b> tepat pada waktunya.
+             </p>
+
+             <div className="flex flex-wrap justify-center md:justify-start items-center gap-2 md:gap-3 mb-5">
+                <RemedialCountdown targetDate="2026-03-30T07:00:00+07:00" />
+             </div>
+
+             <div className="flex flex-col sm:flex-row items-center gap-3 p-3 bg-white/60 backdrop-blur-md rounded-xl border border-rose-200">
+                <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 animate-pulse">
+                   <AlertCircle size={18} />
+                </div>
+                <div className="flex-1 text-xs font-black text-rose-600 uppercase tracking-tight text-center sm:text-left">
+                   KONSEKUENSI: NILAI AKAN <span className="underline decoration-2 underline-offset-4 decoration-rose-400">0 (NOL)</span> & <span className="underline decoration-2 underline-offset-4 decoration-rose-400">-10 POIN PERILAKU</span> TANPA TOLERANSI!
+                </div>
+             </div>
           </div>
         </div>
 
