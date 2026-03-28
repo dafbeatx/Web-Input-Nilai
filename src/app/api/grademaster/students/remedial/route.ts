@@ -26,8 +26,36 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Siswa tidak ditemukan' }, { status: 404 });
     }
 
+    let currentStatus = student.remedial_status;
+
+    // Auto-recovery for stuck INITIATED attempts
+    if (currentStatus === 'INITIATED') {
+      const { data: attempt } = await supabase
+        .from('gm_remedial_attempts')
+        .select('id, created_at')
+        .eq('student_id', student.id)
+        .eq('status', 'INITIATED')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+        
+      if (attempt) {
+        const attemptAgeMs = Date.now() - new Date(attempt.created_at).getTime();
+        if (attemptAgeMs > 2 * 60 * 1000) { // 2 minutes
+          console.log(`Auto-recovering stuck INITIATED attempt for ${studentName}`);
+          const { markRemedialFailed } = await import('@/lib/grademaster/services/remedial.service');
+          try {
+            await markRemedialFailed(attempt.id, student.id);
+            currentStatus = 'FAILED';
+          } catch (e) {
+            console.error('Failed to auto-recover attempt', e);
+          }
+        }
+      }
+    }
+
     return NextResponse.json({ 
-      status: student.remedial_status,
+      status: currentStatus,
       finalScore: student.final_score,
       cheatingFlags: student.cheating_flags,
       teacherReviewed: student.teacher_reviewed
@@ -95,6 +123,7 @@ export async function PUT(req: NextRequest) {
         status: data.remedial_status,
         attemptId: data.attempt_id || undefined,
         attemptToken: data.attempt_token || undefined,
+        studentId: finalStudentId,
     });
 
   } catch (err: unknown) {

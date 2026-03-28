@@ -216,7 +216,7 @@ CREATE TABLE IF NOT EXISTS public.gm_remedial_attempts (
     student_id UUID NOT NULL REFERENCES public.gm_students(id) ON DELETE CASCADE,
     attempt_number INTEGER NOT NULL DEFAULT 1,
     attempt_token TEXT NOT NULL UNIQUE,
-    status TEXT NOT NULL DEFAULT 'STARTED',
+    status TEXT NOT NULL DEFAULT 'INITIATED',
     answers JSONB DEFAULT '[]',
     note TEXT,
     location TEXT,

@@ -59,6 +59,10 @@ export default function StudentRemedialLayer({
   const [currentLocation, setCurrentLocation] = useState<string>('');
   const [note, setNote] = useState("");
   const [shuffledQuestions, setShuffledQuestions] = useState<{text: string, originalIndex: number}[]>([]);
+  const [attemptId, setAttemptId] = useState<string | null>(null);
+  const [attemptToken, setAttemptToken] = useState<string | null>(null);
+  const [currentStudentId, setCurrentStudentId] = useState<string | null>(null);
+  const hasActivatedRef = useRef(false);
   
   const [warningCount, setWarningCount] = useState(0);
   const [tabWarningCount, setTabWarningCount] = useState(0);
@@ -294,6 +298,9 @@ export default function StudentRemedialLayer({
         setNote(saved.note || '');
         setCurrentLocation(saved.location || '');
         startedAtRef.current = saved.startedAt;
+        if (saved.attemptId) setAttemptId(saved.attemptId);
+        if (saved.attemptToken) setAttemptToken(saved.attemptToken);
+        if (saved.studentId) setCurrentStudentId(saved.studentId);
 
         // Calculate remaining time from startedAt
         const elapsed = Math.floor((Date.now() - saved.startedAt) / 1000);
@@ -374,8 +381,11 @@ export default function StudentRemedialLayer({
       location: currentLocation,
       refreshCount: loadRemedialSession()?.refreshCount || 0,
       shuffledIndices: shuffledQuestions.map(q => q.originalIndex),
+      attemptId: attemptId || undefined,
+      attemptToken: attemptToken || undefined,
+      studentId: currentStudentId || undefined,
     });
-  }, [answers, note, step, sessionId, studentName, currentLocation, shuffledQuestions]);
+  }, [answers, note, step, sessionId, studentName, currentLocation, shuffledQuestions, attemptId, attemptToken, currentStudentId]);
 
   const isSubmittingRef = useRef(isSubmitting);
   useEffect(() => { isSubmittingRef.current = isSubmitting; });
@@ -431,6 +441,34 @@ export default function StudentRemedialLayer({
     const mapped = indices.map(idx => ({ text: remedialQuestions[idx] || '', originalIndex: idx }));
     setShuffledQuestions(mapped);
   }, [remedialQuestions, sessionId]);
+
+  // Activate EXAM when mounted
+  useEffect(() => {
+    if (step === 'EXAM' && attemptId && attemptToken && currentStudentId && !hasActivatedRef.current) {
+      hasActivatedRef.current = true;
+      const activate = async () => {
+        try {
+          const res = await fetch('/api/grademaster/students/remedial/activate', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({
+               action: 'ACTIVATE',
+               attemptId,
+               studentId: currentStudentId,
+               token: attemptToken
+             })
+          });
+          if (!res.ok) throw new Error('Gagal aktivasi session');
+        } catch (e) {
+          console.error(e);
+          setToast({ message: "Gagal memuat soal. Sesi dibatalkan. Silakan mulai ulang.", type: "error" });
+          clearRemedialSession();
+          window.location.reload();
+        }
+      };
+      activate();
+    }
+  }, [step, attemptId, attemptToken, currentStudentId]);
 
 
 
@@ -523,12 +561,16 @@ export default function StudentRemedialLayer({
       sendTelegramNotify('ACTIVITY', undefined, "Foto verifikasi gagal diambil (kamera mungkin belum sepenuhnya siap)");
     }
 
+    let attemptIdFromServer: string | undefined;
+    let attemptTokenFromServer: string | undefined;
+    let studentIdFromServer: string | undefined;
+
     // 3. Start Session on Server
     try {
       const res = await fetch('/api/grademaster/students/remedial', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, studentName, status: 'STARTED', location: locStr, photo: capturedImg })
+        body: JSON.stringify({ sessionId, studentName, status: 'INITIATED', location: locStr, photo: capturedImg })
       });
       const data = await res.json().catch(() => ({}));
       
@@ -541,6 +583,16 @@ export default function StudentRemedialLayer({
         }
         setIsSubmitting(false);
         return;
+      }
+      
+      if (data.attemptId && data.attemptToken && data.studentId) {
+        attemptIdFromServer = data.attemptId;
+        attemptTokenFromServer = data.attemptToken;
+        studentIdFromServer = data.studentId;
+
+        setAttemptId(data.attemptId);
+        setAttemptToken(data.attemptToken);
+        setCurrentStudentId(data.studentId);
       }
     } catch (e) {
       setToast({ message: "Terjadi kesalahan saat menghubungi server. Coba lagi.", type: "error" });
@@ -569,6 +621,9 @@ export default function StudentRemedialLayer({
       location: locStr,
       refreshCount: 0,
       shuffledIndices: indices,
+      attemptId: attemptIdFromServer || attemptId || undefined,
+      attemptToken: attemptTokenFromServer || attemptToken || undefined,
+      studentId: studentIdFromServer || currentStudentId || undefined,
     });
     
     // Send Start Notification with Photo

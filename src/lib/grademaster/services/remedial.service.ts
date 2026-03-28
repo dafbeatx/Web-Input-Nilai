@@ -31,8 +31,8 @@ export async function submitRemedial(
 
   if (sessErr || !session) throw new Error('Sesi tidak ditemukan');
 
-  // ── STARTED: Create new attempt ──
-  if (status === 'STARTED') {
+  // ── INITIATED: Create new attempt ──
+  if (status === 'INITIATED') {
     if (student.remedial_attempts >= 1) {
       throw new Error('Maksimal kesempatan remedial hanya 1 kali.');
     }
@@ -51,7 +51,7 @@ export async function submitRemedial(
         student_id: studentId,
         attempt_number: (student.remedial_attempts || 0) + 1,
         attempt_token: attemptToken,
-        status: 'STARTED',
+        status: 'INITIATED',
         location,
         photo,
       })
@@ -62,7 +62,7 @@ export async function submitRemedial(
 
     // Update student cache
     const updateData: Record<string, unknown> = {
-      remedial_status: 'STARTED',
+      remedial_status: 'INITIATED',
       remedial_attempts: (student.remedial_attempts || 0) + 1,
       remedial_location: location,
       remedial_photo: photo,
@@ -90,7 +90,7 @@ export async function submitRemedial(
     .select('id, attempt_token, risk_score')
     .eq('session_id', sessionId)
     .eq('student_id', studentId)
-    .eq('status', 'STARTED')
+    .eq('status', 'ACTIVE')
     .order('created_at', { ascending: false })
     .limit(1)
     .single();
@@ -338,4 +338,85 @@ export async function getRemainingStudents(sessionId: string) {
 
   if (error) throw error;
   return data;
+}
+
+export async function activateRemedialAttempt(attemptId: string, studentId: string, token: string) {
+  const { data: attempt, error: fetchErr } = await supabase
+    .from('gm_remedial_attempts')
+    .select('id, status, session_id')
+    .eq('id', attemptId)
+    .eq('student_id', studentId)
+    .single();
+
+  if (fetchErr || !attempt) throw new Error('Attempt tidak ditemukan');
+  
+  if (attempt.status === 'ACTIVE') return true; // Already activated
+  // Only allow activating an INITIATED attempt
+  if (attempt.status !== 'INITIATED') throw new Error(`Attempt sudah dalam status ${attempt.status}`);
+
+  // Validate token
+  const { valid } = verifyAttemptToken(token, attempt.session_id, studentId);
+  if (!valid) throw new Error('Token tidak valid atau kadaluarsa');
+
+  const { error } = await supabase
+    .from('gm_remedial_attempts')
+    .update({ 
+      status: 'ACTIVE',
+      started_at: new Date().toISOString()
+    })
+    .eq('id', attemptId);
+
+  if (error) throw error;
+
+  await supabase
+    .from('gm_students')
+    .update({ remedial_status: 'ACTIVE' })
+    .eq('id', studentId);
+
+  return true;
+}
+
+export async function markRemedialFailed(attemptId: string, studentId: string) {
+  const { data: attempt, error: fetchErr } = await supabase
+    .from('gm_remedial_attempts')
+    .select('id, status')
+    .eq('id', attemptId)
+    .eq('student_id', studentId)
+    .single();
+
+  if (fetchErr || !attempt) throw new Error('Attempt tidak ditemukan');
+  
+  // Can only fail if INITIATED
+  if (attempt.status !== 'INITIATED') {
+    throw new Error(`Tidak bisa mengubah status ${attempt.status} menjadi FAILED`);
+  }
+
+  const { error } = await supabase
+    .from('gm_remedial_attempts')
+    .update({ 
+      status: 'FAILED',
+      completed_at: new Date().toISOString()
+    })
+    .eq('id', attemptId);
+
+  if (error) throw error;
+
+  // Restore student attempts count to allow retry
+  const { data: student } = await supabase
+    .from('gm_students')
+    .select('remedial_attempts')
+    .eq('id', studentId)
+    .single();
+
+  const currentAttempts = Math.max(0, (student?.remedial_attempts || 1) - 1);
+
+  await supabase
+    .from('gm_students')
+    .update({ 
+      remedial_status: 'FAILED',
+      remedial_attempts: currentAttempts 
+    })
+    .eq('id', studentId);
+
+  return true;
 }

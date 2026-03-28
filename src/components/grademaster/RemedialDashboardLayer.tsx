@@ -96,7 +96,7 @@ export default function RemedialDashboardLayer({
   const stats = {
     total: remedialStudents.length,
     completed: remedialStudents.filter(s => s.remedialStatus === 'COMPLETED').length,
-    inProgress: remedialStudents.filter(s => s.remedialStatus === 'IN_PROGRESS').length,
+    active: remedialStudents.filter(s => s.remedialStatus === 'ACTIVE' || s.remedialStatus === 'INITIATED').length,
     cheated: remedialStudents.filter(s => s.remedialStatus === 'CHEATED').length,
     timeout: remedialStudents.filter(s => s.remedialStatus === 'TIMEOUT').length,
     waitingReview: remedialStudents.filter(s => s.remedialStatus === 'REMEDIAL' && !s.teacherReviewed).length
@@ -106,7 +106,8 @@ export default function RemedialDashboardLayer({
     switch (status) {
       case 'COMPLETED':
         return <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><CheckCircle2 size={10}/> FINAL (SELESAI)</span>;
-      case 'IN_PROGRESS':
+      case 'ACTIVE':
+      case 'INITIATED':
         return <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><Clock size={10}/> PROSES</span>;
       case 'CHEATED':
         return <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><AlertTriangle size={10}/> CURANG</span>;

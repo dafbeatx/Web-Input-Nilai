@@ -3,6 +3,9 @@ const STORAGE_KEY = 'gm_remedial_session';
 export interface RemedialSession {
   sessionId: string;
   studentName: string;
+  studentId?: string;
+  attemptId?: string;
+  attemptToken?: string;
   step: string;
   startedAt: number;
   answers: string[];
