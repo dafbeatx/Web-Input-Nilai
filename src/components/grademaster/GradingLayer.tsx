@@ -102,9 +102,22 @@ export default function GradingLayer(props: GradingLayerProps) {
   }, []);
 
   const filteredStudents = React.useMemo(() => {
-    if (!studentName) return dbStudents;
-    return dbStudents.filter(s => s.name.toLowerCase().includes(studentName.toLowerCase()));
-  }, [dbStudents, studentName]);
+    // 1. Start with database-backed students from behavior logs
+    const seen = new Set(dbStudents.map(s => s.name.toLowerCase().trim()));
+    const combined = [...dbStudents];
+
+    // 2. Add names from studentList if they aren't already represented
+    (studentList || []).forEach((name, idx) => {
+      const normalized = name.toLowerCase().trim();
+      if (normalized && !seen.has(normalized)) {
+        combined.push({ id: `list-${idx}`, name: name.trim() });
+        seen.add(normalized);
+      }
+    });
+
+    if (!studentName) return combined;
+    return combined.filter(s => s.name.toLowerCase().includes(studentName.toLowerCase()));
+  }, [dbStudents, studentName, studentList]);
 
   const selectStudent = (id: string, name: string) => {
     setStudentName(name);

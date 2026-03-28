@@ -64,8 +64,7 @@ export async function POST(req: NextRequest) {
       const { data: students, error: stuError } = await supabase
         .from('gm_students')
         .select('*')
-        .eq('session_id', targetId)
-        .eq('is_deleted', false);
+        .eq('session_id', targetId);
         
       if (stuError || !students) return NextResponse.json({ error: 'Students not found' }, { status: 404 });
       
@@ -249,9 +248,12 @@ export async function POST(req: NextRequest) {
     let isReadOnly = false;
     
     // Check access:
-    // 1. If no password provided -> Read-only (Public Overview)
+    // 1. If Admin Session exists -> Full Access
     // 2. If password provided -> Validate. If correct, Full Access (Teacher).
-    if (!password) {
+    // 3. Fallback to Read-only.
+    if (adminSession) {
+      isReadOnly = false;
+    } else if (!password) {
       isReadOnly = true;
     } else {
       const isMatch = await verifyPassword(password.trim(), session.password_hash);
