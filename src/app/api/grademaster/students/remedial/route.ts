@@ -128,6 +128,7 @@ export async function POST(req: NextRequest) {
       status: data.remedial_status,
       subject: data.subject,
       className: data.class_name,
+      remedialQuestions: data.remedialQuestions,
     });
 
   } catch (err: unknown) {

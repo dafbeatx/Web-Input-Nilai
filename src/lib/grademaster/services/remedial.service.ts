@@ -107,6 +107,13 @@ export async function submitRemedial(
       validateStateTransition(student.remedial_status, 'INITIATED');
     }
 
+    // Defensive Question Check: Ensure session has questions before starting
+    const questions = session.scoring_config?.remedialQuestions || [];
+    if (questions.length === 0) {
+      console.error(`[Remedial Error] ${studentName} (session: ${sessionId}) - Gagal INITIATED: Soal remedial kosong di Database.`);
+      throw new Error('INVALID_SESSION_DATA: Guru belum mengatur soal remedial untuk sesi ini.');
+    }
+
     const attemptToken = generateAttemptToken(sessionId, studentId);
     const attemptNumber = (student.remedial_attempts || 0) + 1;
     const originalScore = (student.original_score === 0 || student.original_score == null)
@@ -130,7 +137,7 @@ export async function submitRemedial(
       return data as string;
     }, `Membuat attempt remedial untuk ${studentName} (session: ${sessionId})`);
 
-    console.log(`[Remedial] INITIATED: student=${studentName}, attemptId=${attemptId}, session=${sessionId}`);
+    console.log(`[Remedial] INITIATED: student=${studentName}, attemptId=${attemptId}, session=${sessionId}, questionCount=${questions.length}`);
 
     return {
       ...student,
@@ -143,6 +150,7 @@ export async function submitRemedial(
       attempt_token: attemptToken,
       subject: session.subject,
       class_name: session.class_name,
+      remedialQuestions: questions,
     };
   }
 
@@ -348,7 +356,10 @@ async function findActiveAttempt(
     .limit(1)
     .single();
 
-  if (activeAttempt) return activeAttempt;
+  if (activeAttempt) {
+    console.log(`[Remedial] Active attempt found for ${studentName}: id=${activeAttempt.id}`);
+    return activeAttempt;
+  }
 
   // 2. Auto-recovery: check for INITIATED attempt and auto-activate
   console.warn(`[Remedial Recovery] No ACTIVE attempt found for ${studentName} (session: ${sessionId}). Checking INITIATED...`);

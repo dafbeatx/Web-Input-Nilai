@@ -421,6 +421,12 @@ export default function StudentRemedialLayer({
         if ((!remedialQuestions || remedialQuestions.length === 0) && saved.remedialQuestions) {
           console.log("Recovering questions from local session...");
           // Shuffling logic below will use saved.shuffledIndices
+        } else if ((!remedialQuestions || remedialQuestions.length === 0) && !saved.remedialQuestions) {
+          // Both prop and session storage are empty - this is a corrupted entrance
+          console.error("Critical: No remedial questions found in props or local storage.");
+          setToast({ message: "Data soal tidak ditemukan. Menutup sesi...", type: "error" });
+          setTimeout(() => handleExit(), 2000);
+          return;
         }
 
         const baseTimer = (saved.remedialTimer || remedialTimer) * 60;
@@ -520,6 +526,20 @@ export default function StudentRemedialLayer({
 
   const isSubmittingRef = useRef(isSubmitting);
   useEffect(() => { isSubmittingRef.current = isSubmitting; });
+
+  // ── Session Health Monitoring ──
+  useEffect(() => {
+    if (step === 'EXAM' && shuffledQuestions.length === 0 && !isSubmitting && !isRefreshingRef.current) {
+      console.warn("Detected EXAM step with 0 questions. Triggering safety reset...");
+      setToast({ message: "Sesi tidak valid (soal kosong). Silakan masuk kembali.", type: "error" });
+      sendTelegramNotify('ERROR', undefined, `⚠️ [HEALTH_CHECK] ${studentName} - Sesi EXAM tapi soal kosong. Auto-reset triggered.`);
+      
+      setTimeout(() => {
+        handleExit();
+        window.location.reload();
+      }, 2000);
+    }
+  }, [step, shuffledQuestions.length]);
 
   const handleCameraViolation = useCallback((type: string) => {
     if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
@@ -764,7 +784,7 @@ export default function StudentRemedialLayer({
     let attemptTokenFromServer: string | undefined;
     let studentIdFromServer: string | undefined;
 
-    // 3. Start Session on Server
+      // 3. Start Session on Server
     try {
       const res = await fetch('/api/grademaster/students/remedial', {
         method: 'POST',
@@ -778,9 +798,10 @@ export default function StudentRemedialLayer({
         })
       });
       
+      const data = await res.json();
+      
       if (!res.ok) {
-        const errorData = await res.json();
-        if (errorData.error === 'RESET_REQUIRED') {
+        if (data.error === 'RESET_REQUIRED') {
           setToast({ message: "Sesi anda telah direset. Silakan login kembali.", type: "error" });
           setTimeout(() => {
             clearRemedialSession();
@@ -788,17 +809,30 @@ export default function StudentRemedialLayer({
           }, 3000);
           return;
         }
-        const errMsg = errorData.error || "Terjadi kesalahan saat memulai ujian. Coba lagi.";
+        
+        // Handle specifically missing questions from server side
+        if (data.error?.includes('INVALID_SESSION_DATA') || data.error?.includes('Guru belum mengatur')) {
+          setToast({ message: "Gagal memulai: Soal remedial belum diatur oleh guru.", type: "error" });
+          sendTelegramNotify('ERROR', undefined, `⚠️ ${studentName} - Gagal Mulai: Soal Kosong di Server (Mapel: ${subject})`);
+          setIsSubmitting(false);
+          return;
+        }
+
+        const errMsg = data.error || "Terjadi kesalahan saat memulai ujian. Coba lagi.";
         setToast({ message: errMsg, type: "error" });
         sendTelegramNotify('ERROR', undefined, `Gagal API Mulai: ${errMsg}`);
-        if (errorData.error?.includes('permanen')) {
+        if (data.error?.includes('permanen')) {
             setStep('CHEATED'); 
         }
         setIsSubmitting(false);
         return;
       }
+
+      // If server returned fresh questions, update local state
+      if (data.remedialQuestions && data.remedialQuestions.length > 0) {
+        setShuffledQuestions(data.remedialQuestions.map((q: string, i: number) => ({ text: q, originalIndex: i })));
+      }
       
-      const data = await res.json();
       if (data.attemptId && data.attemptToken && data.studentId) {
         attemptIdFromServer = data.attemptId;
         attemptTokenFromServer = data.attemptToken;
@@ -808,43 +842,57 @@ export default function StudentRemedialLayer({
         setAttemptToken(data.attemptToken);
         setCurrentStudentId(data.studentId);
       }
+
+      // MediaPipe ProctoringCamera will handle media access and stream locally
+      startedAtRef.current = Date.now();
+      
+      // 4. Generate initial shuffle on start
+      // Use the most up-to-date questions (possibly refreshed from server above)
+      const activeQuestions = data.remedialQuestions && data.remedialQuestions.length > 0 
+        ? data.remedialQuestions 
+        : effectiveQuestions;
+
+      const indices = activeQuestions.map((_: any, i: number) => i);
+      for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+      }
+
+      const initialShuffled = indices.map((idx: number) => ({ 
+        text: activeQuestions[idx], 
+        originalIndex: idx 
+      }));
+      
+      setShuffledQuestions(initialShuffled);
+      setAnswers(new Array(activeQuestions.length).fill(""));
+
+      saveRemedialSession({
+        sessionId,
+        studentName,
+        step: 'EXAM',
+        startedAt: startedAtRef.current,
+        answers: new Array(activeQuestions.length).fill(""),
+        note,
+        location: locStr,
+        refreshCount: 0,
+        shuffledIndices: indices,
+        attemptId: attemptIdFromServer || attemptId || undefined,
+        attemptToken: attemptTokenFromServer || attemptToken || undefined,
+        studentId: studentIdFromServer || currentStudentId || undefined,
+        examMode,
+        cameraStatus,
+        remedialQuestions: activeQuestions,
+        remedialTimer,
+      });
+      // Initialize session and set step to EXAM
+      setIsSubmitting(false);
+      setStep('EXAM');
     } catch (e) {
       setToast({ message: "Terjadi kesalahan saat menghubungi server. Coba lagi.", type: "error" });
       sendTelegramNotify('ERROR', undefined, "Gagal Network: Put Remedial failed");
       setIsSubmitting(false);
       return;
     }
-
-    // MediaPipe ProctoringCamera will handle media access and stream locally
-    startedAtRef.current = Date.now();
-    
-    // Generate initial shuffle on start
-    const indices = remedialQuestions.map((_, i) => i);
-    for (let i = indices.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [indices[i], indices[j]] = [indices[j], indices[i]];
-    }
-
-    saveRemedialSession({
-      sessionId,
-      studentName,
-      step: 'EXAM',
-      startedAt: startedAtRef.current,
-      answers,
-      note,
-      location: locStr,
-      refreshCount: 0,
-      shuffledIndices: indices,
-      attemptToken: attemptTokenFromServer || attemptToken || undefined,
-      studentId: studentIdFromServer || currentStudentId || undefined,
-      examMode,
-      cameraStatus,
-      remedialQuestions,
-      remedialTimer,
-    });
-    // Initialize session and set step to EXAM
-    setIsSubmitting(false);
-    setStep('EXAM');
   };
 
   // Timer countdown (depends on timeLeft)
@@ -1696,13 +1744,24 @@ export default function StudentRemedialLayer({
       </div>
 
       <div className="mt-8 flex justify-end pb-24">
-        <button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="px-6 py-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 w-full md:w-auto disabled:opacity-50 disabled:pointer-events-none"
-        >
-          <Send size={16} /> {isSubmitting ? 'Memproses...' : 'Kumpulkan Jawaban'}
-        </button>
+        {shuffledQuestions.length > 0 ? (
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting || isOffline}
+            className={`px-6 py-4 rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 w-full md:w-auto ${
+              isSubmitting || isOffline
+                ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                : 'bg-indigo-600 text-white shadow-indigo-600/20'
+            }`}
+          >
+            <Send size={16} /> {isSubmitting ? 'Memproses...' : 'Kumpulkan Jawaban'}
+          </button>
+        ) : (
+          <div className="flex items-center gap-2 px-4 py-4 bg-rose-50 text-rose-600 rounded-2xl border border-rose-100 text-[10px] md:text-xs font-bold justify-center w-full">
+            <AlertTriangle size={16} />
+            DATA SOAL TIDAK TERSEDIA
+          </div>
+        )}
       </div>
     </div>
   </div>
