@@ -109,6 +109,8 @@ export default function HomeLayer({
           <div className="flex items-center gap-2 md:gap-3 text-indigo-600 mb-1 md:mb-2">
             <GraduationCap size={24} className="md:w-8 md:h-8" />
             <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em]">SMP Terpadu Al-Ittihadiyah</span>
+            <span className="text-[10px] md:text-xs font-black text-slate-300">•</span>
+            <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em]">SMA Terpadu As Salaam</span>
           </div>
           <h1 className="text-2xl md:text-4xl font-black text-slate-800 tracking-tight flex items-center gap-3">
             {expandedGroup ? (
@@ -160,7 +162,7 @@ export default function HomeLayer({
             <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-indigo-50 text-indigo-600 rounded-2xl mb-4 md:mb-6">
               <GraduationCap size={28} className="md:w-8 md:h-8" />
             </div>
-            <h3 className="text-xl md:text-3xl font-black text-slate-800 mb-2 md:mb-3 font-outfit">Selamat Datang di SMP Terpadu Al-Ittihadiyah</h3>
+            <h3 className="text-xl md:text-3xl font-black text-slate-800 mb-2 md:mb-3 font-outfit">Selamat Datang di GradeMaster OS</h3>
             <p className="text-xs md:text-sm text-slate-500 font-bold mb-6 md:mb-10 max-w-2xl mx-auto leading-relaxed">
               Platform koreksi lembar jawaban dan analitik performa cerdas untuk pendidik modern.
               Tinggalkan cara manual, kini Anda dapat mengelola puluhan kelas hanya dengan beberapa klik.
