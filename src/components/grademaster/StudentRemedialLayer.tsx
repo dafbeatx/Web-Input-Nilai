@@ -83,6 +83,7 @@ export default function StudentRemedialLayer({
   const [sessionCreatedAt, setSessionCreatedAt] = useState<string | null>(null);
   const [finalScore, setFinalScore] = useState<number | null>(null);
   const hasSubmittedRef = useRef(false);
+  const wakeLockRef = useRef<any>(null); // Screen Wake Lock
 
   const handleExit = () => {
     clearRemedialSession();
@@ -346,6 +347,44 @@ export default function StudentRemedialLayer({
       setToast({ message: `Anda harus mengaktifkan ${missing.join(' dan ')} untuk melanjutkan ujian.`, type: 'error' });
     }
   };
+
+  // Wake Lock: Keep screen on during EXAM
+  useEffect(() => {
+    if (step !== 'EXAM') {
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().then(() => { wakeLockRef.current = null; });
+      }
+      return;
+    }
+
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator && (navigator as any).wakeLock) {
+          wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+          console.log('Screen Wake Lock is active');
+        }
+      } catch (err: any) {
+        console.warn(`Wake Lock error: ${err.name}, ${err.message}`);
+      }
+    };
+
+    requestWakeLock();
+
+    // Re-acquire on focus
+    const handleReacquire = () => {
+      if (document.visibilityState === 'visible' && step === 'EXAM') {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleReacquire);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleReacquire);
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().then(() => { wakeLockRef.current = null; });
+      }
+    };
+  }, [step]);
 
   // Restore session on mount (localStorage)
   useEffect(() => {
@@ -1105,6 +1144,14 @@ export default function StudentRemedialLayer({
               </div>
             </div>
           </div>
+
+          <button
+            onClick={checkPermissions}
+            disabled={checkingPerms}
+            className={`w-full py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all mb-4 flex items-center justify-center gap-2 border-2 ${cameraOk && locationOk ? 'bg-emerald-50 text-emerald-600 border-emerald-400' : 'bg-indigo-600 border-indigo-500 text-white shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95'}`}
+          >
+            {checkingPerms ? '🟡 Sedang Memproses...' : cameraOk && locationOk ? '✅ Izin Sudah Aktif' : '🔐 Izinkan Kamera & Lokasi'}
+          </button>
 
           {/* Camera error detail banner */}
           {cameraErrorDetail && !cameraOk && (
