@@ -84,7 +84,7 @@ export async function submitRemedial(
 
   const { data: session, error: sessErr } = await supabase
     .from('gm_sessions')
-    .select('id, scoring_config, kkm, remedial_timer')
+    .select('id, scoring_config, kkm, remedial_timer, subject, class_name')
     .eq('id', sessionId)
     .single();
 
@@ -141,6 +141,8 @@ export async function submitRemedial(
       original_score: originalScore ?? student.original_score,
       attempt_id: attemptId,
       attempt_token: attemptToken,
+      subject: session.subject,
+      class_name: session.class_name,
     };
   }
 
@@ -294,7 +296,9 @@ export async function submitRemedial(
     ...studentUpdate,
     newFinalScore: studentUpdate.final_score,
     attempt_id: attempt.id,
-    attempt_token: (attempt as any).attempt_token || null
+    attempt_token: (attempt as any).attempt_token || null,
+    subject: session.subject,
+    class_name: session.class_name,
   };
 }
 

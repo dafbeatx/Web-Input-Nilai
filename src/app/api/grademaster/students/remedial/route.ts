@@ -125,7 +125,9 @@ export async function POST(req: NextRequest) {
       attemptId: data.attempt_id,
       attemptToken: data.attempt_token,
       newFinalScore: data.newFinalScore,
-      status: data.remedial_status
+      status: data.remedial_status,
+      subject: data.subject,
+      className: data.class_name,
     });
 
   } catch (err: unknown) {

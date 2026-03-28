@@ -659,7 +659,12 @@ export default function StudentRemedialLayer({
     if (remedialQuestions.length === 0) {
       const errMsg = "Soal remedial belum diatur atau sesi Anda telah direset oleh guru. Silakan masuk kembali.";
       setToast({ message: errMsg, type: "error" });
-      sendTelegramNotify('ERROR', undefined, `Gagal Mulai: Soal Kosong`);
+      
+      // Try to get some metadata for the log even if it's currently empty state
+      const logName = studentName || localStorage.getItem('gm_remedial_student_name') || 'Siswa Unknown';
+      const logClass = className || localStorage.getItem('gm_remedial_class_name') || 'Kelas Unknown';
+      
+      sendTelegramNotify('ERROR', undefined, `⚠️ [${logClass}] ${logName} - Gagal Mulai: Soal Kosong (Mapel: ${subject || 'Informatika'})`);
       
       // Clear persistence and reload to let student re-type their name/session
       setTimeout(() => {
