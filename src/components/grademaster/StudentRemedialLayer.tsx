@@ -102,6 +102,14 @@ export default function StudentRemedialLayer({
   const lastPhotoHashRef = useRef<string>(''); // Dedup: track last sent photo hash
   const consecutiveDupCountRef = useRef<number>(0); // Track how many dupes skipped in a row
 
+  // Draggable PiP Camera State
+  const pipRef = useRef<HTMLDivElement>(null);
+  const [pipPos, setPipPos] = useState<{x: number, y: number} | null>(null);
+  const isDraggingRef = useRef(false);
+  const dragOffsetRef = useRef({x: 0, y: 0});
+  const dragStartPosRef = useRef({x: 0, y: 0});
+  const wasDraggedRef = useRef(false);
+
   const handleExit = () => {
     clearRemedialSession();
     onBack();
@@ -1944,12 +1952,65 @@ export default function StudentRemedialLayer({
       `}</style>
 
       <div className={`privacy-mode ${(isTabHidden || isPermanentlyBlocked || isOffline) && step === 'EXAM' ? 'invisible' : ''}`}>
-        {/* Fixed Responsive Camera Bubble - Now Portrait & Floating (PIP) */}
+        {/* Draggable Floating Camera (PiP) */}
         {step === 'EXAM' && (
           <div
-            className="fixed z-50 rounded-2xl md:rounded-3xl overflow-hidden border-2 md:border-4 border-slate-900 shadow-2xl bg-slate-900 pointer-events-none bottom-4 right-4 w-24 h-36 md:bottom-6 md:right-8 md:w-36 md:h-52 animate-in slide-in-from-right duration-500 hover:scale-110 transition-transform"
+            ref={pipRef}
+            className="fixed z-50 rounded-2xl md:rounded-3xl overflow-hidden border-2 md:border-4 border-slate-900 shadow-2xl bg-slate-900 w-24 h-36 md:w-36 md:h-52 animate-in slide-in-from-right duration-500 cursor-grab active:cursor-grabbing select-none touch-none"
+            style={{
+              right: pipPos ? undefined : '16px',
+              bottom: pipPos ? undefined : '16px',
+              left: pipPos ? `${pipPos.x}px` : undefined,
+              top: pipPos ? `${pipPos.y}px` : undefined,
+              transition: isDraggingRef.current ? 'none' : 'box-shadow 0.3s',
+            }}
+            onMouseDown={(e) => {
+              if (!pipRef.current) return;
+              const rect = pipRef.current.getBoundingClientRect();
+              isDraggingRef.current = true;
+              wasDraggedRef.current = false;
+              dragOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+              dragStartPosRef.current = { x: e.clientX, y: e.clientY };
+              e.preventDefault();
+
+              const onMove = (ev: MouseEvent) => {
+                const dx = Math.abs(ev.clientX - dragStartPosRef.current.x);
+                const dy = Math.abs(ev.clientY - dragStartPosRef.current.y);
+                if (dx > 3 || dy > 3) wasDraggedRef.current = true;
+                const newX = Math.min(Math.max(0, ev.clientX - dragOffsetRef.current.x), window.innerWidth - (pipRef.current?.offsetWidth || 96));
+                const newY = Math.min(Math.max(0, ev.clientY - dragOffsetRef.current.y), window.innerHeight - (pipRef.current?.offsetHeight || 144));
+                setPipPos({ x: newX, y: newY });
+              };
+              const onUp = () => {
+                isDraggingRef.current = false;
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onUp);
+              };
+              window.addEventListener('mousemove', onMove);
+              window.addEventListener('mouseup', onUp);
+            }}
+            onTouchStart={(e) => {
+              if (!pipRef.current) return;
+              const touch = e.touches[0];
+              const rect = pipRef.current.getBoundingClientRect();
+              isDraggingRef.current = true;
+              wasDraggedRef.current = false;
+              dragOffsetRef.current = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+              dragStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+            }}
+            onTouchMove={(e) => {
+              if (!isDraggingRef.current || !pipRef.current) return;
+              const touch = e.touches[0];
+              const dx = Math.abs(touch.clientX - dragStartPosRef.current.x);
+              const dy = Math.abs(touch.clientY - dragStartPosRef.current.y);
+              if (dx > 3 || dy > 3) wasDraggedRef.current = true;
+              const newX = Math.min(Math.max(0, touch.clientX - dragOffsetRef.current.x), window.innerWidth - (pipRef.current?.offsetWidth || 96));
+              const newY = Math.min(Math.max(0, touch.clientY - dragOffsetRef.current.y), window.innerHeight - (pipRef.current?.offsetHeight || 144));
+              setPipPos({ x: newX, y: newY });
+            }}
+            onTouchEnd={() => { isDraggingRef.current = false; }}
           >
-            <div className="w-full h-full relative">
+            <div className="w-full h-full relative pointer-events-none">
                 <ProctoringCamera 
                   ref={videoRef}
                   onViolation={handleCameraViolation} 
@@ -1957,21 +2018,24 @@ export default function StudentRemedialLayer({
               </div>
             
             {/* Timer Label */}
-            <div className="absolute top-1 left-1 bg-black/70 text-white font-mono text-[9px] md:text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm tracking-wider font-bold">
+            <div className="absolute top-1 left-1 bg-black/70 text-white font-mono text-[9px] md:text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm tracking-wider font-bold pointer-events-none">
               ⏱️ {formatTime(timeLeft)}
             </div>
     
             {/* Monitoring Label */}
-            <div className="absolute bottom-1 left-1 flex items-center gap-1 bg-black/60 px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm">
+            <div className="absolute bottom-1 left-1 flex items-center gap-1 bg-black/60 px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm pointer-events-none">
                <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${examMode === 'STRICT' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
                <span className={`text-[7px] md:text-[8px] font-black uppercase tracking-wider ${examMode === 'STRICT' ? 'text-emerald-300' : 'text-amber-300'}`}>
                  {examMode === 'STRICT' ? 'Strict Mode' : 'Limited Mode'}
                </span>
             </div>
+
+            {/* Drag Handle Indicator */}
+            <div className="absolute top-1 left-1/2 -translate-x-1/2 w-6 h-1 bg-white/30 rounded-full pointer-events-none" />
     
             {/* Penalty Info (if any) */}
             {(warningCount > 0 || tabWarningCount > 0) && (
-              <div className="absolute top-1 right-1 flex flex-col gap-0.5 items-end">
+              <div className="absolute top-1 right-1 flex flex-col gap-0.5 items-end pointer-events-none">
                 {tabWarningCount > 0 && (
                   <span className="text-[7px] md:text-[8px] bg-rose-500/90 text-white px-1 rounded font-bold backdrop-blur-sm">
                     TAB: {tabWarningCount}/{MAX_TAB_WARNINGS}
