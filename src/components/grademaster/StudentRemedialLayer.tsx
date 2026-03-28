@@ -978,21 +978,40 @@ export default function StudentRemedialLayer({
       }, 2500);
     }
 
-    // 10s Auto-Snap for Proctoring (Telegram)
-    const proctorInterval = setInterval(async () => {
-      // Diagnostic Ping: If this arrives but the photo doesn't, compressImage or payload size is the culprit
-      sendTelegramNotify('ACTIVITY', undefined, `[Sistem] Interval 10 Detik Berjalan untuk ${studentName}...`);
-      
-      const snap = capturePhoto();
-      if (snap) {
-        const compressed = await compressImage(snap);
-        sendTelegramNotify('PROCTORING', compressed, `📸 Auto-Snap (Interval 10 Detik)`);
-      } else {
-        sendTelegramNotify('ACTIVITY', undefined, `⚠️ [Sistem] Gagal capture foto (videoRef invalid/belum siap)`);
-      }
-    }, 10000);
+    // Auto-Snap for Proctoring (Telegram)
+    // Using recursive setTimeout instead of setInterval to prevent overlap and backlog issues, especially on slow devices
+    let isProctoringActive = true;
+    let proctorTimerId: NodeJS.Timeout;
 
-    return () => clearInterval(proctorInterval);
+    const runProctorCycle = async () => {
+      if (!isProctoringActive || step !== 'EXAM') return;
+      
+      try {
+        // Prevent capturing static images when the tab is inactive/backgrounded
+        if (!document.hidden) {
+          const snap = capturePhoto();
+          if (snap) {
+            const compressed = await compressImage(snap);
+            await sendTelegramNotify('PROCTORING', compressed, `📸 Auto-Snap`);
+          }
+        }
+      } catch (err) {
+        console.error("Proctoring auto-snap error:", err);
+      } finally {
+        if (isProctoringActive && step === 'EXAM') {
+          // Schedule next run 10 seconds AFTER the current one completely finished
+          proctorTimerId = setTimeout(runProctorCycle, 10000);
+        }
+      }
+    };
+
+    // Initial trigger
+    proctorTimerId = setTimeout(runProctorCycle, 10000);
+
+    return () => {
+      isProctoringActive = false;
+      clearTimeout(proctorTimerId);
+    };
   }, [step]);
 
   // Anti-cheat mechanism — 3 warnings before ban
