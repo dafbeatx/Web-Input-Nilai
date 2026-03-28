@@ -80,6 +80,9 @@ export default function StudentRemedialLayer({
   const [backPressCount, setBackPressCount] = useState(0);
   const [secondChanceUsed, setSecondChanceUsed] = useState(false);
   const [secondChanceReason, setSecondChanceReason] = useState('');
+  const [isOffline, setIsOffline] = useState(false);
+  const [networkWarningCount, setNetworkWarningCount] = useState(0);
+  const MAX_NETWORK_WARNINGS = 2;
   const [isTabHidden, setIsTabHidden] = useState(false);
   const [remainingStudents, setRemainingStudents] = useState<{name: string}[]>([]);
   const [sessionCreatedAt, setSessionCreatedAt] = useState<string | null>(null);
@@ -904,11 +907,39 @@ export default function StudentRemedialLayer({
     document.addEventListener("copy", handleCopyPaste);
     document.addEventListener("paste", handleCopyPaste);
 
+    const handleOffline = () => {
+      setIsOffline(true);
+      setNetworkWarningCount(prev => {
+        const next = prev + 1;
+        const reason = `Mematikan koneksi internet (Peringatan ${next})`;
+        if (next > MAX_NETWORK_WARNINGS) {
+          setClientCheatingFlags(f => [...f, reason]);
+          hasTriggeredCheatingRef.current = true;
+          setToast({ message: 'Terlalu sering mematikan data. Ujian dihentikan.', type: 'error' });
+          handleStatusUpdate('CHEATED', 'Mematikan internet lebih dari 2 kali');
+        } else {
+          sendActivityLog(reason);
+        }
+        return next;
+      });
+    };
+
+    const handleOnline = () => {
+      setIsOffline(false);
+      sendActivityLog("Koneksi internet kembali aktif");
+      setToast({ message: "Koneksi terhubung kembali. Lanjutkan ujian.", type: "success" });
+    };
+
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+
     return () => {
       window.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleBlur);
-      document.addEventListener("copy", handleCopyPaste);
-      document.addEventListener("paste", handleCopyPaste);
+      document.removeEventListener("copy", handleCopyPaste);
+      document.removeEventListener("paste", handleCopyPaste);
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
     };
   }, [step, setToast]);
 
@@ -1515,7 +1546,7 @@ export default function StudentRemedialLayer({
         }
       `}</style>
 
-      <div className={`privacy-mode ${isTabHidden && step === 'EXAM' ? 'invisible' : ''}`}>
+      <div className={`privacy-mode ${(isTabHidden || isOffline) && step === 'EXAM' ? 'invisible' : ''}`}>
         {/* Fixed Responsive Camera Bubble */}
         {step === 'EXAM' && (
           <div
