@@ -103,7 +103,7 @@ export default function HomeLayer({
   const expandedGroup = expandedClass ? classGroups.find(g => `${g.className}__${g.academicYear}` === expandedClass) : null;
 
   return (
-    <div className="min-h-screen p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in">
+    <div className="min-h-screen p-3 sm:p-5 lg:p-8 pb-safe-bottom max-w-7xl mx-auto animate-in mb-20 md:mb-0">
       <header className="mb-8 md:mb-12 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
         <div>
           <div className="flex items-center gap-2 md:gap-3 text-indigo-600 mb-1 md:mb-2">
@@ -299,7 +299,8 @@ export default function HomeLayer({
         </div>
       ) : (
         /* ── Class Cards Grid ── */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
+        /* ── Class Cards Grid / Mobile List ── */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-5 pb-6">
           {classGroups.map(g => {
             const key = `${g.className}__${g.academicYear}`;
             const bData = behaviorSummary[key];
@@ -308,28 +309,51 @@ export default function HomeLayer({
               <button
                 key={key}
                 onClick={() => setExpandedClass(key)}
-                className="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border-2 border-slate-100 hover:border-indigo-500 hover:shadow-xl hover:shadow-indigo-500/10 transition-all text-left group outline-none focus:border-indigo-500"
+                className="relative w-full flex md:flex-col items-center md:items-start gap-3 md:gap-4 bg-white p-3 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 md:border-2 hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-500/10 active:bg-slate-50 active:scale-[0.98] md:active:scale-100 transition-all text-left group outline-none focus:border-indigo-500 shadow-sm md:shadow-none"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 md:w-14 md:h-14 bg-indigo-50 text-indigo-600 rounded-xl md:rounded-2xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                    <Users size={24} className="md:w-7 md:h-7" />
+                {/* Mobile: Left Icon, Desktop: Top Icon */}
+                <div className="w-12 h-12 md:w-14 md:h-14 shrink-0 bg-indigo-50 text-indigo-600 rounded-xl md:rounded-2xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                  <Users size={22} className="md:w-7 md:h-7" />
+                </div>
+                
+                {/* Text Content */}
+                <div className="flex-1 min-w-0 md:w-full">
+                  <h3 className="text-base md:text-2xl font-black text-slate-800 mb-0.5 md:mb-1 truncate group-hover:text-indigo-600 transition-colors">Kelas {g.className}</h3>
+                  
+                  <div className="flex items-center gap-1.5 md:gap-2 mb-1 md:mb-3">
+                    <span className="text-[9px] md:text-[10px] font-black text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md uppercase tracking-widest border border-slate-100">{g.schoolLevel}</span>
+                    <span className="text-[9px] md:text-[10px] font-bold text-slate-400 flex items-center gap-1"><Calendar size={10} />{g.academicYear}</span>
                   </div>
-                  <ChevronRight size={18} className="text-slate-300 group-hover:text-indigo-500 transition-colors mt-1" />
+
+                  {/* Desktop Only Stats Footer */}
+                  <div className="hidden md:flex pt-3 border-t border-slate-50 items-center justify-between w-full">
+                    <span className="text-[10px] md:text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                      {g.sessions.length} Sesi Ujian
+                    </span>
+                    {label && bData && bData.count > 0 && (
+                      <span className={`text-[10px] md:text-xs font-black px-2 py-0.5 rounded-md ${label.color}`}>
+                        {bData.count} Siswa
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <h3 className="text-xl md:text-2xl font-black text-slate-800 mb-1">Kelas {g.className}</h3>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[9px] md:text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full uppercase tracking-widest">{g.schoolLevel}</span>
-                  <span className="text-[9px] md:text-[10px] font-bold text-slate-400 flex items-center gap-1"><Calendar size={10} />{g.academicYear}</span>
-                </div>
-                <div className="pt-3 border-t border-slate-50 flex items-center justify-between">
-                  <span className="text-[10px] md:text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
-                    {g.sessions.length} Sesi Ujian
+
+                {/* Mobile Only Quick Stats */}
+                <div className="flex md:hidden flex-col items-end gap-1.5 shrink-0 ml-1">
+                  <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-50">
+                    {g.sessions.length} Sesi
                   </span>
                   {label && bData && bData.count > 0 && (
-                    <span className={`text-[10px] md:text-xs font-black px-2 py-0.5 rounded-md ${label.color}`}>
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${label.color}`}>
                       {bData.count} Siswa
                     </span>
                   )}
+                </div>
+                
+                {/* Chevron icon */}
+                <ChevronRight size={18} className="text-slate-300 md:hidden ml-1 shrink-0 group-hover:text-indigo-400 transition-colors" />
+                <div className="hidden md:block absolute top-6 right-6">
+                  <ChevronRight size={18} className="text-slate-200 group-hover:text-indigo-400 transition-colors" />
                 </div>
               </button>
             );

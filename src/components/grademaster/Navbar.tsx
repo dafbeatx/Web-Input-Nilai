@@ -126,17 +126,67 @@ export default function Navbar({
                 </button>
               )}
 
-              {/* Mobile hamburger — integrated in navbar */}
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 text-slate-600 hover:text-indigo-600 flex items-center justify-center transition-colors"
-              >
-                {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
-              </button>
+              {/* Hamburger removed from top nav in mobile (moved to bottom nav) */}
             </div>
           </div>
         </div>
       </nav>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white border-t border-slate-100 shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.08)] pb-safe">
+        <div className="flex items-center justify-around h-[68px] px-2">
+          {isAdmin ? (
+            <>
+              <button 
+                onClick={() => { onNavigate('home'); setIsMobileMenuOpen(false); }} 
+                className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors active:scale-95 ${isActive('exam') ? 'text-indigo-600' : 'text-slate-400 hover:text-indigo-500'}`}
+              >
+                <div className={`p-1.5 rounded-full ${isActive('exam') ? 'bg-indigo-50' : 'bg-transparent'}`}>
+                  <ClipboardList size={22} className="stroke-[2]" />
+                </div>
+                <span className="text-[10px] font-bold -mt-1">Ujian</span>
+              </button>
+              <button 
+                onClick={() => { onNavigate('behavior'); setIsMobileMenuOpen(false); }} 
+                className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors active:scale-95 ${isActive('behavior') ? 'text-indigo-600' : 'text-slate-400 hover:text-indigo-500'}`}
+              >
+                <div className={`p-1.5 rounded-full ${isActive('behavior') ? 'bg-indigo-50' : 'bg-transparent'}`}>
+                  <Users size={22} className="stroke-[2]" />
+                </div>
+                <span className="text-[10px] font-bold -mt-1">Kehadiran</span>
+              </button>
+              <button 
+                onClick={() => { onNavigate('remedial_dashboard'); setIsMobileMenuOpen(false); }} 
+                className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors active:scale-95 ${isActive('remedial') ? 'text-indigo-600' : 'text-slate-400 hover:text-indigo-500'}`}
+              >
+                <div className={`p-1.5 rounded-full ${isActive('remedial') ? 'bg-indigo-50' : 'bg-transparent'}`}>
+                  <RefreshCcw size={22} className="stroke-[2]" />
+                </div>
+                <span className="text-[10px] font-bold -mt-1">Remedial</span>
+              </button>
+              <button 
+                onClick={() => setIsMobileMenuOpen(true)} 
+                className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors active:scale-95 ${isMobileMenuOpen ? 'text-indigo-600' : 'text-slate-400 hover:text-indigo-500'}`}
+              >
+                <div className={`p-1.5 rounded-full ${isMobileMenuOpen ? 'bg-indigo-50' : 'bg-transparent'}`}>
+                  <Menu size={22} className="stroke-[2]" />
+                </div>
+                <span className="text-[10px] font-bold -mt-1">Menu</span>
+              </button>
+            </>
+          ) : (
+            <button 
+              onClick={() => { onLoginClick(); setIsMobileMenuOpen(false); }} 
+              className="flex flex-col items-center justify-center flex-1 h-full gap-1 text-slate-500 hover:text-indigo-600 transition-colors active:scale-95 cursor-pointer"
+            >
+              <div className="p-1.5 rounded-full bg-transparent">
+                  <LogIn size={22} className="stroke-[2]" />
+              </div>
+              <span className="text-[10px] font-bold -mt-1">Login Admin</span>
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
