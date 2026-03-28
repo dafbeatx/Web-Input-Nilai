@@ -83,6 +83,11 @@ export default function StudentRemedialLayer({
   const [sessionCreatedAt, setSessionCreatedAt] = useState<string | null>(null);
   const [finalScore, setFinalScore] = useState<number | null>(null);
 
+  const handleExit = () => {
+    clearRemedialSession();
+    onBack();
+  };
+
   const getDeviceInfo = () => {
     if (typeof window === 'undefined') return 'unknown';
     const ua = navigator.userAgent;
@@ -344,8 +349,8 @@ export default function StudentRemedialLayer({
   // Restore session on mount (localStorage)
   useEffect(() => {
     const saved = loadRemedialSession();
-    if (saved && saved.sessionId === sessionId && saved.studentName === studentName) {
-      if (['EXAM'].includes(saved.step)) {
+    if (saved && (saved.studentName === studentName || !studentName)) {
+      if (['EXAM', 'INFO'].includes(saved.step)) {
         setStep(saved.step as RemedialStep);
         setAnswers(saved.answers.length === remedialEssayCount ? saved.answers : new Array(remedialEssayCount).fill(""));
         setNote(saved.note || '');
@@ -370,13 +375,15 @@ export default function StudentRemedialLayer({
         saveRemedialSession({ ...saved, refreshCount: (saved.refreshCount || 0) + 1 });
       } else if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(saved.step)) {
         setStep(saved.step as RemedialStep);
-        clearRemedialSession();
       }
     }
   }, [sessionId, studentName, remedialEssayCount, remedialTimer]);
 
   // Check server status on mount (Database) - Persist terminal state across devices/hard-clears
   useEffect(() => {
+    // Guard: only fetch if we have identifying info
+    if (!sessionId || !studentName) return;
+
     const checkServerStatus = async () => {
       try {
         const res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`);
@@ -385,7 +392,6 @@ export default function StudentRemedialLayer({
           // If server says terminal status, override local state
           if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(data.status)) {
             setStep(data.status as RemedialStep);
-            clearRemedialSession();
             
             if (data.status === 'COMPLETED') {
               setFinalScore(data.finalScore);
@@ -1271,10 +1277,10 @@ export default function StudentRemedialLayer({
           )}
           
           <button
-            onClick={onBack}
+            onClick={handleExit}
             className={`w-full py-4 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95 ${isCheat ? 'bg-rose-500 shadow-rose-500/20' : isTimeout ? 'bg-amber-500 shadow-amber-500/20' : 'bg-emerald-500 shadow-emerald-500/20'}`}
           >
-            Kembali ke Dashboard
+            Selesai & Keluar
           </button>
         </div>
       </div>

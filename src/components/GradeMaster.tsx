@@ -144,8 +144,12 @@ export default function GradeMaster() {
 
     // Restore active remedial exam session
     const remedialSession = loadRemedialSession();
-    if (remedialSession && remedialSession.step === 'EXAM') {
+    if (remedialSession && (remedialSession.step === 'EXAM' || ['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(remedialSession.step))) {
       setStudentName(remedialSession.studentName);
+      if (remedialSession.sessionId) {
+        setSessionId(remedialSession.sessionId);
+      }
+      
       if (initialLayer !== 'remedial') {
         setInternalLayer('remedial');
         window.history.replaceState({ layer: 'remedial' }, '', '#remedial');
