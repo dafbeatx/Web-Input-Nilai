@@ -97,6 +97,8 @@ export default function StudentRemedialLayer({
   const hasSubmittedRef = useRef(false);
   const hasSentStartNotifRef = useRef(false);
   const wakeLockRef = useRef<any>(null); // Screen Wake Lock
+  const lastPhotoHashRef = useRef<string>(''); // Dedup: track last sent photo hash
+  const consecutiveDupCountRef = useRef<number>(0); // Track how many dupes skipped in a row
 
   const handleExit = () => {
     clearRemedialSession();
@@ -176,26 +178,85 @@ export default function StudentRemedialLayer({
     }
   };
 
+  const computeSimpleHash = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): string => {
+    const w = canvas.width;
+    const h = canvas.height;
+    const samplePoints = [
+      [Math.floor(w * 0.25), Math.floor(h * 0.25)],
+      [Math.floor(w * 0.5), Math.floor(h * 0.25)],
+      [Math.floor(w * 0.75), Math.floor(h * 0.25)],
+      [Math.floor(w * 0.25), Math.floor(h * 0.5)],
+      [Math.floor(w * 0.5), Math.floor(h * 0.5)],
+      [Math.floor(w * 0.75), Math.floor(h * 0.5)],
+      [Math.floor(w * 0.25), Math.floor(h * 0.75)],
+      [Math.floor(w * 0.5), Math.floor(h * 0.75)],
+      [Math.floor(w * 0.75), Math.floor(h * 0.75)],
+      [Math.floor(w * 0.1), Math.floor(h * 0.1)],
+      [Math.floor(w * 0.9), Math.floor(h * 0.9)],
+      [Math.floor(w * 0.5), Math.floor(h * 0.1)],
+    ];
+    let hash = '';
+    for (const [x, y] of samplePoints) {
+      const pixel = ctx.getImageData(x, y, 1, 1).data;
+      hash += `${Math.floor(pixel[0] / 16)}${Math.floor(pixel[1] / 16)}${Math.floor(pixel[2] / 16)}`;
+    }
+    return hash;
+  };
+
   const capturePhoto = (): string | undefined => {
     if (!videoRef.current) return undefined;
     try {
-      if (videoRef.current.readyState < 2 || videoRef.current.videoWidth === 0) {
+      const video = videoRef.current;
+      if (video.readyState < 2 || video.videoWidth === 0 || video.paused || video.ended) {
         console.warn('Video not ready for capture');
         return undefined;
       }
 
       const canvas = document.createElement('canvas');
-      canvas.width = videoRef.current.videoWidth || 320;
-      canvas.height = videoRef.current.videoHeight || 240;
+      canvas.width = video.videoWidth || 320;
+      canvas.height = video.videoHeight || 240;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        return canvas.toDataURL('image/jpeg', 0.6); 
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Check for blank/black frame
+        const centerPixel = ctx.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data;
+        if (centerPixel[0] === 0 && centerPixel[1] === 0 && centerPixel[2] === 0) {
+          console.warn('Captured a blank/black frame, skipping');
+          return undefined;
+        }
+
+        return canvas.toDataURL('image/jpeg', 0.6);
       }
     } catch (err) {
       console.error('Failed to capture photo:', err);
     }
     return undefined;
+  };
+
+  const isPhotoDuplicate = (base64: string): boolean => {
+    try {
+      const img = new Image();
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = 320;
+      tempCanvas.height = 240;
+      const tempCtx = tempCanvas.getContext('2d');
+      if (!tempCtx || !videoRef.current) return false;
+
+      tempCtx.drawImage(videoRef.current, 0, 0, 320, 240);
+      const hash = computeSimpleHash(tempCanvas, tempCtx);
+
+      if (hash === lastPhotoHashRef.current) {
+        consecutiveDupCountRef.current++;
+        return true;
+      }
+
+      lastPhotoHashRef.current = hash;
+      consecutiveDupCountRef.current = 0;
+      return false;
+    } catch {
+      return false;
+    }
   };
 
   const [agreedRules, setAgreedRules] = useState(false);
@@ -983,34 +1044,40 @@ export default function StudentRemedialLayer({
     }
 
     // Auto-Snap for Proctoring (Telegram)
-    // Using recursive setTimeout instead of setInterval to prevent overlap and backlog issues, especially on slow devices
+    // Using recursive setTimeout instead of setInterval to prevent overlap and backlog issues
     let isProctoringActive = true;
     let proctorTimerId: NodeJS.Timeout;
+    const PROCTOR_INTERVAL = 30000; // 30 seconds between captures
 
     const runProctorCycle = async () => {
       if (!isProctoringActive || step !== 'EXAM') return;
       
       try {
-        // Prevent capturing static images when the tab is inactive/backgrounded
         if (!document.hidden) {
           const snap = capturePhoto();
           if (snap) {
-            const compressed = await compressImage(snap);
-            await sendTelegramNotify('PROCTORING', compressed, `📸 Auto-Snap`);
+            if (isPhotoDuplicate(snap)) {
+              // Skip sending duplicate frames — log only if many in a row
+              if (consecutiveDupCountRef.current >= 3) {
+                console.warn(`Skipped ${consecutiveDupCountRef.current} consecutive duplicate proctoring frames`);
+              }
+            } else {
+              const compressed = await compressImage(snap);
+              await sendTelegramNotify('PROCTORING', compressed, `📸 Auto-Snap`);
+            }
           }
         }
       } catch (err) {
         console.error("Proctoring auto-snap error:", err);
       } finally {
         if (isProctoringActive && step === 'EXAM') {
-          // Schedule next run 10 seconds AFTER the current one completely finished
-          proctorTimerId = setTimeout(runProctorCycle, 10000);
+          proctorTimerId = setTimeout(runProctorCycle, PROCTOR_INTERVAL);
         }
       }
     };
 
-    // Initial trigger
-    proctorTimerId = setTimeout(runProctorCycle, 10000);
+    // Initial trigger after 30 seconds
+    proctorTimerId = setTimeout(runProctorCycle, PROCTOR_INTERVAL);
 
     return () => {
       isProctoringActive = false;
@@ -1559,11 +1626,8 @@ export default function StudentRemedialLayer({
           )}
         </div>
 
-        {cameraOk && (
-          <div className="fixed top-4 right-4 w-24 h-18 md:w-32 md:h-24 rounded-2xl overflow-hidden border-4 border-white shadow-2xl z-[60] animate-in zoom-in duration-500">
-            <ProctoringCamera ref={videoRef} onViolation={handleCameraViolation} />
-          </div>
-        )}
+        {/* Camera preview removed from INFO screen to prevent dual-instance issues.
+           The single ProctoringCamera instance renders in the EXAM step below. */}
       </div>
     );
   }
