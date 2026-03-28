@@ -717,9 +717,9 @@ export default function DashboardLayer({
                   <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Deteksi Kemiripan Jawaban</h2>
                   <p className="text-[10px] md:text-xs font-bold text-slate-500">
                     {similarityMetadata ? (
-                      <>Dianalisa: <span className="text-slate-800">{similarityMetadata.totalStudents} Siswa</span> ({similarityMetadata.totalPairs} Pasangan) &bull; </>
+                      <>Dianalisis: <span className="text-slate-800">{similarityMetadata.totalStudents} siswa</span> ({similarityMetadata.totalPairs} pasangan) &bull; </>
                     ) : null}
-                    Ditemukan <span className="text-rose-600">{similarityReports.length} indikasi kesamaan</span>.
+                    Ditemukan <span className="text-rose-600">{similarityReports.filter(r => r.final_score > 0).length} pasangan dengan kemiripan signifikan</span>.
                   </p>
                 </div>
               </div>
@@ -730,7 +730,7 @@ export default function DashboardLayer({
             
             <div className="p-6 overflow-y-auto bg-slate-50/50 flex-1 custom-scrollbar">
               <div className="space-y-4">
-                {similarityReports.map((report, idx) => (
+                {similarityReports.filter(r => r.final_score > 0).map((report, idx) => (
                   <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
                     {/* Status Badge */}
                     <div className={`absolute top-0 right-0 px-4 py-1.5 rounded-bl-2xl text-[10px] font-black uppercase tracking-widest ${

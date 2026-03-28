@@ -91,15 +91,32 @@ export function calculateSimilarity(studentA: StudentData, studentB: StudentData
     essaySimilarity = validEssayMatches / validEssayQuestions;
   }
 
+  // EARLY RETURN GUARD: Jika data dari kedua sisi tidak valid/cukup, langsung anggap SAFE 0%
+  // Mencegah nilai 0.0 lolos sebagai SUSPECT karena logic bug
+  if (validPgQuestions < 15 && validEssayQuestions < 2) {
+    return {
+      studentAId: studentA.id,
+      studentBId: studentB.id,
+      studentAName: studentA.name,
+      studentBName: studentB.name,
+      pgSimilarity: 0,
+      essaySimilarity: 0,
+      finalScore: 0,
+      riskLevel: 'SAFE'
+    };
+  }
+
   // 3. Hitung final score
   const finalScore = (pgSimilarity * 0.8) + (essaySimilarity * 0.2);
 
   // 4. Tentukan risk_level
   let riskLevel: 'HIGH_RISK' | 'SUSPECT' | 'SAFE' = 'SAFE';
 
+  // Periksa HANYA jika finalScore valid dan melewati ambang batas
+  // finalScore >= 0.50 tidak boleh dipicu oleh angka 0 yang tersisa
   if (pgSimilarity >= 0.70 && finalScore >= 0.75) {
     riskLevel = 'HIGH_RISK';
-  } else if (finalScore >= 0.50) {
+  } else if (finalScore >= 0.50 && finalScore > 0) {
     riskLevel = 'SUSPECT';
   }
 
@@ -144,8 +161,8 @@ export async function analyzeSessionSimilarity(sessionId: string): Promise<Simil
       
       const similarity = calculateSimilarity(studentA, studentB);
       
-      // Hanya proses yang mencurigakan (threshold: finalScore >= 0.50 atau PG >= 70%)
-      if (similarity.riskLevel !== 'SAFE') {
+      // Hanya proses yang sungguh-sungguh mencurigakan (mengabaikan 0% atau threshold gagal)
+      if (similarity.riskLevel !== 'SAFE' && similarity.finalScore >= 0.50) {
         reports.push(similarity);
       }
     }
