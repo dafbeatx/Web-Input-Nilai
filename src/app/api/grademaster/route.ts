@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      if (error.code === '23505') throw new Error('Nama sesi kelas ini sudah digunakan. Vercel/Supabase mewajibkan nama sesi yang unik. Silakan tambahkan kode unik, misal: "UTS SMA N 1 - Kelas 10A".');
+      if (error.code === '23505') throw new Error('Nama sesi kelas ini sudah digunakan. Vercel/Supabase mewajibkan nama sesi yang unik. Silakan tambahkan kode unik, misal: "UTS SMA N 1 - Informatika".');
       throw new Error(`Error Basis Data (${error.code || 'Unknown'}): ${error.message}`);
     }
     return NextResponse.json({ message: 'Sesi berhasil dibuat', sessionId: newSession?.id });

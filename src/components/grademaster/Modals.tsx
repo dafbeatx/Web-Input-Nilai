@@ -235,7 +235,7 @@ export default function Modals(props: ModalsProps) {
             <input
               type="text" value={sessionName}
               onChange={(e) => setSessionName(e.target.value)}
-              placeholder="Contoh: UTS Kelas 10A"
+              placeholder="Contoh: UTS SMA Informatika"
               className="w-full bg-slate-50 border-2 border-slate-100 rounded-lg p-2.5 text-xs md:text-sm font-bold text-slate-700 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-300 disabled:opacity-60"
               autoFocus
               disabled={modal === 'delete'}

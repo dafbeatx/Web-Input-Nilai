@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   GraduationCap,
   FolderOpen,
@@ -8,13 +8,11 @@ import {
   User,
   BookOpen,
   LayoutGrid,
-  ClipboardList,
   CheckCircle2,
   Loader2,
   ArrowRight,
   ArrowLeft,
   Settings,
-  FileText
 } from 'lucide-react';
 import { parseAnswerKey } from '@/lib/grademaster/parser';
 import { ToastType } from '@/lib/grademaster/types';
@@ -44,18 +42,8 @@ interface SetupLayerProps {
   setSemester: (v: string) => void;
   kkm: number;
   setKkm: (v: number) => void;
-  remedialEssayCount: number;
-  setRemedialEssayCount: (v: number) => void;
   remedialTimer: number;
   setRemedialTimer: (v: number) => void;
-  remedialQuestions: string[];
-  setRemedialQuestions: (v: string[]) => void;
-  remedialQuestionsInput: string;
-  onRemedialInputChange: (v: string) => void;
-  remedialAnswerKeys: string[];
-  setRemedialAnswerKeys: (v: string[]) => void;
-  remedialAnswerKeysInput: string;
-  onAnswerKeysInputChange: (v: string) => void;
   isPublic: boolean;
   setIsPublic: (v: boolean) => void;
   isDemo?: boolean;
@@ -80,16 +68,24 @@ export default function SetupLayer(props: SetupLayerProps) {
     academicYear, setAcademicYear,
     semester, setSemester,
     kkm, setKkm,
-    remedialEssayCount, setRemedialEssayCount,
     remedialTimer, setRemedialTimer,
-    remedialQuestions, setRemedialQuestions,
-    remedialQuestionsInput, onRemedialInputChange,
-    remedialAnswerKeys, setRemedialAnswerKeys,
-    remedialAnswerKeysInput, onAnswerKeysInputChange,
     isPublic, setIsPublic,
     isDemo, setIsDemo,
     onSubmit, onBack, isLoading, setToast,
   } = props;
+
+  const [smaClasses, setSmaClasses] = useState<string[]>([]);
+  const [isLoadingClasses, setIsLoadingClasses] = useState(false);
+
+  useEffect(() => {
+    if (schoolLevel !== 'SMA') return;
+    setIsLoadingClasses(true);
+    fetch(`/api/grademaster/behaviors?year=${encodeURIComponent(academicYear)}`)
+      .then(res => res.json())
+      .then(data => setSmaClasses(data.classes || []))
+      .catch(() => setSmaClasses([]))
+      .finally(() => setIsLoadingClasses(false));
+  }, [schoolLevel, academicYear]);
 
   const parsedPreview = parseAnswerKey(keyInput);
   const parsedCount = parsedPreview.length;
@@ -204,14 +200,25 @@ export default function SetupLayer(props: SetupLayerProps) {
                     <label className={labelClass}><LayoutGrid size={14} /> Kelas</label>
                     <select value={studentClass} onChange={(e) => setStudentClass(e.target.value)} className={`${inputClass} cursor-pointer`}>
                       <option value="">-- Pilih Kelas --</option>
-                      <optgroup label="Tingkat SMP">
-                        <option value="7A">Kelas 7A</option><option value="7B">Kelas 7B</option><option value="7C">Kelas 7C</option>
-                        <option value="8A">Kelas 8A</option><option value="8B">Kelas 8B</option><option value="8C">Kelas 8C</option>
-                        <option value="9A">Kelas 9A</option><option value="9B">Kelas 9B</option><option value="9C">Kelas 9C</option>
-                      </optgroup>
-                      <optgroup label="Tingkat SMA">
-                        <option value="SMA">SMA</option>
-                      </optgroup>
+                      {schoolLevel === 'SMP' ? (
+                        <optgroup label="Tingkat SMP">
+                          <option value="7A">Kelas 7A</option><option value="7B">Kelas 7B</option><option value="7C">Kelas 7C</option>
+                          <option value="8A">Kelas 8A</option><option value="8B">Kelas 8B</option><option value="8C">Kelas 8C</option>
+                          <option value="9A">Kelas 9A</option><option value="9B">Kelas 9B</option><option value="9C">Kelas 9C</option>
+                        </optgroup>
+                      ) : (
+                        <optgroup label="Tingkat SMA">
+                          {isLoadingClasses ? (
+                            <option disabled>Memuat kelas...</option>
+                          ) : smaClasses.length > 0 ? (
+                            smaClasses.map(cls => (
+                              <option key={cls} value={cls}>{cls}</option>
+                            ))
+                          ) : (
+                            <option value="SMA">SMA</option>
+                          )}
+                        </optgroup>
+                      )}
                     </select>
                   </div>
                   <div className="col-span-2 md:col-span-1">
@@ -246,45 +253,6 @@ export default function SetupLayer(props: SetupLayerProps) {
               </div>
             </div>
 
-            {/* 2. ATUR SOAL REMEDIAL */}
-            <div className={cardClass}>
-              <h2 className={sectionTitleClass}><ClipboardList className="text-indigo-500" /> Atur Soal Remedial</h2>
-              
-              <div className="space-y-6">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className={labelClass}><FileText size={14} /> Soal Essay</label>
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${remedialEssayCount > 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
-                      {remedialEssayCount} Soal terdeteksi
-                    </span>
-                  </div>
-                  <textarea
-                    value={remedialQuestionsInput}
-                    onChange={(e) => onRemedialInputChange(e.target.value)}
-                    placeholder={"Ketikkan semua soal remedial di sini.\nFormat bermarker angka:\n1. Jelaskan definisi AI...\n2. Bagaimana cara kerja Next.js?"}
-                    rows={8}
-                    className={`${inputClass} resize-y font-normal`}
-                  />
-                </div>
-
-                <div className="pt-2 border-t border-slate-100">
-                  <div className="flex items-center justify-between mb-2 mt-4">
-                    <label className={labelClass}><Key size={14} /> Kunci Jawaban Essay <span className="text-[10px] text-emerald-500 lowercase ml-1">(Penilaian otomatis)</span></label>
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${remedialAnswerKeys.length > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-                      {remedialAnswerKeys.length} Kunci terdeteksi
-                    </span>
-                  </div>
-                  <textarea
-                    value={remedialAnswerKeysInput}
-                    onChange={(e) => onAnswerKeysInputChange(e.target.value)}
-                    placeholder={"Kunci jawaban essay format bernomor:\n1. Internet adalah jaringan global...\n2. Next.js adalah framework React..."}
-                    rows={8}
-                    className={`${inputClass} resize-y font-normal`}
-                  />
-                  <p className="text-xs text-slate-400 mt-2 font-medium">⚠️ Pasangkan nomor kunci jawaban secara berurutan sesuai dengan nomor soal essay.</p>
-                </div>
-              </div>
-            </div>
 
             {/* 3. KUNCI JAWABAN PG */}
             <div className={cardClass}>
@@ -370,35 +338,6 @@ export default function SetupLayer(props: SetupLayerProps) {
 
             {/* PREVIEW CONTAINER */}
             <div className="space-y-6 hidden lg:block">
-              {/* Preview Essay */}
-              {remedialEssayCount > 0 && (
-                <div className="bg-white rounded-2xl p-5 shadow-sm border border-indigo-100 border-t-4 border-t-indigo-500">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-3">Preview Soal Essay</p>
-                  <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                    {remedialQuestions.map((q, idx) => (
-                      <div key={idx} className="flex gap-2 text-[11px]">
-                        <span className="font-black text-indigo-600">{idx + 1}.</span>
-                        <span className="text-slate-700 font-medium">{q}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Preview Essay Keys */}
-              {remedialAnswerKeys.length > 0 && (
-                <div className="bg-white rounded-2xl p-5 shadow-sm border border-emerald-100 border-t-4 border-t-emerald-500">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-3">Preview Kunci Essay</p>
-                  <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                    {remedialAnswerKeys.map((k, idx) => (
-                      <div key={idx} className="flex gap-2 text-[11px]">
-                        <span className="font-black text-emerald-600">{idx + 1}.</span>
-                        <span className="text-slate-700 font-medium">{k}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Preview PG Keys */}
               {parsedCount > 0 && (
