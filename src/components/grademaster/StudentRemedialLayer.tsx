@@ -66,6 +66,7 @@ export default function StudentRemedialLayer({
   const [cameraRetryCount, setCameraRetryCount] = useState(0);
   const [cameraErrorDetail, setCameraErrorDetail] = useState<string | null>(null);
   const [isCameraBypassed, setIsCameraBypassed] = useState(false);
+  const [pledgeText, setPledgeText] = useState("");
   const MAX_CAMERA_RETRIES = 3;
   
   const [warningCount, setWarningCount] = useState(0);
@@ -353,10 +354,12 @@ export default function StudentRemedialLayer({
         if (saved.attemptId) setAttemptId(saved.attemptId);
         if (saved.attemptToken) setAttemptToken(saved.attemptToken);
         if (saved.studentId) setCurrentStudentId(saved.studentId);
+        if (saved.isCameraBypassed) setIsCameraBypassed(true);
 
-        // Calculate remaining time from startedAt
-        const elapsed = Math.floor((Date.now() - saved.startedAt) / 1000);
-        const remaining = Math.max(0, (remedialTimer * 60) - elapsed);
+        const elapsedSeconds = Math.floor((Date.now() - saved.startedAt) / 1000);
+        const baseTimer = saved.isCameraBypassed ? Math.floor((remedialTimer * 60) / 2) : (remedialTimer * 60);
+        let remaining = baseTimer - elapsedSeconds;
+        if (remaining < 0) remaining = 0;
         setTimeLeft(remaining);
 
         // Track refresh & Toast recovery
@@ -436,8 +439,9 @@ export default function StudentRemedialLayer({
       attemptId: attemptId || undefined,
       attemptToken: attemptToken || undefined,
       studentId: currentStudentId || undefined,
+      isCameraBypassed,
     });
-  }, [answers, note, step, sessionId, studentName, currentLocation, shuffledQuestions, attemptId, attemptToken, currentStudentId]);
+  }, [answers, note, step, sessionId, studentName, currentLocation, shuffledQuestions, attemptId, attemptToken, currentStudentId, isCameraBypassed]);
 
   const isSubmittingRef = useRef(isSubmitting);
   useEffect(() => { isSubmittingRef.current = isSubmitting; });
@@ -681,6 +685,7 @@ export default function StudentRemedialLayer({
       attemptId: attemptIdFromServer || attemptId || undefined,
       attemptToken: attemptTokenFromServer || attemptToken || undefined,
       studentId: studentIdFromServer || currentStudentId || undefined,
+      isCameraBypassed,
     });
     
     // Send Start Notification with Photo
@@ -1016,9 +1021,12 @@ export default function StudentRemedialLayer({
             <>
               <div className="mb-4 p-4 bg-slate-900 rounded-2xl text-center">
                 <p className="text-xs text-white font-bold mb-1">Kamera gagal diakses setelah {MAX_CAMERA_RETRIES} percobaan.</p>
-                <p className="text-[10px] text-slate-400 font-bold mb-4">Anda dapat melanjutkan ujian tanpa proteksi kamera, namun tindakan ini <strong className="text-amber-400">akan dicatat dan dilaporkan ke Guru</strong> untuk ditinjau secara manual.</p>
+                <p className="text-[10px] text-slate-400 font-bold mb-4">Anda dapat melanjutkan ujian tanpa proteksi kamera, namun tindakan ini <strong className="text-amber-400">akan dicatat dan dilaporkan ke Guru</strong> untuk ditinjau secara manual. Waktu pengerjaan juga akan dipotong 50%.</p>
                 <button
-                  onClick={() => setIsCameraBypassed(true)}
+                  onClick={() => {
+                    setIsCameraBypassed(true);
+                    setTimeLeft(Math.floor(remedialTimer * 60 / 2));
+                  }}
                   className="w-full py-3 bg-amber-500 text-white rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-lg hover:bg-amber-600 transition-all flex items-center justify-center gap-2"
                 >
                    Lanjutkan Tanpa Kamera
@@ -1033,15 +1041,32 @@ export default function StudentRemedialLayer({
             </>
           ) : isCameraBypassed ? (
             <>
-              <div className="mb-4 p-4 bg-amber-50 rounded-xl border border-amber-200">
-                <p className="text-[11px] text-amber-800 font-bold flex items-center gap-2"><AlertTriangle size={14} /> Anda menggunakan fitur <b>Bypass Kamera</b>.</p>
+              <div className="mb-4 p-4 bg-amber-50 rounded-xl border border-amber-200 shadow-inner">
+                <p className="text-xs text-amber-900 font-black mb-1 flex items-center gap-2">
+                  <AlertTriangle size={16} className="text-amber-600" /> PERHATIAN (BYPASS MODE)
+                </p>
+                <p className="text-[10px] text-amber-800 font-bold leading-relaxed mb-3">
+                  Waktu ujian Anda telah <b>dipotong 50%</b>. Segala dugaan kecurangan (mencontek teman/bantuan orang tua) akan dideteksi oleh sistem otomatis dari pola ketepatan waktu & kemiripan opsi.
+                </p>
+                
+                <div className="bg-white p-3 rounded-lg border border-amber-100 mt-2 text-center">
+                  <p className="text-[9px] font-black uppercase text-rose-500 tracking-widest mb-2">UNTUK LANJUT, KETIK KALIMAT BERIKUT:</p>
+                  <p className="text-xs font-mono font-bold bg-slate-100 py-1.5 rounded text-slate-700 select-all mb-3 text-center">SAYA BERJANJI TIDAK DIBANTU SIAPAPUN</p>
+                  <input
+                    type="text"
+                    value={pledgeText}
+                    onChange={(e) => setPledgeText(e.target.value)}
+                    placeholder="Ketik persis di sini..."
+                    className="w-full text-center px-3 py-2 text-xs border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 font-bold text-amber-950 uppercase"
+                  />
+                </div>
               </div>
               <button
                 onClick={startExam}
-                disabled={isSubmitting || !locationOk}
-                className="w-full py-4 bg-amber-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-amber-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
+                disabled={isSubmitting || !locationOk || pledgeText.toUpperCase() !== 'SAYA BERJANJI TIDAK DIBANTU SIAPAPUN'}
+                className="w-full py-4 bg-rose-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-rose-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
               >
-                {isSubmitting ? 'MEMPROSES...' : !locationOk ? '⛔ IZIN LOKASI BELUM DIAKTIFKAN' : 'SAYA MENGERTI, MULAI REMEDIAL'}
+                {isSubmitting ? 'MEMPROSES...' : !locationOk ? '⛔ IZIN LOKASI BELUM DIAKTIFKAN' : pledgeText.toUpperCase() !== 'SAYA BERJANJI TIDAK DIBANTU SIAPAPUN' ? 'Ketik Persetujuan Dahulu' : 'SAYA SIAP, MULAI REMEDIAL'}
               </button>
             </>
           ) : (
