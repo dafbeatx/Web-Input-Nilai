@@ -246,3 +246,15 @@ export async function resetRemedial(studentId: string) {
   
   return true;
 }
+
+export async function getRemainingStudents(sessionId: string) {
+  const { data, error } = await supabase
+    .from('gm_students')
+    .select('id, name, final_score, remedial_status')
+    .eq('session_id', sessionId)
+    .is('remedial_status', null)
+    .order('name', { ascending: true });
+
+  if (error) throw error;
+  return data;
+}

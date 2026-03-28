@@ -23,6 +23,21 @@ interface StudentRemedialLayerProps {
 
 type RemedialStep = 'RULES' | 'INFO' | 'EXAM' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT';
 
+const Badge = ({ children, color = 'indigo' }: { children: React.ReactNode; color?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'rose' }) => {
+  const colors = {
+    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    amber: 'bg-amber-50 text-amber-600 border-amber-100',
+    slate: 'bg-slate-50 text-slate-600 border-slate-100',
+    rose: 'bg-rose-50 text-rose-600 border-rose-100',
+  };
+  return (
+    <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-tight border shadow-sm inline-block ${colors[color]}`}>
+      {children}
+    </span>
+  );
+};
+
 export default function StudentRemedialLayer({
   studentName,
   subject,
@@ -52,6 +67,11 @@ export default function StudentRemedialLayer({
   const startedAtRef = useRef<number>(0);
   const isRefreshingRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [backPressCount, setBackPressCount] = useState(0);
+  const [isTabHidden, setIsTabHidden] = useState(false);
+  const [remainingStudents, setRemainingStudents] = useState<{name: string}[]>([]);
+  const [sessionCreatedAt, setSessionCreatedAt] = useState<string | null>(null);
+  const [finalScore, setFinalScore] = useState<number | null>(null);
 
   const getDeviceInfo = () => {
     if (typeof window === 'undefined') return 'unknown';
@@ -142,17 +162,34 @@ export default function StudentRemedialLayer({
     window.history.pushState(null, '', window.location.href);
     const handlePopState = () => {
       window.history.pushState(null, '', window.location.href);
-      setToast({ message: '⛔ Anda tidak diperbolehkan keluar saat ujian berlangsung!', type: 'error' });
+      setBackPressCount(prev => {
+        const next = prev + 1;
+        if (next >= 5) {
+          hasTriggeredCheatingRef.current = true;
+          setClientCheatingFlags(f => [...f, `Mencoba menekan tombol kembali ${next} kali`]);
+          setToast({ message: 'Batas percobaan navigasi terlampaui. Ujian dihentikan.', type: 'error' });
+          handleStatusUpdate('CHEATED');
+        } else if (next >= 3) {
+          setToast({ message: `⚠️ PERINGATAN: Jika mengetuk kembali lagi, sistem akan menandakan anda curang! (${next}/5)`, type: 'error' });
+        } else {
+          setToast({ message: '⛔ Anda tidak diperbolehkan keluar saat ujian berlangsung!', type: 'error' });
+        }
+        return next;
+      });
+    };
+
+    const handlePrint = (e: any) => {
+      e.preventDefault();
+      setToast({ message: 'Aksi Cetak/Print tidak diizinkan!', type: 'error' });
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload2);
     window.addEventListener('popstate', handlePopState);
+    window.addEventListener('beforeprint', handlePrint);
 
     // Error Logging: Detect if user closes the tab during exam (Abandoned)
     const handleAbandoned = () => {
       if (!isRefreshingRef.current && !isSubmittingRef.current) {
-        // We use synchronous-ish beacon or just fire it and hope for the best
-        // navigator.sendBeacon is better for unloads
         const payload = JSON.stringify({
           studentName, className, subject, event: 'ABANDONED', deviceInfo: getDeviceInfo()
         });
@@ -165,6 +202,7 @@ export default function StudentRemedialLayer({
       window.removeEventListener('beforeunload', handleBeforeUnload2);
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('unload', handleAbandoned);
+      window.removeEventListener('beforeprint', handlePrint);
     };
   }, [step]);
 
@@ -223,7 +261,8 @@ export default function StudentRemedialLayer({
         const remaining = Math.max(0, (remedialTimer * 60) - elapsed);
         setTimeLeft(remaining);
 
-        // Track refresh
+        // Track refresh & Toast recovery
+        setToast({ message: "Melanjutkan sesi remedial sebelumnya...", type: "success" });
         saveRemedialSession({ ...saved, refreshCount: (saved.refreshCount || 0) + 1 });
       } else if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(saved.step)) {
         setStep(saved.step as RemedialStep);
@@ -491,7 +530,12 @@ export default function StudentRemedialLayer({
     };
 
     const handleVisibilityChange = () => {
-      if (document.hidden && !isRefreshingRef.current) handleTabLeave();
+      if (document.hidden) {
+         setIsTabHidden(true);
+         if (!isRefreshingRef.current) handleTabLeave();
+      } else {
+         setIsTabHidden(false);
+      }
     };
 
     const handleBlur = () => {
@@ -502,7 +546,7 @@ export default function StudentRemedialLayer({
 
     const handleCopyPaste = (e: ClipboardEvent) => {
       e.preventDefault();
-      setToast({ message: "Aksi Copy/Paste tidak diizinkan saat ujian!", type: "error" });
+      setToast({ message: "Tidak diperkenankan untuk menyalin lembar soal", type: "error" });
     };
 
     window.addEventListener("visibilitychange", handleVisibilityChange);
@@ -555,8 +599,17 @@ export default function StudentRemedialLayer({
         setStep(status);
         if (status === 'COMPLETED') {
           setToast({ message: "Jawaban Remedial berhasil dikumpulkan.", type: "success" });
-          const finalScore = data.newFinalScore; // Match the API response key
-          sendTelegramNotify('FINISH', undefined, undefined, finalScore);
+          const fScore = data.newFinalScore || data.final_score; // Handle both potential returns
+          setFinalScore(fScore);
+          sendTelegramNotify('FINISH', undefined, undefined, fScore);
+          
+          // Fetch friends who haven't finished
+          fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`)
+            .then(r => r.json())
+            .then(d => {
+              setRemainingStudents(d.students || []);
+              setSessionCreatedAt(d.sessionCreatedAt);
+            });
         } else if (status === 'CHEATED') {
           const photo = capturePhoto();
           sendTelegramNotify('CHEATED', photo, clientCheatingFlags.join(', '));
@@ -761,14 +814,38 @@ export default function StudentRemedialLayer({
     );
   }
 
-  // RENDER: END SCREENS (COMPLETED / CHEATED / TIMEOUT)
+  // RENDER: COMPLETED / CHEATED / TIMEOUT
   if (step === 'CHEATED' || step === 'TIMEOUT' || step === 'COMPLETED') {
     const isCheat = step === 'CHEATED';
     const isTimeout = step === 'TIMEOUT';
-    
+    const isCompleted = step === 'COMPLETED';
+
+    const getRemainingTimeStr = () => {
+      if (!sessionCreatedAt) return "";
+      const deadline = new Date(sessionCreatedAt).getTime() + (5 * 24 * 60 * 60 * 1000);
+      const diff = deadline - Date.now();
+      if (diff <= 0) return "Waktu Habis";
+
+      const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+      const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+      const mins = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+      
+      let str = "";
+      if (days > 0) str += `${days} Hari `;
+      if (hours > 0) str += `${hours} Jam `;
+      str += `${mins} Menit`;
+      return str;
+    };
+
+    const handleShare = () => {
+      const timeStr = getRemainingTimeStr();
+      const text = `Halo! Saya sudah beres remedial ${subject} dengan nilai ${finalScore}. Yuk buruan remedial bagi yang belum, sisa waktu tinggal ${timeStr} lagi (Deadline Jakarta)!`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    };
+
     return (
-      <div className={`min-h-screen flex items-center justify-center p-4 animate-in ${isCheat ? 'bg-rose-50/50' : isTimeout ? 'bg-amber-50/50' : 'bg-emerald-50/50'}`}>
-        <div className={`bg-white max-w-md w-full rounded-[2rem] p-8 md:p-10 shadow-2xl border-2 text-center ${isCheat ? 'border-rose-100' : isTimeout ? 'border-amber-100' : 'border-emerald-100'}`}>
+      <div className={`min-h-screen py-10 flex items-center justify-center p-4 animate-in ${isCheat ? 'bg-rose-50/50' : isTimeout ? 'bg-amber-50/50' : 'bg-emerald-50/50'}`}>
+        <div className={`bg-white max-w-lg w-full rounded-[2rem] p-8 md:p-10 shadow-2xl border-2 text-center ${isCheat ? 'border-rose-100' : isTimeout ? 'border-amber-100' : 'border-emerald-100'}`}>
           <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${isCheat ? 'bg-rose-100 text-rose-600' : isTimeout ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
             {isCheat ? <ShieldX size={40} /> : isTimeout ? <Clock size={40} /> : <CheckCircle2 size={40} />}
           </div>
@@ -777,15 +854,43 @@ export default function StudentRemedialLayer({
             {isCheat ? 'Terdeteksi Mencontek!' : isTimeout ? 'Waktu Habis!' : 'Berhasil Disimpan!'}
           </h2>
           
-          <p className="text-sm md:text-base text-slate-500 font-bold mb-8 leading-relaxed">
+          <p className="text-sm md:text-base text-slate-500 font-bold mb-4 leading-relaxed">
             {isCheat ? (
                <>Anda terdeteksi melakukan tindakan yang dilarang (keluar tab/layar). Nilai Remedial Anda diatur menjadi <strong className="text-rose-600">0</strong>.<br /><br />Hubungi <strong>Guru Mata Pelajaran</strong>.</>
             ) : isTimeout ? (
                <>Waktu pengerjaan remedial Anda sudah habis. Formulir terkunci dan nilai belum memenuhi batas KKM.</>
             ) : (
-               <>Jawaban remedial Anda telah tersimpan ke dalam sistem database sekolah. Skor Anda telah diperbaharui.</>
+               <>Jawaban remedial Anda telah tersimpan ke dalam sistem database sekolah. Skor akhir Anda: <strong className="text-emerald-600 font-black text-lg">{finalScore}</strong></>
             )}
           </p>
+
+          {isCompleted && (
+            <div className="mt-8 mb-8">
+               <button
+                 onClick={handleShare}
+                 className="flex items-center justify-center gap-2 w-full py-4 bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all mb-6"
+               >
+                 <Send size={16} /> Bagikan ke Teman Class
+               </button>
+
+               {remainingStudents.length > 0 && (
+                 <div className="text-left bg-slate-50 border border-slate-100 rounded-2xl p-5 overflow-hidden">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center justify-between">
+                       <span>Daftar Teman Belum Remedial</span>
+                       <span className="text-rose-500">Sisa: {getRemainingTimeStr()}</span>
+                    </h3>
+                    <div className="max-h-40 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                       {remainingStudents.map((s, i) => (
+                         <div key={i} className="flex items-center justify-between text-xs font-bold text-slate-600 bg-white p-2.5 rounded-lg border border-slate-100">
+                            <span>{s.name}</span>
+                            <span className="text-[9px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-400 font-black">BELUM</span>
+                         </div>
+                       ))}
+                    </div>
+                 </div>
+               )}
+            </div>
+          )}
           
           <button
             onClick={onBack}
@@ -807,7 +912,35 @@ export default function StudentRemedialLayer({
 
   return (
     <>
-      {/* Fixed Responsive Camera Bubble */}
+      {/* Anti-Screenshot / Privacy Overlay (Activates when tab/app switcher is opened) */}
+      {isTabHidden && step === 'EXAM' && (
+        <div className="fixed inset-0 z-[9999] bg-slate-900 flex flex-col items-center justify-center text-center p-6 animate-in fade-in duration-300">
+           <div className="w-20 h-20 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mb-6 animate-pulse">
+              <ShieldX size={48} />
+           </div>
+           <h2 className="text-xl font-black text-white mb-2 font-outfit">Layar Diproteksi</h2>
+           <p className="text-slate-400 text-sm font-bold max-w-xs leading-relaxed">
+             Konten disembunyikan untuk menjaga keamanan ujian. Kembalilah ke halaman untuk melanjutkan.
+           </p>
+        </div>
+      )}
+
+      {/* Global Anti-Selection Styles */}
+      <style jsx global>{`
+        .privacy-mode {
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+          user-select: none;
+          -webkit-touch-callout: none;
+        }
+        @media print {
+          body { display: none !important; }
+        }
+      `}</style>
+
+      <div className={`privacy-mode ${isTabHidden && step === 'EXAM' ? 'invisible' : ''}`}>
+        {/* Fixed Responsive Camera Bubble */}
       <div
         className="fixed z-50 rounded-xl md:rounded-2xl overflow-hidden border-2 md:border-4 border-slate-800 shadow-2xl bg-slate-900 pointer-events-none top-3 right-3 w-28 h-20 lg:top-auto lg:bottom-4 lg:right-4 lg:w-40 lg:h-28"
       >
@@ -901,21 +1034,7 @@ export default function StudentRemedialLayer({
         </button>
       </div>
     </div>
-    </>
-  );
-}
-
-function Badge({ children, color = 'indigo' }: { children: React.ReactNode; color?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'rose' }) {
-  const colors = {
-    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    amber: 'bg-amber-50 text-amber-600 border-amber-100',
-    slate: 'bg-slate-50 text-slate-600 border-slate-100',
-    rose: 'bg-rose-50 text-rose-600 border-rose-100',
-  };
-  return (
-    <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-tight border shadow-sm inline-block ${colors[color]}`}>
-      {children}
-    </span>
+  </div>
+  </>
   );
 }
