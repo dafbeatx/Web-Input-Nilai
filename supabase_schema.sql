@@ -282,3 +282,29 @@ CREATE POLICY "gm_proctoring_snapshots_anon_access" ON public.gm_proctoring_snap
     USING (true) WITH CHECK (true);
 
 CREATE INDEX IF NOT EXISTS idx_gm_proctoring_snapshots_attempt ON public.gm_proctoring_snapshots(attempt_id);
+
+-- ============================================================
+-- 4. Similarity Reports (Detected Cheating Rings)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.gm_similarity_reports (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    session_id UUID NOT NULL REFERENCES public.gm_sessions(id) ON DELETE CASCADE,
+    student_a_id UUID NOT NULL REFERENCES public.gm_students(id) ON DELETE CASCADE,
+    student_b_id UUID NOT NULL REFERENCES public.gm_students(id) ON DELETE CASCADE,
+    student_a_name TEXT NOT NULL,
+    student_b_name TEXT NOT NULL,
+    pg_similarity NUMERIC(5,4) NOT NULL,
+    essay_similarity NUMERIC(5,4) NOT NULL,
+    final_score NUMERIC(5,4) NOT NULL,
+    risk_level TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    UNIQUE(session_id, student_a_id, student_b_id)
+);
+
+ALTER TABLE public.gm_similarity_reports ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "gm_similarity_reports_anon_access" ON public.gm_similarity_reports;
+CREATE POLICY "gm_similarity_reports_anon_access" ON public.gm_similarity_reports
+    FOR ALL TO anon
+    USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_gm_similarity_reports_session ON public.gm_similarity_reports(session_id);
