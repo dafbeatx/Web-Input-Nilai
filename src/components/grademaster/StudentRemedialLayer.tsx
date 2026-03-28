@@ -91,22 +91,55 @@ export default function StudentRemedialLayer({
     return `${os} | ${browser}`;
   };
 
+  const getNetworkInfo = () => {
+    if (typeof navigator === 'undefined') return 'unknown';
+    const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    if (!conn) return 'unknown';
+    return `${conn.effectiveType || 'unknown'} (${conn.downlink || '?'}Mbps)`;
+  };
+
+  const compressImage = async (base64Str: string, maxWidth = 320, quality = 0.6): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = (maxWidth / width) * height;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(base64Str);
+    });
+  };
+
   const sendTelegramNotify = async (event: string, photo?: string, message?: string, score?: number) => {
     try {
+      const netInfo = getNetworkInfo();
+      const payload = {
+        studentName,
+        className,
+        subject,
+        event,
+        message: message ? `${message}${message.includes('Network:') ? '' : ` | Network: ${netInfo}`}` : `Network: ${netInfo}`,
+        photo,
+        score,
+        deviceInfo: getDeviceInfo()
+      };
+
       await fetch('/api/telegram/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentName,
-          className,
-          subject,
-          event,
-          score,
-          kkm: 70, // Default KKM
-          photo,
-          message,
-          deviceInfo: getDeviceInfo()
-        })
+        body: JSON.stringify(payload)
       });
     } catch (err) {
       console.error('Failed to send Telegram notify:', err);
@@ -116,7 +149,6 @@ export default function StudentRemedialLayer({
   const capturePhoto = (): string | undefined => {
     if (!videoRef.current) return undefined;
     try {
-      // Ensure video is ready and has dimensions
       if (videoRef.current.readyState < 2 || videoRef.current.videoWidth === 0) {
         console.warn('Video not ready for capture');
         return undefined;
@@ -128,7 +160,7 @@ export default function StudentRemedialLayer({
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        return canvas.toDataURL('image/jpeg', 0.6); // 60% quality to save bandwidth
+        return canvas.toDataURL('image/jpeg', 0.6); 
       }
     } catch (err) {
       console.error('Failed to capture photo:', err);
@@ -136,8 +168,9 @@ export default function StudentRemedialLayer({
     return undefined;
   };
 
-  // Pre-exam agreement
-  const [agreedRules, setAgreedRules] = useState(false);  const sendActivityLog = (message: string) => {
+  const [agreedRules, setAgreedRules] = useState(false);
+  
+  const sendActivityLog = (message: string) => {
     if (step !== 'EXAM') return;
     sendTelegramNotify('ACTIVITY', undefined, message);
   };
@@ -439,7 +472,12 @@ export default function StudentRemedialLayer({
       return;
     }
 
-    const capturedImg = capturePhoto();
+    // Capture & Compress Photo
+    let capturedImg = capturePhoto();
+    if (capturedImg) {
+      capturedImg = await compressImage(capturedImg);
+    }
+    
     if (!capturedImg) {
       const errMsg = "Gagal mengambil foto verifikasi. Pastikan wajah terlihat jelas di kamera.";
       setToast({ message: errMsg, type: "error" });
@@ -497,6 +535,10 @@ export default function StudentRemedialLayer({
     });
     
     // Send Start Notification with Photo
+    const net = getNetworkInfo();
+    if (net.includes('2g') || net.includes('3g')) {
+      setToast({ message: "Koneksi lambat terdeteksi. Harap bersabar saat mengunggah jawaban.", type: "error" });
+    }
     sendTelegramNotify('START', capturedImg);
 
     setIsSubmitting(false);
@@ -624,8 +666,10 @@ export default function StudentRemedialLayer({
               setSessionCreatedAt(d.sessionCreatedAt);
             });
         } else if (status === 'CHEATED') {
-          const photo = capturePhoto();
-          sendTelegramNotify('CHEATED', photo, clientCheatingFlags.join(', '));
+          let photo = capturePhoto();
+          compressImage(photo || "").then(compressed => {
+            sendTelegramNotify('CHEATED', compressed || photo || undefined, clientCheatingFlags.join(', '));
+          });
         }
       }
     } catch (e) {
