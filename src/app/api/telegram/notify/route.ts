@@ -48,6 +48,14 @@ export async function POST(req: NextRequest) {
                `ℹ️ Status: Siswa keluar/menutup halaman ujian sebelum selesai.\n` +
                `⏰ Waktu: ${timestamp}${deviceStr}`;
         break;
+      case 'ACTIVITY':
+        text = `⚠️ <b>ACTIVITY LOG</b>\n\n` +
+               `👤 Siswa: <b>${studentName}</b>\n` +
+               `🏫 Kelas: ${className}\n` +
+               `📚 Mapel: ${subject}\n` +
+               `📝 Aktivitas: <b>${message}</b>\n` +
+               `⏰ Waktu: ${timestamp}${deviceStr}`;
+        break;
       default:
         text = message || 'Pesan otomatis dari GradeMaster';
     }

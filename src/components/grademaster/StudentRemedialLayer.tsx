@@ -137,7 +137,10 @@ export default function StudentRemedialLayer({
   };
 
   // Pre-exam agreement
-  const [agreedRules, setAgreedRules] = useState(false);
+  const [agreedRules, setAgreedRules] = useState(false);  const sendActivityLog = (message: string) => {
+    if (step !== 'EXAM') return;
+    sendTelegramNotify('ACTIVITY', undefined, message);
+  };
 
   // Permission states
   const [cameraOk, setCameraOk] = useState(false);
@@ -164,6 +167,7 @@ export default function StudentRemedialLayer({
       window.history.pushState(null, '', window.location.href);
       setBackPressCount(prev => {
         const next = prev + 1;
+        sendActivityLog(`Mencoba menekan tombol Kembali (Back Button) - Percobaan ke-${next}`);
         if (next >= 5) {
           hasTriggeredCheatingRef.current = true;
           setClientCheatingFlags(f => [...f, `Mencoba menekan tombol kembali ${next} kali`]);
@@ -181,6 +185,7 @@ export default function StudentRemedialLayer({
     const handlePrint = (e: any) => {
       e.preventDefault();
       setToast({ message: 'Aksi Cetak/Print tidak diizinkan!', type: 'error' });
+      sendActivityLog("Mencoba mencetak halaman/soal (Print/PDF Attempt)");
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload2);
@@ -191,7 +196,7 @@ export default function StudentRemedialLayer({
     const handleAbandoned = () => {
       if (!isRefreshingRef.current && !isSubmittingRef.current) {
         const payload = JSON.stringify({
-          studentName, className, subject, event: 'ABANDONED', deviceInfo: getDeviceInfo()
+          studentName, className, subject, event: 'ACTIVITY', message: 'Siswa menutup browser / Hard Close', deviceInfo: getDeviceInfo()
         });
         navigator.sendBeacon('/api/telegram/notify', payload);
       }
@@ -532,21 +537,29 @@ export default function StudentRemedialLayer({
     const handleVisibilityChange = () => {
       if (document.hidden) {
          setIsTabHidden(true);
-         if (!isRefreshingRef.current) handleTabLeave();
+         if (!isRefreshingRef.current) {
+           sendActivityLog("Meninggalkan layar ujian (Tab Switch / Task Switcher)");
+           handleTabLeave();
+         }
       } else {
          setIsTabHidden(false);
+         sendActivityLog("Kembali ke layar ujian");
       }
     };
 
     const handleBlur = () => {
       setTimeout(() => {
-        if (!isRefreshingRef.current && document.hidden) handleTabLeave();
+        if (!isRefreshingRef.current && document.hidden) {
+           sendActivityLog("Halaman kehilangan fokus (Blur)");
+           handleTabLeave();
+        }
       }, 500);
     };
 
     const handleCopyPaste = (e: ClipboardEvent) => {
       e.preventDefault();
       setToast({ message: "Tidak diperkenankan untuk menyalin lembar soal", type: "error" });
+      sendActivityLog("Mencoba menyalin/copy teks soal");
     };
 
     window.addEventListener("visibilitychange", handleVisibilityChange);
