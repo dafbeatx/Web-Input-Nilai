@@ -597,9 +597,16 @@ export default function StudentRemedialLayer({
     setIsSubmitting(true);
 
     if (remedialQuestions.length === 0) {
-      const errMsg = "Soal remedial belum diatur oleh guru. Hubungi guru mata pelajaran.";
+      const errMsg = "Soal remedial belum diatur atau sesi Anda telah direset oleh guru. Silakan masuk kembali.";
       setToast({ message: errMsg, type: "error" });
       sendTelegramNotify('ERROR', undefined, `Gagal Mulai: Soal Kosong`);
+      
+      // Clear persistence and reload to let student re-type their name/session
+      setTimeout(() => {
+        clearRemedialSession();
+        window.location.reload();
+      }, 3000);
+      
       setIsSubmitting(false);
       return;
     }
