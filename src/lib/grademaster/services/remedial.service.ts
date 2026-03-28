@@ -44,8 +44,8 @@ export async function submitRemedial(
     remedial_photo: photo
   };
 
-  if (status === 'IN_PROGRESS') {
-    updateData.remedial_attempts = student.remedial_attempts + 1;
+  if (status === 'STARTED') {
+    updateData.remedial_attempts = (student.remedial_attempts || 0) + 1;
     if (student.original_score === 0 || student.original_score == null) {
        updateData.original_score = student.final_score;
     }
@@ -198,8 +198,10 @@ export async function resetRemedial(studentId: string) {
 
   if (fetchErr || !student) throw new Error('Siswa tidak ditemukan');
 
-  // Revert to original score if it exists, otherwise use current final_score (which should be the original if remedial never finished)
-  const scoreToRestore = student.original_score !== null ? student.original_score : student.final_score;
+  // Revert to original score if it exists (usually set when remedial starts).
+  // If original_score is 0 but remedial_status was set, then 0 is likely the intended restoration point.
+  // We use student.original_score as the source of truth if it's not null.
+  const scoreToRestore = student.original_score !== null ? Number(student.original_score) : Number(student.final_score);
 
   const { error } = await supabase
     .from('gm_students')
