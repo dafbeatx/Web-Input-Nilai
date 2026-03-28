@@ -406,3 +406,13 @@ BEGIN
 END;
 $$;
 
+
+-- ========================================================
+-- MIGRATION: Remedial Analytics Columns
+-- ========================================================
+-- Add missing columns to gm_students to support new features
+-- Prevent 'column exam_mode does not exist' RPC failure
+ALTER TABLE public.gm_students 
+ADD COLUMN IF NOT EXISTS exam_mode TEXT DEFAULT 'STRICT',
+ADD COLUMN IF NOT EXISTS camera_status TEXT DEFAULT 'ACTIVE',
+ADD COLUMN IF NOT EXISTS risk_level TEXT DEFAULT 'LOW';
