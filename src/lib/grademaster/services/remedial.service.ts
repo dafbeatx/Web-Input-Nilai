@@ -249,6 +249,10 @@ export async function submitRemedial(
     attemptUpdate.status = 'TIMEOUT';
     studentUpdate.remedial_answers = answers;
     studentUpdate.remedial_status = 'TIMEOUT';
+    studentUpdate.remedial_score = 0;
+    studentUpdate.final_score = student.original_score || student.final_score || 0;
+    studentUpdate.final_score_locked = student.original_score || student.final_score || 0;
+    studentUpdate.teacher_reviewed = false;
   }
 
   // ── FINALIZATION: Transactional Update (Attempt + Student) ──
