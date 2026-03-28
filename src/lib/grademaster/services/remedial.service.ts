@@ -26,23 +26,35 @@ async function withRetry<T>(
   context: string,
   maxRetries = 3
 ): Promise<T> {
-  let lastError: Error | null = null;
+  let lastError: any = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
     } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-      console.error(`[Retry ${attempt}/${maxRetries}] ${context}: ${lastError.message}`);
+      lastError = err;
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : (typeof err === 'object' && err !== null) 
+          ? JSON.stringify(err) 
+          : String(err);
+      
+      console.error(`[Retry ${attempt}/${maxRetries}] ${context}: ${errorMessage}`);
 
       if (attempt < maxRetries) {
-        const delay = 200 * Math.pow(2, attempt - 1); // 200ms, 400ms, 800ms
+        const delay = 200 * Math.pow(2, attempt - 1);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }
 
-  throw new Error(`${context} gagal setelah ${maxRetries} percobaan: ${lastError?.message}`);
+  const finalMessage = lastError instanceof Error 
+    ? lastError.message 
+    : (typeof lastError === 'object' && lastError !== null)
+      ? JSON.stringify(lastError)
+      : String(lastError);
+
+  throw new Error(`${context} gagal setelah ${maxRetries} percobaan: ${finalMessage}`);
 }
 
 export async function submitRemedial(
@@ -229,32 +241,29 @@ export async function submitRemedial(
     studentUpdate.remedial_status = 'TIMEOUT';
   }
 
-  // Persist attempt with retry
-  await withRetry(async () => {
-    const { error } = await supabase
-      .from('gm_remedial_attempts')
-      .update(attemptUpdate)
-      .eq('id', attempt.id);
+  // ── FINALIZATION: Transactional Update (Attempt + Student) ──
+  
+  const result = await withRetry(async () => {
+    const { data, error } = await supabase.rpc('finalize_remedial_attempt', {
+      p_attempt_id: attempt.id,
+      p_student_id: studentId,
+      p_attempt_data: attemptUpdate,
+      p_student_data: studentUpdate
+    });
+
     if (error) throw error;
-  }, `Menyimpan attempt (id: ${attempt.id}, student: ${studentName})`);
+    return data;
+  }, `Finalisasi remedial (id: ${studentId}, student: ${studentName})`);
 
-  // Persist student cache with retry
-  const { error: updateErr, data } = await withRetry(async () => {
-    const result = await supabase
-      .from('gm_students')
-      .update(studentUpdate)
-      .eq('id', studentId)
-      .select()
-      .single();
-    if (result.error) throw result.error;
-    return result;
-  }, `Menyimpan data siswa (id: ${studentId}, student: ${studentName})`);
+  console.log(`[Remedial] FINALIZED: student=${studentName}, status=${status}, result=SUCCESS`);
 
-  if (updateErr) throw updateErr;
-
-  console.log(`[Remedial] ${status}: student=${studentName}, attemptId=${attempt.id}, session=${sessionId}`);
-
-  return data;
+  return { 
+    ...student, 
+    ...studentUpdate,
+    newFinalScore: studentUpdate.final_score,
+    attempt_id: attempt.id,
+    attempt_token: (attempt as any).attempt_token || null
+  };
 }
 
 async function findActiveAttempt(

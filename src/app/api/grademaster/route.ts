@@ -216,8 +216,7 @@ export async function POST(req: NextRequest) {
           const { count } = await supabase
             .from('gm_students')
             .select('*', { count: 'exact', head: true })
-            .eq('session_id', s.id)
-            .eq('is_deleted', false);
+            .eq('session_id', s.id);
           return { ...s, student_count: count || 0 };
         })
       );
@@ -268,7 +267,6 @@ export async function POST(req: NextRequest) {
       .from('gm_students')
       .select('*')
       .eq('session_id', session.id)
-      .eq('is_deleted', false)
       .order('created_at', { ascending: true });
 
     const gradedStudents: GradedStudent[] = (students || []).map(s => ({

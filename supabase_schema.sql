@@ -352,3 +352,57 @@ BEGIN
   RETURN v_attempt_id;
 END;
 $$;
+
+-- ============================================================
+-- Remedial RPC: Transactional Finalize Attempt
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.finalize_remedial_attempt(
+  p_attempt_id UUID,
+  p_student_id UUID,
+  p_attempt_data JSONB,
+  p_student_data JSONB
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- 1. Update remedial attempt (record of this specific try)
+  UPDATE public.gm_remedial_attempts
+  SET 
+    status = (p_attempt_data->>'status'),
+    answers = (p_attempt_data->'answers'),
+    note = (p_attempt_data->>'note'),
+    risk_score = (p_attempt_data->'risk_score')::INTEGER,
+    risk_level = (p_attempt_data->>'risk_level'),
+    risk_flags = (p_attempt_data->'risk_flags'),
+    essay_score_auto = (p_attempt_data->'essay_score_auto')::NUMERIC,
+    essay_auto_details = (p_attempt_data->'essay_auto_details'),
+    essay_score_final = (p_attempt_data->'essay_score_final')::NUMERIC,
+    completed_at = (p_attempt_data->>'completed_at')::TIMESTAMPTZ
+  WHERE id = p_attempt_id;
+
+  -- 2. Update student master (primary record for scoring)
+  UPDATE public.gm_students
+  SET
+    remedial_status = (p_student_data->>'remedial_status'),
+    remedial_answers = (p_student_data->'remedial_answers'),
+    remedial_note = (p_student_data->>'remedial_note'),
+    remedial_score = (p_student_data->'remedial_score')::NUMERIC,
+    is_cheated = (p_student_data->'is_cheated')::BOOLEAN,
+    cheating_flags = (p_student_data->'cheating_flags'),
+    essay_score_auto = (p_student_data->'essay_score_auto')::NUMERIC,
+    essay_score_final = (p_student_data->'essay_score_final')::NUMERIC,
+    essay_auto_details = (p_student_data->'essay_auto_details'),
+    final_score = (p_student_data->'final_score')::NUMERIC,
+    final_score_locked = (p_student_data->'final_score_locked')::NUMERIC,
+    teacher_reviewed = (p_student_data->'teacher_reviewed')::BOOLEAN,
+    exam_mode = (p_student_data->>'exam_mode'),
+    camera_status = (p_student_data->>'camera_status'),
+    risk_level = (p_student_data->>'risk_level')
+  WHERE id = p_student_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+

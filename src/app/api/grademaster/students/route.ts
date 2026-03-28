@@ -24,7 +24,6 @@ export async function POST(req: NextRequest) {
       .select('id')
       .eq('session_id', sessionId)
       .eq('name', name.trim())
-      .eq('is_deleted', false)
       .single();
 
     if (existingStudent) {
@@ -116,8 +115,7 @@ export async function GET(req: NextRequest) {
       .from('gm_students')
       .select('*')
       .eq('session_id', sessionId)
-      .eq('is_deleted', false)
-      .order('created_at', { ascending: true });
+      .order('name', { ascending: true });
 
     if (error) throw error;
 
@@ -170,7 +168,7 @@ export async function DELETE(req: NextRequest) {
 
     const { error } = await supabase
       .from('gm_students')
-      .update({ is_deleted: true })
+      .delete()
       .eq('id', studentId);
 
     if (error) throw error;
