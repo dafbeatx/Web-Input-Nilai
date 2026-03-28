@@ -472,18 +472,12 @@ export default function StudentRemedialLayer({
       return;
     }
 
-    // Capture & Compress Photo
+    // Capture & Compress Photo (non-blocking — exam proceeds even if photo fails)
     let capturedImg = capturePhoto();
     if (capturedImg) {
       capturedImg = await compressImage(capturedImg);
-    }
-    
-    if (!capturedImg) {
-      const errMsg = "Gagal mengambil foto verifikasi. Pastikan wajah terlihat jelas di kamera.";
-      setToast({ message: errMsg, type: "error" });
-      sendTelegramNotify('ERROR', undefined, "Gagal Foto: Video/Kamera bermasalah");
-      setIsSubmitting(false);
-      return;
+    } else {
+      sendTelegramNotify('ACTIVITY', undefined, "Foto verifikasi gagal diambil (kamera mungkin belum sepenuhnya siap)");
     }
 
     // 3. Start Session on Server
