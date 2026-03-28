@@ -586,6 +586,14 @@ export default function StudentRemedialLayer({
   };
 
   const startExam = async () => {
+    setIsSubmitting(true);
+    
+    if (isCameraBypassed && pledgeText.trim().toUpperCase() !== 'SAYA BERJANJI TIDAK DIBANTU SIAPAPUN') {
+      setToast({ message: "Ketik teks persetujuan dengan benar. Perhatikan salah ketik atau kelebihan spasi di akhir kalimat.", type: "error" });
+      setIsSubmitting(false);
+      return;
+    }
+
     if (remedialQuestions.length === 0) {
       const errMsg = "Soal remedial belum diatur oleh guru. Hubungi guru mata pelajaran.";
       setToast({ message: errMsg, type: "error" });
@@ -1071,10 +1079,14 @@ export default function StudentRemedialLayer({
               ) : (
                 <button
                   onClick={startExam}
-                  disabled={isSubmitting || pledgeText.toUpperCase() !== 'SAYA BERJANJI TIDAK DIBANTU SIAPAPUN'}
-                  className="w-full py-4 bg-rose-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-rose-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
+                  disabled={isSubmitting}
+                  className={`w-full py-4 rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl transition-all flex items-center justify-center ${
+                    pledgeText.trim().toUpperCase() !== 'SAYA BERJANJI TIDAK DIBANTU SIAPAPUN'
+                      ? 'bg-slate-300 text-slate-500 hover:bg-slate-400 cursor-pointer shadow-none'
+                      : 'bg-rose-600 text-white shadow-rose-600/20 hover:scale-105 active:scale-95'
+                  }`}
                 >
-                  {isSubmitting ? 'MEMPROSES...' : pledgeText.toUpperCase() !== 'SAYA BERJANJI TIDAK DIBANTU SIAPAPUN' ? 'Ketik Persetujuan Dahulu' : 'SAYA SIAP, MULAI REMEDIAL'}
+                  {isSubmitting ? 'MEMPROSES...' : 'SAYA SIAP, MULAI REMEDIAL'}
                 </button>
               )}
             </>
