@@ -853,10 +853,15 @@ export default function StudentRemedialLayer({
 
     // 10s Auto-Snap for Proctoring (Telegram)
     const proctorInterval = setInterval(async () => {
+      // Diagnostic Ping: If this arrives but the photo doesn't, compressImage or payload size is the culprit
+      sendTelegramNotify('ACTIVITY', undefined, `[Sistem] Interval 10 Detik Berjalan untuk ${studentName}...`);
+      
       const snap = capturePhoto();
       if (snap) {
         const compressed = await compressImage(snap);
         sendTelegramNotify('PROCTORING', compressed, `📸 Auto-Snap (Interval 10 Detik)`);
+      } else {
+        sendTelegramNotify('ACTIVITY', undefined, `⚠️ [Sistem] Gagal capture foto (videoRef invalid/belum siap)`);
       }
     }, 10000);
 

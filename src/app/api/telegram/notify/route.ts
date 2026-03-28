@@ -90,7 +90,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    await sendAdminNotification(text, photoFile);
+    const result = await sendAdminNotification(text, photoFile);
+
+    // If Telegram rejects the photo (e.g. rate limit, bad file format, parse error)
+    if (result && result.ok === false) {
+      console.error('Telegram API rejected the message:', result);
+      await sendAdminNotification(`⚠️ <b>Gagal kirim dari server:</b>\n\nEvent: ${event}\nError: <code>${result.description}</code>\nCode: ${result.error_code}`);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {
