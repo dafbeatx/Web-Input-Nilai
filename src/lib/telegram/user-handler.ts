@@ -256,11 +256,11 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
     if (isRemedial) {
       remedialWarning = 
         `\n⚠️ <b>TIDAK MEMENUHI KKM (${kkm})</b>\n` +
-        `Sesuai kebijakan, Remedial diberi waktu <b>5 HARI</b> dari penginputan nilai.\n\n` +
+        `Batas akhir pengerjaan Remedial adalah <b>Senin, 30 Maret 2026 pukul 07.00 WIB</b>.\n\n` +
         `🌐 <b>Lakukan melalui:</b> <a href="${webUrl}">${webUrl}</a>\n\n` +
         `❌ <b>Konsekuensi Keterlambatan:</b>\n` +
-        `• Nilai otomatis diset menjadi <b>0</b>\n` +
-        `• Penalti <b>-10 Poin Perilaku</b>\n`;
+        `• Nilai otomatis diset menjadi <b>0 (NOL)</b>\n` +
+        `• Penalti <b>-10 Poin Perilaku</b> tanpa toleransi!\n`;
     }
 
     const totalPG = Array.isArray(sessionInfo.answer_key) ? sessionInfo.answer_key.length : 0;
