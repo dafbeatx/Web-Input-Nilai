@@ -890,6 +890,7 @@ export default function GradeMaster() {
           academicYear={academicYear}
           examType={examType}
           semester={semester}
+          kkm={kkm}
           onBack={() => setLayer("dashboard")}
           setToast={setToast}
         />

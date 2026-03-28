@@ -17,6 +17,7 @@ interface StudentRemedialLayerProps {
   academicYear: string;
   examType: string;
   semester: string;
+  kkm: number;
   onBack: () => void;
   setToast: (t: ToastType) => void;
 }
@@ -49,6 +50,7 @@ export default function StudentRemedialLayer({
   academicYear,
   examType,
   semester,
+  kkm,
   onBack,
   setToast,
 }: StudentRemedialLayerProps) {
@@ -158,13 +160,16 @@ export default function StudentRemedialLayer({
     try {
       const netInfo = getNetworkInfo();
       const payload = {
-        studentName,
-        className,
-        subject,
+        studentName: studentName || 'Unknown Student',
+        className: className || 'Unknown Class',
+        subject: subject || 'Unknown Subject',
         event,
         message: message ? `${message}${message.includes('Network:') ? '' : ` | Network: ${netInfo}`}` : `Network: ${netInfo}`,
         photo,
         score,
+        kkm: kkm || 70,
+        academicYear,
+        examType,
         deviceInfo: getDeviceInfo()
       };
 
