@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
     const { data: student, error } = await supabase
       .from('gm_students')
-      .select('id, name, final_score, remedial_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed')
+      .select('id, name, final_score, remedial_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed, violation_count, is_blocked')
       .eq('session_id', sessionId)
       .eq('name', studentName)
       .eq('is_deleted', false)
@@ -58,7 +58,9 @@ export async function GET(req: NextRequest) {
       status: currentStatus,
       finalScore: student.final_score,
       cheatingFlags: student.cheating_flags,
-      teacherReviewed: student.teacher_reviewed
+      teacherReviewed: student.teacher_reviewed,
+      violationCount: student.violation_count || 0,
+      isBlocked: student.is_blocked || false
     });
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     return response;

@@ -72,6 +72,8 @@ CREATE TABLE IF NOT EXISTS public.gm_students (
     exam_mode TEXT DEFAULT 'STRICT',
     camera_status TEXT DEFAULT 'ACTIVE',
     risk_level TEXT DEFAULT 'LOW',
+    violation_count INTEGER DEFAULT 0,
+    is_blocked BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 

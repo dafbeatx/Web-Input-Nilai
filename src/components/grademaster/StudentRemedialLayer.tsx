@@ -90,6 +90,7 @@ export default function StudentRemedialLayer({
   const [networkWarningCount, setNetworkWarningCount] = useState(0);
   const MAX_NETWORK_WARNINGS = 2;
   const [isTabHidden, setIsTabHidden] = useState(false);
+  const [isPermanentlyBlocked, setIsPermanentlyBlocked] = useState(false);
   const [remainingStudents, setRemainingStudents] = useState<{name: string}[]>([]);
   const [sessionCreatedAt, setSessionCreatedAt] = useState<string | null>(null);
   const [finalScore, setFinalScore] = useState<number | null>(null);
@@ -464,6 +465,14 @@ export default function StudentRemedialLayer({
         const res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
+          if (data.isBlocked) {
+             setIsPermanentlyBlocked(true);
+             setIsTabHidden(false); 
+          }
+          if (data.violationCount) {
+             setTabWarningCount(data.violationCount);
+          }
+          
           // If server says terminal status, override local state
           if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(data.status)) {
             setStep(data.status as RemedialStep);
@@ -1018,27 +1027,33 @@ export default function StudentRemedialLayer({
   useEffect(() => {
     if (step !== 'EXAM') return;
 
-    const handleTabLeave = () => {
-      if (isRefreshingRef.current || hasTriggeredCheatingRef.current) return;
-      setTabWarningCount(prev => {
-        const next = prev + 1;
-        const reason = `Meninggalkan halaman ${next} kali`;
-        if (next >= MAX_TAB_WARNINGS) {
-          setClientCheatingFlags(f => [...f, reason]);
-          if (secondChanceUsed) {
-            hasTriggeredCheatingRef.current = true;
-            setToast({ message: 'Batas peringatan terlampaui. Ujian dihentikan.', type: 'error' });
-            handleStatusUpdate('CHEATED', reason);
+    const handleTabLeave = async () => {
+      if (isRefreshingRef.current || hasTriggeredCheatingRef.current || isPermanentlyBlocked) return;
+      
+      try {
+        const res = await fetch('/api/grademaster/students/remedial/violation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, studentName })
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setTabWarningCount(data.count);
+          
+          if (data.isBlocked) {
+             setClientCheatingFlags(f => [...f, `Batas maksimal pelanggaran tab tercapai`]);
+             setIsPermanentlyBlocked(true);
+             hasTriggeredCheatingRef.current = true;
+             setToast({ message: 'Batas peringatan terlampaui. Akses ujian Anda ditutup sistem.', type: 'error' });
+             sendTelegramNotify('CHEATED', capturePhoto() || undefined, 'Meninggalkan halaman ujian melebihi batas yang diizinkan sistem.');
           } else {
-            setSecondChanceReason(reason);
-            setStep('SECOND_CHANCE');
-            sendTelegramNotify('SECOND_CHANCE', capturePhoto() || undefined, reason);
+             setToast({ message: `⚠️ PERINGATAN ${data.count}/${data.limit}: Jangan tinggalkan halaman ujian! (Sisa ${data.limit - data.count} peringatan)`, type: 'error' });
           }
-        } else {
-          setToast({ message: `⚠️ PERINGATAN ${next}/${MAX_TAB_WARNINGS}: Jangan tinggalkan halaman ujian! (Sisa ${MAX_TAB_WARNINGS - next} peringatan)`, type: 'error' });
         }
-        return next;
-      });
+      } catch (err) {
+        console.error('Failed to log violation via API:', err);
+      }
     };
 
     const handleVisibilityChange = () => {
@@ -1799,15 +1814,17 @@ export default function StudentRemedialLayer({
 
   return (
     <>
-      {/* Anti-Screenshot / Privacy Overlay (Activates when tab/app switcher is opened) */}
-      {isTabHidden && step === 'EXAM' && (
+      {/* Anti-Screenshot / Privacy Overlay (Activates when tab/app switcher is opened or permanently blocked) */}
+      {(isTabHidden || isPermanentlyBlocked) && step === 'EXAM' && (
         <div className="fixed inset-0 z-[9999] bg-slate-900 flex flex-col items-center justify-center text-center p-6 animate-in fade-in duration-300">
            <div className="w-20 h-20 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mb-6 animate-pulse">
               <ShieldX size={48} />
            </div>
            <h2 className="text-xl font-black text-white mb-2 font-outfit">Layar Diproteksi</h2>
            <p className="text-slate-400 text-sm font-bold max-w-xs leading-relaxed">
-             Konten disembunyikan untuk menjaga keamanan ujian. Kembalilah ke halaman untuk melanjutkan.
+             {isPermanentlyBlocked 
+                ? "Akses Anda ke halaman ujian telah diblokir permanen karena melanggar aturan ujian (Meninggalkan Halaman). Hubungi Guru Pengawas." 
+                : "Konten disembunyikan untuk menjaga keamanan ujian. Kembalilah ke halaman untuk melanjutkan."}
            </p>
         </div>
       )}
@@ -1826,7 +1843,7 @@ export default function StudentRemedialLayer({
         }
       `}</style>
 
-      <div className={`privacy-mode ${(isTabHidden || isOffline) && step === 'EXAM' ? 'invisible' : ''}`}>
+      <div className={`privacy-mode ${(isTabHidden || isPermanentlyBlocked || isOffline) && step === 'EXAM' ? 'invisible' : ''}`}>
         {/* Fixed Responsive Camera Bubble */}
         {step === 'EXAM' && (
           <div
