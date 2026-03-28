@@ -1932,10 +1932,10 @@ export default function StudentRemedialLayer({
       `}</style>
 
       <div className={`privacy-mode ${(isTabHidden || isPermanentlyBlocked || isOffline) && step === 'EXAM' ? 'invisible' : ''}`}>
-        {/* Fixed Responsive Camera Bubble */}
+        {/* Fixed Responsive Camera Bubble - Now Portrait & Floating (PIP) */}
         {step === 'EXAM' && (
           <div
-            className="fixed z-50 rounded-xl md:rounded-2xl overflow-hidden border-2 md:border-4 border-slate-800 shadow-2xl bg-slate-900 pointer-events-none top-3 right-3 w-28 h-20 lg:top-auto lg:bottom-4 lg:right-4 lg:w-40 lg:h-28 animate-in slide-in-from-right duration-500"
+            className="fixed z-50 rounded-2xl md:rounded-3xl overflow-hidden border-2 md:border-4 border-slate-900 shadow-2xl bg-slate-900 pointer-events-none bottom-4 right-4 w-24 h-36 md:bottom-6 md:right-8 md:w-36 md:h-52 animate-in slide-in-from-right duration-500 hover:scale-110 transition-transform"
           >
             <div className="w-full h-full relative">
                 <ProctoringCamera 
