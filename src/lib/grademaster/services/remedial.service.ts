@@ -205,12 +205,14 @@ export async function resetRemedial(studentId: string) {
     .eq('id', student.session_id)
     .single();
     
-  const config = session?.scoring_config || { pgWeight: 0.7, essayWeight: 0.3 };
+  const config = session?.scoring_config || {};
+  const pgWeight = (typeof config.pgWeight === 'number') ? config.pgWeight : 0.7;
+  const essayWeight = (typeof config.essayWeight === 'number') ? config.essayWeight : 0.3;
   
   // UTS Score Recovery (Calculated from original UTS PG & Essay scores)
   const recoveredUtsScore = Math.round(
-    (Number(student.mcq_score || 0) * (config.pgWeight || 0.7)) + 
-    (Number(student.essay_score || 0) * (config.essayWeight || 0.3))
+    (Number(student.mcq_score || 0) * pgWeight) + 
+    (Number(student.essay_score || 0) * essayWeight)
   );
 
   // Restore logic: prioritize captured original_score, fallback to recovered UTS score
