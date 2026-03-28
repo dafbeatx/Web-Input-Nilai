@@ -171,7 +171,7 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
 
     const { data: students } = await supabase
       .from('gm_students')
-      .select('name')
+      .select('id, name')
       .eq('session_id', session.id)
       .order('name');
 
@@ -185,7 +185,7 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
     for (let i = 0; i < students.length; i += 2) {
       const row = students.slice(i, i + 2).map(s => ({
         text: `👤 ${s.name}`,
-        callback_data: `user_student::${s.name}`,
+        callback_data: `user_student::${s.id}`,
       }));
       keyboard.push(row);
     }
@@ -195,8 +195,21 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
     return;
   }
 
-  if (action === 'user_student' && value && conv) {
-    const sessionId = conv.data.sessionId as string;
+  if (action === 'user_student' && value) {
+    // 1. Fetch current student to get session_id
+    const { data: match } = await supabase
+      .from('gm_students')
+      .select('id, session_id, name, final_score, mcq_score, essay_score, csi, lps, correct, wrong, essay_scores')
+      .eq('id', value)
+      .single();
+
+    if (!match) {
+      await sendMessage(chatId, `❌ Terjadi kesalahan atau data siswa tidak ditemukan.`);
+      userConversations.delete(chatId);
+      return;
+    }
+
+    const sessionId = match.session_id;
 
     const { data: sessionInfo } = await supabase
       .from('gm_sessions')
@@ -212,24 +225,17 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
 
     const { data: students } = await supabase
       .from('gm_students')
-      .select('name, final_score, mcq_score, essay_score, csi, lps, correct, wrong, essay_scores')
+      .select('id, name, final_score')
       .eq('session_id', sessionId)
       .order('final_score', { ascending: false });
 
     if (!students || students.length === 0) {
-      await sendMessage(chatId, '📭 <b>Maaf,</b> data nilai tidak ditemukan.');
+      await sendMessage(chatId, '📭 <b>Maaf,</b> data kelas tidak ditemukan.');
       userConversations.delete(chatId);
       return;
     }
 
-    const match = students.find(s => s.name === value);
-    if (!match) {
-      await sendMessage(chatId, `❌ Nama "<b>${value}</b>" tidak ditemukan.`);
-      userConversations.delete(chatId);
-      return;
-    }
-
-    const rank = students.findIndex(s => s.name === match.name) + 1;
+    const rank = students.findIndex(s => s.id === match.id) + 1;
     const totalStudents = students.length;
     const scores = students.map(s => Number(s.final_score));
     const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
