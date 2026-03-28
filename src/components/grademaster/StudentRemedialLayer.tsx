@@ -699,13 +699,21 @@ export default function StudentRemedialLayer({
   const startExam = async () => {
     setIsSubmitting(true);
 
-    if (remedialQuestions.length === 0) {
+    const saved = loadRemedialSession();
+    let effectiveQuestions = remedialQuestions;
+    
+    // Check local session fallback if prop is empty
+    if ((!effectiveQuestions || effectiveQuestions.length === 0) && saved?.remedialQuestions) {
+      effectiveQuestions = saved.remedialQuestions;
+    }
+
+    if (!effectiveQuestions || effectiveQuestions.length === 0) {
       const errMsg = "Soal remedial belum diatur atau sesi Anda telah direset oleh guru. Silakan masuk kembali.";
       setToast({ message: errMsg, type: "error" });
       
       // Try to get some metadata for the log even if it's currently empty state
-      const logName = studentName || localStorage.getItem('gm_remedial_student_name') || 'Siswa Unknown';
-      const logClass = className || localStorage.getItem('gm_remedial_class_name') || 'Kelas Unknown';
+      const logName = studentName || saved?.studentName || 'Siswa Unknown';
+      const logClass = className || saved?.location?.split(' - ')[0] || 'Kelas Unknown';
       
       sendTelegramNotify('ERROR', undefined, `⚠️ [${logClass}] ${logName} - Gagal Mulai: Soal Kosong (Mapel: ${subject || 'Informatika'})`);
       
@@ -1370,10 +1378,12 @@ export default function StudentRemedialLayer({
 
               <button
                 onClick={startExam}
-                disabled={isSubmitting || !allPermsOk}
+                disabled={isSubmitting || !allPermsOk || (remedialQuestions.length === 0 && !loadRemedialSession()?.remedialQuestions)}
                 className="w-full py-4 bg-indigo-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
               >
-                {isSubmitting ? 'MEMPROSES...' : !allPermsOk ? '⛔ AKTIFKAN IZIN TERLEBIH DAHULU' : 'SAYA MENGERTI, MULAI REMEDIAL'}
+                {isSubmitting ? 'MEMPROSES...' : 
+                 (remedialQuestions.length === 0 && !loadRemedialSession()?.remedialQuestions) ? '⏳ MEMUAT DATA UJIAN...' :
+                 !allPermsOk ? '⛔ AKTIFKAN IZIN TERLEBIH DAHULU' : 'SAYA MENGERTI, MULAI REMEDIAL'}
               </button>
             </>
           )}
