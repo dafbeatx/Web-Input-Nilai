@@ -35,6 +35,7 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
   // Individual Edit
   const [newStudentName, setNewStudentName] = useState('');
   const [isAddingStudent, setIsAddingStudent] = useState(false);
+  const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
 
   // Class Overview
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
@@ -183,7 +184,8 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
   };
 
   const updatePoints = async (type: 'GOOD' | 'BAD', pointsDelta: number, reason: string) => {
-    if (!selectedStudent) return;
+    if (!selectedStudent || isUpdatingPoints) return;
+    setIsUpdatingPoints(true);
     try {
       const res = await fetch('/api/grademaster/behaviors/points', {
         method: 'PUT',
@@ -195,17 +197,19 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
 
       // Update local state smoothly
       setStudents(prev => prev.map(s => s.id === selectedStudent.id ? data.student : s));
-      setSelectedStudent(data.student);
+      setSelectedStudent(null); // Close modal automatically for better UX
       setToast({ message: `Poin ${type === 'GOOD' ? 'ditambahkan' : 'dikurangi'} untuk ${selectedStudent.student_name}`, type: "success" });
     } catch (err: any) {
       setToast({ message: err.message || "Gagal mengupdate poin", type: "error" });
+    } finally {
+      setIsUpdatingPoints(false);
     }
   };
 
   return (
     <div className="min-h-screen p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in pt-16">
       <header className="mb-6 md:mb-10">
-        <button onClick={onBack} className="flex items-center gap-1.5 md:gap-2 text-slate-400 hover:text-indigo-600 font-bold text-[10px] md:text-xs uppercase tracking-widest transition-colors mb-4">
+        <button type="button" onClick={(e) => { e.preventDefault(); onBack(); }} className="flex items-center gap-1.5 md:gap-2 text-slate-400 hover:text-indigo-600 font-bold text-[10px] md:text-xs uppercase tracking-widest transition-colors mb-4">
           <ArrowLeft size={12} className="md:w-[14px] md:h-[14px]" /> Kembali ke Dashboard Ujian
         </button>
         <h1 className="text-2xl md:text-4xl font-black text-slate-800 tracking-tight flex items-center gap-3">
@@ -403,8 +407,11 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
                   "Membuang Sampah Sembarangan",
                   "Tidak Mengerjakan Tugas"
                 ].map((reason, i) => (
-                  <button key={i} onClick={() => updatePoints('BAD', -10, reason)} className="w-full p-3 bg-white border border-rose-100 rounded-xl text-left hover:bg-rose-50 group transition-colors">
-                    <p className="text-sm font-bold text-rose-700 group-hover:text-rose-600 leading-tight">{reason}</p>
+                  <button type="button" disabled={isUpdatingPoints} key={i} onClick={(e) => { e.preventDefault(); updatePoints('BAD', -10, reason); }} className={`w-full p-3 border border-rose-100 rounded-xl text-left transition-colors ${isUpdatingPoints ? 'bg-slate-50 opacity-50 cursor-not-allowed' : 'bg-white hover:bg-rose-50 group'}`}>
+                    <p className="text-sm font-bold text-rose-700 md:group-hover:text-rose-600 leading-tight flex justify-between items-center">
+                       <span>{reason}</span>
+                       {isUpdatingPoints && <Loader2 size={12} className="animate-spin text-rose-400" />}
+                    </p>
                   </button>
                 ))}
               </div>
@@ -419,8 +426,11 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
                   "Mengerjakan Tugas Ekstra",
                   "Disiplin Tingkat Tinggi"
                 ].map((reason, i) => (
-                  <button key={i} onClick={() => updatePoints('GOOD', 10, reason)} className="w-full p-3 bg-white border border-emerald-100 rounded-xl text-left hover:bg-emerald-50 group transition-colors">
-                    <p className="text-sm font-bold text-emerald-700 group-hover:text-emerald-600 leading-tight">{reason}</p>
+                  <button type="button" disabled={isUpdatingPoints} key={i} onClick={(e) => { e.preventDefault(); updatePoints('GOOD', 10, reason); }} className={`w-full p-3 border border-emerald-100 rounded-xl text-left transition-colors ${isUpdatingPoints ? 'bg-slate-50 opacity-50 cursor-not-allowed' : 'bg-white hover:bg-emerald-50 group'}`}>
+                    <p className="text-sm font-bold text-emerald-700 md:group-hover:text-emerald-600 leading-tight flex justify-between items-center">
+                       <span>{reason}</span>
+                       {isUpdatingPoints && <Loader2 size={12} className="animate-spin text-emerald-400" />}
+                    </p>
                   </button>
                 ))}
               </div>
@@ -443,7 +453,7 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
             )}
 
             <div className="p-4 border-t border-slate-100 bg-white">
-              <button onClick={() => setSelectedStudent(null)} className="w-full py-3 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl text-xs font-black uppercase tracking-widest transition-colors">
+              <button type="button" disabled={isUpdatingPoints} onClick={(e) => { e.preventDefault(); setSelectedStudent(null); }} className="w-full py-3 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl text-xs font-black uppercase tracking-widest transition-colors disabled:opacity-50">
                 Tutup Jendela
               </button>
             </div>
