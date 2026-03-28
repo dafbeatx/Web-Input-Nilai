@@ -82,6 +82,7 @@ export default function StudentRemedialLayer({
   const [remainingStudents, setRemainingStudents] = useState<{name: string}[]>([]);
   const [sessionCreatedAt, setSessionCreatedAt] = useState<string | null>(null);
   const [finalScore, setFinalScore] = useState<number | null>(null);
+  const hasSubmittedRef = useRef(false);
 
   const handleExit = () => {
     clearRemedialSession();
@@ -830,6 +831,9 @@ export default function StudentRemedialLayer({
   }, [step, setToast]);
 
   const handleStatusUpdate = async (status: 'COMPLETED' | 'CHEATED' | 'TIMEOUT') => {
+    if (hasSubmittedRef.current) return;
+    hasSubmittedRef.current = true;
+    
     setIsSubmitting(true);
 
     const payload = { 

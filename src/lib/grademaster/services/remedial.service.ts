@@ -244,15 +244,39 @@ export async function submitRemedial(
   // ── FINALIZATION: Transactional Update (Attempt + Student) ──
   
   const result = await withRetry(async () => {
-    const { data, error } = await supabase.rpc('finalize_remedial_attempt', {
-      p_attempt_id: attempt.id,
-      p_student_id: studentId,
-      p_attempt_data: attemptUpdate,
-      p_student_data: studentUpdate
-    });
+    try {
+      const { data, error } = await supabase.rpc('finalize_remedial_attempt', {
+        p_attempt_id: attempt.id,
+        p_student_id: studentId,
+        p_attempt_data: attemptUpdate,
+        p_student_data: studentUpdate
+      });
 
-    if (error) throw error;
-    return data;
+      if (error) throw error;
+      return data;
+    } catch (err: any) {
+      if (err.message && err.message.includes('column') && err.message.includes('does not exist')) {
+        console.warn(`[Safe Update Fallback] Menghapus kolom opsional yang belum dimigrasi di tabel gm_students.`);
+        
+        // Remove columns that might not exist in an older schema
+        const safeStudentUpdate = { ...studentUpdate };
+        delete safeStudentUpdate.exam_mode;
+        delete safeStudentUpdate.camera_status;
+        delete safeStudentUpdate.risk_level;
+
+        const { data, error } = await supabase.rpc('finalize_remedial_attempt', {
+          p_attempt_id: attempt.id,
+          p_student_id: studentId,
+          p_attempt_data: attemptUpdate,
+          p_student_data: safeStudentUpdate
+        });
+
+        if (error) throw error;
+        return data;
+      } else {
+        throw err;
+      }
+    }
   }, `Finalisasi remedial (id: ${studentId}, student: ${studentName})`);
 
   console.log(`[Remedial] FINALIZED: student=${studentName}, status=${status}, result=SUCCESS`);
