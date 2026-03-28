@@ -75,7 +75,7 @@ export default function StudentRemedialLayer({
   const [cameraErrorDetail, setCameraErrorDetail] = useState<string | null>(null);
   const [examMode, setExamMode] = useState<'STRICT' | 'LIMITED'>('STRICT');
   const [cameraStatus, setCameraStatus] = useState<'ACTIVE' | 'FAILED'>('ACTIVE');
-  const MAX_CAMERA_RETRIES = 3;
+  const MAX_CAMERA_RETRIES = 5;
   
   const [warningCount, setWarningCount] = useState(0);
   const [tabWarningCount, setTabWarningCount] = useState(0);
@@ -90,7 +90,13 @@ export default function StudentRemedialLayer({
   const [secondChanceReason, setSecondChanceReason] = useState('');
   const [isOffline, setIsOffline] = useState(false);
   const [networkWarningCount, setNetworkWarningCount] = useState(0);
-  const MAX_NETWORK_WARNINGS = 2;
+  const MAX_NETWORK_WARNINGS = 3;
+  const [activeWarning, setActiveWarning] = useState<{
+    type: 'TAB' | 'NETWORK' | 'CAMERA';
+    count: number;
+    limit: number;
+    message: string;
+  } | null>(null);
   const [isTabHidden, setIsTabHidden] = useState(false);
   const [isPermanentlyBlocked, setIsPermanentlyBlocked] = useState(false);
   const [remainingStudents, setRemainingStudents] = useState<{name: string}[]>([]);
@@ -1127,16 +1133,15 @@ export default function StudentRemedialLayer({
         
         if (res.ok) {
           const data = await res.json();
-          setTabWarningCount(data.count);
-          
           if (data.isBlocked) {
              setClientCheatingFlags(f => [...f, `Batas maksimal pelanggaran tab tercapai`]);
              setIsPermanentlyBlocked(true);
              hasTriggeredCheatingRef.current = true;
-             setToast({ message: 'Batas peringatan terlampaui. Akses ujian Anda ditutup sistem.', type: 'error' });
+             setActiveWarning({ type: 'TAB', count: data.count, limit: data.limit, message: 'Batas Anda sudah habis tertangkap meninggalkan halaman ujian.' });
              sendTelegramNotify('CHEATED', capturePhoto() || undefined, 'Meninggalkan halaman ujian melebihi batas yang diizinkan sistem.');
+             handleStatusUpdate('CHEATED', 'Meninggalkan tab browser melebihi batas 3 kali');
           } else {
-             setToast({ message: `⚠️ PERINGATAN ${data.count}/${data.limit}: Jangan tinggalkan halaman ujian! (Sisa ${data.limit - data.count} peringatan)`, type: 'error' });
+             setActiveWarning({ type: 'TAB', count: data.count, limit: data.limit, message: 'Sistem mendeteksi Anda meninggalkan halaman ujian. Dilarang membuka aplikasi atau tab lain selama ujian!' });
           }
         }
       } catch (err) {
@@ -1182,13 +1187,14 @@ export default function StudentRemedialLayer({
       setNetworkWarningCount(prev => {
         const next = prev + 1;
         const reason = `Mematikan koneksi internet (Peringatan ${next})`;
-        if (next > MAX_NETWORK_WARNINGS) {
+        if (next >= MAX_NETWORK_WARNINGS) {
           setClientCheatingFlags(f => [...f, reason]);
           hasTriggeredCheatingRef.current = true;
-          setToast({ message: 'Terlalu sering mematikan data. Ujian dihentikan.', type: 'error' });
-          handleStatusUpdate('CHEATED', 'Mematikan internet lebih dari 2 kali');
+          setActiveWarning({ type: 'NETWORK', count: next, limit: MAX_NETWORK_WARNINGS, message: 'Batas mematikan koneksi tercapai.' });
+          handleStatusUpdate('CHEATED', 'Mematikan internet melebihi batas yang diizinkan sistem');
         } else {
           sendActivityLog(reason);
+          setActiveWarning({ type: 'NETWORK', count: next, limit: MAX_NETWORK_WARNINGS, message: 'Koneksi terputus tiba-tiba atau sengaja dimatikan. Pastikan koneksi stabil untuk mencegah ujian digagalkan!' });
         }
         return next;
       });
@@ -1206,8 +1212,8 @@ export default function StudentRemedialLayer({
     return () => {
       window.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleBlur);
-      document.removeEventListener("copy", handleCopyPaste);
-      document.removeEventListener("paste", handleCopyPaste);
+      window.removeEventListener("copy", handleCopyPaste);
+      window.removeEventListener("paste", handleCopyPaste);
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);
     };
@@ -1909,9 +1915,52 @@ export default function StudentRemedialLayer({
   };
 
   return (
-    <>
-      {/* Anti-Screenshot / Privacy Overlay (Activates when tab/app switcher is opened or permanently blocked) */}
-      {/* Anti-Screenshot / Privacy Overlay - Optimized for Mobile */}
+    <div className="relative min-h-screen bg-slate-50 pb-20 overflow-x-hidden">
+      
+      {/* Big Warning Modal Inject */}
+      {activeWarning && step === 'EXAM' && (
+        <div className="fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-xl flex justify-center items-center p-4 shadow-2xl">
+          <div className="bg-white max-w-sm w-full rounded-[2rem] shadow-[0_0_100px_rgba(244,63,94,0.3)] overflow-hidden animate-in zoom-in-95 duration-200 border-4 border-rose-500/20">
+            <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-8 flex flex-col items-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10" />
+              <AlertTriangle size={64} className="text-white drop-shadow-md relative z-10" />
+              <h2 className="text-2xl font-black text-white mt-4 tracking-widest text-center relative z-10">PELANGGARAN</h2>
+            </div>
+            <div className="p-6 md:p-8 text-center flex flex-col items-center">
+              <div className="bg-rose-50 border border-rose-100 px-5 py-2.5 rounded-full text-base font-black text-rose-600 mb-6 w-full shadow-inner">
+                Peringatan ke-{activeWarning.count} dari maksimum {activeWarning.limit}
+              </div>
+              <p className="text-xs md:text-sm text-slate-600 font-bold leading-relaxed mb-6">
+                {activeWarning.message}
+              </p>
+              
+              <div className="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl mb-6">
+                <p className="text-[10px] md:text-xs text-slate-500 font-black uppercase tracking-wider mb-1">
+                  KONSEKUENSI BERIKUTNYA:
+                </p>
+                <p className="text-rose-600 text-[11px] md:text-xs font-black leading-snug">
+                  JIKA TERUS MELANGGAR BATAS, UJIAN AKAN DITUTUP SECARA PERMANEN DAN NILAI OTOMATIS MENJADI ANGKA 0.
+                </p>
+              </div>
+              
+              {(activeWarning.count >= activeWarning.limit) ? (
+                 <div className="w-full py-4 rounded-xl text-center bg-slate-100 text-slate-400 font-black text-xs uppercase tracking-widest cursor-not-allowed">
+                   Akses Dikunci. Mengirim Laporan...
+                 </div>
+              ) : (
+                <button 
+                  onClick={() => setActiveWarning(null)}
+                  className="w-full py-4 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-slate-900/20 transition-all focus:outline-none focus:ring-4 focus:ring-slate-200"
+                >
+                  (X) Saya Mengerti & Lanjut Ujian
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Anti-Screenshot / Privacy Overlay */}
       {(isTabHidden || isPermanentlyBlocked) && step === 'EXAM' && (
         <div className="fixed inset-0 z-[10000] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center text-center p-4 md:p-8 animate-in fade-in zoom-in duration-300">
            <div className="w-16 h-16 md:w-24 md:h-24 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mb-4 md:mb-6 animate-pulse ring-4 ring-rose-500/10">
@@ -2117,7 +2166,7 @@ export default function StudentRemedialLayer({
         )}
       </div>
     </div>
+   </div>
   </div>
-  </>
   );
 }

@@ -94,8 +94,8 @@ export async function submitRemedial(
 
   // ── INITIATED: Create new attempt (transactional) ──
   if (status === 'INITIATED') {
-    if (student.remedial_attempts >= 1) {
-      throw new Error('Maksimal kesempatan remedial hanya 1 kali. Status ini bersifat permanen.');
+    if (student.remedial_attempts >= 2) {
+      throw new Error('Maksimal kesempatan remedial adalah 2 kali. Status ini sudah bersifat permanen dan tidak bisa mengulang lagi.');
     }
 
     if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(student.remedial_status)) {
