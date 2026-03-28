@@ -551,14 +551,14 @@ export default function StudentRemedialLayer({
       // Try high accuracy first
       navigator.geolocation.getCurrentPosition(resolve, (errHigh) => {
         if (errHigh.code === 1) {
-          // PERMISSION_DENIED — no point retrying IP, user explicitly denied.
-          reject(errHigh);
+          // If explicitly denied, fallback to IP immediately to prevent getting stuck
+          fetchIpFallback(errHigh);
           return;
         }
         // Fallback: try without high accuracy
         navigator.geolocation.getCurrentPosition(resolve, (errLow) => {
           if (errLow.code === 1) {
-            reject(errLow);
+            fetchIpFallback(errLow);
             return;
           }
           // Ultimate Fallback: IP-based location (fixes Chromium 400 Network location provider error)
