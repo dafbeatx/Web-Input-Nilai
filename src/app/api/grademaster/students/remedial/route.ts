@@ -81,7 +81,7 @@ export async function PUT(req: NextRequest) {
 
     console.log('Incoming remedial request:', JSON.stringify(body, null, 2));
 
-    const { sessionId, studentId, studentName, status, location, answers, note, elapsedTimeMs, clientCheatingFlags, photo } = body;
+    const { sessionId, studentId, studentName, status, location, answers, note, elapsedTimeMs, clientCheatingFlags, photo, examMode, cameraStatus, riskLevel } = body;
     // status: 'STARTED' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT'
 
     if (!sessionId || (!studentName && !studentId) || !status) {
@@ -114,7 +114,10 @@ export async function PUT(req: NextRequest) {
        location || '',
        elapsedTimeMs || 1000 * 60 * 30, // Fallback to 30 mins if not provided
        clientCheatingFlags || [],
-       photo
+       photo,
+       examMode,
+       cameraStatus,
+       riskLevel
     );
 
     return NextResponse.json({ 

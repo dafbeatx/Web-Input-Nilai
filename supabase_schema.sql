@@ -69,6 +69,9 @@ CREATE TABLE IF NOT EXISTS public.gm_students (
     essay_score_manual NUMERIC(5,2),
     essay_score_final NUMERIC(5,2) DEFAULT 0,
     essay_auto_details JSONB DEFAULT '[]'::jsonb,
+    exam_mode TEXT DEFAULT 'STRICT',
+    camera_status TEXT DEFAULT 'ACTIVE',
+    risk_level TEXT DEFAULT 'LOW',
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 

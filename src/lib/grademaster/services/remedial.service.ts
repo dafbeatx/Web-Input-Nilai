@@ -13,7 +13,10 @@ export async function submitRemedial(
   location: string,
   elapsedTimeMs: number,
   clientCheatingFlags: string[] = [],
-  photo?: string
+  photo?: string,
+  examMode?: string,
+  cameraStatus?: string,
+  riskLevel?: string
 ) {
   const { data: student, error: fetchErr } = await supabase
     .from('gm_students')
@@ -106,6 +109,9 @@ export async function submitRemedial(
 
   const studentUpdate: Record<string, unknown> = {
     remedial_status: status,
+    exam_mode: examMode || 'STRICT',
+    camera_status: cameraStatus || 'ACTIVE',
+    risk_level: riskLevel || 'LOW',
   };
 
   if (status === 'COMPLETED' || status === 'CHEATED') {

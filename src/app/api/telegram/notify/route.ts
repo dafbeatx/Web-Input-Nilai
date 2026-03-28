@@ -4,11 +4,12 @@ import { sendAdminNotification } from '@/lib/telegram/bot';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { studentName, className, subject, event, score, kkm, photo, message, deviceInfo } = body;
+    const { studentName, className, subject, event, score, kkm, photo, message, deviceInfo, examMode } = body;
 
     let text = '';
     const timestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-    const deviceStr = deviceInfo ? `\n📱 Perangkat: <code>${deviceInfo}</code>` : '';
+    const modeStr = examMode ? `\n🛡️ Mode Ujian: <b>${examMode}</b>` : '';
+    const deviceStr = deviceInfo ? `\n📱 Perangkat: <code>${deviceInfo}</code>${modeStr}` : ` ${modeStr}`;
 
     switch (event) {
       case 'START':

@@ -13,7 +13,8 @@ export interface RemedialSession {
   location: string;
   refreshCount: number;
   shuffledIndices?: number[];
-  isCameraBypassed?: boolean;
+  examMode?: 'STRICT' | 'LIMITED';
+  cameraStatus?: 'ACTIVE' | 'FAILED';
 }
 
 export function saveRemedialSession(data: RemedialSession): void {

@@ -65,8 +65,8 @@ export default function StudentRemedialLayer({
   const hasActivatedRef = useRef(false);
   const [cameraRetryCount, setCameraRetryCount] = useState(0);
   const [cameraErrorDetail, setCameraErrorDetail] = useState<string | null>(null);
-  const [isCameraBypassed, setIsCameraBypassed] = useState(false);
-  const [pledgeText, setPledgeText] = useState("");
+  const [examMode, setExamMode] = useState<'STRICT' | 'LIMITED'>('STRICT');
+  const [cameraStatus, setCameraStatus] = useState<'ACTIVE' | 'FAILED'>('ACTIVE');
   const MAX_CAMERA_RETRIES = 3;
   
   const [warningCount, setWarningCount] = useState(0);
@@ -299,7 +299,8 @@ export default function StudentRemedialLayer({
         camReady = true;
         setCameraRetryCount(0);
         setCameraErrorDetail(null);
-        setIsCameraBypassed(false);
+        setExamMode('STRICT');
+        setCameraStatus('ACTIVE');
       } catch (err: any) {
         camReady = false;
         const detail = getCameraErrorMessage(err);
@@ -307,7 +308,7 @@ export default function StudentRemedialLayer({
         setCameraRetryCount(prev => {
           const next = prev + 1;
           if (next >= MAX_CAMERA_RETRIES) {
-            sendTelegramNotify('ACTIVITY', undefined, `Kamera gagal ${next}x (${err?.name}). Siswa diarahkan ke fitur Bypass.`);
+            sendTelegramNotify('ACTIVITY', undefined, `Kamera gagal ${next}x (${err?.name}). Siswa diarahkan ke Mode Terbatas.`);
           }
           return next;
         });
@@ -353,10 +354,13 @@ export default function StudentRemedialLayer({
         if (saved.attemptId) setAttemptId(saved.attemptId);
         if (saved.attemptToken) setAttemptToken(saved.attemptToken);
         if (saved.studentId) setCurrentStudentId(saved.studentId);
-        if (saved.isCameraBypassed) setIsCameraBypassed(true);
+        if (saved.examMode) {
+          setExamMode(saved.examMode);
+          setCameraStatus(saved.cameraStatus || 'ACTIVE');
+        }
 
         const elapsedSeconds = Math.floor((Date.now() - saved.startedAt) / 1000);
-        const baseTimer = saved.isCameraBypassed ? Math.floor((remedialTimer * 60) / 2) : (remedialTimer * 60);
+        const baseTimer = (remedialTimer * 60);
         let remaining = baseTimer - elapsedSeconds;
         if (remaining < 0) remaining = 0;
         setTimeLeft(remaining);
@@ -425,7 +429,9 @@ export default function StudentRemedialLayer({
   // Persist answers whenever they change
   useEffect(() => {
     if (step !== 'EXAM' || !startedAtRef.current) return;
+    const saved = loadRemedialSession();
     saveRemedialSession({
+      ...saved,
       sessionId,
       studentName,
       step,
@@ -433,14 +439,15 @@ export default function StudentRemedialLayer({
       answers,
       note,
       location: currentLocation,
-      refreshCount: loadRemedialSession()?.refreshCount || 0,
+      refreshCount: saved?.refreshCount || 0,
       shuffledIndices: shuffledQuestions.map(q => q.originalIndex),
       attemptId: attemptId || undefined,
       attemptToken: attemptToken || undefined,
       studentId: currentStudentId || undefined,
-      isCameraBypassed,
+      examMode,
+      cameraStatus,
     });
-  }, [answers, note, step, sessionId, studentName, currentLocation, shuffledQuestions, attemptId, attemptToken, currentStudentId, isCameraBypassed]);
+  }, [answers, note, step, sessionId, studentName, currentLocation, shuffledQuestions, attemptId, attemptToken, currentStudentId, examMode, cameraStatus]);
 
   const isSubmittingRef = useRef(isSubmitting);
   useEffect(() => { isSubmittingRef.current = isSubmitting; });
@@ -588,12 +595,6 @@ export default function StudentRemedialLayer({
 
   const startExam = async () => {
     setIsSubmitting(true);
-    
-    if (isCameraBypassed && pledgeText.trim().toUpperCase() !== 'SAYA BERJANJI TIDAK DIBANTU SIAPAPUN') {
-      setToast({ message: "Ketik teks persetujuan dengan benar. Perhatikan salah ketik atau kelebihan spasi di akhir kalimat.", type: "error" });
-      setIsSubmitting(false);
-      return;
-    }
 
     if (remedialQuestions.length === 0) {
       const errMsg = "Soal remedial belum diatur oleh guru. Hubungi guru mata pelajaran.";
@@ -622,9 +623,9 @@ export default function StudentRemedialLayer({
     if (capturedImg) {
       capturedImg = await compressImage(capturedImg);
     } else {
-      if (isCameraBypassed) {
-        setClientCheatingFlags(f => [...f, "Ujian dimulai tanpa pengawasan kamera (Bypassed)"]);
-        sendTelegramNotify('ACTIVITY', undefined, `⚠️ Siswa melanjutkan ujian tanpa kamera (Bypassed) setelah 3x gagal izin.`);
+      if (examMode === 'LIMITED') {
+        setClientCheatingFlags(f => [...f, "Ujian dimulai dengan Mode Terbatas (Tanpa Kamera/Lokasi)"]);
+        sendTelegramNotify('ACTIVITY', undefined, `⚠️ Siswa melanjutkan ujian dengan mode LIMITED karena perangkat tidak mendukung.`);
       } else {
         sendTelegramNotify('ACTIVITY', undefined, "Foto verifikasi gagal diambil (kamera mungkin belum sepenuhnya siap)");
       }
@@ -693,7 +694,8 @@ export default function StudentRemedialLayer({
       attemptId: attemptIdFromServer || attemptId || undefined,
       attemptToken: attemptTokenFromServer || attemptToken || undefined,
       studentId: studentIdFromServer || currentStudentId || undefined,
-      isCameraBypassed,
+      examMode,
+      cameraStatus,
     });
     
     // Send Start Notification with Photo
@@ -774,8 +776,8 @@ export default function StudentRemedialLayer({
     return () => {
       window.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleBlur);
-      document.removeEventListener("copy", handleCopyPaste);
-      document.removeEventListener("paste", handleCopyPaste);
+      document.addEventListener("copy", handleCopyPaste);
+      document.addEventListener("paste", handleCopyPaste);
     };
   }, [step, setToast]);
 
@@ -800,7 +802,10 @@ export default function StudentRemedialLayer({
                return mappedAnswers;
             })() : undefined,
             note: status === 'COMPLETED' ? note : undefined,
-            clientCheatingFlags: clientCheatingFlags.length > 0 ? clientCheatingFlags : undefined
+            clientCheatingFlags: clientCheatingFlags.length > 0 ? clientCheatingFlags : undefined,
+            examMode,
+            cameraStatus,
+            riskLevel: clientCheatingFlags.length > 0 ? 'HIGH' : (examMode === 'LIMITED' ? 'MEDIUM' : 'LOW')
         })
       });
       const data = await res.json().catch(() => ({}));
@@ -922,7 +927,7 @@ export default function StudentRemedialLayer({
 
   // RENDER: INFO SCREEN (Camera/GPS/Timer confirmation + Permission Check)
   if (step === 'INFO') {
-    const allPermsOk = (cameraOk || isCameraBypassed) && locationOk;
+    const allPermsOk = examMode === 'LIMITED' || (cameraOk && locationOk);
 
     return (
       <div className="min-h-screen flex items-center justify-center p-4 animate-in">
@@ -1025,19 +1030,37 @@ export default function StudentRemedialLayer({
             </div>
           )}
 
-          {cameraRetryCount >= MAX_CAMERA_RETRIES ? (
+          {examMode === 'LIMITED' ? (
+            <>
+              <div className="mb-4 p-4 bg-amber-50 rounded-xl border border-amber-200 shadow-inner">
+                <p className="text-xs text-amber-900 font-black mb-1 flex items-center gap-2">
+                  <AlertTriangle size={16} className="text-amber-600" /> MODE UJIAN TERBATAS
+                </p>
+                <p className="text-[10px] text-amber-800 font-bold leading-relaxed mb-3">
+                  Anda masuk menggunakan Mode Terbatas karena keterbatasan perangkat (Gagal akses kamera/lokasi). Tindakan ini akan tercatat di sistem admin.
+                </p>
+                <button
+                  onClick={startExam}
+                  disabled={isSubmitting}
+                  className="w-full py-4 rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl bg-orange-500 text-white shadow-orange-500/20 hover:scale-105 transition-all flex items-center justify-center"
+                >
+                  {isSubmitting ? 'MEMPROSES...' : 'SAYA MENGERTI, MULAI UJIAN'}
+                </button>
+              </div>
+            </>
+          ) : cameraRetryCount >= MAX_CAMERA_RETRIES ? (
             <>
               <div className="mb-4 p-4 bg-slate-900 rounded-2xl text-center">
-                <p className="text-xs text-white font-bold mb-1">Kamera gagal diakses setelah {MAX_CAMERA_RETRIES} percobaan.</p>
-                <p className="text-[10px] text-slate-400 font-bold mb-4">Anda dapat melanjutkan ujian tanpa proteksi kamera, namun tindakan ini <strong className="text-amber-400">akan dicatat dan dilaporkan ke Guru</strong> untuk ditinjau secara manual. Waktu pengerjaan juga akan dipotong 50%.</p>
+                <p className="text-xs text-white font-bold mb-1">Perangkat tidak mendukung / gagal akses.</p>
+                <p className="text-[10px] text-slate-400 font-bold mb-4">Anda dapat melanjutkan ujian dalam <strong className="text-amber-400">Mode Terbatas (LIMITED)</strong>. Monitoring anti-cheat seperti tab-switch tetap berjalan.</p>
                 <button
                   onClick={() => {
-                    setIsCameraBypassed(true);
-                    setTimeLeft(Math.floor(remedialTimer * 60 / 2));
+                    setExamMode('LIMITED');
+                    if (!cameraOk) setCameraStatus('FAILED');
                   }}
                   className="w-full py-3 bg-amber-500 text-white rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-lg hover:bg-amber-600 transition-all flex items-center justify-center gap-2"
                 >
-                   Lanjutkan Tanpa Kamera
+                   Masuk Mode Terbatas
                 </button>
               </div>
               <button
@@ -1046,50 +1069,6 @@ export default function StudentRemedialLayer({
               >
                 <ArrowLeft size={14} /> Kembali ke Halaman Utama
               </button>
-            </>
-          ) : isCameraBypassed ? (
-            <>
-              <div className="mb-4 p-4 bg-amber-50 rounded-xl border border-amber-200 shadow-inner">
-                <p className="text-xs text-amber-900 font-black mb-1 flex items-center gap-2">
-                  <AlertTriangle size={16} className="text-amber-600" /> PERHATIAN (BYPASS MODE)
-                </p>
-                <p className="text-[10px] text-amber-800 font-bold leading-relaxed mb-3">
-                  Waktu ujian Anda telah <b>dipotong 50%</b>. Segala dugaan kecurangan (mencontek teman/bantuan orang tua) akan dideteksi oleh sistem otomatis dari pola ketepatan waktu & kemiripan opsi.
-                </p>
-                
-                <div className="bg-white p-3 rounded-lg border border-amber-100 mt-2 text-center">
-                  <p className="text-[9px] font-black uppercase text-rose-500 tracking-widest mb-2">UNTUK LANJUT, KETIK KALIMAT BERIKUT:</p>
-                  <p className="text-xs font-mono font-bold bg-slate-100 py-1.5 rounded text-slate-700 select-all mb-3 text-center">SAYA BERJANJI TIDAK DIBANTU SIAPAPUN</p>
-                  <input
-                    type="text"
-                    value={pledgeText}
-                    onChange={(e) => setPledgeText(e.target.value)}
-                    placeholder="Ketik persis di sini..."
-                    className="w-full text-center px-3 py-2 text-xs border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 font-bold text-amber-950 uppercase"
-                  />
-                </div>
-              </div>
-              {!locationOk ? (
-                <button
-                  onClick={checkPermissions}
-                  disabled={checkingPerms}
-                  className="w-full py-4 bg-amber-500 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
-                >
-                  {checkingPerms ? 'MEMERIKSA LOKASI...' : '⛔ PERIKSA IZIN LOKASI (KLIK DI SINI)'}
-                </button>
-              ) : (
-                <button
-                  onClick={startExam}
-                  disabled={isSubmitting}
-                  className={`w-full py-4 rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl transition-all flex items-center justify-center ${
-                    pledgeText.trim().toUpperCase() !== 'SAYA BERJANJI TIDAK DIBANTU SIAPAPUN'
-                      ? 'bg-slate-300 text-slate-500 hover:bg-slate-400 cursor-pointer shadow-none'
-                      : 'bg-rose-600 text-white shadow-rose-600/20 hover:scale-105 active:scale-95'
-                  }`}
-                >
-                  {isSubmitting ? 'MEMPROSES...' : 'SAYA SIAP, MULAI REMEDIAL'}
-                </button>
-              )}
             </>
           ) : (
             <>
@@ -1267,8 +1246,10 @@ export default function StudentRemedialLayer({
 
         {/* Monitoring Label */}
         <div className="absolute bottom-1 left-1 flex items-center gap-1 bg-black/60 px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm">
-           <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-           <span className="text-[7px] md:text-[8px] text-emerald-300 font-black uppercase tracking-wider">Monitoring</span>
+           <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${examMode === 'STRICT' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+           <span className={`text-[7px] md:text-[8px] font-black uppercase tracking-wider ${examMode === 'STRICT' ? 'text-emerald-300' : 'text-amber-300'}`}>
+             {examMode === 'STRICT' ? 'Strict Mode' : 'Limited Mode'}
+           </span>
         </div>
 
         {/* Penalty Info (if any) */}
