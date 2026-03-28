@@ -13,6 +13,8 @@ export interface RemedialSession {
   location: string;
   refreshCount: number;
   shuffledIndices?: number[];
+  remedialQuestions?: string[];
+  remedialTimer?: number;
   examMode?: 'STRICT' | 'LIMITED';
   cameraStatus?: 'ACTIVE' | 'FAILED';
 }

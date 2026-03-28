@@ -245,13 +245,28 @@ export async function submitRemedial(
       }
     }
   } else if (status === 'TIMEOUT') {
+    // Essay scoring (even on timeout, give credit for what they did)
+    const answerKeys: string[] = session.scoring_config?.remedialAnswerKeys || [];
+    const essayResult = calculateEssayScore(answers, answerKeys);
+
     attemptUpdate.answers = answers;
     attemptUpdate.status = 'TIMEOUT';
+    attemptUpdate.essay_score_auto = essayResult.score;
+    attemptUpdate.essay_score_final = essayResult.score;
+
     studentUpdate.remedial_answers = answers;
     studentUpdate.remedial_status = 'TIMEOUT';
-    studentUpdate.remedial_score = 0;
-    studentUpdate.final_score = student.original_score || student.final_score || 0;
-    studentUpdate.final_score_locked = student.original_score || student.final_score || 0;
+    studentUpdate.remedial_score = essayResult.score;
+    studentUpdate.essay_score_auto = essayResult.score;
+    studentUpdate.essay_score_final = essayResult.score;
+    
+    // Final score remains original or the timed-out remedial score (capped at KKM)
+    const sessionKkm = session.kkm || 70;
+    const remedialResult = Math.min(essayResult.score, sessionKkm);
+    const finalScore = Math.max(student.original_score || student.final_score || 0, remedialResult);
+    
+    studentUpdate.final_score = finalScore;
+    studentUpdate.final_score_locked = finalScore;
     studentUpdate.teacher_reviewed = false;
   }
 

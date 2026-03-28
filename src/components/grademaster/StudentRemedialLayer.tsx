@@ -417,8 +417,14 @@ export default function StudentRemedialLayer({
           setCameraStatus(saved.cameraStatus || 'ACTIVE');
         }
 
+        // Recovery for questions/timer if prop is empty (common on refresh)
+        if ((!remedialQuestions || remedialQuestions.length === 0) && saved.remedialQuestions) {
+          console.log("Recovering questions from local session...");
+          // Shuffling logic below will use saved.shuffledIndices
+        }
+
+        const baseTimer = (saved.remedialTimer || remedialTimer) * 60;
         const elapsedSeconds = Math.floor((Date.now() - saved.startedAt) / 1000);
-        const baseTimer = (remedialTimer * 60);
         let remaining = baseTimer - elapsedSeconds;
         if (remaining < 0) remaining = 0;
         setTimeLeft(remaining);
@@ -489,6 +495,10 @@ export default function StudentRemedialLayer({
   useEffect(() => {
     if (step !== 'EXAM' || !startedAtRef.current) return;
     const saved = loadRemedialSession();
+    const refreshCount = saved?.refreshCount || 0;
+    const prevQuestions = saved?.remedialQuestions || [];
+    const prevTimer = saved?.remedialTimer || 0;
+
     saveRemedialSession({
       ...saved,
       sessionId,
@@ -498,15 +508,15 @@ export default function StudentRemedialLayer({
       answers,
       note,
       location: currentLocation,
-      refreshCount: saved?.refreshCount || 0,
+      refreshCount,
       shuffledIndices: shuffledQuestions.map(q => q.originalIndex),
-      attemptId: attemptId || undefined,
-      attemptToken: attemptToken || undefined,
       studentId: currentStudentId || undefined,
       examMode,
       cameraStatus,
+      remedialQuestions: (remedialQuestions && remedialQuestions.length > 0) ? remedialQuestions : prevQuestions,
+      remedialTimer: (remedialTimer && remedialTimer > 0) ? remedialTimer : prevTimer,
     });
-  }, [answers, note, step, sessionId, studentName, currentLocation, shuffledQuestions, attemptId, attemptToken, currentStudentId, examMode, cameraStatus]);
+  }, [answers, note, step, sessionId, studentName, currentLocation, shuffledQuestions, currentStudentId, examMode, cameraStatus, remedialQuestions, remedialTimer]);
 
   const isSubmittingRef = useRef(isSubmitting);
   useEffect(() => { isSubmittingRef.current = isSubmitting; });
@@ -555,21 +565,32 @@ export default function StudentRemedialLayer({
 
     const saved = loadRemedialSession();
     let indices: number[] = [];
+    let sourceQuestions = remedialQuestions;
 
     // Prioritize indices from saved session to keep order consistent on refresh
-    if (saved && saved.sessionId === sessionId && saved.shuffledIndices && saved.shuffledIndices.length === remedialQuestions.length) {
-      indices = saved.shuffledIndices;
-    } else {
+    if (saved && saved.sessionId === sessionId) {
+      if (saved.shuffledIndices && saved.shuffledIndices.length > 0) {
+        indices = saved.shuffledIndices;
+        // If prop is empty, use questions from session
+        if ((!sourceQuestions || sourceQuestions.length === 0) && saved.remedialQuestions) {
+          sourceQuestions = saved.remedialQuestions;
+        }
+      }
+    }
+    
+    if (indices.length === 0 && sourceQuestions && sourceQuestions.length > 0) {
       // Generate new shuffle
-      indices = remedialQuestions.map((_, i) => i);
+      indices = sourceQuestions.map((_, i) => i);
       for (let i = indices.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [indices[i], indices[j]] = [indices[j], indices[i]];
       }
     }
 
-    const mapped = indices.map(idx => ({ text: remedialQuestions[idx] || '', originalIndex: idx }));
-    setShuffledQuestions(mapped);
+    if (sourceQuestions && sourceQuestions.length > 0) {
+      const mapped = indices.map(idx => ({ text: sourceQuestions[idx] || '', originalIndex: idx }));
+      setShuffledQuestions(mapped);
+    }
   }, [remedialQuestions, sessionId]);
 
   // Activate EXAM when mounted
@@ -806,11 +827,12 @@ export default function StudentRemedialLayer({
       location: locStr,
       refreshCount: 0,
       shuffledIndices: indices,
-      attemptId: attemptIdFromServer || attemptId || undefined,
       attemptToken: attemptTokenFromServer || attemptToken || undefined,
       studentId: studentIdFromServer || currentStudentId || undefined,
       examMode,
       cameraStatus,
+      remedialQuestions,
+      remedialTimer,
     });
     // Initialize session and set step to EXAM
     setIsSubmitting(false);
@@ -979,10 +1001,12 @@ export default function StudentRemedialLayer({
       studentName, 
       status, 
       location: currentLocation,
-      answers: status === 'COMPLETED' ? (() => {
+      answers: (status === 'COMPLETED' || status === 'TIMEOUT') ? (() => {
         const mappedAnswers = new Array(remedialEssayCount).fill("");
         shuffledQuestions.forEach((sq, i) => {
-          mappedAnswers[sq.originalIndex] = answers[i];
+          if (sq.originalIndex < remedialEssayCount) {
+            mappedAnswers[sq.originalIndex] = answers[i] || "";
+          }
         });
         return mappedAnswers;
       })() : undefined,
@@ -1092,6 +1116,7 @@ export default function StudentRemedialLayer({
     setToast({ message: `Gagal mengirim jawaban setelah ${MAX_SUBMIT_RETRIES} percobaan: ${lastError}. Data tersimpan lokal, hubungi guru.`, type: "error" });
     sendTelegramNotify('ERROR', undefined, `Submit gagal ${MAX_SUBMIT_RETRIES}x: ${lastError}`);
     setIsSubmitting(false);
+    hasSubmittedRef.current = false; // ALLOW RETRY
   };
 
   const handleChange = (index: number, val: string) => {
