@@ -17,6 +17,7 @@ export interface RemedialSession {
   remedialTimer?: number;
   examMode?: 'STRICT' | 'LIMITED';
   cameraStatus?: 'ACTIVE' | 'FAILED';
+  extendedTime?: number;
 }
 
 export function saveRemedialSession(data: RemedialSession): void {

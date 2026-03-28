@@ -62,6 +62,12 @@ export default function StudentRemedialLayer({
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [attemptToken, setAttemptToken] = useState<string | null>(null);
   const [currentStudentId, setCurrentStudentId] = useState<string | null>(null);
+  
+  // Points & Time Extension State
+  const [pointsBal, setPointsBal] = useState<{total: number, usedToday: number} | null>(null);
+  const [showTimeUpModal, setShowTimeUpModal] = useState(false);
+  const [extendLoading, setExtendLoading] = useState(false);
+  const [pointsToSpend, setPointsToSpend] = useState<number>(3);
   const hasActivatedRef = useRef(false);
   const [cameraRetryCount, setCameraRetryCount] = useState(0);
   const [cameraErrorDetail, setCameraErrorDetail] = useState<string | null>(null);
@@ -435,7 +441,7 @@ export default function StudentRemedialLayer({
 
         const baseTimer = (saved.remedialTimer || remedialTimer) * 60;
         const elapsedSeconds = Math.floor((Date.now() - saved.startedAt) / 1000);
-        let remaining = baseTimer - elapsedSeconds;
+        let remaining = baseTimer + (saved.extendedTime || 0) - elapsedSeconds;
         if (remaining < 0) remaining = 0;
         setTimeLeft(remaining);
 
@@ -476,6 +482,22 @@ export default function StudentRemedialLayer({
         }
       } catch (err) {
         console.error('Failed to fetch server-side status:', err);
+      }
+      
+      // Fetch behavior points for time extension
+      try {
+        const pRes = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(className)}&year=${encodeURIComponent(academicYear)}`);
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          const pRecord = pData.students?.find((s: any) => s.student_name === studentName);
+          if (pRecord) {
+            const currentDate = new Date().toISOString().split('T')[0];
+            const usedToday = pRecord.points_date === currentDate ? (pRecord.points_used_today || 0) : 0;
+            setPointsBal({ total: pRecord.total_points, usedToday });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch points status:', err);
       }
     };
     checkServerStatus();
@@ -918,13 +940,20 @@ export default function StudentRemedialLayer({
   // Timer countdown (depends on timeLeft)
   useEffect(() => {
     if (step !== 'EXAM') return;
+    if (showTimeUpModal) return; // Pause timer physically if modal intercepts
+    
     if (timeLeft <= 0) {
-      handleStatusUpdate('TIMEOUT');
+      // Intercept timeout logic to offer points
+      if (pointsBal !== null && pointsBal.total > 0 && pointsBal.usedToday < 10) {
+        setShowTimeUpModal(true);
+      } else {
+        handleStatusUpdate('TIMEOUT');
+      }
       return;
     }
     const timerId = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
     return () => clearInterval(timerId);
-  }, [step, timeLeft]);
+  }, [step, timeLeft, showTimeUpModal, pointsBal]);
 
   // Proctoring: START photo + 10s auto-snap (depends ONLY on step, NOT timeLeft)
   useEffect(() => {
@@ -1061,6 +1090,52 @@ export default function StudentRemedialLayer({
       window.removeEventListener("online", handleOnline);
     };
   }, [step, setToast]);
+
+  const handleExtendTime = async () => {
+    if (pointsToSpend <= 0 || pointsToSpend > 10) {
+      setToast({ message: "Pilih waktu antara 1 - 10 menit.", type: "error" });
+      return;
+    }
+    
+    if (pointsBal !== null && (pointsBal.usedToday + pointsToSpend > 10)) {
+      setToast({ message: `Sisa kuota harian ekstensi waktu Anda tersisa ${10 - pointsBal.usedToday} menit.`, type: "error" });
+      return;
+    }
+    
+    setExtendLoading(true);
+    try {
+      const res = await fetch('/api/grademaster/behaviors/spend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentName, className, academicYear, pointsToSpend })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal menambah waktu");
+      
+      // Calculate Added Secs
+      const addedSeconds = pointsToSpend * 60;
+      setTimeLeft(prev => prev > 0 ? prev + addedSeconds : addedSeconds);
+      
+      // Update local storage so a refresh doesn't zero it
+      const s = loadRemedialSession();
+      if (s) {
+        saveRemedialSession({ ...s, extendedTime: (s.extendedTime || 0) + addedSeconds });
+      }
+      
+      // Update points visual cache
+      setPointsBal(prev => prev ? { total: data.newPoints, usedToday: prev.usedToday + pointsToSpend } : null);
+      
+      setShowTimeUpModal(false);
+      setToast({ message: `Waktu ditambah ${pointsToSpend} menit. Cepat selesaikan!`, type: "success" });
+      sendActivityLog(`Menggunakan poin sebanyak ${pointsToSpend} untuk tambahan waktu ujian ${pointsToSpend} menit.`);
+      
+    } catch(err: any) {
+      setToast({ message: err.message || "Gagal menghubungi server", type: "error" });
+    } finally {
+      setExtendLoading(false);
+    }
+  };
 
   const handleStatusUpdate = async (status: 'COMPLETED' | 'CHEATED' | 'TIMEOUT', explicitReason?: string) => {
     if (hasSubmittedRef.current) return;
@@ -1463,6 +1538,63 @@ export default function StudentRemedialLayer({
             <ProctoringCamera ref={videoRef} onViolation={handleCameraViolation} />
           </div>
         )}
+      </div>
+    );
+  }
+
+  // RENDER: TIME UP MODAL (Extension points feature)
+  if (step === 'EXAM' && showTimeUpModal) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-xl animate-in fade-in duration-300">
+        <div className="bg-white max-w-lg w-full rounded-[2rem] p-8 md:p-10 shadow-2xl border flex flex-col items-center text-center">
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-rose-100 text-rose-600 animate-pulse">
+            <Clock size={40} />
+          </div>
+          <h2 className="text-2xl font-black text-slate-800 mb-2 font-outfit uppercase tracking-tight">Waktu Habis!</h2>
+          <p className="text-sm font-bold text-slate-500 mb-6">
+            Pilih untuk menyimpan ujian Anda sekarang, atau menambahkan waktu dengan menukar Poin Anda.
+          </p>
+          
+          <div className="bg-slate-50 rounded-2xl w-full p-4 mb-6 border border-slate-100 shadow-sm text-center flex flex-col gap-2">
+            <div className="flex justify-between items-center px-2">
+              <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Sisa Poin Anda:</span>
+              <span className="text-sm font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg">{pointsBal?.total || 0} Poin</span>
+            </div>
+            <div className="flex justify-between items-center px-2">
+              <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Batas Pemakaian Hari Ini:</span>
+              <span className="text-sm font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-lg">Sisa {10 - (pointsBal?.usedToday || 0)} Menit</span>
+            </div>
+            
+            <div className="flex items-center justify-between gap-4 mt-4 px-2">
+              <label className="text-xs font-bold text-slate-600 flex-1 text-left">Gunakan Poin: (1 Poin = 1 Menit)</label>
+              <input 
+                type="number" 
+                min="1" 
+                max={Math.min(10 - (pointsBal?.usedToday || 0), pointsBal?.total || 0)}
+                value={pointsToSpend}
+                onChange={(e) => setPointsToSpend(Number(e.target.value))}
+                className="w-20 bg-white border border-slate-200 rounded-lg p-2 text-center font-black text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+          
+          <div className="flex flex-col md:flex-row gap-3 w-full">
+            <button
+              onClick={() => handleStatusUpdate('TIMEOUT')}
+              disabled={extendLoading}
+              className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95 disabled:opacity-50"
+            >
+              Simpan Ujian
+            </button>
+            <button
+              onClick={handleExtendTime}
+              disabled={extendLoading || !pointsBal || pointsBal.total <= 0 || pointsBal.usedToday >= 10 || pointsToSpend <= 0}
+              className="flex-1 py-4 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 transition-all active:scale-95 disabled:opacity-50 disabled:shadow-none"
+            >
+              {extendLoading ? 'MEMPROSES...' : '+ TAMBAH WAKTU'}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

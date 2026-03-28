@@ -227,30 +227,16 @@ export async function submitRemedial(
       studentUpdate.essay_score_final = 0;
       studentUpdate.teacher_reviewed = false;
     } else {
-      studentUpdate.remedial_score = essayResult.score;
+      // Hardcode score to 70 and enforce COMPLETED status (No second chance)
+      const finalScore = 70;
 
-      if (answerKeys.length > 0) {
-        const sessionKkm = session.kkm || 70;
-        const remedialResult = Math.min(essayResult.score, sessionKkm);
-        const finalScore = Math.max(student.original_score || student.final_score || 0, remedialResult);
-
-        studentUpdate.final_score = finalScore;
-        studentUpdate.final_score_locked = finalScore;
-        
-        // Conditional Retry: If still below KKM, allow another attempt by NOT setting to COMPLETED
-        if (remedialResult < sessionKkm) {
-          studentUpdate.remedial_status = 'REMEDIAL';
-          studentUpdate.teacher_reviewed = false;
-        } else {
-          studentUpdate.remedial_status = 'COMPLETED';
-          studentUpdate.teacher_reviewed = true;
-        }
-        
-        attemptUpdate.status = 'COMPLETED';
-      } else {
-        studentUpdate.remedial_status = 'REMEDIAL';
-        studentUpdate.teacher_reviewed = false;
-      }
+      studentUpdate.remedial_score = finalScore;
+      studentUpdate.final_score = finalScore;
+      studentUpdate.final_score_locked = finalScore;
+      
+      studentUpdate.remedial_status = 'COMPLETED';
+      studentUpdate.teacher_reviewed = true;
+      attemptUpdate.status = 'COMPLETED';
     }
   } else if (status === 'TIMEOUT') {
     // Essay scoring (even on timeout, give credit for what they did)
@@ -268,14 +254,12 @@ export async function submitRemedial(
     studentUpdate.essay_score_auto = essayResult.score;
     studentUpdate.essay_score_final = essayResult.score;
     
-    // Final score remains original or the timed-out remedial score (capped at KKM)
-    const sessionKkm = session.kkm || 70;
-    const remedialResult = Math.min(essayResult.score, sessionKkm);
-    const finalScore = Math.max(student.original_score || student.final_score || 0, remedialResult);
+    // Final score is hardcoded to 70
+    const finalScore = 70;
     
     studentUpdate.final_score = finalScore;
     studentUpdate.final_score_locked = finalScore;
-    studentUpdate.teacher_reviewed = false;
+    studentUpdate.teacher_reviewed = true;
   }
 
   // ── FINALIZATION: Transactional Update (Attempt + Student) ──
