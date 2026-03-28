@@ -65,6 +65,7 @@ export default function StudentRemedialLayer({
   const hasActivatedRef = useRef(false);
   const [cameraRetryCount, setCameraRetryCount] = useState(0);
   const [cameraErrorDetail, setCameraErrorDetail] = useState<string | null>(null);
+  const [isCameraBypassed, setIsCameraBypassed] = useState(false);
   const MAX_CAMERA_RETRIES = 3;
   
   const [warningCount, setWarningCount] = useState(0);
@@ -299,6 +300,7 @@ export default function StudentRemedialLayer({
       camReady = true;
       setCameraRetryCount(0);
       setCameraErrorDetail(null);
+      setIsCameraBypassed(false);
     } catch (err: any) {
       camReady = false;
       const detail = getCameraErrorMessage(err);
@@ -608,7 +610,12 @@ export default function StudentRemedialLayer({
     if (capturedImg) {
       capturedImg = await compressImage(capturedImg);
     } else {
-      sendTelegramNotify('ACTIVITY', undefined, "Foto verifikasi gagal diambil (kamera mungkin belum sepenuhnya siap)");
+      if (isCameraBypassed) {
+        setClientCheatingFlags(f => [...f, "Ujian dimulai tanpa pengawasan kamera (Bypassed)"]);
+        sendTelegramNotify('ACTIVITY', undefined, `⚠️ Siswa melanjutkan ujian tanpa kamera (Bypassed) setelah 3x gagal izin.`);
+      } else {
+        sendTelegramNotify('ACTIVITY', undefined, "Foto verifikasi gagal diambil (kamera mungkin belum sepenuhnya siap)");
+      }
     }
 
     let attemptIdFromServer: string | undefined;
@@ -902,7 +909,7 @@ export default function StudentRemedialLayer({
 
   // RENDER: INFO SCREEN (Camera/GPS/Timer confirmation + Permission Check)
   if (step === 'INFO') {
-    const allPermsOk = cameraOk && locationOk;
+    const allPermsOk = (cameraOk || isCameraBypassed) && locationOk;
 
     return (
       <div className="min-h-screen flex items-center justify-center p-4 animate-in">
@@ -1009,13 +1016,32 @@ export default function StudentRemedialLayer({
             <>
               <div className="mb-4 p-4 bg-slate-900 rounded-2xl text-center">
                 <p className="text-xs text-white font-bold mb-1">Kamera gagal diakses setelah {MAX_CAMERA_RETRIES} percobaan.</p>
-                <p className="text-[10px] text-slate-400 font-bold">Silakan hubungi guru Anda untuk bantuan atau gunakan perangkat lain.</p>
+                <p className="text-[10px] text-slate-400 font-bold mb-4">Anda dapat melanjutkan ujian tanpa proteksi kamera, namun tindakan ini <strong className="text-amber-400">akan dicatat dan dilaporkan ke Guru</strong> untuk ditinjau secara manual.</p>
+                <button
+                  onClick={() => setIsCameraBypassed(true)}
+                  className="w-full py-3 bg-amber-500 text-white rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-lg hover:bg-amber-600 transition-all flex items-center justify-center gap-2"
+                >
+                   Lanjutkan Tanpa Kamera
+                </button>
               </div>
               <button
                 onClick={onBack}
-                className="w-full py-4 bg-slate-700 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 text-slate-400 bg-slate-800 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-slate-700 transition-all flex items-center justify-center gap-2"
               >
                 <ArrowLeft size={14} /> Kembali ke Halaman Utama
+              </button>
+            </>
+          ) : isCameraBypassed ? (
+            <>
+              <div className="mb-4 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                <p className="text-[11px] text-amber-800 font-bold flex items-center gap-2"><AlertTriangle size={14} /> Anda menggunakan fitur <b>Bypass Kamera</b>.</p>
+              </div>
+              <button
+                onClick={startExam}
+                disabled={isSubmitting || !locationOk}
+                className="w-full py-4 bg-amber-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-amber-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
+              >
+                {isSubmitting ? 'MEMPROSES...' : !locationOk ? '⛔ IZIN LOKASI BELUM DIAKTIFKAN' : 'SAYA MENGERTI, MULAI REMEDIAL'}
               </button>
             </>
           ) : (
