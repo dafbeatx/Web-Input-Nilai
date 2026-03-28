@@ -339,8 +339,12 @@ export default function StudentRemedialLayer({
   };
 
   const startExam = async () => {
-    setIsSubmitting(true);
-    
+    if (remedialQuestions.length === 0) {
+      setToast({ message: "Soal remedial belum diatur oleh guru. Hubungi guru mata pelajaran.", type: "error" });
+      setIsSubmitting(false);
+      return;
+    }
+
     // 1. Get Location (Mandatory) - with fallback
     let locStr = '';
     try {
@@ -353,12 +357,20 @@ export default function StudentRemedialLayer({
       return;
     }
 
-    // 2. Start Session on Server
+    // 2. Capture Photo
+    const capturedImg = capturePhoto();
+    if (!capturedImg) {
+      setToast({ message: "Gagal mengambil foto verifikasi. Pastikan wajah terlihat jelas di kamera.", type: "error" });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // 3. Start Session on Server
     try {
       const res = await fetch('/api/grademaster/students/remedial', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, studentName, status: 'STARTED', location: locStr })
+        body: JSON.stringify({ sessionId, studentName, status: 'STARTED', location: locStr, photo: capturedImg })
       });
       const data = await res.json().catch(() => ({}));
       
@@ -399,11 +411,7 @@ export default function StudentRemedialLayer({
     });
     
     // Send Start Notification with Photo
-    // Tiny delay to ensure camera is stable if just switched step (though it should be already on)
-    setTimeout(() => {
-      const photo = capturePhoto();
-      sendTelegramNotify('START', photo);
-    }, 1000);
+    sendTelegramNotify('START', capturedImg);
 
     setIsSubmitting(false);
     setStep('EXAM');

@@ -212,6 +212,13 @@ export default function RemedialDashboardLayer({
               </div>
            </div>
 
+            {parseEssayQuestions(remedialQuestionsInput).length === 0 && (
+              <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3">
+                <AlertTriangle className="text-amber-500 shrink-0" size={20} />
+                <p className="text-xs font-bold text-amber-500">Peringatan: Anda belum memasukkan soal. Siswa tidak akan bisa mengerjakan remedial jika soal kosong.</p>
+              </div>
+            )}
+
             <div className="space-y-4">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Bagian Kiri: List Pertanyaan */}
@@ -303,12 +310,16 @@ export default function RemedialDashboardLayer({
                 onClick={() => setSelectedStudentId(selectedStudentId === student.id ? null : student.id)}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-                    student.remedialStatus === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600' : 
-                    student.remedialStatus === 'CHEATED' ? 'bg-rose-50 text-rose-600' :
-                    'bg-slate-50 text-slate-500'
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden border-2 ${
+                    student.remedialStatus === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                    student.remedialStatus === 'CHEATED' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                    'bg-slate-50 text-slate-500 border-slate-100'
                   }`}>
-                    <User size={24} />
+                    {student.remedialPhoto ? (
+                      <img src={student.remedialPhoto} alt={student.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <User size={24} />
+                    )}
                   </div>
                   <div>
                     <h3 className="font-black text-slate-800 text-base md:text-lg">{student.name}</h3>

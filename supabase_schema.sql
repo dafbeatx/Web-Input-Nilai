@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS public.gm_students (
     remedial_note TEXT,
     remedial_ip TEXT,
     remedial_location TEXT,
+    remedial_photo TEXT,
     original_score NUMERIC(5,2) DEFAULT 0,
     remedial_score NUMERIC(5,2) DEFAULT 0,
     final_score_locked NUMERIC(5,2) DEFAULT 0,

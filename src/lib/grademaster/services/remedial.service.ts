@@ -11,7 +11,8 @@ export async function submitRemedial(
   note: string,
   location: string,
   elapsedTimeMs: number,
-  clientCheatingFlags: string[] = []
+  clientCheatingFlags: string[] = [],
+  photo?: string
 ) {
   const { data: student, error: fetchErr } = await supabase
     .from('gm_students')
@@ -39,7 +40,8 @@ export async function submitRemedial(
 
   const updateData: Record<string, unknown> = {
     remedial_status: status,
-    remedial_location: location
+    remedial_location: location,
+    remedial_photo: photo
   };
 
   if (status === 'IN_PROGRESS') {
@@ -207,6 +209,7 @@ export async function resetRemedial(studentId: string) {
        remedial_answers: null,
        remedial_note: null,
        remedial_location: null,
+       remedial_photo: null,
        remedial_attempts: 0,
        is_cheated: false,
        cheating_flags: null,

@@ -286,6 +286,7 @@ export async function POST(req: NextRequest) {
       lps: s.lps,
       remedialStatus: s.remedial_status,
       remedialLocation: s.remedial_location,
+      remedialPhoto: s.remedial_photo,
       remedialAnswers: s.remedial_answers,
       remedialNote: s.remedial_note,
       originalScore: s.original_score ? Number(s.original_score) : undefined,

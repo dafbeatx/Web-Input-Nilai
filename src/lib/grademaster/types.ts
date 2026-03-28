@@ -41,6 +41,7 @@ export interface GradedStudent {
   lps: number;
   remedialStatus?: 'NONE' | 'STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT' | 'REMEDIAL';
   remedialLocation?: string;
+  remedialPhoto?: string;
   remedialAnswers?: string[];
   remedialEssayScores?: number[];
   remedialNote?: string;

@@ -210,9 +210,7 @@ export default function SetupLayer(props: SetupLayerProps) {
                         <option value="9A">Kelas 9A</option><option value="9B">Kelas 9B</option><option value="9C">Kelas 9C</option>
                       </optgroup>
                       <optgroup label="Tingkat SMA">
-                        <option value="10A">Kelas 10A</option><option value="10B">Kelas 10B</option>
-                        <option value="11-IPA">Kelas 11 IPA</option><option value="11-IPS">Kelas 11 IPS</option>
-                        <option value="12-IPA">Kelas 12 IPA</option><option value="12-IPS">Kelas 12 IPS</option>
+                        <option value="SMA">SMA</option>
                       </optgroup>
                     </select>
                   </div>

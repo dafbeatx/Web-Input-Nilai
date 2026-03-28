@@ -218,7 +218,7 @@ export default function BehaviorLayer({ onBack, setToast }: BehaviorLayerProps) 
       <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 items-end mb-8 relative z-10">
         <div className="w-full md:w-1/3">
           <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Kelas</label>
-          <input type="text" placeholder="Contoh: 10A" value={className} onChange={(e) => setClassName(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500" />
+          <input type="text" placeholder="Contoh: SMA atau 9A" value={className} onChange={(e) => setClassName(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500" />
         </div>
         <div className="w-full md:w-1/3">
           <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Tahun Ajaran</label>
