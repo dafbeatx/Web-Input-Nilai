@@ -290,31 +290,30 @@ export default function StudentRemedialLayer({
       setCameraErrorDetail(errMsg);
       setCameraRetryCount(3);
       sendTelegramNotify('ERROR', undefined, `Kamera gagal total: Browser unsupported (mediaDevices undefined). Siswa dialihkan keluar.`);
-      setCheckingPerms(false);
-      return;
-    }
-
-    // Check camera with granular error handling
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 160, height: 120, facingMode: 'user' } });
-      stream.getTracks().forEach(t => t.stop());
-      camReady = true;
-      setCameraRetryCount(0);
-      setCameraErrorDetail(null);
-      setIsCameraBypassed(false);
-    } catch (err: any) {
       camReady = false;
-      const detail = getCameraErrorMessage(err);
-      setCameraErrorDetail(detail);
-      setCameraRetryCount(prev => {
-        const next = prev + 1;
-        if (next >= MAX_CAMERA_RETRIES) {
-          sendTelegramNotify('ACTIVITY', undefined, `Kamera gagal ${next}x (${err?.name}). Siswa dialihkan keluar.`);
-        }
-        return next;
-      });
-      // This is a DEVICE error, NOT cheating — never flag
-      sendTelegramNotify('ACTIVITY', undefined, `Kamera error: ${err?.name || 'unknown'} (percobaan ${cameraRetryCount + 1}/${MAX_CAMERA_RETRIES})`);
+    } else {
+      // Check camera with granular error handling
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 160, height: 120, facingMode: 'user' } });
+        stream.getTracks().forEach(t => t.stop());
+        camReady = true;
+        setCameraRetryCount(0);
+        setCameraErrorDetail(null);
+        setIsCameraBypassed(false);
+      } catch (err: any) {
+        camReady = false;
+        const detail = getCameraErrorMessage(err);
+        setCameraErrorDetail(detail);
+        setCameraRetryCount(prev => {
+          const next = prev + 1;
+          if (next >= MAX_CAMERA_RETRIES) {
+            sendTelegramNotify('ACTIVITY', undefined, `Kamera gagal ${next}x (${err?.name}). Siswa dialihkan keluar.`);
+          }
+          return next;
+        });
+        // This is a DEVICE error, NOT cheating — never flag
+        sendTelegramNotify('ACTIVITY', undefined, `Kamera error: ${err?.name || 'unknown'} (percobaan ${cameraRetryCount + 1}/${MAX_CAMERA_RETRIES})`);
+      }
     }
     setCameraOk(camReady);
 
@@ -1061,13 +1060,23 @@ export default function StudentRemedialLayer({
                   />
                 </div>
               </div>
-              <button
-                onClick={startExam}
-                disabled={isSubmitting || !locationOk || pledgeText.toUpperCase() !== 'SAYA BERJANJI TIDAK DIBANTU SIAPAPUN'}
-                className="w-full py-4 bg-rose-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-rose-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
-              >
-                {isSubmitting ? 'MEMPROSES...' : !locationOk ? '⛔ IZIN LOKASI BELUM DIAKTIFKAN' : pledgeText.toUpperCase() !== 'SAYA BERJANJI TIDAK DIBANTU SIAPAPUN' ? 'Ketik Persetujuan Dahulu' : 'SAYA SIAP, MULAI REMEDIAL'}
-              </button>
+              {!locationOk ? (
+                <button
+                  onClick={checkPermissions}
+                  disabled={checkingPerms}
+                  className="w-full py-4 bg-amber-500 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  {checkingPerms ? 'MEMERIKSA LOKASI...' : '⛔ PERIKSA IZIN LOKASI (KLIK DI SINI)'}
+                </button>
+              ) : (
+                <button
+                  onClick={startExam}
+                  disabled={isSubmitting || pledgeText.toUpperCase() !== 'SAYA BERJANJI TIDAK DIBANTU SIAPAPUN'}
+                  className="w-full py-4 bg-rose-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-rose-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
+                >
+                  {isSubmitting ? 'MEMPROSES...' : pledgeText.toUpperCase() !== 'SAYA BERJANJI TIDAK DIBANTU SIAPAPUN' ? 'Ketik Persetujuan Dahulu' : 'SAYA SIAP, MULAI REMEDIAL'}
+                </button>
+              )}
             </>
           ) : (
             <>
