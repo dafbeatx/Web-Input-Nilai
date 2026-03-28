@@ -192,16 +192,31 @@ export async function finalizeRemedial(
 export async function resetRemedial(studentId: string) {
   const { data: student, error: fetchErr } = await supabase
     .from('gm_students')
-    .select('original_score, final_score')
+    .select('original_score, final_score, session_id, mcq_score, essay_score')
     .eq('id', studentId)
     .single();
 
   if (fetchErr || !student) throw new Error('Siswa tidak ditemukan');
 
-  // Revert to original score if it exists (usually set when remedial starts).
-  // If original_score is 0 but remedial_status was set, then 0 is likely the intended restoration point.
-  // We use student.original_score as the source of truth if it's not null.
-  const scoreToRestore = student.original_score !== null ? Number(student.original_score) : Number(student.final_score);
+  // Fetch session config to get original weights for UTS calculation
+  const { data: session } = await supabase
+    .from('gm_sessions')
+    .select('scoring_config')
+    .eq('id', student.session_id)
+    .single();
+    
+  const config = session?.scoring_config || { pgWeight: 0.7, essayWeight: 0.3 };
+  
+  // UTS Score Recovery (Calculated from original UTS PG & Essay scores)
+  const recoveredUtsScore = Math.round(
+    (Number(student.mcq_score || 0) * (config.pgWeight || 0.7)) + 
+    (Number(student.essay_score || 0) * (config.essayWeight || 0.3))
+  );
+
+  // Restore logic: prioritize captured original_score, fallback to recovered UTS score
+  const scoreToRestore = (student.original_score != null && Number(student.original_score) !== 0) 
+    ? Number(student.original_score) 
+    : recoveredUtsScore;
 
   const { error } = await supabase
     .from('gm_students')
