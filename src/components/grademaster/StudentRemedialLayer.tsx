@@ -954,10 +954,20 @@ export default function StudentRemedialLayer({
           }
         } else {
           const data = await res.json();
+          
+          // STRICT KKM ENFORCEMENT: If status is 'REMEDIAL', it means score < KKM
+          if (data.status === 'REMEDIAL') {
+            setToast({ message: "⚠️ NILAI BELUM MENCAPAI KKM (70). Silakan perbaiki jawaban Anda dan kumpulkan lagi!", type: "error" });
+            setIsSubmitting(false);
+            hasSubmittedRef.current = false; // Allow re-submission
+            setFinalScore(data.newFinalScore || data.final_score);
+            return; // STAY ON EXAM STEP
+          }
+
           clearRemedialSession();
           setStep(status);
           if (status === 'COMPLETED') {
-            setToast({ message: "Jawaban Remedial berhasil dikumpulkan.", type: "success" });
+            setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Selamat, Anda LULUS KKM!", type: "success" });
             const fScore = data.newFinalScore || data.final_score;
             setFinalScore(fScore);
             sendTelegramNotify('FINISH', undefined, undefined, fScore);
@@ -1367,12 +1377,15 @@ export default function StudentRemedialLayer({
             </div>
           )}
           
-          <button
-            onClick={handleExit}
-            className={`w-full py-4 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95 ${isCheat ? 'bg-rose-500 shadow-rose-500/20' : isTimeout ? 'bg-amber-500 shadow-amber-500/20' : 'bg-emerald-500 shadow-emerald-500/20'}`}
-          >
-            Selesai & Keluar
-          </button>
+          {/* Only show Exit if passed KKM or it's a cheat/timeout which are terminal */}
+          {(!isCompleted || (finalScore !== null && finalScore >= 70) || isCheat || isTimeout) && (
+            <button
+              onClick={handleExit}
+              className={`w-full py-4 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95 ${isCheat ? 'bg-rose-500 shadow-rose-500/20' : isTimeout ? 'bg-amber-500 shadow-amber-500/20' : 'bg-emerald-500 shadow-emerald-500/20'}`}
+            >
+              Selesai & Keluar
+            </button>
+          )}
         </div>
       </div>
     );
