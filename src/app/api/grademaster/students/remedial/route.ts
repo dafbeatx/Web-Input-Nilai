@@ -4,6 +4,39 @@ import { checkRateLimit } from '@/lib/grademaster/security';
 
 import { submitRemedial } from '@/lib/grademaster/services/remedial.service';
 
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const sessionId = searchParams.get('sessionId');
+    const studentName = searchParams.get('studentName');
+
+    if (!sessionId || !studentName) {
+      return NextResponse.json({ error: 'Session ID dan Nama Siswa wajib diisi' }, { status: 400 });
+    }
+
+    const { data: student, error } = await supabase
+      .from('gm_students')
+      .select('id, name, final_score, remedial_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed')
+      .eq('session_id', sessionId)
+      .eq('name', studentName)
+      .eq('is_deleted', false)
+      .single();
+
+    if (error || !student) {
+      return NextResponse.json({ error: 'Siswa tidak ditemukan' }, { status: 404 });
+    }
+
+    return NextResponse.json({ 
+      status: student.remedial_status,
+      finalScore: student.final_score,
+      cheatingFlags: student.cheating_flags,
+      teacherReviewed: student.teacher_reviewed
+    });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: 'Gagal mengambil status' }, { status: 500 });
+  }
+}
+
 export async function PUT(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for') || 'unknown';

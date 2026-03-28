@@ -284,7 +284,7 @@ export default function StudentRemedialLayer({
     }
   };
 
-  // Restore session on mount
+  // Restore session on mount (localStorage)
   useEffect(() => {
     const saved = loadRemedialSession();
     if (saved && saved.sessionId === sessionId && saved.studentName === studentName) {
@@ -309,6 +309,37 @@ export default function StudentRemedialLayer({
       }
     }
   }, [sessionId, studentName, remedialEssayCount, remedialTimer]);
+
+  // Check server status on mount (Database) - Persist terminal state across devices/hard-clears
+  useEffect(() => {
+    const checkServerStatus = async () => {
+      try {
+        const res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`);
+        if (res.ok) {
+          const data = await res.json();
+          // If server says terminal status, override local state
+          if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(data.status)) {
+            setStep(data.status as RemedialStep);
+            clearRemedialSession();
+            
+            if (data.status === 'COMPLETED') {
+              setFinalScore(data.finalScore);
+              // Pre-fetch friends list for results screen
+              fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`)
+                .then(r => r.json())
+                .then(d => {
+                  setRemainingStudents(d.students || []);
+                  setSessionCreatedAt(d.sessionCreatedAt);
+                });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch server-side status:', err);
+      }
+    };
+    checkServerStatus();
+  }, [sessionId, studentName]);
 
   // Mark refresh vs tab-leave
   useEffect(() => {
