@@ -620,6 +620,12 @@ export default function StudentRemedialLayer({
 
     // Capture & Compress Photo (non-blocking — exam proceeds even if photo fails)
     let capturedImg = capturePhoto();
+    if (!capturedImg && examMode !== 'LIMITED') {
+      // Small delay to wait for video to reach readyState if just mounted
+      await new Promise(r => setTimeout(r, 500));
+      capturedImg = capturePhoto();
+    }
+
     if (capturedImg) {
       capturedImg = await compressImage(capturedImg);
     } else {
@@ -1129,6 +1135,12 @@ export default function StudentRemedialLayer({
             </>
           )}
         </div>
+
+        {cameraOk && (
+          <div className="fixed top-4 right-4 w-24 h-18 md:w-32 md:h-24 rounded-2xl overflow-hidden border-4 border-white shadow-2xl z-[60] animate-in zoom-in duration-500">
+            <ProctoringCamera ref={videoRef} onViolation={handleCameraViolation} />
+          </div>
+        )}
       </div>
     );
   }
