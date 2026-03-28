@@ -271,6 +271,17 @@ async function findActiveAttempt(
   studentId: string,
   studentName: string
 ): Promise<{ id: string; attempt_token: string; risk_score: number }> {
+  // 0. Check student status first - if null/NONE, we should NOT try to recover an old attempt
+  const { data: student } = await supabase
+    .from('gm_students')
+    .select('remedial_status')
+    .eq('id', studentId)
+    .single();
+
+  if (!student || !student.remedial_status || student.remedial_status === 'NONE') {
+    throw new Error('RESET_REQUIRED');
+  }
+
   // 1. Try finding ACTIVE attempt
   const { data: activeAttempt } = await supabase
     .from('gm_remedial_attempts')
@@ -490,7 +501,7 @@ export async function activateRemedialAttempt(attemptId: string, studentId: stri
     .single();
 
   if (fetchErr || !attempt) {
-    throw new Error(`Attempt tidak ditemukan (attempt: ${attemptId}, student: ${studentId})`);
+    throw new Error('RESET_REQUIRED');
   }
   
   if (attempt.status === 'ACTIVE') return true;
@@ -538,7 +549,7 @@ export async function markRemedialFailed(attemptId: string, studentId: string) {
     .single();
 
   if (fetchErr || !attempt) {
-    throw new Error(`Attempt tidak ditemukan (attempt: ${attemptId}, student: ${studentId})`);
+    throw new Error('RESET_REQUIRED');
   }
   
   if (attempt.status !== 'INITIATED') {

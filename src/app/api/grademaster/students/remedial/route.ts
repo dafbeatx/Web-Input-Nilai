@@ -155,10 +155,16 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ message: 'Data remedial berhasil direset' });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Gagal mereset data remedial';
-    console.error('Remedial reset error:', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('Remedial error:', message);
+    
+    if (message === 'RESET_REQUIRED') {
+      return NextResponse.json({ error: 'RESET_REQUIRED', message: 'Sesi anda telah direset. Silakan mulai ulang.' }, { status: 400 });
+    }
+    
+    return NextResponse.json(
+      { error: 'Gagal memproses remedial', detail: message },
+      { status: 500 }
+    );
   }
 }
-
-

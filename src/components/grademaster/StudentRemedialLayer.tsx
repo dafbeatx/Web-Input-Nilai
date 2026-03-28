@@ -520,12 +520,26 @@ export default function StudentRemedialLayer({
                token: attemptToken
              })
           });
-          if (!res.ok) throw new Error('Gagal aktivasi session');
-        } catch (e) {
+          
+          if (!res.ok) {
+            const errorData = await res.json();
+            if (errorData.error === 'RESET_REQUIRED') {
+              setToast({ message: "Sesi sebelumnya telah direset oleh guru. Silakan mulai ulang.", type: "error" });
+              setTimeout(() => {
+                clearRemedialSession();
+                window.location.reload();
+              }, 3000);
+              return;
+            }
+            throw new Error(errorData.error || 'Gagal aktivasi session');
+          }
+        } catch (e: any) {
           console.error(e);
-          setToast({ message: "Gagal memuat soal. Sesi dibatalkan. Silakan mulai ulang.", type: "error" });
-          clearRemedialSession();
-          window.location.reload();
+          setToast({ message: `Gagal memuat soal: ${e.message}. Silakan mulai ulang.`, type: "error" });
+          setTimeout(() => {
+            clearRemedialSession();
+            window.location.reload();
+          }, 3000);
         }
       };
       activate();
@@ -651,23 +665,38 @@ export default function StudentRemedialLayer({
     // 3. Start Session on Server
     try {
       const res = await fetch('/api/grademaster/students/remedial', {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, studentName, status: 'INITIATED', location: locStr, photo: capturedImg })
+        body: JSON.stringify({ 
+          sessionId, 
+          studentName, 
+          status: 'INITIATED', 
+          location: locStr, 
+          photo: capturedImg 
+        })
       });
-      const data = await res.json().catch(() => ({}));
       
       if (!res.ok) {
-        const errMsg = data.error || "Terjadi kesalahan saat memulai ujian. Coba lagi.";
+        const errorData = await res.json();
+        if (errorData.error === 'RESET_REQUIRED') {
+          setToast({ message: "Sesi anda telah direset. Silakan login kembali.", type: "error" });
+          setTimeout(() => {
+            clearRemedialSession();
+            window.location.reload();
+          }, 3000);
+          return;
+        }
+        const errMsg = errorData.error || "Terjadi kesalahan saat memulai ujian. Coba lagi.";
         setToast({ message: errMsg, type: "error" });
         sendTelegramNotify('ERROR', undefined, `Gagal API Mulai: ${errMsg}`);
-        if (data.error?.includes('permanen')) {
+        if (errorData.error?.includes('permanen')) {
             setStep('CHEATED'); 
         }
         setIsSubmitting(false);
         return;
       }
       
+      const data = await res.json();
       if (data.attemptId && data.attemptToken && data.studentId) {
         attemptIdFromServer = data.attemptId;
         attemptTokenFromServer = data.attemptToken;
@@ -822,16 +851,26 @@ export default function StudentRemedialLayer({
     for (let attempt = 1; attempt <= MAX_SUBMIT_RETRIES; attempt++) {
       try {
         const res = await fetch('/api/grademaster/students/remedial', {
-          method: 'PUT',
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        const data = await res.json().catch(() => ({}));
-        
+
         if (!res.ok) {
-          const errMsg = data.error || "Terjadi kesalahan saat mengirim jawaban.";
+          const errorData = await res.json().catch(() => ({}));
           
-          if (data.error?.includes('sudah pernah dilakukan') || data.error?.includes('permanen') || res.status === 403) {
+          if (errorData.error === 'RESET_REQUIRED') {
+            setToast({ message: "Sesi anda telah direset oleh proktor. Data lokal dihapus.", type: "error" });
+            setTimeout(() => {
+              clearRemedialSession();
+              window.location.reload();
+            }, 3000);
+            return;
+          }
+
+          const errMsg = errorData.error || "Terjadi kesalahan saat mengirim jawaban.";
+          
+          if (errorData.error?.includes('sudah pernah dilakukan') || errorData.error?.includes('permanen') || res.status === 403) {
             clearRemedialSession();
             setStep('CHEATED');
             setToast({ message: errMsg, type: "error" });
@@ -847,6 +886,7 @@ export default function StudentRemedialLayer({
             continue;
           }
         } else {
+          const data = await res.json();
           clearRemedialSession();
           setStep(status);
           if (status === 'COMPLETED') {

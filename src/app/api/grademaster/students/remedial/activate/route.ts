@@ -39,8 +39,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Aksi tidak valid' }, { status: 400 });
 
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Gagal memproses aktivasi';
-    console.error(`[Activate API Error] attempt=${body?.attemptId}, student=${body?.studentId}, action=${body?.action}, error=${message}`);
-    return NextResponse.json({ error: message }, { status: 400 });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('Remedial activation error:', message);
+    
+    if (message === 'RESET_REQUIRED') {
+      return NextResponse.json({ error: 'RESET_REQUIRED', message: 'Sesi anda telah direset. Silakan mulai ulang.' }, { status: 400 });
+    }
+    
+    return NextResponse.json({ error: 'Gagal mengaktifkan remedial', detail: message }, { status: 500 });
   }
 }
