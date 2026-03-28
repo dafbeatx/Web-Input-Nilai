@@ -1018,6 +1018,15 @@ export default function StudentRemedialLayer({
     if (showTimeUpModal) return; // Pause timer physically if modal intercepts
     
     if (timeLeft <= 0) {
+      // EMERGENCY SAVE: Immediate save when time is up to ensure last typed characters are not lost
+      const current = loadRemedialSession();
+      saveRemedialSession({
+        ...current,
+        answers,
+        note,
+        step: 'EXAM',
+        lastUpdated: Date.now()
+      });
       setShowTimeUpModal(true);
       return;
     }
@@ -1218,31 +1227,36 @@ export default function StudentRemedialLayer({
       try {
         data = await res.json();
       } catch (e) {
-        throw new Error("Server tidak merespon dengan benar. Harap coba lagi.");
+        throw new Error("Server tidak merespon dengan benar (JSON Error). Harap hubungi Pengawas.");
       }
 
       if (!res.ok) throw new Error(data.error || "Gagal menambah waktu");
       
       // Calculate Added Secs
       const addedSeconds = fixedPoints * 60;
-      setTimeLeft(prev => prev > 0 ? prev + addedSeconds : addedSeconds);
       
-      // Update local storage so a refresh doesn't zero it
+      // ATOMIC UPDATE: Save to LocalStorage IMMEDIATELY before updating UI state
+      // This ensures if the page is refreshed right now, the time is already added.
       const s = loadRemedialSession();
       if (s) {
-        saveRemedialSession({ ...s, extendedTime: (s.extendedTime || 0) + addedSeconds });
+        saveRemedialSession({ 
+          ...s, 
+          extendedTime: (s.extendedTime || 0) + addedSeconds,
+          lastUpdated: Date.now()
+        });
       }
       
-      // Update points visual cache
+      // Update UI state
+      setTimeLeft(prev => prev > 0 ? prev + addedSeconds : addedSeconds);
       setPointsBal(prev => prev ? { total: data.newPoints, usedToday: prev.usedToday + fixedPoints } : null);
       
+      // Success - Close modal
       setShowTimeUpModal(false);
-      setToast({ message: `Waktu ditambah ${fixedPoints} menit. Cepat selesaikan!`, type: "success" });
-      sendActivityLog(`Menggunakan poin sebanyak ${fixedPoints} untuk tambahan waktu ujian ${fixedPoints} menit.`);
+      setToast({ message: `Waktu berhasil ditambah ${fixedPoints} menit.`, type: "success" });
+      sendActivityLog(`Ekstensi waktu: Menggunakan ${fixedPoints} poin untuk +${fixedPoints} menit.`);
       
     } catch(err: any) {
       setToast({ message: err.message || "Gagal menghubungi server", type: "error" });
-      // If server error is "Saldo tidak cukup" or similar, don't close modal but show message.
     } finally {
       setExtendLoading(false);
     }
