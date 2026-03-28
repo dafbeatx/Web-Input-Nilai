@@ -54,12 +54,14 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ 
+    const response = NextResponse.json({ 
       status: currentStatus,
       finalScore: student.final_score,
       cheatingFlags: student.cheating_flags,
       teacherReviewed: student.teacher_reviewed
     });
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    return response;
   } catch (err: unknown) {
     return NextResponse.json({ error: 'Gagal mengambil status' }, { status: 500 });
   }
@@ -111,7 +113,7 @@ export async function POST(req: NextRequest) {
        status, 
        answers || [], 
        note || '', 
-       location || '',
+       location || 'UNAVAILABLE',
        elapsedTimeMs || 1000 * 60 * 30, // Fallback to 30 mins if not provided
        clientCheatingFlags || [],
        photo,

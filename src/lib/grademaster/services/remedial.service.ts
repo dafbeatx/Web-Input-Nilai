@@ -64,7 +64,7 @@ export async function submitRemedial(
   status: string,
   answers: string[],
   note: string,
-  location: string,
+  location: string = 'UNAVAILABLE',
   elapsedTimeMs: number,
   clientCheatingFlags: string[] = [],
   photo?: string,
@@ -404,7 +404,7 @@ async function findActiveAttempt(
       attempt_token: recoveryToken,
       status: 'ACTIVE',
       started_at: new Date().toISOString(),
-      location: 'RECOVERY',
+      location: 'RECOVERY_AUTO',
     })
     .select('id, attempt_token, risk_score')
     .single();

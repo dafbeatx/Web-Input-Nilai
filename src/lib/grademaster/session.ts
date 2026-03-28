@@ -10,7 +10,7 @@ export interface RemedialSession {
   startedAt: number;
   answers: string[];
   note: string;
-  location: string;
+  location?: string;
   refreshCount: number;
   shuffledIndices?: number[];
   remedialQuestions?: string[];

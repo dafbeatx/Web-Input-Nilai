@@ -297,14 +297,12 @@ export default function StudentRemedialLayer({
     return `Gagal mengakses kamera (${name || 'unknown'}). Pastikan tidak ada aplikasi lain yang menggunakan kamera, atau salin link dan buka di Google Chrome.`;
   };
 
-  // Check permissions (camera + location)
+  // Check permissions (camera only — location is best-effort logging)
   const checkPermissions = async () => {
     setCheckingPerms(true);
     setCameraErrorDetail(null);
     let camReady = false;
-    let locReady = false;
 
-    // Deteksi awal jika browser sangat jadul atau bukan environment yang mendukung kamera (misal in-app browser ketat)
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       const errMsg = 'Browser atau HP Anda tidak mendukung akses kamera secara langsung. Harap salin link ini dan buka pada aplikasi Google Chrome terbaru.';
       setCameraErrorDetail(errMsg);
@@ -312,7 +310,6 @@ export default function StudentRemedialLayer({
       sendTelegramNotify('ERROR', undefined, `Kamera gagal total (mediaDevices undefined). Siswa mengakses panel Bypass.`);
       camReady = false;
     } else {
-      // Check camera with granular error handling
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 160, height: 120, facingMode: 'user' } });
         stream.getTracks().forEach(t => t.stop());
@@ -332,32 +329,26 @@ export default function StudentRemedialLayer({
           }
           return next;
         });
-        // This is a DEVICE error, NOT cheating — never flag
         sendTelegramNotify('ACTIVITY', undefined, `Kamera error: ${err?.name || 'unknown'} (percobaan ${cameraRetryCount + 1}/${MAX_CAMERA_RETRIES})`);
       }
     }
     setCameraOk(camReady);
 
-    // Check location properly with fallback chain
+    // Location: best-effort only, never blocks exam access
     try {
-      await getPosition();
-      locReady = true;
+      const pos = await getPosition();
+      const locStr = `${pos.coords.latitude},${pos.coords.longitude}`;
+      setCurrentLocation(locStr);
       setLocationOk(true);
-    } catch (err: any) {
-      locReady = false;
+    } catch {
       setLocationOk(false);
-      if (err?.code === 1) {
-        setToast({ message: 'Izin lokasi ditolak browser. Mohon izinkan dari pengaturan.', type: 'error' });
-      }
+      setCurrentLocation('UNAVAILABLE');
     }
 
     setCheckingPerms(false);
 
-    if (!camReady || !locReady) {
-      const missing: string[] = [];
-      if (!camReady) missing.push('Kamera');
-      if (!locReady) missing.push('Lokasi (GPS)');
-      setToast({ message: `Anda harus mengaktifkan ${missing.join(' dan ')} untuk melanjutkan ujian.`, type: 'error' });
+    if (!camReady) {
+      setToast({ message: 'Anda harus mengaktifkan Kamera untuk melanjutkan ujian.', type: 'error' });
     }
   };
 
@@ -420,12 +411,25 @@ export default function StudentRemedialLayer({
         // Recovery for questions/timer if prop is empty (common on refresh)
         if ((!remedialQuestions || remedialQuestions.length === 0) && saved.remedialQuestions) {
           console.log("Recovering questions from local session...");
-          // Shuffling logic below will use saved.shuffledIndices
         } else if ((!remedialQuestions || remedialQuestions.length === 0) && !saved.remedialQuestions) {
-          // Both prop and session storage are empty - this is a corrupted entrance
-          console.error("Critical: No remedial questions found in props or local storage.");
-          setToast({ message: "Data soal tidak ditemukan. Menutup sesi...", type: "error" });
-          setTimeout(() => handleExit(), 2000);
+          // Both prop and localStorage empty — force-fetch from server before giving up
+          console.warn("No questions in props or localStorage. Attempting server recovery...");
+          fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`, { cache: 'no-store' })
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+              if (data && ['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(data.status)) {
+                setStep(data.status as RemedialStep);
+                return;
+              }
+              console.error("Critical: No remedial questions found anywhere. Resetting.");
+              setToast({ message: "Data soal tidak ditemukan. Silakan masuk kembali.", type: "error" });
+              setTimeout(() => { clearRemedialSession(); handleExit(); }, 2000);
+            })
+            .catch(() => {
+              console.error("Server unreachable. Resetting session.");
+              setToast({ message: "Data soal tidak ditemukan. Silakan masuk kembali.", type: "error" });
+              setTimeout(() => { clearRemedialSession(); handleExit(); }, 2000);
+            });
           return;
         }
 
@@ -451,7 +455,7 @@ export default function StudentRemedialLayer({
 
     const checkServerStatus = async () => {
       try {
-        const res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`);
+        const res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           // If server says terminal status, override local state
@@ -461,7 +465,7 @@ export default function StudentRemedialLayer({
             if (data.status === 'COMPLETED') {
               setFinalScore(data.finalScore);
               // Pre-fetch friends list for results screen
-              fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`)
+              fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`, { cache: 'no-store' })
                 .then(r => r.json())
                 .then(d => {
                   setRemainingStudents(d.students || []);
@@ -530,14 +534,31 @@ export default function StudentRemedialLayer({
   // ── Session Health Monitoring ──
   useEffect(() => {
     if (step === 'EXAM' && shuffledQuestions.length === 0 && !isSubmitting && !isRefreshingRef.current) {
-      console.warn("Detected EXAM step with 0 questions. Triggering safety reset...");
-      setToast({ message: "Sesi tidak valid (soal kosong). Silakan masuk kembali.", type: "error" });
-      sendTelegramNotify('ERROR', undefined, `⚠️ [HEALTH_CHECK] ${studentName} - Sesi EXAM tapi soal kosong. Auto-reset triggered.`);
-      
-      setTimeout(() => {
-        handleExit();
-        window.location.reload();
-      }, 2000);
+      console.warn("Detected EXAM step with 0 questions. Attempting server recovery...");
+      sendTelegramNotify('ERROR', undefined, `⚠️ [HEALTH_CHECK] ${studentName} - Sesi EXAM tapi soal kosong. Mencoba recovery dari server...`);
+
+      const attemptRecovery = async () => {
+        try {
+          const res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`, { cache: 'no-store' });
+          if (res.ok) {
+            const data = await res.json();
+            if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(data.status)) {
+              setStep(data.status as RemedialStep);
+              if (data.status === 'COMPLETED') setFinalScore(data.finalScore);
+              return;
+            }
+          }
+        } catch { /* server unreachable */ }
+
+        // Recovery failed — reset
+        setToast({ message: "Sesi tidak valid (soal kosong). Silakan masuk kembali.", type: "error" });
+        setTimeout(() => {
+          clearRemedialSession();
+          handleExit();
+          window.location.reload();
+        }, 2000);
+      };
+      attemptRecovery();
     }
   }, [step, shuffledQuestions.length]);
 
@@ -621,6 +642,7 @@ export default function StudentRemedialLayer({
         try {
           const res = await fetch('/api/grademaster/students/remedial/activate', {
              method: 'POST',
+             cache: 'no-store' as RequestCache,
              headers: { 'Content-Type': 'application/json' },
              body: JSON.stringify({
                action: 'ACTIVATE',
@@ -747,18 +769,15 @@ export default function StudentRemedialLayer({
       return;
     }
 
-    // 1. Get Location (Mandatory) - with fallback
-    let locStr = '';
+    // 1. Get Location (best-effort — never blocks exam start)
+    let locStr = currentLocation || 'UNAVAILABLE';
     try {
       const pos = await getPosition();
       locStr = `${pos.coords.latitude},${pos.coords.longitude}`;
       setCurrentLocation(locStr);
-    } catch (e: any) {
-      const errDetail = getLocationErrorMessage(e);
-      setToast({ message: errDetail, type: "error" });
-      sendTelegramNotify('ERROR', undefined, `Gagal Lokasi: ${errDetail}`);
-      setIsSubmitting(false);
-      return;
+    } catch {
+      locStr = 'UNAVAILABLE';
+      setCurrentLocation('UNAVAILABLE');
     }
 
     // Capture & Compress Photo (non-blocking — exam proceeds even if photo fails)
@@ -788,6 +807,7 @@ export default function StudentRemedialLayer({
     try {
       const res = await fetch('/api/grademaster/students/remedial', {
         method: 'POST',
+        cache: 'no-store' as RequestCache,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           sessionId, 
@@ -873,7 +893,7 @@ export default function StudentRemedialLayer({
         startedAt: startedAtRef.current,
         answers: new Array(activeQuestions.length).fill(""),
         note,
-        location: locStr,
+        location: locStr || 'UNAVAILABLE',
         refreshCount: 0,
         shuffledIndices: indices,
         attemptId: attemptIdFromServer || attemptId || undefined,
@@ -1081,6 +1101,7 @@ export default function StudentRemedialLayer({
       try {
         const res = await fetch('/api/grademaster/students/remedial', {
           method: 'POST',
+          cache: 'no-store' as RequestCache,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
@@ -1137,7 +1158,7 @@ export default function StudentRemedialLayer({
             setFinalScore(fScore);
             sendTelegramNotify('FINISH', undefined, undefined, fScore);
             
-            fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`)
+            fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`, { cache: 'no-store' })
               .then(r => r.json())
               .then(d => {
                 setRemainingStudents(d.students || []);
@@ -1255,7 +1276,7 @@ export default function StudentRemedialLayer({
 
   // RENDER: INFO SCREEN (Camera/GPS/Timer confirmation + Permission Check)
   if (step === 'INFO') {
-    const allPermsOk = examMode === 'LIMITED' || (cameraOk && locationOk);
+    const allPermsOk = examMode === 'LIMITED' || cameraOk;
 
     return (
       <div className="min-h-screen flex items-center justify-center p-4 animate-in">
@@ -1302,7 +1323,7 @@ export default function StudentRemedialLayer({
             </li>
             <li className="flex gap-3 text-sm text-slate-600 font-bold items-start">
               <MapPin className="text-emerald-500 shrink-0 mt-0.5" size={18} />
-              <span>Akses <strong>Lokasi (GPS) wajib diizinkan</strong> untuk memverifikasi keaslian perangkat Anda.</span>
+              <span>Lokasi <strong>(GPS) akan dicatat otomatis</strong> jika tersedia. Tidak wajib untuk memulai ujian.</span>
             </li>
             <li className="flex gap-3 text-sm text-slate-600 font-bold items-start">
               <Clock className="text-amber-500 shrink-0 mt-0.5" size={18} />
@@ -1334,7 +1355,7 @@ export default function StudentRemedialLayer({
               <div>
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Lokasi</p>
                 <p className={`text-xs font-bold ${checkingPerms ? 'text-amber-600' : locationOk ? 'text-emerald-600' : 'text-slate-400'}`}>
-                  {checkingPerms ? '🟡 Sedang dicek...' : locationOk ? '📍 Aktif' : '🔴 Belum diizinkan'}
+                  {checkingPerms ? '🟡 Sedang dicek...' : locationOk ? '📍 Aktif' : '⚪ Tidak tersedia (opsional)'}
                 </p>
               </div>
             </div>
@@ -1343,9 +1364,9 @@ export default function StudentRemedialLayer({
           <button
             onClick={checkPermissions}
             disabled={checkingPerms}
-            className={`w-full py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all mb-4 flex items-center justify-center gap-2 border-2 ${cameraOk && locationOk ? 'bg-emerald-50 text-emerald-600 border-emerald-400' : 'bg-indigo-600 border-indigo-500 text-white shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95'}`}
+            className={`w-full py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all mb-4 flex items-center justify-center gap-2 border-2 ${cameraOk ? 'bg-emerald-50 text-emerald-600 border-emerald-400' : 'bg-indigo-600 border-indigo-500 text-white shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95'}`}
           >
-            {checkingPerms ? '🟡 Sedang Memproses...' : cameraOk && locationOk ? '✅ Izin Sudah Aktif' : '🔐 Izinkan Kamera & Lokasi'}
+            {checkingPerms ? '🟡 Sedang Memproses...' : cameraOk ? '✅ Kamera Aktif' : '🔐 Izinkan Kamera'}
           </button>
 
           {/* Camera error detail banner */}
@@ -1419,7 +1440,7 @@ export default function StudentRemedialLayer({
                   ) : cameraRetryCount > 0 ? (
                     <><AlertTriangle size={14} /> Coba Lagi ({cameraRetryCount}/{MAX_CAMERA_RETRIES})</>
                   ) : (
-                    <><AlertTriangle size={14} /> Periksa Izin Kamera & Lokasi</>
+                    <><AlertTriangle size={14} /> Periksa Izin Kamera</>
                   )}
                 </button>
               )}
