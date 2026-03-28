@@ -1195,7 +1195,13 @@ export default function StudentRemedialLayer({
   const handleExtendTime = async () => {
     const fixedPoints = 10;
     
-    if (pointsBal !== null && (pointsBal.usedToday + fixedPoints > 10)) {
+    // Check if pointsBal is available. If not, we can't extend, but we shouldn't get stuck.
+    if (pointsBal === null) {
+      setToast({ message: "Data poin disiplin Anda tidak tersedia. Harap hubungi Pengawas.", type: "error" });
+      return;
+    }
+
+    if (pointsBal.usedToday + fixedPoints > 10) {
       setToast({ message: `Sisa kuota harian ekstensi waktu Anda tersisa ${10 - pointsBal.usedToday} menit.`, type: "error" });
       return;
     }
@@ -1208,7 +1214,13 @@ export default function StudentRemedialLayer({
         body: JSON.stringify({ studentName, className, academicYear, pointsToSpend: fixedPoints })
       });
       
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        throw new Error("Server tidak merespon dengan benar. Harap coba lagi.");
+      }
+
       if (!res.ok) throw new Error(data.error || "Gagal menambah waktu");
       
       // Calculate Added Secs
@@ -1230,6 +1242,7 @@ export default function StudentRemedialLayer({
       
     } catch(err: any) {
       setToast({ message: err.message || "Gagal menghubungi server", type: "error" });
+      // If server error is "Saldo tidak cukup" or similar, don't close modal but show message.
     } finally {
       setExtendLoading(false);
     }
@@ -1661,7 +1674,7 @@ export default function StudentRemedialLayer({
             </div>
           </div>
           
-          <div className="w-full">
+          <div className="w-full flex flex-col gap-3">
             <button
               onClick={() => {
                 setPointsToSpend(10);
@@ -1672,9 +1685,16 @@ export default function StudentRemedialLayer({
             >
               {extendLoading ? 'MEMPROSES...' : 'SETUJU TAMBAH WAKTU (-10 POIN)'}
             </button>
-            {(!pointsBal || pointsBal.total < 10 || pointsBal.usedToday >= 10) && (
-              <p className="text-[10px] md:text-xs text-rose-500 font-bold mt-4">
-                Poin Anda tidak cukup atau limit harian mencapai batas. Harap hubungi Pengawas.
+            <button
+              onClick={() => handleStatusUpdate('TIMEOUT')}
+              disabled={extendLoading || isSubmitting}
+              className="w-full py-3 bg-slate-100 text-slate-500 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+            >
+              TIDAK, KUMPULKAN JAWABAN SEKARANG
+            </button>
+            {(!pointsBal || pointsBal.total < 10 || pointsBal.usedToday >= 10) && pointsBal !== null && (
+              <p className="text-[10px] md:text-xs text-rose-500 font-bold mt-2">
+                Saldo poin Anda tidak cukup (Minimal 10) atau telah mencapai limit harian.
               </p>
             )}
           </div>
