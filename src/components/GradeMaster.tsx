@@ -755,7 +755,8 @@ export default function GradeMaster() {
               handleLoadPublicSession(session.session_name);
             }
           }}
-          onDeleteSession={(name) => {
+          onDeleteSession={(id, name) => {
+            setSessionId(id);
             setSessionName(name);
             setModal("delete");
           }}

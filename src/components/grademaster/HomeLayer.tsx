@@ -24,7 +24,7 @@ interface HomeLayerProps {
   isLoading: boolean;
   onCreateNew: () => void;
   onSessionClick: (session: SessionMeta) => void;
-  onDeleteSession: (name: string) => void;
+  onDeleteSession: (id: string, name: string) => void;
   onOpenAbout: () => void;
   isAdmin: boolean;
   onLoginClick: () => void;
@@ -224,28 +224,28 @@ export default function HomeLayer({
                         {s.is_public ? '🔓' : '🔒'}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                       <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${s.is_public ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-slate-400 bg-slate-50 border border-slate-100'}`}>
-                        {s.is_public ? 'Public' : 'Private'}
-                      </span>
-                      {s.is_demo && (
-                        <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full text-amber-600 bg-amber-50 border border-amber-100 flex items-center gap-1">
-                          🧪 Demo
+                      <div className="flex items-center gap-2">
+                         <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${s.is_public ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-slate-400 bg-slate-50 border border-slate-100'}`}>
+                          {s.is_public ? 'Public' : 'Private'}
                         </span>
-                      )}
-                      {isAdmin && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onDeleteSession(s.session_name); }}
-                          className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                          title="Hapus Sesi"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
-                      <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">
-                        {s.exam_type || 'UJIAN'}
-                      </span>
-                    </div>
+                        {s.is_demo && (
+                          <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full text-amber-600 bg-amber-50 border border-amber-100 flex items-center gap-1">
+                            🧪 Demo
+                          </span>
+                        )}
+                        {isAdmin && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onDeleteSession(s.id, s.session_name); }}
+                            className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                            title="Hapus Sesi"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                        <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">
+                          {s.exam_type || 'UJIAN'}
+                        </span>
+                      </div>
                   </div>
                   <h3 className="text-base md:text-lg font-black text-slate-800 mb-0.5 truncate">{s.session_name}</h3>
                   <p className="text-xs font-bold text-slate-500 truncate">{s.subject || 'Mapel'}</p>
