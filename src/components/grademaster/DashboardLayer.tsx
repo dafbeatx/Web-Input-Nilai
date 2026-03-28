@@ -270,7 +270,7 @@ export default function DashboardLayer({
   };
 
   return (
-    <div className="p-3 sm:p-5 lg:p-8 max-w-6xl mx-auto animate-in">
+    <div className="p-3 sm:p-5 lg:p-8 w-full max-w-5xl mx-auto px-4 md:px-6 animate-in">
       <header className="mb-8 md:mb-10 text-center">
         <div className="inline-flex items-center gap-1.5 md:gap-2 px-3 py-1 md:px-4 md:py-1.5 bg-indigo-100 text-indigo-600 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-3 md:mb-4 border border-indigo-200">
           <LayoutGrid size={12} className="md:w-3.5 md:h-3.5" /> Dashboard Analitik
@@ -320,23 +320,23 @@ export default function DashboardLayer({
           <h3 className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-400 mb-4 text-center">🏆 Bintang Kelas (Top 3)</h3>
           <div className="flex flex-col md:flex-row items-end justify-center gap-4 max-w-3xl mx-auto">
             {/* Juara 2 */}
-            <div className="order-2 md:order-1 flex-1 bg-slate-50 border border-slate-200 rounded-3xl p-5 text-center transform md:-translate-y-4 hover:-translate-y-6 transition-transform shadow-sm relative w-full">
+            <div className="order-2 md:order-1 flex-1 bg-slate-50 border border-slate-200 rounded-3xl p-5 text-center transform md:-translate-y-4 hover:-translate-y-6 transition-transform shadow-sm relative w-full min-w-0">
               <div className="w-12 h-12 md:w-14 md:h-14 mx-auto bg-slate-200 rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner">🥈</div>
-              <h4 className="font-bold text-slate-700 text-sm md:text-base truncate px-2">{analytics.ranking[1].name}</h4>
-              <p className="text-slate-500 font-black text-xl mt-1">{analytics.ranking[1].finalScore}</p>
+              <h4 className="font-bold text-slate-700 text-sm md:text-base truncate px-2">{analytics.ranking.length > 1 ? analytics.ranking[1].name : '-'}</h4>
+              <p className="text-slate-500 font-black text-xl mt-1">{analytics.ranking.length > 1 ? analytics.ranking[1].finalScore : 0}</p>
             </div>
             {/* Juara 1 */}
-            <div className="order-1 md:order-2 flex-1 bg-gradient-to-b from-amber-50 to-amber-100 border border-amber-200 rounded-3xl p-6 text-center transform md:-translate-y-8 hover:-translate-y-10 transition-transform shadow-md relative z-10 w-full mb-4 md:mb-0">
+            <div className="order-1 md:order-2 flex-1 bg-gradient-to-b from-amber-50 to-amber-100 border border-amber-200 rounded-3xl p-6 text-center transform md:-translate-y-8 hover:-translate-y-10 transition-transform shadow-md relative z-10 w-full mb-4 md:mb-0 min-w-0">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-sm flex items-center gap-1"><Trophy size={12}/> Juara 1</div>
               <div className="w-14 h-14 md:w-16 md:h-16 mx-auto bg-amber-200 rounded-full flex items-center justify-center text-3xl mb-3 shadow-inner">🥇</div>
-              <h4 className="font-black text-amber-900 text-base md:text-lg truncate px-2">{analytics.ranking[0].name}</h4>
-              <p className="text-amber-600 font-black text-2xl mt-1">{analytics.ranking[0].finalScore}</p>
+              <h4 className="font-black text-amber-900 text-base md:text-lg truncate px-2">{analytics.ranking.length > 0 ? analytics.ranking[0].name : '-'}</h4>
+              <p className="text-amber-600 font-black text-2xl mt-1">{analytics.ranking.length > 0 ? analytics.ranking[0].finalScore : 0}</p>
             </div>
             {/* Juara 3 */}
-            <div className="order-3 md:order-3 flex-1 bg-orange-50 border border-orange-200 rounded-3xl p-5 text-center transform hover:-translate-y-2 transition-transform shadow-sm relative w-full">
+            <div className="order-3 md:order-3 flex-1 bg-orange-50 border border-orange-200 rounded-3xl p-5 text-center transform hover:-translate-y-2 transition-transform shadow-sm relative w-full min-w-0">
               <div className="w-12 h-12 md:w-14 md:h-14 mx-auto bg-orange-200 rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner">🥉</div>
-              <h4 className="font-bold text-orange-900 text-sm md:text-base truncate px-2">{analytics.ranking[2].name}</h4>
-              <p className="text-orange-600 font-black text-xl mt-1">{analytics.ranking[2].finalScore}</p>
+              <h4 className="font-bold text-orange-900 text-sm md:text-base truncate px-2">{analytics.ranking.length > 2 ? analytics.ranking[2].name : '-'}</h4>
+              <p className="text-orange-600 font-black text-xl mt-1">{analytics.ranking.length > 2 ? analytics.ranking[2].finalScore : 0}</p>
             </div>
           </div>
         </div>
