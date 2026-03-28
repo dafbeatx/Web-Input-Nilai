@@ -65,6 +65,15 @@ export async function POST(req: NextRequest) {
                `⏰ Waktu: ${timestamp}${deviceStr}\n\n` +
                `<i>(Sistem otomatis mengambil foto setiap 10 detik)</i>`;
         break;
+      case 'SECOND_CHANCE':
+        text = `⚠️ <b>KESEMPATAN KEDUA DIGUNAKAN</b>\n\n` +
+               `👤 Siswa: <b>${studentName}</b>\n` +
+               `🏫 Kelas: ${className}\n` +
+               `📚 Mapel: ${subject}\n` +
+               `🔴 Pelanggaran: <b>${message || 'Pelanggaran proctoring'}</b>\n` +
+               `⏰ Waktu: ${timestamp}${deviceStr}\n\n` +
+               `<i>Siswa diberi 1x kesempatan terakhir. Pelanggaran berikutnya = diskualifikasi permanen.</i>`;
+        break;
       default:
         text = message || 'Pesan otomatis dari GradeMaster';
     }

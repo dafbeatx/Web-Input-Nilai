@@ -21,7 +21,7 @@ interface StudentRemedialLayerProps {
   setToast: (t: ToastType) => void;
 }
 
-type RemedialStep = 'RULES' | 'INFO' | 'EXAM' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT';
+type RemedialStep = 'RULES' | 'INFO' | 'EXAM' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT' | 'SECOND_CHANCE';
 
 const Badge = ({ children, color = 'indigo' }: { children: React.ReactNode; color?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'rose' }) => {
   const colors = {
@@ -78,6 +78,8 @@ export default function StudentRemedialLayer({
   const isDeploymentReloadRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [backPressCount, setBackPressCount] = useState(0);
+  const [secondChanceUsed, setSecondChanceUsed] = useState(false);
+  const [secondChanceReason, setSecondChanceReason] = useState('');
   const [isTabHidden, setIsTabHidden] = useState(false);
   const [remainingStudents, setRemainingStudents] = useState<{name: string}[]>([]);
   const [sessionCreatedAt, setSessionCreatedAt] = useState<string | null>(null);
@@ -217,12 +219,19 @@ export default function StudentRemedialLayer({
       window.history.pushState(null, '', window.location.href);
       setBackPressCount(prev => {
         const next = prev + 1;
+        const reason = `Mencoba menekan tombol kembali ${next} kali`;
         sendActivityLog(`Mencoba menekan tombol Kembali (Back Button) - Percobaan ke-${next}`);
         if (next >= 5) {
-          hasTriggeredCheatingRef.current = true;
-          setClientCheatingFlags(f => [...f, `Mencoba menekan tombol kembali ${next} kali`]);
-          setToast({ message: 'Batas percobaan navigasi terlampaui. Ujian dihentikan.', type: 'error' });
-          handleStatusUpdate('CHEATED');
+          setClientCheatingFlags(f => [...f, reason]);
+          if (secondChanceUsed) {
+            hasTriggeredCheatingRef.current = true;
+            setToast({ message: 'Batas percobaan navigasi terlampaui. Ujian dihentikan.', type: 'error' });
+            handleStatusUpdate('CHEATED', reason);
+          } else {
+            setSecondChanceReason(reason);
+            setStep('SECOND_CHANCE');
+            sendTelegramNotify('SECOND_CHANCE', capturePhoto() || undefined, reason);
+          }
         } else if (next >= 3) {
           setToast({ message: `⚠️ PERINGATAN: Jika mengetuk kembali lagi, sistem akan menandakan anda curang! (${next}/5)`, type: 'error' });
         } else {
@@ -508,6 +517,8 @@ export default function StudentRemedialLayer({
       if (type === 'NO_FACE') flagMessage = "Wajah tidak terdeteksi";
       if (type === 'MULTIPLE_FACES') flagMessage = "Terdeteksi lebih dari satu orang";
 
+      const reason = `${flagMessage} (${newCount} kali)`;
+
       setClientCheatingFlags(oldFlags => {
         if (!oldFlags.includes(flagMessage)) {
            return [...oldFlags, flagMessage];
@@ -516,16 +527,23 @@ export default function StudentRemedialLayer({
       });
 
       if (newCount >= 10) {
-        hasTriggeredCheatingRef.current = true;
-        setToast({ message: "Batas pelanggaran terlampaui. Ujian dihentikan.", type: "error" });
-        handleStatusUpdate('CHEATED');
+        setClientCheatingFlags(f => [...f, reason]);
+        if (secondChanceUsed) {
+          hasTriggeredCheatingRef.current = true;
+          setToast({ message: "Batas pelanggaran terlampaui. Ujian dihentikan.", type: "error" });
+          handleStatusUpdate('CHEATED', reason);
+        } else {
+          setSecondChanceReason(reason);
+          setStep('SECOND_CHANCE');
+          sendTelegramNotify('SECOND_CHANCE', capturePhoto() || undefined, reason);
+        }
       } else {
         setToast({ message: `Peringatan Kamera: ${flagMessage} (${newCount}/10)`, type: "error" });
       }
 
       return newCount;
     });
-  }, []);
+  }, [secondChanceUsed]);
 
   // Shuffle logic
   useEffect(() => {
@@ -834,11 +852,18 @@ export default function StudentRemedialLayer({
       if (isRefreshingRef.current || hasTriggeredCheatingRef.current) return;
       setTabWarningCount(prev => {
         const next = prev + 1;
+        const reason = `Meninggalkan halaman ${next} kali`;
         if (next >= MAX_TAB_WARNINGS) {
-          hasTriggeredCheatingRef.current = true;
-          setClientCheatingFlags(f => [...f, `Meninggalkan halaman ${next} kali`]);
-          setToast({ message: 'Batas peringatan terlampaui. Ujian dihentikan.', type: 'error' });
-          handleStatusUpdate('CHEATED');
+          setClientCheatingFlags(f => [...f, reason]);
+          if (secondChanceUsed) {
+            hasTriggeredCheatingRef.current = true;
+            setToast({ message: 'Batas peringatan terlampaui. Ujian dihentikan.', type: 'error' });
+            handleStatusUpdate('CHEATED', reason);
+          } else {
+            setSecondChanceReason(reason);
+            setStep('SECOND_CHANCE');
+            sendTelegramNotify('SECOND_CHANCE', capturePhoto() || undefined, reason);
+          }
         } else {
           setToast({ message: `⚠️ PERINGATAN ${next}/${MAX_TAB_WARNINGS}: Jangan tinggalkan halaman ujian! (Sisa ${MAX_TAB_WARNINGS - next} peringatan)`, type: 'error' });
         }
@@ -887,11 +912,15 @@ export default function StudentRemedialLayer({
     };
   }, [step, setToast]);
 
-  const handleStatusUpdate = async (status: 'COMPLETED' | 'CHEATED' | 'TIMEOUT') => {
+  const handleStatusUpdate = async (status: 'COMPLETED' | 'CHEATED' | 'TIMEOUT', explicitReason?: string) => {
     if (hasSubmittedRef.current) return;
     hasSubmittedRef.current = true;
     
     setIsSubmitting(true);
+
+    const allFlags = explicitReason 
+      ? (clientCheatingFlags.includes(explicitReason) ? clientCheatingFlags : [...clientCheatingFlags, explicitReason])
+      : clientCheatingFlags;
 
     const payload = { 
       sessionId, 
@@ -906,10 +935,11 @@ export default function StudentRemedialLayer({
         return mappedAnswers;
       })() : undefined,
       note: status === 'COMPLETED' ? note : undefined,
-      clientCheatingFlags: clientCheatingFlags.length > 0 ? clientCheatingFlags : undefined,
+      clientCheatingFlags: allFlags.length > 0 ? allFlags : undefined,
       examMode,
       cameraStatus,
-      riskLevel: clientCheatingFlags.length > 0 ? 'HIGH' : (examMode === 'LIMITED' ? 'MEDIUM' : 'LOW')
+      riskLevel: allFlags.length > 0 ? 'HIGH' : (examMode === 'LIMITED' ? 'MEDIUM' : 'LOW'),
+      cheatingReason: explicitReason
     };
 
     const MAX_SUBMIT_RETRIES = 3;
@@ -980,8 +1010,9 @@ export default function StudentRemedialLayer({
               });
           } else if (status === 'CHEATED') {
             let photo = capturePhoto();
+            const cheatedReason = explicitReason || allFlags.join(', ') || 'Pelanggaran proctoring';
             compressImage(photo || "").then(compressed => {
-              sendTelegramNotify('CHEATED', compressed || photo || undefined, clientCheatingFlags.join(', '));
+              sendTelegramNotify('CHEATED', compressed || photo || undefined, cheatedReason);
             });
           }
           setIsSubmitting(false);
@@ -1273,6 +1304,63 @@ export default function StudentRemedialLayer({
             <ProctoringCamera ref={videoRef} onViolation={handleCameraViolation} />
           </div>
         )}
+      </div>
+    );
+  }
+
+  // RENDER: SECOND CHANCE SCREEN
+  if (step === 'SECOND_CHANCE') {
+    const handleUseSecondChance = () => {
+      setSecondChanceUsed(true);
+      setWarningCount(0);
+      setTabWarningCount(0);
+      setBackPressCount(0);
+      hasTriggeredCheatingRef.current = false;
+      setStep('EXAM');
+      setToast({ message: '⚠️ Ini adalah kesempatan terakhir Anda. Pelanggaran berikutnya akan langsung didiskualifikasi!', type: 'error' });
+      sendTelegramNotify('ACTIVITY', capturePhoto() || undefined, `Siswa melanjutkan ujian dengan kesempatan kedua. Alasan sebelumnya: ${secondChanceReason}`);
+    };
+
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 animate-in bg-amber-50/50">
+        <div className="bg-white max-w-lg w-full rounded-[2rem] p-8 md:p-10 shadow-2xl border-2 border-amber-200 text-center">
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 bg-amber-100 text-amber-600 animate-pulse">
+            <AlertTriangle size={40} />
+          </div>
+
+          <h2 className="text-2xl font-black text-slate-800 mb-2 font-outfit">⚠️ Pelanggaran Terdeteksi!</h2>
+
+          <p className="text-sm text-slate-500 font-bold mb-4 leading-relaxed">
+            Sistem mendeteksi tindakan yang melanggar aturan ujian:
+          </p>
+
+          <div className="bg-rose-50 border-2 border-rose-200 rounded-2xl p-4 mb-6">
+            <p className="text-sm font-black text-rose-700">{secondChanceReason}</p>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6 text-left space-y-3">
+            <p className="text-xs font-black text-amber-800 uppercase tracking-wider">📢 Peringatan Penting</p>
+            <p className="text-sm text-amber-700 font-bold leading-relaxed">
+              Anda mendapat <strong className="text-rose-600">1x kesempatan terakhir</strong> untuk melanjutkan ujian.
+              Jika melakukan pelanggaran lagi, Anda akan <strong className="text-rose-600">langsung didiskualifikasi</strong> dan 
+              nilai menjadi <strong className="text-rose-600">0 (NOL)</strong>.
+            </p>
+            <p className="text-xs text-amber-600 font-bold">
+              ⏱️ Timer ujian tetap berjalan selama jeda ini.
+            </p>
+          </div>
+
+          <button
+            onClick={handleUseSecondChance}
+            className="w-full py-4 bg-amber-500 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 mb-3"
+          >
+            🔄 Saya Mengerti, Lanjutkan Ujian
+          </button>
+
+          <p className="text-[10px] text-slate-400 font-bold">
+            Foto otomatis tetap diambil setiap 10 detik selama ujian berlangsung.
+          </p>
+        </div>
       </div>
     );
   }
