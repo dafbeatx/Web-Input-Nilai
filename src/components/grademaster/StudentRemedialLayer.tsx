@@ -255,7 +255,7 @@ export default function StudentRemedialLayer({
   const getCameraErrorMessage = (err: any): string => {
     const name = err?.name || '';
     if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-      return 'Izin kamera ditolak. Buka Pengaturan Browser → Izin Situs → Kamera → Izinkan, lalu coba lagi.';
+      return 'Izin ditolak atau dihalangi oleh sistem HP Anda (contoh: ada Balon chat/Overlay layar yang sedang aktif). Tutup balon chat/overlay tersebut, Izinkan pengaturan kamera, atau coba salin link ini dan buka langsung di Google Chrome.';
     }
     if (name === 'NotReadableError' || name === 'TrackStartError') {
       return 'Kamera sedang dipakai aplikasi lain (misal WhatsApp Video, Zoom, atau HP sedang merekam). Tutup aplikasi tersebut lalu coba lagi.';
@@ -264,15 +264,15 @@ export default function StudentRemedialLayer({
       return 'Permintaan kamera dibatalkan oleh sistem. Kemungkinan ada balon/overlay dari aplikasi lain yang menghalangi. Tutup semua overlay lalu coba lagi.';
     }
     if (name === 'OverconstrainedError') {
-      return 'Kamera perangkat Anda tidak mendukung resolusi yang diminta. Hubungi guru untuk bantuan.';
+      return 'Kamera perangkat Anda tidak mendukung spesifikasi yang diminta. Hubungi guru untuk bantuan.';
     }
     if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
       return 'Tidak ditemukan kamera di perangkat ini. Pastikan perangkat memiliki kamera depan.';
     }
     if (name === 'SecurityError') {
-      return 'Browser memblokir akses kamera karena halaman dianggap tidak aman. Pastikan Anda mengakses situs via HTTPS.';
+      return 'Browser memblokir akses kamera (keamanan). Pastikan jangan membuka link dari dalam aplikasi (misal Telegram/Line/WA). Salin link dan buka di Chrome.';
     }
-    return `Gagal mengakses kamera (${name || 'unknown'}). Pastikan tidak ada aplikasi lain yang menggunakan kamera, lalu coba lagi.`;
+    return `Gagal mengakses kamera (${name || 'unknown'}). Pastikan tidak ada aplikasi lain yang menggunakan kamera, atau salin link dan buka di Google Chrome.`;
   };
 
   // Check permissions (camera + location)
@@ -281,6 +281,16 @@ export default function StudentRemedialLayer({
     setCameraErrorDetail(null);
     let camReady = false;
     let locReady = false;
+
+    // Deteksi awal jika browser sangat jadul atau bukan environment yang mendukung kamera (misal in-app browser ketat)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const errMsg = 'Browser atau HP Anda tidak mendukung akses kamera secara langsung. Harap salin link ini dan buka pada aplikasi Google Chrome terbaru.';
+      setCameraErrorDetail(errMsg);
+      setCameraRetryCount(3);
+      sendTelegramNotify('ERROR', undefined, `Kamera gagal total: Browser unsupported (mediaDevices undefined). Siswa dialihkan keluar.`);
+      setCheckingPerms(false);
+      return;
+    }
 
     // Check camera with granular error handling
     try {
