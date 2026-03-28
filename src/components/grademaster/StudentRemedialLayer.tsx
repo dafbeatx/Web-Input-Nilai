@@ -817,7 +817,18 @@ export default function StudentRemedialLayer({
     setStep('EXAM');
   };
 
-  // Timer & Initial Setup logic
+  // Timer countdown (depends on timeLeft)
+  useEffect(() => {
+    if (step !== 'EXAM') return;
+    if (timeLeft <= 0) {
+      handleStatusUpdate('TIMEOUT');
+      return;
+    }
+    const timerId = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
+    return () => clearInterval(timerId);
+  }, [step, timeLeft]);
+
+  // Proctoring: START photo + 10s auto-snap (depends ONLY on step, NOT timeLeft)
   useEffect(() => {
     if (step !== 'EXAM') return;
 
@@ -837,15 +848,9 @@ export default function StudentRemedialLayer({
         if (net.includes('2g') || net.includes('3g')) {
           setToast({ message: "Koneksi lambat terdeteksi. Harap bersabar saat mengunggah jawaban.", type: "error" });
         }
-      }, 2500); // 2.5s delay to ensure camera stream is painting after mounting
+      }, 2500);
     }
 
-    if (timeLeft <= 0) {
-      handleStatusUpdate('TIMEOUT');
-      return;
-    }
-    const timerId = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-    
     // 10s Auto-Snap for Proctoring (Telegram)
     const proctorInterval = setInterval(async () => {
       const snap = capturePhoto();
@@ -855,11 +860,8 @@ export default function StudentRemedialLayer({
       }
     }, 10000);
 
-    return () => {
-      clearInterval(timerId);
-      clearInterval(proctorInterval);
-    };
-  }, [step, timeLeft]);
+    return () => clearInterval(proctorInterval);
+  }, [step]);
 
   // Anti-cheat mechanism — 3 warnings before ban
   useEffect(() => {
