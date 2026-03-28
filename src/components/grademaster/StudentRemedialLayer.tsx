@@ -53,6 +53,24 @@ export default function StudentRemedialLayer({
   const isRefreshingRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  const getDeviceInfo = () => {
+    if (typeof window === 'undefined') return 'unknown';
+    const ua = navigator.userAgent;
+    let os = "Other";
+    if (ua.indexOf("Win") !== -1) os = "Windows";
+    if (ua.indexOf("Mac") !== -1) os = "MacOS";
+    if (ua.indexOf("Android") !== -1) os = "Android";
+    if (ua.indexOf("iPhone") !== -1 || ua.indexOf("iPad") !== -1) os = "iOS";
+
+    let browser = "Other";
+    if (ua.indexOf("Chrome") !== -1) browser = "Chrome";
+    else if (ua.indexOf("Firefox") !== -1) browser = "Firefox";
+    else if (ua.indexOf("Safari") !== -1) browser = "Safari";
+    else if (ua.indexOf("Edge") !== -1) browser = "Edge";
+    
+    return `${os} | ${browser}`;
+  };
+
   const sendTelegramNotify = async (event: string, photo?: string, message?: string, score?: number) => {
     try {
       await fetch('/api/telegram/notify', {
@@ -67,6 +85,7 @@ export default function StudentRemedialLayer({
           kkm: 70, // Default KKM
           photo,
           message,
+          deviceInfo: getDeviceInfo()
         })
       });
     } catch (err) {
@@ -128,9 +147,24 @@ export default function StudentRemedialLayer({
 
     window.addEventListener('beforeunload', handleBeforeUnload2);
     window.addEventListener('popstate', handlePopState);
+
+    // Error Logging: Detect if user closes the tab during exam (Abandoned)
+    const handleAbandoned = () => {
+      if (!isRefreshingRef.current && !isSubmittingRef.current) {
+        // We use synchronous-ish beacon or just fire it and hope for the best
+        // navigator.sendBeacon is better for unloads
+        const payload = JSON.stringify({
+          studentName, className, subject, event: 'ABANDONED', deviceInfo: getDeviceInfo()
+        });
+        navigator.sendBeacon('/api/telegram/notify', payload);
+      }
+    };
+    window.addEventListener('unload', handleAbandoned);
+
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload2);
       window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('unload', handleAbandoned);
     };
   }, [step]);
 
@@ -340,7 +374,9 @@ export default function StudentRemedialLayer({
 
   const startExam = async () => {
     if (remedialQuestions.length === 0) {
-      setToast({ message: "Soal remedial belum diatur oleh guru. Hubungi guru mata pelajaran.", type: "error" });
+      const errMsg = "Soal remedial belum diatur oleh guru. Hubungi guru mata pelajaran.";
+      setToast({ message: errMsg, type: "error" });
+      sendTelegramNotify('ERROR', undefined, `Gagal Mulai: Soal Kosong`);
       setIsSubmitting(false);
       return;
     }
@@ -352,15 +388,18 @@ export default function StudentRemedialLayer({
       locStr = `${pos.coords.latitude},${pos.coords.longitude}`;
       setCurrentLocation(locStr);
     } catch (e: any) {
-      setToast({ message: getLocationErrorMessage(e), type: "error" });
+      const errDetail = getLocationErrorMessage(e);
+      setToast({ message: errDetail, type: "error" });
+      sendTelegramNotify('ERROR', undefined, `Gagal Lokasi: ${errDetail}`);
       setIsSubmitting(false);
       return;
     }
 
-    // 2. Capture Photo
     const capturedImg = capturePhoto();
     if (!capturedImg) {
-      setToast({ message: "Gagal mengambil foto verifikasi. Pastikan wajah terlihat jelas di kamera.", type: "error" });
+      const errMsg = "Gagal mengambil foto verifikasi. Pastikan wajah terlihat jelas di kamera.";
+      setToast({ message: errMsg, type: "error" });
+      sendTelegramNotify('ERROR', undefined, "Gagal Foto: Video/Kamera bermasalah");
       setIsSubmitting(false);
       return;
     }
@@ -375,7 +414,9 @@ export default function StudentRemedialLayer({
       const data = await res.json().catch(() => ({}));
       
       if (!res.ok) {
-        setToast({ message: data.error || "Terjadi kesalahan saat memulai ujian. Coba lagi.", type: "error" });
+        const errMsg = data.error || "Terjadi kesalahan saat memulai ujian. Coba lagi.";
+        setToast({ message: errMsg, type: "error" });
+        sendTelegramNotify('ERROR', undefined, `Gagal API Mulai: ${errMsg}`);
         if (data.error?.includes('permanen')) {
             setStep('CHEATED'); 
         }
@@ -384,6 +425,7 @@ export default function StudentRemedialLayer({
       }
     } catch (e) {
       setToast({ message: "Terjadi kesalahan saat menghubungi server. Coba lagi.", type: "error" });
+      sendTelegramNotify('ERROR', undefined, "Gagal Network: Put Remedial failed");
       setIsSubmitting(false);
       return;
     }
@@ -503,7 +545,9 @@ export default function StudentRemedialLayer({
       const data = await res.json().catch(() => ({}));
       
       if (!res.ok) {
-        setToast({ message: data.error || "Terjadi kesalahan saat mengirim jawaban. Coba lagi.", type: "error" });
+        const errMsg = data.error || "Terjadi kesalahan saat mengirim jawaban. Coba lagi.";
+        setToast({ message: errMsg, type: "error" });
+        sendTelegramNotify('ERROR', undefined, `Gagal API Selesai: ${errMsg}`);
         if (data.error?.includes('sudah pernah dilakukan') || data.error?.includes('permanen')) {
             setStep('CHEATED');
         }
@@ -520,6 +564,7 @@ export default function StudentRemedialLayer({
       }
     } catch (e) {
       setToast({ message: "Terjadi kesalahan jaringan saat mengirim jawaban. Coba lagi.", type: "error" });
+      sendTelegramNotify('ERROR', undefined, "Gagal Network: Put Remedial (Submit) failed");
     } finally {
       setIsSubmitting(false);
     }

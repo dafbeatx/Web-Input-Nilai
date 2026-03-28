@@ -4,10 +4,11 @@ import { sendAdminNotification } from '@/lib/telegram/bot';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { studentName, className, subject, event, score, kkm, photo, message } = body;
+    const { studentName, className, subject, event, score, kkm, photo, message, deviceInfo } = body;
 
     let text = '';
     const timestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+    const deviceStr = deviceInfo ? `\n📱 Perangkat: <code>${deviceInfo}</code>` : '';
 
     switch (event) {
       case 'START':
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
                `👤 Siswa: <b>${studentName}</b>\n` +
                `🏫 Kelas: ${className}\n` +
                `📚 Mapel: ${subject}\n` +
-               `⏰ Waktu: ${timestamp}\n\n` +
+               `⏰ Waktu: ${timestamp}${deviceStr}\n\n` +
                `<i>(Foto di atas adalah verifikasi wajah saat mulai)</i>`;
         break;
       case 'FINISH':
@@ -23,15 +24,29 @@ export async function POST(req: NextRequest) {
                `👤 Siswa: <b>${studentName}</b>\n` +
                `🏫 Kelas: ${className}\n` +
                `📊 Skor: <b>${score}</b> (KKM: ${kkm})\n` +
-               `⏰ Selesai: ${timestamp}`;
+               `⏰ Selesai: ${timestamp}${deviceStr}`;
         break;
       case 'CHEATED':
         text = `🚨 <b>KECURANGAN TERDETEKSI!</b>\n\n` +
                `👤 Siswa: <b>${studentName}</b>\n` +
                `🏫 Kelas: ${className}\n` +
                `⚠️ Alasan: <b>${message || 'Pelanggaran Proctoring'}</b>\n` +
-               `⏰ Waktu: ${timestamp}\n\n` +
+               `⏰ Waktu: ${timestamp}${deviceStr}\n\n` +
                `🚫 <i>Siswa otomatis didiskualifikasi dari remedial ini.</i>`;
+        break;
+      case 'ERROR':
+        text = `❌ <b>ERROR SISWA</b>\n\n` +
+               `👤 Siswa: <b>${studentName}</b>\n` +
+               `🏫 Kelas: ${className}\n` +
+               `⚠️ Error: <b>${message || 'Unknown Error'}</b>\n` +
+               `⏰ Waktu: ${timestamp}${deviceStr}`;
+        break;
+      case 'ABANDONED':
+        text = `⚠️ <b>SESI DITINGGALKAN</b>\n\n` +
+               `👤 Siswa: <b>${studentName}</b>\n` +
+               `🏫 Kelas: ${className}\n` +
+               `ℹ️ Status: Siswa keluar/menutup halaman ujian sebelum selesai.\n` +
+               `⏰ Waktu: ${timestamp}${deviceStr}`;
         break;
       default:
         text = message || 'Pesan otomatis dari GradeMaster';
