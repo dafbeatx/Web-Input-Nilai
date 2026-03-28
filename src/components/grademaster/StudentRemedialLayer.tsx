@@ -289,7 +289,7 @@ export default function StudentRemedialLayer({
       const errMsg = 'Browser atau HP Anda tidak mendukung akses kamera secara langsung. Harap salin link ini dan buka pada aplikasi Google Chrome terbaru.';
       setCameraErrorDetail(errMsg);
       setCameraRetryCount(3);
-      sendTelegramNotify('ERROR', undefined, `Kamera gagal total: Browser unsupported (mediaDevices undefined). Siswa dialihkan keluar.`);
+      sendTelegramNotify('ERROR', undefined, `Kamera gagal total (mediaDevices undefined). Siswa mengakses panel Bypass.`);
       camReady = false;
     } else {
       // Check camera with granular error handling
@@ -307,7 +307,7 @@ export default function StudentRemedialLayer({
         setCameraRetryCount(prev => {
           const next = prev + 1;
           if (next >= MAX_CAMERA_RETRIES) {
-            sendTelegramNotify('ACTIVITY', undefined, `Kamera gagal ${next}x (${err?.name}). Siswa dialihkan keluar.`);
+            sendTelegramNotify('ACTIVITY', undefined, `Kamera gagal ${next}x (${err?.name}). Siswa diarahkan ke fitur Bypass.`);
           }
           return next;
         });
@@ -537,10 +537,11 @@ export default function StudentRemedialLayer({
             if (data && data.latitude && data.longitude) {
               resolve({ coords: { latitude: parseFloat(data.latitude), longitude: parseFloat(data.longitude) } });
             } else {
-              reject(fallbackErr);
+              // Always resolve to prevent trapping old devices (Nokia 5.2 etc)
+              resolve({ coords: { latitude: 0, longitude: 0 } });
             }
           })
-          .catch(() => reject(fallbackErr));
+          .catch(() => resolve({ coords: { latitude: 0, longitude: 0 } }));
       };
 
       if (!navigator.geolocation) {
