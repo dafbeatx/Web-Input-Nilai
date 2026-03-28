@@ -1903,17 +1903,29 @@ export default function StudentRemedialLayer({
   return (
     <>
       {/* Anti-Screenshot / Privacy Overlay (Activates when tab/app switcher is opened or permanently blocked) */}
+      {/* Anti-Screenshot / Privacy Overlay - Optimized for Mobile */}
       {(isTabHidden || isPermanentlyBlocked) && step === 'EXAM' && (
-        <div className="fixed inset-0 z-[9999] bg-slate-900 flex flex-col items-center justify-center text-center p-6 animate-in fade-in duration-300">
-           <div className="w-20 h-20 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mb-6 animate-pulse">
-              <ShieldX size={48} />
+        <div className="fixed inset-0 z-[10000] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center text-center p-4 md:p-8 animate-in fade-in zoom-in duration-300">
+           <div className="w-16 h-16 md:w-24 md:h-24 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mb-4 md:mb-6 animate-pulse ring-4 ring-rose-500/10">
+              <ShieldX size={32} className="md:w-12 md:h-12" />
            </div>
-           <h2 className="text-xl font-black text-white mb-2 font-outfit">Layar Diproteksi</h2>
-           <p className="text-slate-400 text-sm font-bold max-w-xs leading-relaxed">
+           
+           <h2 className="text-lg md:text-2xl font-black text-white mb-2 font-outfit uppercase tracking-tight">Layar Diproteksi</h2>
+           
+           <p className="text-slate-400 text-[10px] md:text-sm font-bold max-w-xs md:max-w-md leading-relaxed mb-6">
              {isPermanentlyBlocked 
-                ? "Akses Anda ke halaman ujian telah diblokir permanen karena melanggar aturan ujian (Meninggalkan Halaman). Hubungi Guru Pengawas." 
-                : "Konten disembunyikan untuk menjaga keamanan ujian. Kembalilah ke halaman untuk melanjutkan."}
+                ? "Akses Anda diblokir permanen karena melanggar aturan meninggalkan halaman ujian. Silakan hubungi Guru Pengawas untuk informasi lebih lanjut." 
+                : "Konten disembunyikan otomatis untuk pengawasan. Kembalilah fokus ke halaman ujian ini sekarang."}
            </p>
+
+           {isPermanentlyBlocked && (
+             <button
+               onClick={handleExit}
+               className="px-8 py-3 bg-slate-800 text-white border border-slate-700 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-slate-700 transition-all flex items-center gap-2 shadow-2xl"
+             >
+               <ArrowLeft size={14} /> Keluar dari Ujian
+             </button>
+           )}
         </div>
       )}
 
