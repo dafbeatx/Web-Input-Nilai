@@ -783,68 +783,99 @@ export default function StudentRemedialLayer({
 
   const handleStatusUpdate = async (status: 'COMPLETED' | 'CHEATED' | 'TIMEOUT') => {
     setIsSubmitting(true);
-    clearRemedialSession();
-    
-    try {
-      const res = await fetch('/api/grademaster/students/remedial', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-           sessionId, 
-           studentName, 
-           status, 
-           location: currentLocation,
-            answers: status === 'COMPLETED' ? (() => {
-               const mappedAnswers = new Array(remedialEssayCount).fill("");
-               shuffledQuestions.forEach((sq, i) => {
-                 mappedAnswers[sq.originalIndex] = answers[i];
-               });
-               return mappedAnswers;
-            })() : undefined,
-            note: status === 'COMPLETED' ? note : undefined,
-            clientCheatingFlags: clientCheatingFlags.length > 0 ? clientCheatingFlags : undefined,
-            examMode,
-            cameraStatus,
-            riskLevel: clientCheatingFlags.length > 0 ? 'HIGH' : (examMode === 'LIMITED' ? 'MEDIUM' : 'LOW')
-        })
-      });
-      const data = await res.json().catch(() => ({}));
-      
-      if (!res.ok) {
-        const errMsg = data.error || "Terjadi kesalahan saat mengirim jawaban. Coba lagi.";
-        setToast({ message: errMsg, type: "error" });
-        sendTelegramNotify('ERROR', undefined, `Gagal API Selesai: ${errMsg}`);
-        if (data.error?.includes('sudah pernah dilakukan') || data.error?.includes('permanen')) {
-            setStep('CHEATED');
-        }
-      } else {
-        setStep(status);
-        if (status === 'COMPLETED') {
-          setToast({ message: "Jawaban Remedial berhasil dikumpulkan.", type: "success" });
-          const fScore = data.newFinalScore || data.final_score; // Handle both potential returns
-          setFinalScore(fScore);
-          sendTelegramNotify('FINISH', undefined, undefined, fScore);
+
+    const payload = { 
+      sessionId, 
+      studentName, 
+      status, 
+      location: currentLocation,
+      answers: status === 'COMPLETED' ? (() => {
+        const mappedAnswers = new Array(remedialEssayCount).fill("");
+        shuffledQuestions.forEach((sq, i) => {
+          mappedAnswers[sq.originalIndex] = answers[i];
+        });
+        return mappedAnswers;
+      })() : undefined,
+      note: status === 'COMPLETED' ? note : undefined,
+      clientCheatingFlags: clientCheatingFlags.length > 0 ? clientCheatingFlags : undefined,
+      examMode,
+      cameraStatus,
+      riskLevel: clientCheatingFlags.length > 0 ? 'HIGH' : (examMode === 'LIMITED' ? 'MEDIUM' : 'LOW')
+    };
+
+    const MAX_SUBMIT_RETRIES = 3;
+    let lastError = '';
+
+    for (let attempt = 1; attempt <= MAX_SUBMIT_RETRIES; attempt++) {
+      try {
+        const res = await fetch('/api/grademaster/students/remedial', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        
+        if (!res.ok) {
+          const errMsg = data.error || "Terjadi kesalahan saat mengirim jawaban.";
           
-          // Fetch friends who haven't finished
-          fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`)
-            .then(r => r.json())
-            .then(d => {
-              setRemainingStudents(d.students || []);
-              setSessionCreatedAt(d.sessionCreatedAt);
+          if (data.error?.includes('sudah pernah dilakukan') || data.error?.includes('permanen') || res.status === 403) {
+            clearRemedialSession();
+            setStep('CHEATED');
+            setToast({ message: errMsg, type: "error" });
+            setIsSubmitting(false);
+            return;
+          }
+
+          lastError = errMsg;
+          if (attempt < MAX_SUBMIT_RETRIES) {
+            const delay = 500 * Math.pow(2, attempt - 1);
+            setToast({ message: `Gagal mengirim (${attempt}/${MAX_SUBMIT_RETRIES}). Mencoba ulang...`, type: "error" });
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+        } else {
+          clearRemedialSession();
+          setStep(status);
+          if (status === 'COMPLETED') {
+            setToast({ message: "Jawaban Remedial berhasil dikumpulkan.", type: "success" });
+            const fScore = data.newFinalScore || data.final_score;
+            setFinalScore(fScore);
+            sendTelegramNotify('FINISH', undefined, undefined, fScore);
+            
+            fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`)
+              .then(r => r.json())
+              .then(d => {
+                setRemainingStudents(d.students || []);
+                setSessionCreatedAt(d.sessionCreatedAt);
+              });
+          } else if (status === 'CHEATED') {
+            let photo = capturePhoto();
+            compressImage(photo || "").then(compressed => {
+              sendTelegramNotify('CHEATED', compressed || photo || undefined, clientCheatingFlags.join(', '));
             });
-        } else if (status === 'CHEATED') {
-          let photo = capturePhoto();
-          compressImage(photo || "").then(compressed => {
-            sendTelegramNotify('CHEATED', compressed || photo || undefined, clientCheatingFlags.join(', '));
-          });
+          }
+          setIsSubmitting(false);
+          return;
+        }
+      } catch (e) {
+        lastError = "Kesalahan jaringan";
+        if (attempt < MAX_SUBMIT_RETRIES) {
+          const delay = 500 * Math.pow(2, attempt - 1);
+          setToast({ message: `Koneksi gagal (${attempt}/${MAX_SUBMIT_RETRIES}). Mencoba ulang...`, type: "error" });
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
         }
       }
-    } catch (e) {
-      setToast({ message: "Terjadi kesalahan jaringan saat mengirim jawaban. Coba lagi.", type: "error" });
-      sendTelegramNotify('ERROR', undefined, "Gagal Network: Put Remedial (Submit) failed");
-    } finally {
-      setIsSubmitting(false);
     }
+
+    // All retries failed — save to localStorage as safety net
+    try {
+      localStorage.setItem('gm_failed_submission', JSON.stringify({ ...payload, failedAt: Date.now() }));
+    } catch { /* localStorage might be full */ }
+
+    setToast({ message: `Gagal mengirim jawaban setelah ${MAX_SUBMIT_RETRIES} percobaan: ${lastError}. Data tersimpan lokal, hubungi guru.`, type: "error" });
+    sendTelegramNotify('ERROR', undefined, `Submit gagal ${MAX_SUBMIT_RETRIES}x: ${lastError}`);
+    setIsSubmitting(false);
   };
 
   const handleChange = (index: number, val: string) => {

@@ -311,3 +311,44 @@ CREATE POLICY "gm_similarity_reports_anon_access" ON public.gm_similarity_report
     USING (true) WITH CHECK (true);
 
 CREATE INDEX IF NOT EXISTS idx_gm_similarity_reports_session ON public.gm_similarity_reports(session_id);
+
+-- ============================================================
+-- Remedial RPC: Transactional Start Attempt
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.start_remedial_attempt(
+  p_session_id UUID,
+  p_student_id UUID,
+  p_attempt_number INTEGER,
+  p_attempt_token TEXT,
+  p_location TEXT,
+  p_photo TEXT DEFAULT NULL,
+  p_original_score NUMERIC DEFAULT NULL
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_attempt_id UUID;
+BEGIN
+  INSERT INTO public.gm_remedial_attempts (
+    session_id, student_id, attempt_number, attempt_token, status, location, photo
+  ) VALUES (
+    p_session_id, p_student_id, p_attempt_number, p_attempt_token, 'INITIATED', p_location, p_photo
+  ) RETURNING id INTO v_attempt_id;
+
+  UPDATE public.gm_students SET
+    remedial_status = 'INITIATED',
+    remedial_attempts = p_attempt_number,
+    remedial_location = p_location,
+    remedial_photo = p_photo,
+    original_score = CASE
+      WHEN (original_score IS NULL OR original_score = 0) AND p_original_score IS NOT NULL
+      THEN p_original_score
+      ELSE original_score
+    END
+  WHERE id = p_student_id;
+
+  RETURN v_attempt_id;
+END;
+$$;

@@ -66,13 +66,14 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  let body: Record<string, any> | null = null;
   try {
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`remedial:${ip}`)) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan' }, { status: 429 });
     }
 
-    const body = await req.json().catch(() => null);
+    body = await req.json().catch(() => null);
     
     if (!body) {
       console.error('Remedial error: Invalid JSON payload');
@@ -131,8 +132,14 @@ export async function PUT(req: NextRequest) {
 
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Gagal menyimpan data remedial';
-    console.error('Remedial error:', message);
-    return NextResponse.json({ error: message }, { status: 400 });
+    const studentRef = body?.studentName || body?.studentId || 'unknown';
+    console.error(`[Remedial API Error] student=${studentRef}, session=${body?.sessionId}, status=${body?.status}, error=${message}`);
+    
+    const isPermenant = message.includes('permanen') || message.includes('sudah pernah');
+    return NextResponse.json(
+      { error: message }, 
+      { status: isPermenant ? 403 : 400 }
+    );
   }
 }
 

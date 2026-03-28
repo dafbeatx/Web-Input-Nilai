@@ -3,6 +3,48 @@ import { assessClientRisk, assessServerRisk, mergeRiskAssessments } from './risk
 import { calculateEssayScore } from '../scoring';
 import { generateAttemptToken, verifyAttemptToken } from '../token';
 
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  NONE: ['INITIATED'],
+  INITIATED: ['ACTIVE', 'FAILED'],
+  ACTIVE: ['COMPLETED', 'CHEATED', 'TIMEOUT'],
+  FAILED: ['INITIATED'],
+};
+
+function validateStateTransition(current: string | null, target: string): void {
+  const normalizedCurrent = current || 'NONE';
+  const allowed = VALID_TRANSITIONS[normalizedCurrent];
+  if (!allowed || !allowed.includes(target)) {
+    throw new Error(
+      `Transisi status tidak valid: ${normalizedCurrent} → ${target}. ` +
+      `Status yang diizinkan dari ${normalizedCurrent}: ${allowed?.join(', ') || 'tidak ada'}`
+    );
+  }
+}
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  context: string,
+  maxRetries = 3
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      console.error(`[Retry ${attempt}/${maxRetries}] ${context}: ${lastError.message}`);
+
+      if (attempt < maxRetries) {
+        const delay = 200 * Math.pow(2, attempt - 1); // 200ms, 400ms, 800ms
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw new Error(`${context} gagal setelah ${maxRetries} percobaan: ${lastError?.message}`);
+}
+
 export async function submitRemedial(
   sessionId: string,
   studentId: string,
@@ -24,7 +66,9 @@ export async function submitRemedial(
     .eq('id', studentId)
     .single();
 
-  if (fetchErr || !student) throw new Error('Siswa tidak ditemukan');
+  if (fetchErr || !student) {
+    throw new Error(`Siswa tidak ditemukan (id: ${studentId}, session: ${sessionId})`);
+  }
 
   const { data: session, error: sessErr } = await supabase
     .from('gm_sessions')
@@ -32,75 +76,66 @@ export async function submitRemedial(
     .eq('id', sessionId)
     .single();
 
-  if (sessErr || !session) throw new Error('Sesi tidak ditemukan');
+  if (sessErr || !session) {
+    throw new Error(`Sesi tidak ditemukan (id: ${sessionId})`);
+  }
 
-  // ── INITIATED: Create new attempt ──
+  // ── INITIATED: Create new attempt (transactional) ──
   if (status === 'INITIATED') {
     if (student.remedial_attempts >= 1) {
-      throw new Error('Maksimal kesempatan remedial hanya 1 kali.');
+      throw new Error('Maksimal kesempatan remedial hanya 1 kali. Status ini bersifat permanen.');
     }
 
     if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(student.remedial_status)) {
-      throw new Error('Remedial sudah pernah dilakukan atau dikunci.');
+      throw new Error(`Remedial sudah pernah dilakukan atau dikunci (status: ${student.remedial_status}). Status ini bersifat permanen.`);
+    }
+
+    // Validate state transition (allow NONE, FAILED → INITIATED)
+    if (student.remedial_status && !['NONE', 'FAILED'].includes(student.remedial_status)) {
+      validateStateTransition(student.remedial_status, 'INITIATED');
     }
 
     const attemptToken = generateAttemptToken(sessionId, studentId);
+    const attemptNumber = (student.remedial_attempts || 0) + 1;
+    const originalScore = (student.original_score === 0 || student.original_score == null)
+      ? student.final_score
+      : null;
 
-    // Create isolated attempt row
-    const { data: attempt, error: attemptErr } = await supabase
-      .from('gm_remedial_attempts')
-      .insert({
-        session_id: sessionId,
-        student_id: studentId,
-        attempt_number: (student.remedial_attempts || 0) + 1,
-        attempt_token: attemptToken,
-        status: 'INITIATED',
-        location,
-        photo,
-      })
-      .select('id, attempt_token')
-      .single();
+    // Use RPC for atomic insert + update
+    const attemptId = await withRetry(async () => {
+      const { data, error } = await supabase.rpc('start_remedial_attempt', {
+        p_session_id: sessionId,
+        p_student_id: studentId,
+        p_attempt_number: attemptNumber,
+        p_attempt_token: attemptToken,
+        p_location: location,
+        p_photo: photo || null,
+        p_original_score: originalScore,
+      });
 
-    if (attemptErr) throw new Error(`Gagal membuat attempt: ${attemptErr.message}`);
+      if (error) throw new Error(`RPC start_remedial_attempt: ${error.message}`);
+      if (!data) throw new Error('RPC returned null attempt ID');
+      return data as string;
+    }, `Membuat attempt remedial untuk ${studentName} (session: ${sessionId})`);
 
-    // Update student cache
-    const updateData: Record<string, unknown> = {
-      remedial_status: 'INITIATED',
-      remedial_attempts: (student.remedial_attempts || 0) + 1,
-      remedial_location: location,
-      remedial_photo: photo,
-    };
-
-    if (student.original_score === 0 || student.original_score == null) {
-      updateData.original_score = student.final_score;
-    }
-
-    await supabase.from('gm_students').update(updateData).eq('id', studentId);
+    console.log(`[Remedial] INITIATED: student=${studentName}, attemptId=${attemptId}, session=${sessionId}`);
 
     return {
       ...student,
-      ...updateData,
-      attempt_id: attempt.id,
-      attempt_token: attempt.attempt_token,
+      remedial_status: 'INITIATED',
+      remedial_attempts: attemptNumber,
+      remedial_location: location,
+      remedial_photo: photo,
+      original_score: originalScore ?? student.original_score,
+      attempt_id: attemptId,
+      attempt_token: attemptToken,
     };
   }
 
   // ── COMPLETED / CHEATED / TIMEOUT: Finalize attempt ──
 
-  // Find active attempt
-  const { data: attempt } = await supabase
-    .from('gm_remedial_attempts')
-    .select('id, attempt_token, risk_score')
-    .eq('session_id', sessionId)
-    .eq('student_id', studentId)
-    .eq('status', 'ACTIVE')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-
-  if (!attempt) {
-    throw new Error('Tidak ditemukan sesi remedial aktif.');
-  }
+  // Find active attempt with auto-recovery
+  let attempt = await findActiveAttempt(sessionId, studentId, studentName);
 
   const attemptUpdate: Record<string, unknown> = {
     status,
@@ -194,23 +229,114 @@ export async function submitRemedial(
     studentUpdate.remedial_status = 'TIMEOUT';
   }
 
-  // Persist attempt
-  await supabase
-    .from('gm_remedial_attempts')
-    .update(attemptUpdate)
-    .eq('id', attempt.id);
+  // Persist attempt with retry
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('gm_remedial_attempts')
+      .update(attemptUpdate)
+      .eq('id', attempt.id);
+    if (error) throw error;
+  }, `Menyimpan attempt (id: ${attempt.id}, student: ${studentName})`);
 
-  // Persist student cache
-  const { error: updateErr, data } = await supabase
-    .from('gm_students')
-    .update(studentUpdate)
-    .eq('id', studentId)
-    .select()
-    .single();
+  // Persist student cache with retry
+  const { error: updateErr, data } = await withRetry(async () => {
+    const result = await supabase
+      .from('gm_students')
+      .update(studentUpdate)
+      .eq('id', studentId)
+      .select()
+      .single();
+    if (result.error) throw result.error;
+    return result;
+  }, `Menyimpan data siswa (id: ${studentId}, student: ${studentName})`);
 
   if (updateErr) throw updateErr;
 
+  console.log(`[Remedial] ${status}: student=${studentName}, attemptId=${attempt.id}, session=${sessionId}`);
+
   return data;
+}
+
+async function findActiveAttempt(
+  sessionId: string,
+  studentId: string,
+  studentName: string
+): Promise<{ id: string; attempt_token: string; risk_score: number }> {
+  // 1. Try finding ACTIVE attempt
+  const { data: activeAttempt } = await supabase
+    .from('gm_remedial_attempts')
+    .select('id, attempt_token, risk_score')
+    .eq('session_id', sessionId)
+    .eq('student_id', studentId)
+    .eq('status', 'ACTIVE')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (activeAttempt) return activeAttempt;
+
+  // 2. Auto-recovery: check for INITIATED attempt and auto-activate
+  console.warn(`[Remedial Recovery] No ACTIVE attempt found for ${studentName} (session: ${sessionId}). Checking INITIATED...`);
+
+  const { data: initiatedAttempt } = await supabase
+    .from('gm_remedial_attempts')
+    .select('id, attempt_token, risk_score, session_id')
+    .eq('session_id', sessionId)
+    .eq('student_id', studentId)
+    .eq('status', 'INITIATED')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (initiatedAttempt) {
+    console.warn(`[Remedial Recovery] Found INITIATED attempt ${initiatedAttempt.id}. Auto-activating...`);
+
+    await supabase
+      .from('gm_remedial_attempts')
+      .update({ status: 'ACTIVE', started_at: new Date().toISOString() })
+      .eq('id', initiatedAttempt.id);
+
+    await supabase
+      .from('gm_students')
+      .update({ remedial_status: 'ACTIVE' })
+      .eq('id', studentId);
+
+    return initiatedAttempt;
+  }
+
+  // 3. Last resort: create recovery attempt to prevent data loss
+  console.error(`[Remedial Recovery] No attempt found at all for ${studentName} (session: ${sessionId}). Creating recovery attempt...`);
+
+  const recoveryToken = generateAttemptToken(sessionId, studentId);
+
+  const { data: recoveryAttempt, error: recoveryErr } = await supabase
+    .from('gm_remedial_attempts')
+    .insert({
+      session_id: sessionId,
+      student_id: studentId,
+      attempt_number: 1,
+      attempt_token: recoveryToken,
+      status: 'ACTIVE',
+      started_at: new Date().toISOString(),
+      location: 'RECOVERY',
+    })
+    .select('id, attempt_token, risk_score')
+    .single();
+
+  if (recoveryErr || !recoveryAttempt) {
+    throw new Error(
+      `Gagal membuat recovery attempt untuk ${studentName} (session: ${sessionId}): ${recoveryErr?.message || 'unknown'}`
+    );
+  }
+
+  await supabase
+    .from('gm_students')
+    .update({ remedial_status: 'ACTIVE' })
+    .eq('id', studentId);
+
+  console.warn(`[Remedial Recovery] Recovery attempt created: ${recoveryAttempt.id} for ${studentName}`);
+
+  return recoveryAttempt;
 }
 
 export async function reviewRemedial(
@@ -224,7 +350,7 @@ export async function reviewRemedial(
     .eq('id', studentId)
     .single();
 
-  if (fetchErr || !student) throw new Error('Siswa tidak ditemukan');
+  if (fetchErr || !student) throw new Error(`Siswa tidak ditemukan (id: ${studentId})`);
 
   if (student.is_cheated) {
     throw new Error('Tidak bisa mengoreksi nilai siswa yang terdeteksi curang');
@@ -254,7 +380,7 @@ export async function finalizeRemedial(
     .eq('id', studentId)
     .single();
 
-  if (fetchErr || !student) throw new Error('Siswa tidak ditemukan');
+  if (fetchErr || !student) throw new Error(`Siswa tidak ditemukan (id: ${studentId})`);
   if (student.is_cheated) throw new Error('Siswa curang, nilai sudah di 0');
   if (!student.teacher_reviewed) throw new Error('Guru belum mengoreksi nilai remedial');
 
@@ -281,7 +407,7 @@ export async function resetRemedial(studentId: string) {
     .eq('id', studentId)
     .single();
 
-  if (fetchErr || !student) throw new Error('Siswa tidak ditemukan');
+  if (fetchErr || !student) throw new Error(`Siswa tidak ditemukan (id: ${studentId})`);
 
   const { data: session } = await supabase
     .from('gm_sessions')
@@ -354,30 +480,42 @@ export async function activateRemedialAttempt(attemptId: string, studentId: stri
     .eq('student_id', studentId)
     .single();
 
-  if (fetchErr || !attempt) throw new Error('Attempt tidak ditemukan');
+  if (fetchErr || !attempt) {
+    throw new Error(`Attempt tidak ditemukan (attempt: ${attemptId}, student: ${studentId})`);
+  }
   
-  if (attempt.status === 'ACTIVE') return true; // Already activated
-  // Only allow activating an INITIATED attempt
-  if (attempt.status !== 'INITIATED') throw new Error(`Attempt sudah dalam status ${attempt.status}`);
+  if (attempt.status === 'ACTIVE') return true;
+
+  if (attempt.status !== 'INITIATED') {
+    throw new Error(`Attempt sudah dalam status ${attempt.status}, tidak bisa diaktivasi (attempt: ${attemptId})`);
+  }
 
   // Validate token
   const { valid } = verifyAttemptToken(token, attempt.session_id, studentId);
-  if (!valid) throw new Error('Token tidak valid atau kadaluarsa');
+  if (!valid) {
+    throw new Error(`Token tidak valid atau kadaluarsa (attempt: ${attemptId}, student: ${studentId})`);
+  }
 
-  const { error } = await supabase
-    .from('gm_remedial_attempts')
-    .update({ 
-      status: 'ACTIVE',
-      started_at: new Date().toISOString()
-    })
-    .eq('id', attemptId);
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('gm_remedial_attempts')
+      .update({ 
+        status: 'ACTIVE',
+        started_at: new Date().toISOString()
+      })
+      .eq('id', attemptId);
+    if (error) throw error;
+  }, `Mengaktivasi attempt (id: ${attemptId})`);
 
-  if (error) throw error;
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('gm_students')
+      .update({ remedial_status: 'ACTIVE' })
+      .eq('id', studentId);
+    if (error) throw error;
+  }, `Update status siswa ke ACTIVE (id: ${studentId})`);
 
-  await supabase
-    .from('gm_students')
-    .update({ remedial_status: 'ACTIVE' })
-    .eq('id', studentId);
+  console.log(`[Remedial] ACTIVATED: attempt=${attemptId}, student=${studentId}`);
 
   return true;
 }
@@ -390,11 +528,12 @@ export async function markRemedialFailed(attemptId: string, studentId: string) {
     .eq('student_id', studentId)
     .single();
 
-  if (fetchErr || !attempt) throw new Error('Attempt tidak ditemukan');
+  if (fetchErr || !attempt) {
+    throw new Error(`Attempt tidak ditemukan (attempt: ${attemptId}, student: ${studentId})`);
+  }
   
-  // Can only fail if INITIATED
   if (attempt.status !== 'INITIATED') {
-    throw new Error(`Tidak bisa mengubah status ${attempt.status} menjadi FAILED`);
+    throw new Error(`Tidak bisa mengubah status ${attempt.status} menjadi FAILED (attempt: ${attemptId})`);
   }
 
   const { error } = await supabase
@@ -407,7 +546,6 @@ export async function markRemedialFailed(attemptId: string, studentId: string) {
 
   if (error) throw error;
 
-  // Restore student attempts count to allow retry
   const { data: student } = await supabase
     .from('gm_students')
     .select('remedial_attempts')
@@ -423,6 +561,8 @@ export async function markRemedialFailed(attemptId: string, studentId: string) {
       remedial_attempts: currentAttempts 
     })
     .eq('id', studentId);
+
+  console.log(`[Remedial] FAILED: attempt=${attemptId}, student=${studentId}`);
 
   return true;
 }
