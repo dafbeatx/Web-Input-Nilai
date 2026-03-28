@@ -77,6 +77,7 @@ export default function DashboardLayer({
   const [behaviorMap, setBehaviorMap] = useState<Record<string, BehaviorRecord>>({});
   const [isCheckingSimilarity, setIsCheckingSimilarity] = useState(false);
   const [similarityReports, setSimilarityReports] = useState<any[] | null>(null);
+  const [similarityMetadata, setSimilarityMetadata] = useState<{ totalStudents: number, totalPairs: number } | null>(null);
 
   useEffect(() => {
     if (!studentClass || !isPublicView) return;
@@ -256,6 +257,7 @@ export default function DashboardLayer({
       
       if (data.reports && data.reports.length > 0) {
         setSimilarityReports(data.reports);
+        setSimilarityMetadata(data.metadata || null);
       } else {
         alert('Analisis selesai. Tidak ditemukan kemiripan jawaban yang mencurigakan antar siswa (Semua berstatus SAFE).');
         setSimilarityReports([]);
@@ -713,10 +715,15 @@ export default function DashboardLayer({
                 </div>
                 <div>
                   <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Deteksi Kemiripan Jawaban</h2>
-                  <p className="text-xs font-bold text-slate-500">Ditemukan {similarityReports.length} pasangan siswa dengan indikasi kesamaan tinggi.</p>
+                  <p className="text-[10px] md:text-xs font-bold text-slate-500">
+                    {similarityMetadata ? (
+                      <>Dianalisa: <span className="text-slate-800">{similarityMetadata.totalStudents} Siswa</span> ({similarityMetadata.totalPairs} Pasangan) &bull; </>
+                    ) : null}
+                    Ditemukan <span className="text-rose-600">{similarityReports.length} indikasi kesamaan</span>.
+                  </p>
                 </div>
               </div>
-              <button onClick={() => setSimilarityReports(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">
+              <button onClick={() => { setSimilarityReports(null); setSimilarityMetadata(null); }} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">
                 Tutup
               </button>
             </div>
@@ -744,15 +751,15 @@ export default function DashboardLayer({
                     <div className="grid grid-cols-3 gap-3">
                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-center">
                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Kemiripan PG</p>
-                         <p className="text-lg font-black text-slate-700">{(report.pg_similarity * 100).toFixed(1)}%</p>
+                         <p className="text-lg font-black text-slate-700">{((report.pg_similarity || 0) * 100).toFixed(1)}%</p>
                        </div>
                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-center">
                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Kemiripan Essay</p>
-                         <p className="text-lg font-black text-slate-700">{(report.essay_similarity * 100).toFixed(1)}%</p>
+                         <p className="text-lg font-black text-slate-700">{((report.essay_similarity || 0) * 100).toFixed(1)}%</p>
                        </div>
-                       <div className={`p-3 rounded-xl border text-center ${report.risk_level === 'HIGH_RISK' ? 'bg-rose-50 border-rose-100' : 'bg-amber-50 border-amber-100'}`}>
-                         <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${report.risk_level === 'HIGH_RISK' ? 'text-rose-400' : 'text-amber-500'}`}>Skor Akhir Identik</p>
-                         <p className={`text-xl font-black ${report.risk_level === 'HIGH_RISK' ? 'text-rose-600' : 'text-amber-600'}`}>{(report.final_score * 100).toFixed(1)}%</p>
+                       <div className="p-3 bg-rose-50 rounded-xl border border-rose-100 text-center">
+                         <p className="text-[9px] font-black uppercase tracking-widest text-rose-400 mb-1">Skor Akhir</p>
+                         <p className="text-lg font-black text-rose-600">{((report.final_score || 0) * 100).toFixed(1)}%</p>
                        </div>
                     </div>
                   </div>

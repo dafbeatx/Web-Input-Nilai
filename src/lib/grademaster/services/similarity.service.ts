@@ -14,8 +14,16 @@ export interface SimilarityReport {
 interface StudentData {
   id: string;
   name: string;
-  mcq_answers: Record<string, string>;
-  essay_scores: number[];
+  mcq_answers?: Record<string, string> | null;
+  essay_scores?: (number | null)[] | null;
+}
+
+export interface SimilarityAnalysisResult {
+  reports: SimilarityReport[];
+  metadata: {
+    totalStudents: number;
+    totalPairs: number;
+  };
 }
 
 /**
@@ -24,8 +32,10 @@ interface StudentData {
  */
 export function calculateSimilarity(studentA: StudentData, studentB: StudentData): SimilarityReport {
   // 1. Hitung PG Similarity
-  const keysA = Object.keys(studentA.mcq_answers);
-  const keysB = Object.keys(studentB.mcq_answers);
+  const mcqA = studentA.mcq_answers || {};
+  const mcqB = studentB.mcq_answers || {};
+  const keysA = Object.keys(mcqA);
+  const keysB = Object.keys(mcqB);
   
   // Ambil semua nomor soal yang diisi oleh setidaknya satu siswa
   const allQuestionNumbers = Array.from(new Set([...keysA, ...keysB]));
@@ -34,13 +44,13 @@ export function calculateSimilarity(studentA: StudentData, studentB: StudentData
   let validPgQuestions = 0;
 
   for (const qNum of allQuestionNumbers) {
-    const ansA = studentA.mcq_answers[qNum];
-    const ansB = studentB.mcq_answers[qNum];
+    const ansA = mcqA[qNum];
+    const ansB = mcqB[qNum];
     
     // Abaikan jika ada yang kosong (supaya tidak dihitung sebagai kesamaan 'kosong')
-    if (ansA && ansB) {
+    if (ansA && ansB && typeof ansA === 'string' && typeof ansB === 'string') {
       validPgQuestions++;
-      if (ansA === ansB) {
+      if (ansA.trim().toUpperCase() === ansB.trim().toUpperCase()) {
         validPgMatches++;
       }
     }
@@ -57,14 +67,17 @@ export function calculateSimilarity(studentA: StudentData, studentB: StudentData
   let validEssayMatches = 0;
   let validEssayQuestions = 0;
 
-  const maxLen = Math.max(studentA.essay_scores.length, studentB.essay_scores.length);
+  const scoresA = studentA.essay_scores || [];
+  const scoresB = studentB.essay_scores || [];
+
+  const maxLen = Math.max(scoresA.length, scoresB.length);
   for (let i = 0; i < maxLen; i++) {
-    const scoreA = studentA.essay_scores[i];
-    const scoreB = studentB.essay_scores[i];
+    const scoreA = scoresA[i];
+    const scoreB = scoresB[i];
     
     // Anggap nilai 0 adalah valid (mungkin memang salah mutlak)
     // Valid jika array punya nilai di indeks i
-    if (scoreA !== undefined && scoreB !== undefined) {
+    if (scoreA !== undefined && scoreA !== null && scoreB !== undefined && scoreB !== null) {
       validEssayQuestions++;
       if (scoreA === scoreB) {
         validEssayMatches++;
@@ -105,23 +118,25 @@ export function calculateSimilarity(studentA: StudentData, studentB: StudentData
 /**
  * Fungsi untuk menganalisis dan menyimpan kemiripan jawaban antar seluruh siswa dalam satu sesi
  */
-export async function analyzeSessionSimilarity(sessionId: string): Promise<SimilarityReport[]> {
+export async function analyzeSessionSimilarity(sessionId: string): Promise<SimilarityAnalysisResult> {
   // Fetch semua student di session
   const { data: students, error } = await supabase
     .from('gm_students')
     .select('id, name, mcq_answers, essay_scores')
-    .eq('session_id', sessionId)
-    .eq('is_deleted', false);
+    .eq('session_id', sessionId);
+    // .eq('is_deleted', false); // Optional: if is_deleted column exists or is needed
 
   if (error || !students) {
     console.error('Failed to fetch students for similarity analysis', error);
-    return [];
+    return { reports: [], metadata: { totalStudents: 0, totalPairs: 0 } };
   }
 
   const reports: SimilarityReport[] = [];
 
   // O(N^2) pairing
   const len = students.length;
+  const totalPotentialPairs = (len * (len - 1)) / 2;
+  
   for (let i = 0; i < len; i++) {
     for (let j = i + 1; j < len; j++) {
       const studentA = students[i];
@@ -129,12 +144,17 @@ export async function analyzeSessionSimilarity(sessionId: string): Promise<Simil
       
       const similarity = calculateSimilarity(studentA, studentB);
       
-      // Hanya proses yang mencurigakan (mengurangi beban DB)
+      // Hanya proses yang mencurigakan (threshold: finalScore >= 0.50 atau PG >= 70%)
       if (similarity.riskLevel !== 'SAFE') {
         reports.push(similarity);
       }
     }
   }
+
+  const metadata = {
+    totalStudents: len,
+    totalPairs: totalPotentialPairs
+  };
 
   if (reports.length > 0) {
     // Upsert ke database
@@ -166,5 +186,8 @@ export async function analyzeSessionSimilarity(sessionId: string): Promise<Simil
   }
 
   // Sort by final score desc
-  return reports.sort((a, b) => b.finalScore - a.finalScore);
+  return {
+    reports: reports.sort((a, b) => b.finalScore - a.finalScore),
+    metadata
+  };
 }

@@ -11,12 +11,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // Lakukan analisa similarity (O(N^2) pairing) dan simpan hasilnya
-    const reports = await analyzeSessionSimilarity(sessionId);
+    const result = await analyzeSessionSimilarity(sessionId);
 
     return NextResponse.json({
       message: 'Analisis kemiripan jawaban berhasil dijalankan',
-      count: reports.length,
-      reports
+      count: result.reports.length,
+      reports: result.reports,
+      metadata: result.metadata
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Terjadi kesalahan internal';
