@@ -87,64 +87,24 @@ export function getLpsLabel(lps: number): string {
   return 'Perlu Perhatian';
 }
 
-import stringSimilarity from 'string-similarity';
+import { calculateHybridEssayScore } from './services/essay-scoring.service';
 
 export interface EssayScoreResult {
   score: number;
   details: { similarity: number; score: number }[];
 }
 
-function normalizeText(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function similarityToScore(similarity: number): number {
-  if (similarity >= 0.80) return 100;
-  if (similarity >= 0.60) return 85;
-  if (similarity >= 0.40) return 70;
-  return 40;
-}
-
 export function calculateEssayScore(
   studentAnswers: string[],
   answerKeys: string[]
 ): EssayScoreResult {
-  if (!answerKeys || answerKeys.length === 0) {
-    return { score: 0, details: [] };
-  }
-
-  const details: { similarity: number; score: number }[] = [];
-
-  for (let i = 0; i < answerKeys.length; i++) {
-    const studentAns = studentAnswers[i] || '';
-    const key = answerKeys[i] || '';
-
-    if (!studentAns.trim()) {
-      details.push({ similarity: 0, score: 0 });
-      continue;
-    }
-
-    const normalizedStudent = normalizeText(studentAns);
-    const normalizedKey = normalizeText(key);
-
-    if (!normalizedKey) {
-      details.push({ similarity: 0, score: 0 });
-      continue;
-    }
-
-    const similarity = stringSimilarity.compareTwoStrings(normalizedStudent, normalizedKey);
-    const score = similarityToScore(similarity);
-    details.push({ similarity: Math.round(similarity * 100) / 100, score });
-  }
-
-  const totalScore = details.length > 0
-    ? Math.round(details.reduce((sum, d) => sum + d.score, 0) / details.length)
-    : 0;
-
-  return { score: totalScore, details };
+  const hybrid = calculateHybridEssayScore(studentAnswers, answerKeys);
+  // Map to legacy format for backward compatibility
+  return {
+    score: hybrid.score,
+    details: hybrid.details.map(d => ({
+      similarity: d.diceScore / 100,
+      score: d.weightedScore,
+    })),
+  };
 }
-

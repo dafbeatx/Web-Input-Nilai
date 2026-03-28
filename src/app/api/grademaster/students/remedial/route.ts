@@ -92,7 +92,9 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ 
         message: 'Remedial status tersimpan', 
         newFinalScore: data.final_score, 
-        status: data.remedial_status 
+        status: data.remedial_status,
+        attemptId: data.attempt_id || undefined,
+        attemptToken: data.attempt_token || undefined,
     });
 
   } catch (err: unknown) {

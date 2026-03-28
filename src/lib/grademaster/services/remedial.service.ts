@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase/client';
-import { detectCheating } from '../security';
+import { assessClientRisk, assessServerRisk, mergeRiskAssessments } from './risk-engine.service';
 import { calculateEssayScore } from '../scoring';
+import { generateAttemptToken, verifyAttemptToken } from '../token';
 
 export async function submitRemedial(
   sessionId: string,
@@ -16,7 +17,7 @@ export async function submitRemedial(
 ) {
   const { data: student, error: fetchErr } = await supabase
     .from('gm_students')
-    .select('*')
+    .select('id, name, final_score, original_score, remedial_status, remedial_attempts, mcq_answers, mcq_score, essay_score')
     .eq('id', studentId)
     .single();
 
@@ -24,92 +25,180 @@ export async function submitRemedial(
 
   const { data: session, error: sessErr } = await supabase
     .from('gm_sessions')
-    .select('*')
+    .select('id, scoring_config, kkm, remedial_timer')
     .eq('id', sessionId)
     .single();
 
   if (sessErr || !session) throw new Error('Sesi tidak ditemukan');
 
-  if (student.remedial_attempts >= 1 && status === 'STARTED') {
-    throw new Error('Maksimal kesempatan remedial hanya 1 kali.');
-  }
-  
-  if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(student.remedial_status)) {
-    throw new Error('Remedial sudah pernah disubmit atau dikunci.');
+  // ── STARTED: Create new attempt ──
+  if (status === 'STARTED') {
+    if (student.remedial_attempts >= 1) {
+      throw new Error('Maksimal kesempatan remedial hanya 1 kali.');
+    }
+
+    if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(student.remedial_status)) {
+      throw new Error('Remedial sudah pernah dilakukan atau dikunci.');
+    }
+
+    const attemptToken = generateAttemptToken(sessionId, studentId);
+
+    // Create isolated attempt row
+    const { data: attempt, error: attemptErr } = await supabase
+      .from('gm_remedial_attempts')
+      .insert({
+        session_id: sessionId,
+        student_id: studentId,
+        attempt_number: (student.remedial_attempts || 0) + 1,
+        attempt_token: attemptToken,
+        status: 'STARTED',
+        location,
+        photo,
+      })
+      .select('id, attempt_token')
+      .single();
+
+    if (attemptErr) throw new Error(`Gagal membuat attempt: ${attemptErr.message}`);
+
+    // Update student cache
+    const updateData: Record<string, unknown> = {
+      remedial_status: 'STARTED',
+      remedial_attempts: (student.remedial_attempts || 0) + 1,
+      remedial_location: location,
+      remedial_photo: photo,
+    };
+
+    if (student.original_score === 0 || student.original_score == null) {
+      updateData.original_score = student.final_score;
+    }
+
+    await supabase.from('gm_students').update(updateData).eq('id', studentId);
+
+    return {
+      ...student,
+      ...updateData,
+      attempt_id: attempt.id,
+      attempt_token: attempt.attempt_token,
+    };
   }
 
-  const updateData: Record<string, unknown> = {
-    remedial_status: status,
-    remedial_location: location,
-    remedial_photo: photo
+  // ── COMPLETED / CHEATED / TIMEOUT: Finalize attempt ──
+
+  // Find active attempt
+  const { data: attempt } = await supabase
+    .from('gm_remedial_attempts')
+    .select('id, attempt_token, risk_score')
+    .eq('session_id', sessionId)
+    .eq('student_id', studentId)
+    .eq('status', 'STARTED')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (!attempt) {
+    throw new Error('Tidak ditemukan sesi remedial aktif.');
+  }
+
+  const attemptUpdate: Record<string, unknown> = {
+    status,
+    completed_at: new Date().toISOString(),
   };
 
-  if (status === 'STARTED') {
-    updateData.remedial_attempts = (student.remedial_attempts || 0) + 1;
-    if (student.original_score === 0 || student.original_score == null) {
-       updateData.original_score = student.final_score;
-    }
-  } else if (status === 'COMPLETED' || status === 'CHEATED') {
-    const { data: allStudents } = await supabase.from('gm_students').select('*').eq('session_id', sessionId);
-    
-    const currentStudentPayload = {
-      id: student.id,
-      name: student.name,
-      mcqAnswers: student.mcq_answers,
-      remedialAnswers: answers
-    };
-    
-    const serverCheatingResult = detectCheating(currentStudentPayload, allStudents || [], session, elapsedTimeMs);
-    const combinedFlags = [...serverCheatingResult.flags, ...clientCheatingFlags];
-    const isCheated = serverCheatingResult.isCheated || clientCheatingFlags.length > 0 || status === 'CHEATED';
+  const studentUpdate: Record<string, unknown> = {
+    remedial_status: status,
+  };
 
-    // Auto Essay Scoring
+  if (status === 'COMPLETED' || status === 'CHEATED') {
+    // Risk assessment
+    const clientRisk = assessClientRisk(clientCheatingFlags);
+
+    const { data: allStudents } = await supabase
+      .from('gm_students')
+      .select('id, name, remedial_answers')
+      .eq('session_id', sessionId);
+
+    const serverRisk = assessServerRisk(
+      answers,
+      (allStudents || []).map(s => ({
+        id: s.id,
+        name: s.name,
+        remedialAnswers: s.remedial_answers || [],
+      })),
+      studentId,
+      elapsedTimeMs,
+      session.remedial_timer || 15
+    );
+
+    const combinedRisk = mergeRiskAssessments(clientRisk, serverRisk);
+    const isFlagged = combinedRisk.shouldAutoFlag || status === 'CHEATED';
+
+    // Essay scoring (server-side only)
     const answerKeys: string[] = session.scoring_config?.remedialAnswerKeys || [];
     const essayResult = calculateEssayScore(answers, answerKeys);
-    
-    updateData.remedial_answers = answers;
-    updateData.remedial_note = note;
-    updateData.is_cheated = isCheated;
-    updateData.cheating_flags = combinedFlags;
-    updateData.essay_score_auto = essayResult.score;
-    updateData.essay_score_final = essayResult.score;
-    updateData.essay_auto_details = essayResult.details;
-    
-    if (isCheated) {
-      updateData.remedial_score = 0;
-      updateData.final_score = 0;
-      updateData.final_score_locked = 0;
-      updateData.essay_score_final = 0;
-      updateData.remedial_status = 'CHEATED';
-      updateData.teacher_reviewed = false;
+
+    // Update attempt
+    attemptUpdate.answers = answers;
+    attemptUpdate.note = note;
+    attemptUpdate.risk_score = (attempt.risk_score || 0) + combinedRisk.totalScore;
+    attemptUpdate.risk_level = combinedRisk.level;
+    attemptUpdate.risk_flags = combinedRisk.flags;
+    attemptUpdate.essay_score_auto = essayResult.score;
+    attemptUpdate.essay_auto_details = essayResult.details;
+    attemptUpdate.essay_score_final = essayResult.score;
+
+    // Update student cache
+    studentUpdate.remedial_answers = answers;
+    studentUpdate.remedial_note = note;
+    studentUpdate.is_cheated = isFlagged;
+    studentUpdate.cheating_flags = combinedRisk.flags.map(f => f.event);
+    studentUpdate.essay_score_auto = essayResult.score;
+    studentUpdate.essay_score_final = essayResult.score;
+    studentUpdate.essay_auto_details = essayResult.details;
+
+    if (isFlagged) {
+      attemptUpdate.status = 'CHEATED';
+      studentUpdate.remedial_status = 'CHEATED';
+      studentUpdate.remedial_score = 0;
+      studentUpdate.final_score = 0;
+      studentUpdate.final_score_locked = 0;
+      studentUpdate.essay_score_final = 0;
+      studentUpdate.teacher_reviewed = false;
     } else {
-      updateData.remedial_score = essayResult.score;
-      
-      // If answer keys exist, we can AUTO-FINALIZE immediately
+      studentUpdate.remedial_score = essayResult.score;
+
       if (answerKeys.length > 0) {
         const sessionKkm = session.kkm || 70;
         const remedialResult = Math.min(essayResult.score, sessionKkm);
         const finalScore = Math.max(student.original_score || student.final_score || 0, remedialResult);
-        
-        updateData.final_score = finalScore;
-        updateData.final_score_locked = finalScore;
-        updateData.remedial_status = 'COMPLETED';
-        updateData.teacher_reviewed = true; // Auto-reviewed by system
+
+        studentUpdate.final_score = finalScore;
+        studentUpdate.final_score_locked = finalScore;
+        studentUpdate.remedial_status = 'COMPLETED';
+        studentUpdate.teacher_reviewed = true;
+        attemptUpdate.status = 'COMPLETED';
       } else {
-        // No keys, wait for teacher review
-        updateData.remedial_status = 'REMEDIAL';
-        updateData.teacher_reviewed = false;
+        studentUpdate.remedial_status = 'REMEDIAL';
+        studentUpdate.teacher_reviewed = false;
       }
     }
   } else if (status === 'TIMEOUT') {
-    updateData.remedial_answers = answers;
-    updateData.remedial_status = 'TIMEOUT';
+    attemptUpdate.answers = answers;
+    attemptUpdate.status = 'TIMEOUT';
+    studentUpdate.remedial_answers = answers;
+    studentUpdate.remedial_status = 'TIMEOUT';
   }
 
+  // Persist attempt
+  await supabase
+    .from('gm_remedial_attempts')
+    .update(attemptUpdate)
+    .eq('id', attempt.id);
+
+  // Persist student cache
   const { error: updateErr, data } = await supabase
     .from('gm_students')
-    .update(updateData)
-    .eq('id', student.id)
+    .update(studentUpdate)
+    .eq('id', studentId)
     .select()
     .single();
 
@@ -141,12 +230,11 @@ export async function reviewRemedial(
       essay_score_manual: essayScoreManual,
       essay_score_final: essayScoreManual,
       remedial_score: essayScoreManual,
-      teacher_reviewed: true
+      teacher_reviewed: true,
     })
     .eq('id', studentId);
 
   if (error) throw error;
-  
   return true;
 }
 
@@ -161,17 +249,9 @@ export async function finalizeRemedial(
     .single();
 
   if (fetchErr || !student) throw new Error('Siswa tidak ditemukan');
+  if (student.is_cheated) throw new Error('Siswa curang, nilai sudah di 0');
+  if (!student.teacher_reviewed) throw new Error('Guru belum mengoreksi nilai remedial');
 
-  if (student.is_cheated) {
-    throw new Error('Siswa curang, nilai sudah di 0');
-  }
-
-  if (!student.teacher_reviewed) {
-    throw new Error('Guru belum mengoreksi nilai remedial');
-  }
-
-  // The new remedial score is already calculated (essay_score_final)
-  // We cap the remedial improvement at KKM, but ensure we don't LOWER their original score
   const remedialResult = Math.min(student.essay_score_final || student.remedial_score || 0, sessionKkm);
   const finalScore = Math.max(student.original_score || student.final_score || 0, remedialResult);
 
@@ -180,12 +260,11 @@ export async function finalizeRemedial(
     .update({
       final_score: finalScore,
       final_score_locked: finalScore,
-      remedial_status: 'COMPLETED'
+      remedial_status: 'COMPLETED',
     })
     .eq('id', studentId);
 
   if (error) throw error;
-  
   return finalScore;
 }
 
@@ -198,52 +277,54 @@ export async function resetRemedial(studentId: string) {
 
   if (fetchErr || !student) throw new Error('Siswa tidak ditemukan');
 
-  // Fetch session config to get original weights for UTS calculation
   const { data: session } = await supabase
     .from('gm_sessions')
     .select('scoring_config')
     .eq('id', student.session_id)
     .single();
-    
+
   const config = session?.scoring_config || {};
   const pgWeight = (typeof config.pgWeight === 'number') ? config.pgWeight : 0.7;
   const essayWeight = (typeof config.essayWeight === 'number') ? config.essayWeight : 0.3;
-  
-  // UTS Score Recovery (Calculated from original UTS PG & Essay scores)
+
   const recoveredUtsScore = Math.round(
-    (Number(student.mcq_score || 0) * pgWeight) + 
+    (Number(student.mcq_score || 0) * pgWeight) +
     (Number(student.essay_score || 0) * essayWeight)
   );
 
-  // Restore logic: prioritize captured original_score, fallback to recovered UTS score
-  const scoreToRestore = (student.original_score != null && Number(student.original_score) !== 0) 
-    ? Number(student.original_score) 
+  const scoreToRestore = (student.original_score != null && Number(student.original_score) !== 0)
+    ? Number(student.original_score)
     : recoveredUtsScore;
+
+  // Clean up attempt data
+  await supabase
+    .from('gm_remedial_attempts')
+    .delete()
+    .eq('student_id', studentId);
 
   const { error } = await supabase
     .from('gm_students')
     .update({
-       remedial_status: null,
-       remedial_score: null,
-       remedial_answers: null,
-       remedial_note: null,
-       remedial_location: null,
-       remedial_photo: null,
-       remedial_attempts: 0,
-       is_cheated: false,
-       cheating_flags: null,
-       teacher_reviewed: false,
-       essay_score_auto: null,
-       essay_score_manual: null,
-       essay_score_final: null,
-       essay_auto_details: null,
-       final_score: scoreToRestore,
-       final_score_locked: null
+      remedial_status: null,
+      remedial_score: null,
+      remedial_answers: null,
+      remedial_note: null,
+      remedial_location: null,
+      remedial_photo: null,
+      remedial_attempts: 0,
+      is_cheated: false,
+      cheating_flags: null,
+      teacher_reviewed: false,
+      essay_score_auto: null,
+      essay_score_manual: null,
+      essay_score_final: null,
+      essay_auto_details: null,
+      final_score: scoreToRestore,
+      final_score_locked: null,
     })
     .eq('id', studentId);
 
   if (error) throw error;
-  
   return true;
 }
 

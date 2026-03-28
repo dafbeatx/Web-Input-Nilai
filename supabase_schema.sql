@@ -207,3 +207,78 @@ CREATE POLICY "gm_behaviors_anon_access" ON public.gm_behaviors
     FOR ALL TO anon
     USING (true) WITH CHECK (true);
 
+-- ============================================================
+-- Remedial Attempts (Isolated from gm_students)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.gm_remedial_attempts (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    session_id UUID NOT NULL REFERENCES public.gm_sessions(id) ON DELETE CASCADE,
+    student_id UUID NOT NULL REFERENCES public.gm_students(id) ON DELETE CASCADE,
+    attempt_number INTEGER NOT NULL DEFAULT 1,
+    attempt_token TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL DEFAULT 'STARTED',
+    answers JSONB DEFAULT '[]',
+    note TEXT,
+    location TEXT,
+    photo TEXT,
+    started_at TIMESTAMPTZ DEFAULT now(),
+    completed_at TIMESTAMPTZ,
+    risk_score INTEGER DEFAULT 0,
+    risk_level TEXT DEFAULT 'LOW',
+    risk_flags JSONB DEFAULT '[]',
+    essay_score_auto NUMERIC(5,2) DEFAULT 0,
+    essay_auto_details JSONB DEFAULT '[]',
+    essay_score_manual NUMERIC(5,2),
+    essay_score_final NUMERIC(5,2) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.gm_remedial_attempts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "gm_remedial_attempts_anon_access" ON public.gm_remedial_attempts;
+CREATE POLICY "gm_remedial_attempts_anon_access" ON public.gm_remedial_attempts
+    FOR ALL TO anon
+    USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_gm_remedial_attempts_session ON public.gm_remedial_attempts(session_id);
+CREATE INDEX IF NOT EXISTS idx_gm_remedial_attempts_student ON public.gm_remedial_attempts(student_id);
+CREATE INDEX IF NOT EXISTS idx_gm_remedial_attempts_token ON public.gm_remedial_attempts(attempt_token);
+
+-- ============================================================
+-- Activity Logs (Structured event logging per attempt)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.gm_attempt_logs (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    attempt_id UUID NOT NULL REFERENCES public.gm_remedial_attempts(id) ON DELETE CASCADE,
+    event_type TEXT NOT NULL,
+    severity TEXT DEFAULT 'LOW',
+    risk_points INTEGER DEFAULT 0,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.gm_attempt_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "gm_attempt_logs_anon_access" ON public.gm_attempt_logs;
+CREATE POLICY "gm_attempt_logs_anon_access" ON public.gm_attempt_logs
+    FOR ALL TO anon
+    USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_gm_attempt_logs_attempt ON public.gm_attempt_logs(attempt_id);
+
+-- ============================================================
+-- Proctoring Snapshots (Evidence photos per violation)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.gm_proctoring_snapshots (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    attempt_id UUID NOT NULL REFERENCES public.gm_remedial_attempts(id) ON DELETE CASCADE,
+    violation_type TEXT NOT NULL,
+    image_data TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.gm_proctoring_snapshots ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "gm_proctoring_snapshots_anon_access" ON public.gm_proctoring_snapshots;
+CREATE POLICY "gm_proctoring_snapshots_anon_access" ON public.gm_proctoring_snapshots
+    FOR ALL TO anon
+    USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_gm_proctoring_snapshots_attempt ON public.gm_proctoring_snapshots(attempt_id);

@@ -59,74 +59,32 @@ export function checkRateLimit(identifier: string): boolean {
   return true;
 }
 
-import stringSimilarity from 'string-similarity';
+import { assessClientRisk, assessServerRisk, mergeRiskAssessments } from './services/risk-engine.service';
 
+/**
+ * Legacy wrapper — delegates to risk engine.
+ * Kept for backward compatibility with existing callers.
+ */
 export function detectCheating(
-  student: any, 
-  allStudents: any[], 
-  session: any, 
+  student: any,
+  allStudents: any[],
+  session: any,
   submissionTimeMs: number
 ): { isCheated: boolean; flags: string[] } {
-  let flags: string[] = [];
+  const serverRisk = assessServerRisk(
+    student.remedialAnswers || [],
+    allStudents.map(s => ({
+      id: s.id,
+      name: s.name,
+      remedialAnswers: s.remedial_answers || s.remedialAnswers || [],
+    })),
+    student.id,
+    submissionTimeMs,
+    session.remedial_timer || 15
+  );
 
-  // 1. Fast completion
-  // Assume if completed under session.remedial_timer / 3 minutes = cheating
-  // If timer is in minutes, convert to MS
-  const remedialTimerMs = (session.remedial_timer || 15) * 60 * 1000;
-  if (submissionTimeMs < (remedialTimerMs / 3)) {
-    flags.push("Waktu Pengerjaan Sangat Cepat (Selesai < 1/3 waktu)");
-  }
-
-  // 2. Identical MCQ Answers (Compare with other students)
-  if (student.mcqAnswers && Object.keys(student.mcqAnswers).length > 0) {
-    for (const other of allStudents) {
-      if (other.id === student.id) continue;
-      
-      const otherAnswers = other.mcq_answers || other.answers;
-      if (!otherAnswers || Object.keys(otherAnswers).length === 0) continue;
-
-      let isIdentical = true;
-      for (const [qNum, ans] of Object.entries(student.mcqAnswers)) {
-        if (otherAnswers[qNum] !== ans) {
-          isIdentical = false;
-          break;
-        }
-      }
-      
-      if (isIdentical) {
-        flags.push(`Jawaban PG identik 100% dengan ${other.name}`);
-        // Add dual penalty for this severity
-        flags.push("Jawaban Identik"); 
-        break; // Count once
-      }
-    }
-  }
-
-  // 3. High Essay Similarity > 0.9 with other students' answers
-  if (student.remedialAnswers && student.remedialAnswers.length > 0) {
-    for (const other of allStudents) {
-      if (other.id === student.id) continue;
-      
-      const otherEssays = other.remedial_answers || other.remedialAnswers;
-      if (!otherEssays || otherEssays.length === 0) continue;
-
-      for (let i = 0; i < student.remedialAnswers.length; i++) {
-        const myAns = student.remedialAnswers[i] || "";
-        const theirAns = otherEssays[i] || "";
-        
-        if (myAns.trim() && theirAns.trim()) {
-          const sim = stringSimilarity.compareTwoStrings(myAns.toLowerCase(), theirAns.toLowerCase());
-          if (sim > 0.9) {
-            flags.push(`Kemiripan Essay tinggi (>0.9) dengan ${other.name} (Soal ${i + 1})`);
-            flags.push("Kemiripan Essay"); // Dual penalty
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  // Determine if cheated
-  const isCheated = flags.length >= 3;
-  return { isCheated, flags };
+  return {
+    isCheated: serverRisk.shouldAutoFlag,
+    flags: serverRisk.flags.map(f => f.event),
+  };
 }
