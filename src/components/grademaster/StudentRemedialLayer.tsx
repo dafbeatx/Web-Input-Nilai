@@ -1042,8 +1042,11 @@ export default function StudentRemedialLayer({
           }
 
           clearRemedialSession();
-          setStep(status);
-          if (status === 'COMPLETED') {
+          
+          const finalStatus = data.status || status;
+          setStep(finalStatus);
+          
+          if (finalStatus === 'COMPLETED') {
             setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Selamat, Anda LULUS KKM!", type: "success" });
             const fScore = data.newFinalScore || data.final_score;
             setFinalScore(fScore);
@@ -1055,9 +1058,9 @@ export default function StudentRemedialLayer({
                 setRemainingStudents(d.students || []);
                 setSessionCreatedAt(d.sessionCreatedAt);
               });
-          } else if (status === 'CHEATED') {
+          } else if (finalStatus === 'CHEATED') {
             let photo = capturePhoto();
-            const cheatedReason = explicitReason || allFlags.join(', ') || 'Pelanggaran proctoring';
+            const cheatedReason = explicitReason || allFlags.join(', ') || 'Pelanggaran proctoring terdeteksi oleh sistem';
             compressImage(photo || "").then(compressed => {
               sendTelegramNotify('CHEATED', compressed || photo || undefined, cheatedReason);
             });
@@ -1362,6 +1365,7 @@ export default function StudentRemedialLayer({
       setWarningCount(0);
       setTabWarningCount(0);
       setBackPressCount(0);
+      setClientCheatingFlags([]); // Clear stale flags so they aren't sent on submit
       hasTriggeredCheatingRef.current = false;
       setStep('EXAM');
       setToast({ message: '⚠️ Ini adalah kesempatan terakhir Anda. Pelanggaran berikutnya akan langsung didiskualifikasi!', type: 'error' });
