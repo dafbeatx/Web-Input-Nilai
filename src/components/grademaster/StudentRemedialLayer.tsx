@@ -1021,6 +1021,10 @@ export default function StudentRemedialLayer({
       // EMERGENCY SAVE: Immediate save when time is up to ensure last typed characters are not lost
       const current = loadRemedialSession();
       saveRemedialSession({
+        sessionId,
+        studentName,
+        startedAt: current?.startedAt || startedAtRef.current || Date.now(),
+        refreshCount: current?.refreshCount || 0,
         ...current,
         answers,
         note,

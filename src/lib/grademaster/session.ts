@@ -18,6 +18,7 @@ export interface RemedialSession {
   examMode?: 'STRICT' | 'LIMITED';
   cameraStatus?: 'ACTIVE' | 'FAILED';
   extendedTime?: number;
+  lastUpdated?: number;
 }
 
 export function saveRemedialSession(data: RemedialSession): void {
