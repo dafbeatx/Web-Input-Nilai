@@ -79,7 +79,7 @@ export async function submitRemedial(
     .single();
 
   if (fetchErr || !student) {
-    throw new Error(`Siswa tidak ditemukan (id: ${studentId}, session: ${sessionId})`);
+    throw new Error('RESET_REQUIRED');
   }
 
   const { data: session, error: sessErr } = await supabase

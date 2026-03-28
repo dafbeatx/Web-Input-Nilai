@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
       .single();
 
     if (error || !student) {
-      return NextResponse.json({ error: 'Siswa tidak ditemukan' }, { status: 404 });
+      return NextResponse.json({ error: 'RESET_REQUIRED', message: 'Siswa tidak ditemukan' }, { status: 400 });
     }
 
     let currentStatus = student.remedial_status;
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
       .eq('name', studentName)
       .single();
         
-      if (!student) return NextResponse.json({ error: 'Siswa tidak ditemukan' }, { status: 404 });
+      if (!student) return NextResponse.json({ error: 'RESET_REQUIRED', message: 'Siswa tidak ditemukan' }, { status: 400 });
       finalStudentId = student.id;
     }
 
