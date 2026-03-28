@@ -57,6 +57,14 @@ export async function POST(req: NextRequest) {
                `📝 Aktivitas: <b>${message}</b>\n` +
                `⏰ Waktu: ${timestamp}${deviceStr}`;
         break;
+      case 'PROCTORING':
+        text = `📸 <b>LIVE PROCTORING</b>\n\n` +
+               `👤 Siswa: <b>${studentName}</b>\n` +
+               `🏫 Kelas: ${className}\n` +
+               `📚 Mapel: ${subject}\n` +
+               `⏰ Waktu: ${timestamp}${deviceStr}\n\n` +
+               `<i>(Sistem otomatis mengambil foto setiap 10 detik)</i>`;
+        break;
       default:
         text = message || 'Pesan otomatis dari GradeMaster';
     }

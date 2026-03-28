@@ -810,7 +810,20 @@ export default function StudentRemedialLayer({
       return;
     }
     const timerId = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-    return () => clearInterval(timerId);
+    
+    // 10s Auto-Snap for Proctoring (Telegram)
+    const proctorInterval = setInterval(async () => {
+      const snap = capturePhoto();
+      if (snap) {
+        const compressed = await compressImage(snap);
+        sendTelegramNotify('PROCTORING', compressed, `📸 Auto-Snap (Interval 10 Detik)`);
+      }
+    }, 10000);
+
+    return () => {
+      clearInterval(timerId);
+      clearInterval(proctorInterval);
+    };
   }, [step, timeLeft]);
 
   // Anti-cheat mechanism — 3 warnings before ban
@@ -1403,45 +1416,47 @@ export default function StudentRemedialLayer({
 
       <div className={`privacy-mode ${isTabHidden && step === 'EXAM' ? 'invisible' : ''}`}>
         {/* Fixed Responsive Camera Bubble */}
-      <div
-        className="fixed z-50 rounded-xl md:rounded-2xl overflow-hidden border-2 md:border-4 border-slate-800 shadow-2xl bg-slate-900 pointer-events-none top-3 right-3 w-28 h-20 lg:top-auto lg:bottom-4 lg:right-4 lg:w-40 lg:h-28"
-      >
-        <div className="w-full h-full relative">
-            <ProctoringCamera 
-              ref={videoRef}
-              onViolation={handleCameraViolation} 
-            />
-          </div>
-        
-        {/* Timer Label */}
-        <div className="absolute top-1 left-1 bg-black/70 text-white font-mono text-[9px] md:text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm tracking-wider font-bold">
-          ⏱️ {formatTime(timeLeft)}
-        </div>
-
-        {/* Monitoring Label */}
-        <div className="absolute bottom-1 left-1 flex items-center gap-1 bg-black/60 px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm">
-           <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${examMode === 'STRICT' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-           <span className={`text-[7px] md:text-[8px] font-black uppercase tracking-wider ${examMode === 'STRICT' ? 'text-emerald-300' : 'text-amber-300'}`}>
-             {examMode === 'STRICT' ? 'Strict Mode' : 'Limited Mode'}
-           </span>
-        </div>
-
-        {/* Penalty Info (if any) */}
-        {(warningCount > 0 || tabWarningCount > 0) && (
-          <div className="absolute top-1 right-1 flex flex-col gap-0.5 items-end">
-            {tabWarningCount > 0 && (
-              <span className="text-[7px] md:text-[8px] bg-rose-500/90 text-white px-1 rounded font-bold backdrop-blur-sm">
-                TAB: {tabWarningCount}/{MAX_TAB_WARNINGS}
-              </span>
-            )}
-            {warningCount > 0 && (
-              <span className="text-[7px] md:text-[8px] bg-rose-500/90 text-white px-1 rounded font-bold backdrop-blur-sm">
-                CAM: {warningCount}/10
-              </span>
+        {step === 'EXAM' && (
+          <div
+            className="fixed z-50 rounded-xl md:rounded-2xl overflow-hidden border-2 md:border-4 border-slate-800 shadow-2xl bg-slate-900 pointer-events-none top-3 right-3 w-28 h-20 lg:top-auto lg:bottom-4 lg:right-4 lg:w-40 lg:h-28 animate-in slide-in-from-right duration-500"
+          >
+            <div className="w-full h-full relative">
+                <ProctoringCamera 
+                  ref={videoRef}
+                  onViolation={handleCameraViolation} 
+                />
+              </div>
+            
+            {/* Timer Label */}
+            <div className="absolute top-1 left-1 bg-black/70 text-white font-mono text-[9px] md:text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm tracking-wider font-bold">
+              ⏱️ {formatTime(timeLeft)}
+            </div>
+    
+            {/* Monitoring Label */}
+            <div className="absolute bottom-1 left-1 flex items-center gap-1 bg-black/60 px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm">
+               <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${examMode === 'STRICT' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+               <span className={`text-[7px] md:text-[8px] font-black uppercase tracking-wider ${examMode === 'STRICT' ? 'text-emerald-300' : 'text-amber-300'}`}>
+                 {examMode === 'STRICT' ? 'Strict Mode' : 'Limited Mode'}
+               </span>
+            </div>
+    
+            {/* Penalty Info (if any) */}
+            {(warningCount > 0 || tabWarningCount > 0) && (
+              <div className="absolute top-1 right-1 flex flex-col gap-0.5 items-end">
+                {tabWarningCount > 0 && (
+                  <span className="text-[7px] md:text-[8px] bg-rose-500/90 text-white px-1 rounded font-bold backdrop-blur-sm">
+                    TAB: {tabWarningCount}/{MAX_TAB_WARNINGS}
+                  </span>
+                )}
+                {warningCount > 0 && (
+                  <span className="text-[7px] md:text-[8px] bg-rose-500/90 text-white px-1 rounded font-bold backdrop-blur-sm">
+                    CAM: {warningCount}/10
+                  </span>
+                )}
+              </div>
             )}
           </div>
         )}
-      </div>
 
       {/* Main Exam Content */}
       <div className="p-3 sm:p-5 lg:p-8 max-w-4xl mx-auto animate-in pt-8 md:pt-10">
