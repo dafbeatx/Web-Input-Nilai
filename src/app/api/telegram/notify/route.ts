@@ -78,15 +78,19 @@ export async function POST(req: NextRequest) {
         text = message || 'Pesan otomatis dari GradeMaster';
     }
 
-    let photoBlob: Blob | undefined;
+    let photoFile: File | Blob | undefined;
     if (photo && photo.startsWith('data:image')) {
       const base64Data = photo.split(',')[1];
       // Use Buffer for Node.js compatibility if available, else fallback
       const buffer = Buffer.from(base64Data, 'base64');
-      photoBlob = new Blob([buffer], { type: 'image/jpeg' });
+      try {
+        photoFile = new File([buffer], 'student_photo.jpg', { type: 'image/jpeg' });
+      } catch (e) {
+        photoFile = new Blob([buffer], { type: 'image/jpeg' });
+      }
     }
 
-    await sendAdminNotification(text, photoBlob);
+    await sendAdminNotification(text, photoFile);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

@@ -88,6 +88,7 @@ export default function StudentRemedialLayer({
   const [sessionCreatedAt, setSessionCreatedAt] = useState<string | null>(null);
   const [finalScore, setFinalScore] = useState<number | null>(null);
   const hasSubmittedRef = useRef(false);
+  const hasSentStartNotifRef = useRef(false);
   const wakeLockRef = useRef<any>(null); // Screen Wake Lock
 
   const handleExit = () => {
@@ -811,21 +812,34 @@ export default function StudentRemedialLayer({
       examMode,
       cameraStatus,
     });
-    
-    // Send Start Notification with Photo
-    const net = getNetworkInfo();
-    if (net.includes('2g') || net.includes('3g')) {
-      setToast({ message: "Koneksi lambat terdeteksi. Harap bersabar saat mengunggah jawaban.", type: "error" });
-    }
-    sendTelegramNotify('START', capturedImg);
-
+    // Initialize session and set step to EXAM
     setIsSubmitting(false);
     setStep('EXAM');
   };
 
-  // Timer logic
+  // Timer & Initial Setup logic
   useEffect(() => {
     if (step !== 'EXAM') return;
+
+    // Auto-capture START photo when exam interface is fully rendered
+    if (!hasSentStartNotifRef.current) {
+      hasSentStartNotifRef.current = true;
+      setTimeout(async () => {
+        let snap = capturePhoto();
+        if (!snap) {
+           await new Promise(r => setTimeout(r, 1000));
+           snap = capturePhoto();
+        }
+        const compressed = snap ? await compressImage(snap) : undefined;
+        sendTelegramNotify('START', compressed);
+        
+        const net = getNetworkInfo();
+        if (net.includes('2g') || net.includes('3g')) {
+          setToast({ message: "Koneksi lambat terdeteksi. Harap bersabar saat mengunggah jawaban.", type: "error" });
+        }
+      }, 2500); // 2.5s delay to ensure camera stream is painting after mounting
+    }
+
     if (timeLeft <= 0) {
       handleStatusUpdate('TIMEOUT');
       return;
