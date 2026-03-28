@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function PUT(req: NextRequest) {
+export async function POST(req: NextRequest) {
   let body: Record<string, any> | null = null;
   try {
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
@@ -129,10 +129,14 @@ export async function PUT(req: NextRequest) {
     });
 
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Gagal menyimpan data remedial';
+    const message = err instanceof Error ? err.message : String(err);
     const studentRef = body?.studentName || body?.studentId || 'unknown';
     console.error(`[Remedial API Error] student=${studentRef}, session=${body?.sessionId}, status=${body?.status}, error=${message}`);
     
+    if (message === 'RESET_REQUIRED') {
+      return NextResponse.json({ error: 'RESET_REQUIRED', message: 'Sesi anda telah direset. Silakan mulai ulang.' }, { status: 400 });
+    }
+
     const isPermenant = message.includes('permanen') || message.includes('sudah pernah');
     return NextResponse.json(
       { error: message }, 
