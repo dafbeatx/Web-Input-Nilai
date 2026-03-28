@@ -66,6 +66,7 @@ export default function StudentRemedialLayer({
   const hasTriggeredCheatingRef = useRef(false);
   const startedAtRef = useRef<number>(0);
   const isRefreshingRef = useRef(false);
+  const isDeploymentReloadRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [backPressCount, setBackPressCount] = useState(0);
   const [isTabHidden, setIsTabHidden] = useState(false);
@@ -227,7 +228,7 @@ export default function StudentRemedialLayer({
 
     // Error Logging: Detect if user closes the tab during exam (Abandoned)
     const handleAbandoned = () => {
-      if (!isRefreshingRef.current && !isSubmittingRef.current) {
+      if (!isRefreshingRef.current && !isSubmittingRef.current && !isDeploymentReloadRef.current) {
         const payload = JSON.stringify({
           studentName, className, subject, event: 'ACTIVITY', message: 'Siswa menutup browser / Hard Close', deviceInfo: getDeviceInfo()
         });
@@ -315,6 +316,17 @@ export default function StudentRemedialLayer({
       isRefreshingRef.current = true;
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Detect deployment reload flag set by DeploymentGuard
+    if (typeof window !== 'undefined') {
+      const deployFlag = localStorage.getItem('gm_deployment_reload_active');
+      if (deployFlag === 'true') {
+        isDeploymentReloadRef.current = true;
+        isRefreshingRef.current = true;
+        setTimeout(() => { isDeploymentReloadRef.current = false; }, 5000);
+      }
+    }
+
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
@@ -573,7 +585,7 @@ export default function StudentRemedialLayer({
     const handleVisibilityChange = () => {
       if (document.hidden) {
          setIsTabHidden(true);
-         if (!isRefreshingRef.current) {
+         if (!isRefreshingRef.current && !isDeploymentReloadRef.current) {
            sendActivityLog("Meninggalkan layar ujian (Tab Switch / Task Switcher)");
            handleTabLeave();
          }
@@ -585,7 +597,7 @@ export default function StudentRemedialLayer({
 
     const handleBlur = () => {
       setTimeout(() => {
-        if (!isRefreshingRef.current && document.hidden) {
+        if (!isRefreshingRef.current && !isDeploymentReloadRef.current && document.hidden) {
            sendActivityLog("Halaman kehilangan fokus (Blur)");
            handleTabLeave();
         }
