@@ -292,7 +292,7 @@ export default function DashboardLayer({
         )}
         {!isPublicView && isDemo && (
           <div className="mt-4 flex flex-wrap justify-center gap-3">
-             {gradedStudents.length === 0 && (
+             {(gradedStudents.length === 0 || analytics.avgScore === 0) && (
                <button 
                  onClick={handleSeedDemo}
                  disabled={isSeeding}
