@@ -226,8 +226,16 @@ export async function submitRemedial(
 
         studentUpdate.final_score = finalScore;
         studentUpdate.final_score_locked = finalScore;
-        studentUpdate.remedial_status = 'COMPLETED';
-        studentUpdate.teacher_reviewed = true;
+        
+        // Conditional Retry: If still below KKM, allow another attempt by NOT setting to COMPLETED
+        if (remedialResult < sessionKkm) {
+          studentUpdate.remedial_status = 'REMEDIAL';
+          studentUpdate.teacher_reviewed = false;
+        } else {
+          studentUpdate.remedial_status = 'COMPLETED';
+          studentUpdate.teacher_reviewed = true;
+        }
+        
         attemptUpdate.status = 'COMPLETED';
       } else {
         studentUpdate.remedial_status = 'REMEDIAL';

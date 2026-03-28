@@ -1295,18 +1295,40 @@ export default function StudentRemedialLayer({
             ) : isTimeout ? (
                <>Waktu pengerjaan remedial Anda sudah habis. Formulir terkunci dan nilai belum memenuhi batas KKM.</>
             ) : (
-               <>Jawaban remedial Anda telah tersimpan ke dalam sistem database sekolah. Skor akhir Anda: <strong className="text-emerald-600 font-black text-lg">{finalScore}</strong></>
+               <>
+                 {finalScore !== null && finalScore < 70 ? (
+                   <>
+                     <span className="text-rose-600 block mb-2 font-black uppercase text-xs tracking-widest">⚠️ Belum Mencapai KKM</span>
+                     Nilai kamu (<strong className="text-rose-600">{finalScore}</strong>) masih kurang memenuhi KKM (70). 
+                     Silakan pelajari lagi dan <strong>coba lagi</strong> untuk memperbaikinya.
+                   </>
+                 ) : (
+                   <>Jawaban remedial Anda telah tersimpan ke dalam sistem database sekolah. Skor akhir Anda: <strong className="text-emerald-600 font-black text-lg">{finalScore}</strong></>
+                 )}
+               </>
             )}
           </p>
 
           {isCompleted && (
             <div className="mt-8 mb-8">
-               <button
-                 onClick={handleShare}
-                 className="flex items-center justify-center gap-2 w-full py-4 bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all mb-6"
-               >
-                 <Send size={16} /> Bagikan ke Teman Class
-               </button>
+               {finalScore !== null && finalScore < 70 ? (
+                 <button
+                    onClick={() => {
+                      clearRemedialSession();
+                      window.location.reload();
+                    }}
+                    className="flex items-center justify-center gap-2 w-full py-4 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all mb-6"
+                 >
+                   <Clock size={16} /> Coba Lagi Sekarang
+                 </button>
+               ) : (
+                 <button
+                   onClick={handleShare}
+                   className="flex items-center justify-center gap-2 w-full py-4 bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all mb-6"
+                 >
+                   <Send size={16} /> Bagikan ke Teman Class
+                 </button>
+               )}
 
                {remainingStudents.length > 0 && (
                  <div className="text-left bg-slate-50 border border-slate-100 rounded-2xl p-5 overflow-hidden">
