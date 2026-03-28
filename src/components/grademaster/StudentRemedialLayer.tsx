@@ -63,6 +63,9 @@ export default function StudentRemedialLayer({
   const [attemptToken, setAttemptToken] = useState<string | null>(null);
   const [currentStudentId, setCurrentStudentId] = useState<string | null>(null);
   const hasActivatedRef = useRef(false);
+  const [cameraRetryCount, setCameraRetryCount] = useState(0);
+  const [cameraErrorDetail, setCameraErrorDetail] = useState<string | null>(null);
+  const MAX_CAMERA_RETRIES = 3;
   
   const [warningCount, setWarningCount] = useState(0);
   const [tabWarningCount, setTabWarningCount] = useState(0);
@@ -249,19 +252,56 @@ export default function StudentRemedialLayer({
     };
   }, [step]);
 
+  const getCameraErrorMessage = (err: any): string => {
+    const name = err?.name || '';
+    if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+      return 'Izin kamera ditolak. Buka Pengaturan Browser → Izin Situs → Kamera → Izinkan, lalu coba lagi.';
+    }
+    if (name === 'NotReadableError' || name === 'TrackStartError') {
+      return 'Kamera sedang dipakai aplikasi lain (misal WhatsApp Video, Zoom, atau HP sedang merekam). Tutup aplikasi tersebut lalu coba lagi.';
+    }
+    if (name === 'AbortError') {
+      return 'Permintaan kamera dibatalkan oleh sistem. Kemungkinan ada balon/overlay dari aplikasi lain yang menghalangi. Tutup semua overlay lalu coba lagi.';
+    }
+    if (name === 'OverconstrainedError') {
+      return 'Kamera perangkat Anda tidak mendukung resolusi yang diminta. Hubungi guru untuk bantuan.';
+    }
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+      return 'Tidak ditemukan kamera di perangkat ini. Pastikan perangkat memiliki kamera depan.';
+    }
+    if (name === 'SecurityError') {
+      return 'Browser memblokir akses kamera karena halaman dianggap tidak aman. Pastikan Anda mengakses situs via HTTPS.';
+    }
+    return `Gagal mengakses kamera (${name || 'unknown'}). Pastikan tidak ada aplikasi lain yang menggunakan kamera, lalu coba lagi.`;
+  };
+
   // Check permissions (camera + location)
   const checkPermissions = async () => {
     setCheckingPerms(true);
+    setCameraErrorDetail(null);
     let camReady = false;
     let locReady = false;
 
-    // Check camera
+    // Check camera with granular error handling
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 160, height: 120, facingMode: 'user' } });
       stream.getTracks().forEach(t => t.stop());
       camReady = true;
-    } catch {
+      setCameraRetryCount(0);
+      setCameraErrorDetail(null);
+    } catch (err: any) {
       camReady = false;
+      const detail = getCameraErrorMessage(err);
+      setCameraErrorDetail(detail);
+      setCameraRetryCount(prev => {
+        const next = prev + 1;
+        if (next >= MAX_CAMERA_RETRIES) {
+          sendTelegramNotify('ACTIVITY', undefined, `Kamera gagal ${next}x (${err?.name}). Siswa dialihkan keluar.`);
+        }
+        return next;
+      });
+      // This is a DEVICE error, NOT cheating — never flag
+      sendTelegramNotify('ACTIVITY', undefined, `Kamera error: ${err?.name || 'unknown'} (percobaan ${cameraRetryCount + 1}/${MAX_CAMERA_RETRIES})`);
     }
     setCameraOk(camReady);
 
@@ -937,27 +977,64 @@ export default function StudentRemedialLayer({
             </div>
           </div>
 
-          {!allPermsOk && (
-            <button
-              onClick={checkPermissions}
-              disabled={checkingPerms}
-              className="w-full py-3 bg-amber-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all mb-3 flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {checkingPerms ? (
-                <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Memeriksa...</>
-              ) : (
-                <><AlertTriangle size={14} /> Periksa Izin Kamera & Lokasi</>
-              )}
-            </button>
+          {/* Camera error detail banner */}
+          {cameraErrorDetail && !cameraOk && (
+            <div className="mb-4 p-4 bg-rose-50 border-2 border-rose-200 rounded-2xl">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="text-rose-500 shrink-0 mt-0.5" size={16} />
+                <div>
+                  <p className="text-xs font-black text-rose-700 uppercase tracking-wider mb-1">Kamera Tidak Dapat Diakses</p>
+                  <p className="text-xs text-rose-600 font-bold leading-relaxed">{cameraErrorDetail}</p>
+                  {cameraRetryCount > 0 && (
+                    <p className="text-[10px] text-rose-400 font-bold mt-2">
+                      Percobaan: {cameraRetryCount}/{MAX_CAMERA_RETRIES}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
 
-          <button
-            onClick={startExam}
-            disabled={isSubmitting || !allPermsOk}
-            className="w-full py-4 bg-indigo-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
-          >
-            {isSubmitting ? 'MEMPROSES...' : !allPermsOk ? '⛔ AKTIFKAN IZIN TERLEBIH DAHULU' : 'SAYA MENGERTI, MULAI REMEDIAL'}
-          </button>
+          {cameraRetryCount >= MAX_CAMERA_RETRIES ? (
+            <>
+              <div className="mb-4 p-4 bg-slate-900 rounded-2xl text-center">
+                <p className="text-xs text-white font-bold mb-1">Kamera gagal diakses setelah {MAX_CAMERA_RETRIES} percobaan.</p>
+                <p className="text-[10px] text-slate-400 font-bold">Silakan hubungi guru Anda untuk bantuan atau gunakan perangkat lain.</p>
+              </div>
+              <button
+                onClick={onBack}
+                className="w-full py-4 bg-slate-700 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+              >
+                <ArrowLeft size={14} /> Kembali ke Halaman Utama
+              </button>
+            </>
+          ) : (
+            <>
+              {!allPermsOk && (
+                <button
+                  onClick={checkPermissions}
+                  disabled={checkingPerms}
+                  className="w-full py-3 bg-amber-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all mb-3 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {checkingPerms ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Memeriksa...</>
+                  ) : cameraRetryCount > 0 ? (
+                    <><AlertTriangle size={14} /> Coba Lagi ({cameraRetryCount}/{MAX_CAMERA_RETRIES})</>
+                  ) : (
+                    <><AlertTriangle size={14} /> Periksa Izin Kamera & Lokasi</>
+                  )}
+                </button>
+              )}
+
+              <button
+                onClick={startExam}
+                disabled={isSubmitting || !allPermsOk}
+                className="w-full py-4 bg-indigo-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
+              >
+                {isSubmitting ? 'MEMPROSES...' : !allPermsOk ? '⛔ AKTIFKAN IZIN TERLEBIH DAHULU' : 'SAYA MENGERTI, MULAI REMEDIAL'}
+              </button>
+            </>
+          )}
         </div>
       </div>
     );
