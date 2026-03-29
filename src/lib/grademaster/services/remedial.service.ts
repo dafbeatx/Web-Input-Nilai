@@ -6,7 +6,7 @@ import { generateAttemptToken, verifyAttemptToken } from '../token';
 const VALID_TRANSITIONS: Record<string, string[]> = {
   NONE: ['INITIATED'],
   INITIATED: ['ACTIVE', 'FAILED'],
-  ACTIVE: ['COMPLETED', 'CHEATED', 'TIMEOUT'],
+  ACTIVE: ['COMPLETED', 'CHEATED', 'TIMEOUT', 'AI_BOT_DETECTED'],
   FAILED: ['INITIATED'],
 };
 

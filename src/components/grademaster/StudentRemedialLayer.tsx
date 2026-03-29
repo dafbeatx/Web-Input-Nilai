@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ToastType } from '@/lib/grademaster/types';
-import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin, User, Star, ShieldCheck, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin, User, Star, ShieldCheck, ArrowRight, Cpu, MonitorOff, Play } from 'lucide-react';
 import ProctoringCamera from './ProctoringCamera';
 import { saveRemedialSession, loadRemedialSession, clearRemedialSession } from '@/lib/grademaster/session';
 
@@ -22,7 +22,7 @@ interface StudentRemedialLayerProps {
   setToast: (t: ToastType) => void;
 }
 
-type RemedialStep = 'RULES' | 'INFO' | 'GUIDE' | 'EXAM' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT' | 'SECOND_CHANCE';
+type RemedialStep = 'RULES' | 'INFO' | 'GUIDE' | 'EXAM' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT' | 'SECOND_CHANCE' | 'AI_BOT_DETECTED';
 
 const Badge = ({ children, color = 'indigo' }: { children: React.ReactNode; color?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'rose' }) => {
   const colors = {
@@ -123,6 +123,11 @@ export default function StudentRemedialLayer({
   const [showFiveMinWarning, setShowFiveMinWarning] = useState(false);
   const hasShownFiveMinWarningRef = useRef(false);
   const [isPenaltyApplied, setIsPenaltyApplied] = useState(false);
+  
+  // AI Bot & Screen Overlay Detection
+  const [showAiBotWarning, setShowAiBotWarning] = useState(false);
+  const [aiCountdown, setAiCountdown] = useState(10);
+  const aiDetectionRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleExit = () => {
     clearRemedialSession();
@@ -1305,8 +1310,19 @@ export default function StudentRemedialLayer({
     };
 
     const handleBlur = () => {
+      // PROCTORING: If focus is lost, check for AI overlay presence
+      // Delay check slightly to prevent false positive on quick system blips
       setTimeout(() => {
-        if (!isRefreshingRef.current && !isDeploymentReloadRef.current && document.hidden) {
+        if (step !== 'EXAM' || isSubmitting || isRefreshingRef.current) return;
+        
+        // If the window loses focus but the document IS NOT hidden, 
+        // it strongly suggests an overlay (AI Layer) is covering the window.
+        if (!document.hasFocus() && !document.hidden && !showAiBotWarning) {
+           setShowAiBotWarning(true);
+           setAiCountdown(10);
+           sendActivityLog("TERDETEKSI OVERLAY/LAYER (AI BOT POSSIBLE)");
+        } else if (document.hidden) {
+           // Normal tab leaving behavior
            sendActivityLog("Halaman kehilangan fokus (Blur)");
            handleTabLeave();
         }
@@ -1350,6 +1366,16 @@ export default function StudentRemedialLayer({
 
     window.addEventListener("offline", handleOffline);
     window.addEventListener("online", handleOnline);
+    
+    // PiP Detector: Polling for Picture-in-Picture usage (usually AI bot overlays)
+    // We don't use PiP for our camera, so any PiP is a violation
+    const pipCheck = setInterval(() => {
+      if (step === 'EXAM' && document.pictureInPictureElement && !showAiBotWarning) {
+        setShowAiBotWarning(true);
+        setAiCountdown(10);
+        sendActivityLog("TERDETEKSI PICTURE-IN-PICTURE (AI SCREEN LAYER)");
+      }
+    }, 2000);
 
     return () => {
       window.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -1358,8 +1384,30 @@ export default function StudentRemedialLayer({
       window.removeEventListener("paste", handleCopyPaste);
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);
+      clearInterval(pipCheck);
     };
-  }, [step, setToast]);
+  }, [step, setToast, showAiBotWarning, isSubmitting]);
+
+  // AI Warning Countdown Timer
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (showAiBotWarning && aiCountdown > 0) {
+      timer = setInterval(() => {
+        setAiCountdown(prev => prev - 1);
+        
+        // Secondary check: if they actually return focus/close PiP, hide warning early? 
+        // No, let's keep it strict for 10s or until they finish.
+        if (document.hasFocus() && !document.pictureInPictureElement) {
+           // If they fix the issue, we can potentially release them after 3s of good behavior
+        }
+      }, 1000);
+    } else if (showAiBotWarning && aiCountdown === 0) {
+      // LOCKOUT: Time is up and violation still detected
+      setShowAiBotWarning(false);
+      handleStatusUpdate('CHEATED', 'Terdeteksi penggunaan AI Screen Layer/Overlay (Auto-Lock)');
+    }
+    return () => clearInterval(timer);
+  }, [showAiBotWarning, aiCountdown]);
 
   const handleExtendTime = async () => {
     const fixedPoints = 10;
@@ -1511,8 +1559,6 @@ export default function StudentRemedialLayer({
           clearRemedialSession();
           
           const finalStatus = data.status || status;
-          setStep(finalStatus);
-          
           if (finalStatus === 'COMPLETED') {
             setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Selamat, Anda LULUS KKM!", type: "success" });
             const fScore = data.newFinalScore || data.final_score;
@@ -1525,11 +1571,13 @@ export default function StudentRemedialLayer({
                 setRemainingStudents(d.students || []);
                 setSessionCreatedAt(d.sessionCreatedAt);
               });
-          } else if (finalStatus === 'CHEATED') {
+          } else if (finalStatus === 'CHEATED' || finalStatus === 'AI_BOT_DETECTED') {
             let photo = capturePhoto();
             const cheatedReason = explicitReason || allFlags.join(', ') || 'Pelanggaran proctoring terdeteksi oleh sistem';
+            const eventType = finalStatus === 'AI_BOT_DETECTED' ? 'AI_BOT_DETECTED' : 'CHEATED';
+            
             compressImage(photo || "").then(compressed => {
-              sendTelegramNotify('CHEATED', compressed || photo || undefined, cheatedReason);
+              sendTelegramNotify(eventType, compressed || photo || undefined, cheatedReason);
             });
           }
           setIsSubmitting(false);
@@ -2265,6 +2313,62 @@ export default function StudentRemedialLayer({
           body { display: none !important; }
         }
       `}</style>
+
+      {/* AI Bot Warning Modal (The most urgent) */}
+      {showAiBotWarning && step === 'EXAM' && (
+        <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-xl animate-in fade-in duration-300">
+           <div className="bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-[0_0_100px_rgba(225,29,72,0.4)] border-4 border-rose-500 animate-in zoom-in-95">
+              <div className="bg-rose-600 p-8 flex flex-col items-center text-white text-center">
+                 <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-6 relative">
+                    <div className="absolute inset-0 bg-white/30 rounded-full animate-ping" />
+                    <Cpu size={56} className="text-white relative z-10" />
+                 </div>
+                 <h2 className="text-2xl font-black mb-2 tracking-tight font-outfit uppercase">AI TERDETEKSI!</h2>
+                 <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Screen Overlay / Bot Layer Aktif</p>
+              </div>
+              
+              <div className="p-8 text-center bg-slate-50">
+                 <p className="text-sm text-slate-700 font-bold leading-relaxed mb-6">
+                    Sistem mendeteksi adanya aplikasi <strong>AI Screen Layer</strong> atau <strong>Floating Window</strong> ilegal. Matikan segera dalam:
+                 </p>
+                 
+                 <div className="relative w-32 h-32 mx-auto mb-8">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                       <span className="text-5xl font-black text-rose-600 font-mono tracking-tighter">
+                          {aiCountdown}
+                       </span>
+                    </div>
+                    {/* SVG Circle Timer Animation Overlay */}
+                    <svg className="w-full h-full -rotate-90">
+                       <circle
+                         cx="64"
+                         cy="64"
+                         r="60"
+                         fill="transparent"
+                         stroke="rgba(225,29,72,0.1)"
+                         strokeWidth="8"
+                       />
+                       <circle
+                         cx="64"
+                         cy="64"
+                         r="60"
+                         fill="transparent"
+                         stroke="#e11d48"
+                         strokeWidth="8"
+                         strokeDasharray="377"
+                         strokeDashoffset={377 - (377 * aiCountdown) / 10}
+                         className="transition-all duration-1000 ease-linear"
+                       />
+                    </svg>
+                 </div>
+
+                 <p className="text-[10px] text-rose-500 font-black uppercase tracking-widest">
+                    ⚠️ ABAIKAN DAN UJIAN AKAN DIGAGALKAN (NILAI 0)
+                 </p>
+              </div>
+           </div>
+        </div>
+      )}
 
       {/* Time Up Modal (Urgent Reminder) */}
       {showTimeUpModal && step === 'EXAM' && (

@@ -85,6 +85,15 @@ export async function POST(req: NextRequest) {
                `⏰ Waktu: ${timestamp}${deviceStr}\n\n` +
                `🚩 <i>Snapshot foto di atas adalah bukti deteksi AI.</i>`;
         break;
+      case 'AI_BOT_DETECTED':
+        text = `🤖 <b>AI BOT / SCREEN OVERLAY!</b>${contextStr}\n\n` +
+               `👤 Siswa: <b>${fallback(studentName)}</b>\n` +
+               `🏫 Kelas: ${fallback(className)}\n` +
+               `📚 Mapel: ${fallback(subject)}\n` +
+               `⚙️ <b>PELANGGARAN TEKNIS:</b> Terdeteksi penggunaan screen overlay atau AI layer ilegal (Floating Window)!\n` +
+               `⏰ Waktu: ${timestamp}${deviceStr}\n\n` +
+               `🚫 <i>Siswa otomatis didiskualifikasi karena menggunakan bantuan AI eksternal.</i>`;
+        break;
       default:
         text = message || 'Pesan otomatis dari GradeMaster';
     }
