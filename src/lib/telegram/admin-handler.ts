@@ -730,8 +730,17 @@ async function handleLogsReport(chatId: number, sessionName: string) {
 
   const { data: logs } = await supabase
     .from('gm_attempt_logs')
-    .select('student_name, event_type, details, created_at')
-    .eq('session_id', session.id)
+    .select(`
+      event_type,
+      severity,
+      created_at,
+      metadata,
+      gm_remedial_attempts!inner(
+        session_id,
+        gm_students(name)
+      )
+    `)
+    .eq('gm_remedial_attempts.session_id', session.id)
     .order('created_at', { ascending: false })
     .limit(15);
 
@@ -742,11 +751,14 @@ async function handleLogsReport(chatId: number, sessionName: string) {
   }
 
   let msg = `📡 <b>Log Aktivitas — ${sessionName}</b>\n\n`;
-  logs.forEach((log, i) => {
+  logs.forEach((log: any, i) => {
     const time = new Date(log.created_at).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
+    const studentName = log.gm_remedial_attempts?.gm_students?.name || 'Siswa';
+    const detail = log.metadata?.message || log.metadata?.reason || log.event_type;
+    
     const icon = log.event_type === 'CHEATING' ? '🚨' : log.event_type === 'SUBMIT' ? '✅' : log.event_type === 'TAB_SWITCH' ? '⚠️' : '📌';
-    msg += `${icon} <code>${time}</code> <b>${log.student_name || '-'}</b>\n`;
-    msg += `   ${log.event_type}: ${(log.details as string || '').substring(0, 60)}\n\n`;
+    msg += `${icon} <code>${time}</code> <b>${studentName}</b>\n`;
+    msg += `   ${log.event_type}: ${detail.substring(0, 60)}\n\n`;
   });
 
   await sendMessage(chatId, msg);
