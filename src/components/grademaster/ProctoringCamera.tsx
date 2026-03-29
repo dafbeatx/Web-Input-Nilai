@@ -177,6 +177,12 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
           }
         });
 
+        setIsLoading(false);
+        setPermissionDenied(false);
+        setErrorMessage(null);
+        setRetryCount(0);
+        onCameraReadyRef.current?.();
+
         stream.getVideoTracks().forEach(track => {
           track.onended = () => {
             if (isActiveRef.current) {
@@ -286,11 +292,7 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
           }
         }
 
-        setIsLoading(false);
-        setPermissionDenied(false);
-        setErrorMessage(null);
-        setRetryCount(0);
-        onCameraReadyRef.current?.();
+        // AI Init complete
 
       } catch (err: unknown) {
         const error = err instanceof Error ? err : new Error(String(err));
