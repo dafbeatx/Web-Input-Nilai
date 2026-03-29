@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ToastType } from '@/lib/grademaster/types';
-import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin, User, Star, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin, User, Star, ShieldCheck, ArrowRight } from 'lucide-react';
 import ProctoringCamera from './ProctoringCamera';
 import { saveRemedialSession, loadRemedialSession, clearRemedialSession } from '@/lib/grademaster/session';
 
@@ -119,6 +119,9 @@ export default function StudentRemedialLayer({
   // Face Education Popup State
   const [showFaceEducation, setShowFaceEducation] = useState(false);
   const lastEducationShownRef = useRef(0);
+  
+  const [showFiveMinWarning, setShowFiveMinWarning] = useState(false);
+  const hasShownFiveMinWarningRef = useRef(false);
 
   const handleExit = () => {
     clearRemedialSession();
@@ -1130,9 +1133,21 @@ export default function StudentRemedialLayer({
       setShowTimeUpModal(true);
       return;
     }
+
+    // Trigger 5 minute warning
+    if (timeLeft === 300 && !hasShownFiveMinWarningRef.current) {
+       hasShownFiveMinWarningRef.current = true;
+       setShowFiveMinWarning(true);
+       // Autosave on warning
+       const s = loadRemedialSession();
+       if (s) {
+         saveRemedialSession({ ...s, answers, note, lastUpdated: Date.now() });
+       }
+    }
+
     const timerId = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
     return () => clearInterval(timerId);
-  }, [step, timeLeft, showTimeUpModal, pointsBal]);
+  }, [step, timeLeft, showTimeUpModal, pointsBal, answers, note]);
 
   // Proctoring: START photo + 30s auto-snap (depends ONLY on step, NOT timeLeft)
   useEffect(() => {
@@ -2224,6 +2239,42 @@ export default function StudentRemedialLayer({
           body { display: none !important; }
         }
       `}</style>
+
+      {/* 5 Minute Remaining Warning Modal */}
+      {showFiveMinWarning && step === 'EXAM' && (
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-2 border-indigo-100 animate-in zoom-in-95">
+             <div className="bg-gradient-to-br from-indigo-500 via-indigo-600 to-blue-700 p-8 flex flex-col items-center text-white text-center relative overflow-hidden">
+                {/* Decoration */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-xl" />
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-400/20 rounded-full -ml-12 -mb-12 blur-lg" />
+                
+                <div className="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center mb-6 backdrop-blur-md rotate-12 animate-pulse relative z-10">
+                   <Clock size={44} className="text-white drop-shadow-md" />
+                </div>
+                <h2 className="text-2xl font-black mb-2 tracking-tight relative z-10 font-outfit uppercase">Waktu Kritis!</h2>
+                <div className="px-4 py-1.5 bg-white/20 rounded-full backdrop-blur-md text-[10px] font-black uppercase tracking-widest border border-white/30 relative z-10">
+                   Peringatan 5 Menit Terakhir
+                </div>
+             </div>
+             
+             <div className="p-8 pb-10 text-center">
+                <p className="text-sm text-slate-600 font-bold leading-relaxed mb-8">
+                   Halo <span className="text-indigo-600 font-black">{studentName}</span>, waktu pengerjaan kamu hanya tersisa <span className="underline decoration-indigo-200 decoration-4 underline-offset-4">5 menit lagi</span>. 
+                   <br /><br />
+                   Segera periksa kembali jawaban kamu dan pastikan <span className="text-slate-800 font-black italic">semua soal essay telah terisi</span> sebelum sistem terkunci otomatis.
+                </p>
+                
+                <button
+                  onClick={() => setShowFiveMinWarning(false)}
+                  className="w-full py-4 bg-indigo-600 hover:bg-slate-900 active:scale-[0.98] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 transition-all focus:outline-none flex items-center justify-center gap-2 group"
+                >
+                  Iyah Saya Mengerti & Lanjutkan <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
 
       {/* Draggable Floating Camera (PiP) — Di luar privacy-mode agar fixed positioning selalu benar */}
       {step === 'EXAM' && (
