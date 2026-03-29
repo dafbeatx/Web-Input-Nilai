@@ -539,6 +539,47 @@ export default function StudentRemedialLayer({
     };
   }, [step]);
 
+  // 1. Visitor Tracking & Logging
+  useEffect(() => {
+    const trackVisit = async () => {
+      let visitorId = localStorage.getItem('gm_visitor_id');
+      const isReturning = !!visitorId;
+      
+      if (!visitorId) {
+        visitorId = 'v_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+        localStorage.setItem('gm_visitor_id', visitorId);
+      }
+
+      try {
+        const res = await fetch('/api/grademaster/visitor/log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            visitorId,
+            isReturning,
+            studentName: studentName || 'Unknown',
+            sessionId,
+            subject,
+            className
+          })
+        });
+
+        if (res.ok && isReturning) {
+          const data = await res.json();
+          // Notify returning visitor as requested "beritahu orangnya"
+          setToast({ 
+            message: `Sistem mendeteksi kehadiran Anda kembali. Pengawasan proctoring tetap aktif. (IP: ${data.ip})`, 
+            type: 'success' 
+          });
+        }
+      } catch (err) {
+        console.error('Visitor tracking failed:', err);
+      }
+    };
+
+    trackVisit();
+  }, []);
+
   // Restore session on mount (localStorage)
   useEffect(() => {
     const saved = loadRemedialSession();
