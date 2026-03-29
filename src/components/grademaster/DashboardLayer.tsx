@@ -17,7 +17,9 @@ import {
   Users,
   Timer,
   Clock,
-  Send
+  Send,
+  MonitorOff,
+  Cpu
 } from 'lucide-react';
 import { GradedStudent, AnalyticsResult } from '@/lib/grademaster/types';
 import { getCsiLabel, getLpsLabel } from '@/lib/grademaster/scoring';
@@ -56,6 +58,9 @@ interface DashboardLayerProps {
 const CHART_COLORS = ['#e2e8f0', '#94a3b8', '#6366f1', '#818cf8', '#4f46e5'];
 const PIE_COLORS = ['#10b981', '#f43f5e'];
 
+// DEADLINE: Senin, 30 Maret 2026 Jam 07:00 WIB
+const REMEDIAL_DEADLINE = new Date('2026-03-30T07:00:00+07:00').getTime();
+
 export default function DashboardLayer({
   teacherName,
   subject,
@@ -81,8 +86,16 @@ export default function DashboardLayer({
   const [isCheckingSimilarity, setIsCheckingSimilarity] = useState(false);
   const [similarityReports, setSimilarityReports] = useState<any[] | null>(null);
   const [similarityMetadata, setSimilarityMetadata] = useState<{ totalStudents: number, totalPairs: number } | null>(null);
+  const [showDeadlineModal, setShowDeadlineModal] = useState(false);
 
   const handleStartRemedial = (name: string, currentScore: number) => {
+    const isPastDeadline = Date.now() > REMEDIAL_DEADLINE;
+    
+    if (isPastDeadline) {
+      setShowDeadlineModal(true);
+      return;
+    }
+
     fetch('/api/telegram/notify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -867,6 +880,43 @@ export default function DashboardLayer({
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Deadline Warning Modal */}
+      {showDeadlineModal && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-rose-500/20 animate-in zoom-in-95">
+             <div className="bg-rose-600 p-8 flex flex-col items-center text-white text-center">
+                <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4">
+                   <MonitorOff size={40} className="text-white" />
+                </div>
+                <h2 className="text-xl font-black uppercase tracking-tight">Sesi Remedial Selesai</h2>
+                <p className="text-[10px] font-bold opacity-80 uppercase tracking-[0.2em] mt-2 italic">Akses Telah Ditutup</p>
+             </div>
+             
+             <div className="p-8 text-center flex flex-col items-center">
+                <p className="text-sm font-bold text-slate-700 leading-relaxed mb-6">
+                   Sesi remedial telah selesai. Nilai pengerjaan baru Anda sekarang adalah **0 (NOL)**.
+                </p>
+                
+                <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl mb-8 w-full">
+                  <p className="text-[10px] text-rose-500 font-black uppercase tracking-widest mb-1">INFO PERBAIKAN:</p>
+                  <p className="text-xs font-black text-rose-700 leading-snug">
+                     Jika ingin perbaikan, Anda harus mendapatkan **Poin Kebaikan** melalui Guru.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 w-full">
+                  <button
+                    onClick={() => setShowDeadlineModal(false)}
+                    className="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all active:scale-95"
+                  >
+                    Saya Mengerti & Kembali
+                  </button>
+                </div>
+             </div>
           </div>
         </div>
       )}

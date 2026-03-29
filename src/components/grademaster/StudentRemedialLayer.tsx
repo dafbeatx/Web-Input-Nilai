@@ -952,6 +952,16 @@ export default function StudentRemedialLayer({
   };
 
   const startExam = async () => {
+    // DEADLINE CHECK: Senin, 30 Maret 2026 Jam 07:00 WIB
+    const deadline = new Date('2026-03-30T07:00:00+07:00').getTime();
+    if (Date.now() > deadline) {
+      setToast({ 
+        message: "Sesi remedial telah selesai. Nilai pengerjaan Anda sekarang adalah 0. Jika ingin perbaikan, harap hubungi pengawas untuk mendapatkan poin kebaikan.", 
+        type: "error" 
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     const saved = loadRemedialSession();
