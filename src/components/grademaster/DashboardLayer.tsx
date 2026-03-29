@@ -658,27 +658,50 @@ export default function DashboardLayer({
                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Opsi / Status</span>
                     {isPublicView ? (
                       r.finalScore < kkm ? (
-                        <div className="flex flex-col items-end gap-2">
-                          <span className="text-rose-500 text-[9px] font-black uppercase tracking-widest">Perlu Bimbingan</span>
-                          <button 
-                            onClick={() => handleStartRemedial(r.name, r.finalScore)} 
-                            className="px-3 py-2 bg-rose-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm shadow-rose-200 active:scale-95 flex items-center gap-1.5"
-                          >
-                            <Plus size={10} /> Mulai Remedial
-                          </button>
-                        </div>
+                        ['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(r.remedialStatus || '') ? (
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="text-rose-400 text-[7px] font-black uppercase tracking-widest line-through opacity-50">Perlu Bimbingan</span>
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${
+                              r.remedialStatus === 'COMPLETED' ? 'text-indigo-500' : 
+                              r.remedialStatus === 'CHEATED' ? 'text-rose-500' : 'text-amber-500'
+                            }`}>
+                              {r.remedialStatus === 'COMPLETED' ? 'Selesai ✨' : 
+                               r.remedialStatus === 'CHEATED' ? 'Diskualifikasi 🚫' : 'Waktu Habis ⏰'}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-end gap-2">
+                            <span className="text-rose-500 text-[9px] font-black uppercase tracking-widest">Perlu Bimbingan</span>
+                            <button 
+                              onClick={() => handleStartRemedial(r.name, r.finalScore)} 
+                              className="px-3 py-2 bg-rose-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm shadow-rose-200 active:scale-95 flex items-center gap-1.5"
+                            >
+                              <Plus size={10} /> Mulai Remedial
+                            </button>
+                          </div>
+                        )
                       ) : (
                         <span className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">Tuntas ✨</span>
                       )
                     ) : (
                       <div className="flex items-center gap-2">
                         {r.finalScore < kkm ? (
-                          <button 
-                            onClick={() => handleStartRemedial(r.name, r.finalScore)} 
-                            className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-rose-100 active:scale-95 flex items-center gap-1.5"
-                          >
-                            <Plus size={10} /> Mulai Remedial
-                          </button>
+                          ['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(r.remedialStatus || '') ? (
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${
+                              r.remedialStatus === 'COMPLETED' ? 'text-indigo-500' : 
+                              r.remedialStatus === 'CHEATED' ? 'text-rose-500' : 'text-amber-500'
+                            }`}>
+                              {r.remedialStatus === 'COMPLETED' ? 'Selesai ✨' : 
+                               r.remedialStatus === 'CHEATED' ? 'Diskualifikasi 🚫' : 'Waktu Habis ⏰'}
+                            </span>
+                          ) : (
+                            <button 
+                              onClick={() => handleStartRemedial(r.name, r.finalScore)} 
+                              className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-rose-100 active:scale-95 flex items-center gap-1.5"
+                            >
+                              <Plus size={10} /> Mulai Remedial
+                            </button>
+                          )
                         ) : (
                           <span className="text-emerald-500 font-black text-[10px] uppercase tracking-widest">Lulus KKM</span>
                         )}
@@ -723,17 +746,27 @@ export default function DashboardLayer({
                       <td className="py-3.5 text-xs font-bold">
                         {isPublicView ? (
                           r.finalScore < kkm ? (
-                            <div className="flex flex-col gap-2">
-                              <div className="flex items-center gap-1.5 text-rose-500">
-                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"/> Perlu Bimbingan
+                            ['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(r.remedialStatus || '') ? (
+                              <div className="flex items-center gap-1.5 text-indigo-500">
+                                <span className={`w-1.5 h-1.5 rounded-full ${
+                                  r.remedialStatus === 'COMPLETED' ? 'bg-indigo-500' : 
+                                  r.remedialStatus === 'CHEATED' ? 'bg-rose-500' : 'bg-amber-500'
+                                }`}/> {r.remedialStatus === 'COMPLETED' ? 'Selesai ✨' : 
+                                       r.remedialStatus === 'CHEATED' ? 'Diskualifikasi 🚫' : 'Waktu Habis ⏰'}
                               </div>
-                              <button 
-                                onClick={() => handleStartRemedial(r.name, r.finalScore)} 
-                                className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-rose-600 transition-all shadow-sm shadow-rose-200 flex items-center justify-center gap-1.5 w-fit active:scale-95"
-                              >
-                                <Plus size={12} /> Mulai Remedial
-                              </button>
-                            </div>
+                            ) : (
+                              <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-1.5 text-rose-500">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"/> Perlu Bimbingan
+                                </div>
+                                <button 
+                                  onClick={() => handleStartRemedial(r.name, r.finalScore)} 
+                                  className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-rose-600 transition-all shadow-sm shadow-rose-200 flex items-center justify-center gap-1.5 w-fit active:scale-95"
+                                >
+                                  <Plus size={12} /> Mulai Remedial
+                                </button>
+                              </div>
+                            )
                           ) : (
                             <div className="flex items-center gap-1.5 text-emerald-500">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"/> Tuntas
@@ -742,9 +775,19 @@ export default function DashboardLayer({
                         ) : (
                           <div className="flex items-center gap-3">
                             {r.finalScore < kkm ? (
-                              <button onClick={() => handleStartRemedial(r.name, r.finalScore)} className="px-3 py-1.5 text-[10px] bg-rose-50 text-rose-600 rounded-lg font-black uppercase tracking-wider hover:bg-rose-100 transition-colors border border-rose-100 active:scale-95 flex items-center gap-1.5">
-                                <Plus size={12} /> Mulai Remedial
-                              </button>
+                              ['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(r.remedialStatus || '') ? (
+                                <span className={`text-[11px] font-black uppercase tracking-widest ${
+                                  r.remedialStatus === 'COMPLETED' ? 'text-indigo-500' : 
+                                  r.remedialStatus === 'CHEATED' ? 'text-rose-500' : 'text-amber-500'
+                                }`}>
+                                  {r.remedialStatus === 'COMPLETED' ? 'Selesai ✨' : 
+                                   r.remedialStatus === 'CHEATED' ? 'Diskualifikasi 🚫' : 'Waktu Habis ⏰'}
+                                </span>
+                              ) : (
+                                <button onClick={() => handleStartRemedial(r.name, r.finalScore)} className="px-3 py-1.5 text-[10px] bg-rose-50 text-rose-600 rounded-lg font-black uppercase tracking-wider hover:bg-rose-100 transition-colors border border-rose-100 active:scale-95 flex items-center gap-1.5">
+                                  <Plus size={12} /> Mulai Remedial
+                                </button>
+                              )
                             ) : (
                               <span className="text-emerald-500 font-bold text-[11px]">Memenuhi KKM ({kkm})</span>
                             )}

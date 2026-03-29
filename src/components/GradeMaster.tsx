@@ -608,6 +608,18 @@ export default function GradeMaster() {
     setRemedialAnswerKeys(parsed);
   };
 
+  const refreshSessionData = async () => {
+    if (!sessionName) return;
+    try {
+      const data = await fetchSessionData(sessionName, sessionPassword);
+      if (data && data.gradedStudents) {
+        setGradedStudents(data.gradedStudents);
+      }
+    } catch (err) {
+      console.error("Auto-refresh session failed:", err);
+    }
+  };
+
   const handleSaveStudent = async (student: GradedStudent) => {
     setGradedStudents((prev) => [...prev, student]);
 
@@ -895,7 +907,10 @@ export default function GradeMaster() {
           examType={examType}
           semester={semester}
           kkm={kkm}
-          onBack={() => setLayer("dashboard")}
+          onBack={() => {
+            refreshSessionData();
+            setLayer("dashboard");
+          }}
           setToast={setToast}
         />
       )}

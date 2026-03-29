@@ -124,7 +124,7 @@ export interface AnalyticsResult {
   standardDeviation: number;
   distribution: { range: string; count: number }[];
   questionDifficulties: QuestionDifficulty[];
-  ranking: { rank: number; name: string; finalScore: number; csi: number }[];
+  ranking: { rank: number; name: string; finalScore: number; csi: number; remedialStatus?: string }[];
   insights: ClassInsight[];
   correctVsWrong: { correct: number; wrong: number };
 }

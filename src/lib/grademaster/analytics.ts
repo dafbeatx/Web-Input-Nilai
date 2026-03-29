@@ -114,6 +114,7 @@ function generateRanking(students: GradedStudent[]): AnalyticsResult['ranking'] 
       name: s.name,
       finalScore: s.finalScore,
       csi: s.csi,
+      remedialStatus: s.remedialStatus,
     }));
 }
 
