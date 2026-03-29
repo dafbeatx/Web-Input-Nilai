@@ -1576,11 +1576,11 @@ export default function StudentRemedialLayer({
       
       // ATOMIC UPDATE: Save to LocalStorage IMMEDIATELY before updating UI state
       // This ensures if the page is refreshed right now, the time is already added.
-      const s = loadRemedialSession();
-      if (s) {
+      const updatedS = loadRemedialSession();
+      if (updatedS) {
         saveRemedialSession({ 
-          ...s, 
-          extendedTime: (s.extendedTime || 0) + addedSeconds,
+          ...updatedS, 
+          extendedTime: (updatedS.extendedTime || 0) + addedSeconds,
           lastUpdated: Date.now()
         });
       }
