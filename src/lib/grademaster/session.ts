@@ -21,6 +21,9 @@ export interface RemedialSession {
   cameraStatus?: 'ACTIVE' | 'FAILED';
   extendedTime?: number;
   lastUpdated?: number;
+  kkm?: number;
+  academicYear?: string;
+  examType?: string;
 }
 
 export function saveRemedialSession(data: RemedialSession): void {

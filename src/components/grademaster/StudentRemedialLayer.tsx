@@ -176,11 +176,11 @@ export default function StudentRemedialLayer({
 
   const sendTelegramNotify = async (event: string, photo?: string, message?: string, score?: number) => {
     try {
-      // 1. Double-layered fallback: props -> recovered session state -> 'Unknown'
+      // 1. Triple-layered fallback: props -> recovered session state -> global storage -> 'Unknown'
       const saved = loadRemedialSession();
-      const currentStudentName = studentName || saved?.studentName || 'Unknown Student';
-      const currentClassName = className || saved?.className || 'Unknown Class';
-      const currentSubject = subject || saved?.subject || 'Unknown Subject';
+      const currentStudentName = studentName || saved?.studentName || (typeof window !== 'undefined' ? localStorage.getItem('gm_studentName') : '') || 'Unknown Student';
+      const currentClassName = className || saved?.className || (typeof window !== 'undefined' ? localStorage.getItem('gm_studentClass') : '') || 'Unknown Class';
+      const currentSubject = subject || saved?.subject || (typeof window !== 'undefined' ? localStorage.getItem('gm_subject') : '') || 'Unknown Subject';
 
       const netInfo = getNetworkInfo();
       const payload = {
@@ -191,9 +191,9 @@ export default function StudentRemedialLayer({
         message: message ? `${message}${message.includes('Network:') ? '' : ` | Network: ${netInfo}`}` : `Network: ${netInfo}`,
         photo,
         score,
-        kkm: kkm || 70,
-        academicYear,
-        examType,
+        kkm: kkm || saved?.kkm || 70,
+        academicYear: academicYear || '2025/2026',
+        examType: examType || 'UTS',
         deviceInfo: getDeviceInfo()
       };
 
@@ -1088,6 +1088,9 @@ export default function StudentRemedialLayer({
         cameraStatus,
         remedialQuestions: activeQuestions,
         remedialTimer,
+        kkm: kkm || 70,
+        academicYear: academicYear || '2025/2026',
+        examType: examType || 'UTS'
       });
       // Initialize session and set step to EXAM
       setIsSubmitting(false);
@@ -1118,6 +1121,9 @@ export default function StudentRemedialLayer({
         note,
         className,
         subject,
+        kkm: kkm || 70,
+        academicYear: academicYear || '2025/2026',
+        examType: examType || 'UTS',
         step: 'EXAM',
         lastUpdated: Date.now()
       });
