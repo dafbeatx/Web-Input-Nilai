@@ -16,13 +16,14 @@ import {
   AlertOctagon,
   Users,
   Timer,
-  Clock
+  Clock,
+  Send
 } from 'lucide-react';
 import { GradedStudent, AnalyticsResult } from '@/lib/grademaster/types';
 import { getCsiLabel, getLpsLabel } from '@/lib/grademaster/scoring';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import InsightPanel from './InsightPanel';
-import { ShieldCheck, ThumbsUp, ThumbsDown, Trophy, Medal, Star } from 'lucide-react';
+import { ShieldCheck, ThumbsUp, ThumbsDown, Trophy, Medal, Star, Send as SendIcon } from 'lucide-react';
 
 interface BehaviorRecord {
   student_name: string;
@@ -288,6 +289,49 @@ export default function DashboardLayer({
     }
   };
 
+  const [isReporting, setIsReporting] = useState(false);
+  const handleReportToTelegram = async () => {
+    const unfinished = gradedStudents.filter(s => s.finalScore < kkm);
+    
+    if (unfinished.length === 0) {
+      alert("Semua siswa sudah tuntas (di atas KKM)!");
+      return;
+    }
+
+    setIsReporting(true);
+    let message = `lapor bos ini data data siswa yang belum remed\n\n`;
+    message += `📚 Kelas: ${studentClass}\n`;
+    message += `📅 Tahun Ajaran: ${academicYear || '2025/2026'}\n`;
+    message += `📖 Mata Pelajaran: ${subject}\n\n`;
+    message += `📋 Daftar Siswa (${unfinished.length} orang):\n`;
+    
+    unfinished.forEach((s, i) => {
+      message += `${i + 1}. ${s.name} - Nilai: ${s.finalScore}\n`;
+    });
+    
+    message += `\n⚠️ Peringatan: Batas waktu remedial segera berakhir (Batas: 30 Maret 2026, 07:00 WIB). Nilai akan menjadi 0 jika tidak segera dikerjakan!`;
+
+    try {
+      const res = await fetch('/api/telegram/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'REPORT',
+          message: message,
+          studentName: 'KIRIM_LAPOR_BOS',
+          className: studentClass,
+          subject: subject
+        })
+      });
+      if (res.ok) alert("Laporan berhasil dikirim ke Telegram!");
+      else throw new Error("Gagal mengirim");
+    } catch (err) {
+      alert("Gagal mengirim laporan ke Telegram.");
+    } finally {
+      setIsReporting(false);
+    }
+  };
+
   const RemedialCountdown = ({ targetDate }: { targetDate: string }) => {
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
     useEffect(() => {
@@ -527,6 +571,15 @@ export default function DashboardLayer({
                 >
                   {isCheckingSimilarity ? <div className="w-3.5 h-3.5 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" /> : <Eye size={14} />} 
                   Deteksi Kemiripan
+                </button>
+                <button
+                  onClick={handleReportToTelegram}
+                  disabled={isReporting}
+                  className="px-3 md:px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-emerald-100 transition-colors flex items-center justify-center gap-1.5 md:gap-2 disabled:opacity-50"
+                  title="Kirim daftar siswa belum remed ke Telegram Admin"
+                >
+                  {isReporting ? <div className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" /> : <Send size={14} />} 
+                  Lapor Bos!
                 </button>
                 <button
                   onClick={onGradeStudent}
