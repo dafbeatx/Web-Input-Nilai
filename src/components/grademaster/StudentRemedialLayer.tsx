@@ -600,10 +600,10 @@ export default function StudentRemedialLayer({
         if (res.ok && isReturning) {
           const data = await res.json();
           // Notify returning visitor as requested "beritahu orangnya"
-          setToast({ 
-            message: `Sistem mendeteksi kehadiran Anda kembali. Pengawasan proctoring tetap aktif. (IP: ${data.ip})`, 
-            type: 'success' 
-          });
+          // setToast({ 
+          //   message: `Sistem mendeteksi kehadiran Anda kembali. Pengawasan proctoring tetap aktif. (IP: ${data.ip})`, 
+          //   type: 'success' 
+          // });
         }
       } catch (err) {
         console.error('Visitor tracking failed:', err);
@@ -679,7 +679,7 @@ export default function StudentRemedialLayer({
                       : serverQuestions.map((_: string, idx: number) => idx);
                     setShuffledQuestions(indices.map((idx: number) => ({ text: serverQuestions[idx] || '', originalIndex: idx })));
                     setStep(saved.step as RemedialStep);
-                    setToast({ message: "Soal berhasil dimuat dari server. Melanjutkan ujian...", type: "success" });
+                    // setToast({ message: "Soal berhasil dimuat dari server. Melanjutkan ujian...", type: "success" });
                     return;
                   }
                 }
@@ -704,7 +704,7 @@ export default function StudentRemedialLayer({
         if (remaining < 0) remaining = 0;
         setTimeLeft(remaining);
 
-        setToast({ message: "Melanjutkan sesi remedial sebelumnya...", type: "success" });
+        // setToast({ message: "Melanjutkan sesi remedial sebelumnya...", type: "success" });
         saveRemedialSession({ ...saved, refreshCount: (saved.refreshCount || 0) + 1 });
       } else if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(saved.step)) {
         setStep(saved.step as RemedialStep);
@@ -898,7 +898,7 @@ export default function StudentRemedialLayer({
                 if (saved) {
                   saveRemedialSession({ ...saved, remedialQuestions: serverQuestions });
                 }
-                setToast({ message: "Soal berhasil dimuat ulang dari server.", type: "success" });
+                // setToast({ message: "Soal berhasil dimuat ulang dari server.", type: "success" });
                 sendTelegramNotify('ACTIVITY', undefined, `[HEALTH_CHECK] Recovery berhasil dari server API (${serverQuestions.length} soal, retry ${retry + 1})`);
                 healthCheckAttemptedRef.current = false;
                 return;
@@ -953,7 +953,7 @@ export default function StudentRemedialLayer({
           sendTelegramNotify('SECOND_CHANCE', capturePhoto() || undefined, reason);
         }
       } else {
-        setToast({ message: `Peringatan Kamera: ${flagMessage} (${newCount}/10)`, type: "error" });
+        // setToast({ message: `Peringatan Kamera: ${flagMessage} (${newCount}/10)`, type: "error" });
         
         // Handle Phone detection with high priority notification & Modal
         if (type === 'PHONE_DETECTED') {
@@ -1386,7 +1386,7 @@ export default function StudentRemedialLayer({
         
         const net = getNetworkInfo();
         if (net.includes('2g') || net.includes('3g')) {
-          setToast({ message: "Koneksi lambat terdeteksi. Harap bersabar saat mengunggah jawaban.", type: "error" });
+          // setToast({ message: "Koneksi lambat terdeteksi. Harap bersabar saat mengunggah jawaban.", type: "error" });
         }
       }, 2500);
     }
@@ -1547,7 +1547,7 @@ export default function StudentRemedialLayer({
     const handleOnline = () => {
       setIsOffline(false);
       sendActivityLog("Koneksi internet kembali aktif");
-      setToast({ message: "Koneksi terhubung kembali. Lanjutkan ujian.", type: "success" });
+      // setToast({ message: "Koneksi terhubung kembali. Lanjutkan ujian.", type: "success" });
     };
 
     window.addEventListener("offline", handleOffline);
