@@ -155,7 +155,7 @@ export async function handleAdminCallback(chatId: number, callbackData: string) 
       return;
     }
 
-    let msg = `🎓 <b>DATA SISWA BELUM REMEDIAL</b>\n\n`;
+    let msg = `🎓 <b>Lapor bos ini data data siswa yang belum remed</b>\n\n`;
     msg += `📚 <b>Sesi:</b> ${sessionName}\n`;
     msg += `🏫 <b>Kelas:</b> ${session.class_name}\n`;
     msg += `📖 <b>Mapel:</b> ${session.subject}\n`;
@@ -166,6 +166,8 @@ export async function handleAdminCallback(chatId: number, callbackData: string) 
     students.forEach((s, i) => {
       msg += `${i + 1}. ${s.name} (Nilai: <b>${s.final_score}</b>)\n`;
     });
+
+    msg += `\n⚠️ <i>Peringatan: Harap segera instruksikan siswa di atas untuk menyelesaikan remedial tepat waktu!</i>`;
 
     await sendMessage(chatId, msg);
     return;
