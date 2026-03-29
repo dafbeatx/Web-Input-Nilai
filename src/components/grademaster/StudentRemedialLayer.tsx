@@ -1602,12 +1602,32 @@ export default function StudentRemedialLayer({
   };
 
     const validateSubmission = () => {
-      const minLength = 20; // Minimum 20 chars per answer for it to be considered "valid effort"
-      const emptyCount = answers.filter(a => (a || '').trim().length < minLength).length;
+      const minLength = 20;
+      const garbagePhrases = ['tidak tahu', 'gak tahu', 'ndak tahu', 'kosong', 'null', 'undefined', 'asdf', 'qwerty'];
       
-      if (emptyCount > 0) {
+      const invalidIndices = answers.map((a, i) => {
+        const text = (a || '').trim().toLowerCase();
+        
+        // Check length
+        if (text.length < minLength) return i;
+        
+        // Check for garbage phrases
+        if (garbagePhrases.some(phrase => text.includes(phrase))) return i;
+        
+        // Check for repetitive characters (e.g., "aaaaaaaaaaaa")
+        if (/(.)\1{9,}/.test(text)) return i;
+        
+        // Check for repetitive words (e.g., "jawab jawab jawab")
+        const words = text.split(/\s+/);
+        const uniqueWords = new Set(words);
+        if (words.length > 5 && (uniqueWords.size / words.length) < 0.4) return i;
+        
+        return -1;
+      }).filter(index => index !== -1);
+      
+      if (invalidIndices.length > 0) {
         setToast({ 
-          message: `⚠️ BELUM LENGKAP: Ada ${emptyCount} soal yang belum diisi dengan jawaban yang memadai (Min. ${minLength} karakter).`, 
+          message: `⚠️ JAWABAN TIDAK VALID: Ada ${invalidIndices.length} soal yang belum diisi dengan jawaban yang memadai atau terdeteksi asal-asalan.`, 
           type: "error" 
         });
         return false;

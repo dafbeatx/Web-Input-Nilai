@@ -95,26 +95,28 @@ export default function RemedialDashboardLayer({
 
   const stats = {
     total: remedialStudents.length,
-    completed: remedialStudents.filter(s => s.remedialStatus === 'COMPLETED').length,
-    active: remedialStudents.filter(s => s.remedialStatus === 'ACTIVE' || s.remedialStatus === 'INITIATED').length,
+    completed: remedialStudents.filter(s => s.remedialStatus === 'SUBMITTED' || s.remedialStatus === 'COMPLETED').length,
+    failed: remedialStudents.filter(s => s.remedialStatus === 'FAILED_EFFORT').length,
     cheated: remedialStudents.filter(s => s.remedialStatus === 'CHEATED').length,
-    timeout: remedialStudents.filter(s => s.remedialStatus === 'TIMEOUT').length,
+    timeout: remedialStudents.filter(s => s.remedialStatus === 'TIME_UP' || s.remedialStatus === 'TIMEOUT').length,
     waitingReview: remedialStudents.filter(s => s.remedialStatus === 'REMEDIAL' && !s.teacherReviewed).length
   };
 
   const getStatusBadge = (status: string, teacherReviewed?: boolean) => {
     switch (status) {
+      case 'SUBMITTED':
       case 'COMPLETED':
-        return <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><CheckCircle2 size={10}/> FINAL (SELESAI)</span>;
+        return <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><CheckCircle2 size={10}/> SELESAI (VALID)</span>;
       case 'ACTIVE':
       case 'INITIATED':
+      case 'IN_PROGRESS':
         return <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><Clock size={10}/> PROSES</span>;
       case 'CHEATED':
         return <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><ShieldAlert size={10}/> CURANG</span>;
-      case 'COMPLETED':
-        // If completed but was flagged by system, show a hybrid badge or just the normal badge?
-        // Let's handle this in the render loop for the student card.
-        return <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><CheckCircle2 size={10}/> FINAL (SELESAI)</span>;
+      case 'FAILED_EFFORT':
+      case 'FAILED':
+        return <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><AlertTriangle size={10}/> TIDAK VALID</span>;
+      case 'TIME_UP':
       case 'TIMEOUT':
         return <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 border border-slate-200 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><Clock size={10}/> WAKTU HABIS</span>;
       case 'REMEDIAL':

@@ -233,10 +233,30 @@ export async function submitRemedial(
     const systemFlagged = combinedRisk.shouldAutoFlag;
     const explicitlyBlocked = status === 'CHEATED';
 
+    // Advanced Effort Validation (Anti-Exploit)
+    const minWords = 5;
+    const minUniqueWords = 3;
+    const garbagePhrases = ['tidak tahu', 'kosong', 'gak tahu', 'ndak tahu', 'null', 'undefined', 'asdf', 'qwerty'];
+    
+    const validAnswers = answers.filter(a => {
+      const text = (a || '').trim().toLowerCase();
+      if (text.length < 20) return false;
+      
+      const words = text.split(/\s+/).filter(w => w.length > 2);
+      const uniqueWords = new Set(words);
+      
+      // Check for garbage phrases
+      const isGarbage = garbagePhrases.some(p => text.includes(p));
+      if (isGarbage) return false;
+      
+      return words.length >= minWords && uniqueWords.size >= minUniqueWords;
+    });
+
+    const hasEnoughEffort = validAnswers.length >= (answers.length / 2);
+
     // Duration validation (Anti-Exploit: Too fast)
     const minDurationMs = 5 * 60 * 1000; // 5 minutes
     const isTooFast = (elapsedTimeMs || 0) < minDurationMs;
-    const hasEnoughEffort = answers.filter(a => (a || '').trim().length > 30).length >= (answers.length / 2);
 
     // Essay scoring (server-side only)
     const answerKeys: string[] = session.scoring_config?.remedialAnswerKeys || [];
@@ -278,24 +298,29 @@ export async function submitRemedial(
       studentUpdate.essay_score_final = 0;
       studentUpdate.teacher_reviewed = false;
     } else if (status === 'COMPLETED') {
-      // Normal submission (or system-flagged only)
+      // Normal submission
       
-      // EXPLOIT PREVENTION: If no effort detected or too fast, set score to 0
       if (!hasEnoughEffort || isTooFast) {
+        // EXPLOIT PREVENTION: Garbage answers or too fast
         studentUpdate.remedial_score = 0;
         studentUpdate.final_score = 0;
         studentUpdate.final_score_locked = 0;
-        studentUpdate.remedial_status = 'FAILED';
-        attemptUpdate.status = 'FAILED';
+        studentUpdate.remedial_status = 'FAILED_EFFORT';
+        attemptUpdate.status = 'FAILED_EFFORT';
+        studentUpdate.teacher_reviewed = true;
       } else {
-        // Valid effort
-        const finalScore = isPenaltyApplied ? 55 : 70;
+        // VALID SUBMISSION
+        // Remove fixed 70/55 scoring. Use actual similarity score.
+        const rawScore = essayResult.score;
+        const penaltyAmount = isPenaltyApplied ? 15 : 0;
+        const finalScore = Math.max(0, rawScore - penaltyAmount);
+
         studentUpdate.remedial_score = finalScore;
         studentUpdate.final_score = finalScore;
         studentUpdate.final_score_locked = finalScore;
-        studentUpdate.remedial_status = 'COMPLETED';
+        studentUpdate.remedial_status = 'SUBMITTED';
         studentUpdate.teacher_reviewed = true;
-        attemptUpdate.status = 'COMPLETED';
+        attemptUpdate.status = 'SUBMITTED';
       }
       
       // Log penalty event if applied
@@ -303,13 +328,13 @@ export async function submitRemedial(
         studentUpdate.cheating_flags = [...(studentUpdate.cheating_flags as string[] || []), 'PENALTY: LATE_SUBMISSION (-15 Poin)'];
       }
     } else if (status === 'TIMEOUT' || status === 'FAILED') {
-      // EXPLOIT PREVENTION: Logout/Timeout without manual completion yields 0
-      attemptUpdate.status = status;
-      studentUpdate.remedial_status = status;
+      // EXPLOIT PREVENTION: Logout/Timeout yields 0
+      attemptUpdate.status = 'TIME_UP';
+      studentUpdate.remedial_status = 'TIME_UP';
       studentUpdate.remedial_score = 0;
       studentUpdate.final_score = 0;
       studentUpdate.final_score_locked = 0;
-      studentUpdate.teacher_reviewed = true; // Auto-reviewed as zero
+      studentUpdate.teacher_reviewed = true;
     }
   }
 

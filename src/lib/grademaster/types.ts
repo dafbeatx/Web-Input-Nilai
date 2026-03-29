@@ -39,7 +39,7 @@ export interface GradedStudent {
   percentage: number;
   csi: number;
   lps: number;
-  remedialStatus?: 'NONE' | 'INITIATED' | 'ACTIVE' | 'FAILED' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT' | 'REMEDIAL';
+  remedialStatus?: 'NONE' | 'INITIATED' | 'ACTIVE' | 'FAILED' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT' | 'REMEDIAL' | 'SUBMITTED' | 'TIME_UP' | 'FAILED_EFFORT' | 'IN_PROGRESS';
   remedialLocation?: string;
   remedialPhoto?: string;
   remedialAnswers?: string[];
