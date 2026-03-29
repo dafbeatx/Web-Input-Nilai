@@ -110,7 +110,11 @@ export default function RemedialDashboardLayer({
       case 'INITIATED':
         return <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><Clock size={10}/> PROSES</span>;
       case 'CHEATED':
-        return <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><AlertTriangle size={10}/> CURANG</span>;
+        return <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><ShieldAlert size={10}/> CURANG</span>;
+      case 'COMPLETED':
+        // If completed but was flagged by system, show a hybrid badge or just the normal badge?
+        // Let's handle this in the render loop for the student card.
+        return <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><CheckCircle2 size={10}/> FINAL (SELESAI)</span>;
       case 'TIMEOUT':
         return <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 border border-slate-200 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><Clock size={10}/> WAKTU HABIS</span>;
       case 'REMEDIAL':
@@ -348,7 +352,14 @@ export default function RemedialDashboardLayer({
                       </div>
                     )}
                     <div className="flex flex-col border-l border-slate-200 pl-3 md:pl-4 items-end shrink-0">
-                      <div className="mb-1 md:mb-2">{getStatusBadge(student.remedialStatus || '', student.teacherReviewed)}</div>
+                      <div className="mb-1 md:mb-2 text-right">
+                        {student.remedialStatus === 'COMPLETED' && student.isCheated ? (
+                           <div className="flex flex-col items-end gap-1">
+                              <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 text-[9px] font-black uppercase tracking-wider flex items-center gap-1"><AlertTriangle size={9}/> DITANDAI SISTEM</span>
+                              {getStatusBadge('COMPLETED')}
+                           </div>
+                        ) : getStatusBadge(student.remedialStatus || '', student.teacherReviewed)}
+                      </div>
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                         Akhir: <span className="text-indigo-600">{student.finalScoreLocked || student.finalScore}</span>
                       </p>
@@ -375,14 +386,20 @@ export default function RemedialDashboardLayer({
                   <div className="mt-6 space-y-6">
                     {/* Cheating Alerts */}
                     {student.isCheated && student.cheatingFlags && student.cheatingFlags.length > 0 && (
-                      <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex gap-3">
-                         <ShieldAlert className="text-rose-600 shrink-0" size={20} />
+                      <div className={`p-4 border rounded-2xl flex gap-3 ${student.remedialStatus === 'CHEATED' ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200'}`}>
+                         <ShieldAlert className={student.remedialStatus === 'CHEATED' ? 'text-rose-600 shrink-0' : 'text-amber-600 shrink-0'} size={20} />
                          <div>
-                           <h4 className="text-sm font-black tracking-tight text-rose-800">Sistem Deteksi Kecurangan Terpicu</h4>
-                           <ul className="mt-2 list-disc list-inside text-xs font-bold text-rose-700 space-y-1">
+                           <h4 className={`text-sm font-black tracking-tight ${student.remedialStatus === 'CHEATED' ? 'text-rose-800' : 'text-amber-800'}`}>
+                             {student.remedialStatus === 'CHEATED' ? 'Sistem Memblokir Sesi (Curang)' : 'Aktivitas Tidak Biasa Terdeteksi'}
+                           </h4>
+                           <ul className={`mt-2 list-disc list-inside text-xs font-bold space-y-1 ${student.remedialStatus === 'CHEATED' ? 'text-rose-700' : 'text-amber-700'}`}>
                              {student.cheatingFlags.map((flag, idx) => <li key={idx}>{flag}</li>)}
                            </ul>
-                           <p className="mt-2 text-xs text-rose-600 font-medium">Nilai siswa otomatis menjadi 0 menurut algoritma penalti deteksi kecurangan.</p>
+                           <p className={`mt-2 text-xs font-medium ${student.remedialStatus === 'CHEATED' ? 'text-rose-600' : 'text-amber-600'}`}>
+                             {student.remedialStatus === 'CHEATED' 
+                               ? 'Siswa ini telah diblokir secara permanen dari sesi ini dan nilai otomatis menjadi 0.' 
+                               : 'Siswa tetap dapat mengerjakan, namun sistem menandai adanya indikasi aktivitas tidak biasa untuk ditinjau oleh pengawas.'}
+                           </p>
                          </div>
                       </div>
                     )}

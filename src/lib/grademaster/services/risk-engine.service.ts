@@ -34,7 +34,7 @@ const EVENT_SEVERITY: Record<string, RiskSeverity> = {
   'PASTE_ATTEMPT': 'MEDIUM',
   'TAB_SWITCH': 'MEDIUM',
   'PRINT_ATTEMPT': 'MEDIUM',
-  'NO_FACE': 'HIGH',
+  'NO_FACE': 'MEDIUM',      // Lowered from HIGH (30) to MEDIUM (15) to reduce false positives
   'MULTI_FACE': 'HIGH',
   'FAST_COMPLETION': 'CRITICAL',
   'IDENTICAL_ESSAY': 'CRITICAL',
@@ -44,6 +44,7 @@ const EVENT_SEVERITY: Record<string, RiskSeverity> = {
   'OVERLAY_INDICATION': 'LOW',
   'UNUSUAL_ACTIVITY': 'MEDIUM',
   'PIP_ACTIVE': 'HIGH',
+  'SYSTEM_EVENT': 'LOW',  // New category for system-level logs (will set points to 0 below)
 };
 
 function getRiskLevel(score: number): RiskLevel {
@@ -55,10 +56,17 @@ function getRiskLevel(score: number): RiskLevel {
 
 export function createRiskFlag(event: string, customPoints?: number): RiskFlag {
   const severity = EVENT_SEVERITY[event] || 'LOW';
+  
+  // System events or unrecognized events should not penalize the student automatically
+  let points = customPoints ?? SEVERITY_POINTS[severity];
+  if (event === 'UNKNOWN' || event === 'SYSTEM_EVENT') {
+    points = 0;
+  }
+
   return {
     event,
-    severity,
-    points: customPoints ?? SEVERITY_POINTS[severity],
+    severity: (event === 'UNKNOWN' || event === 'SYSTEM_EVENT') ? 'LOW' : severity,
+    points,
     timestamp: Date.now(),
   };
 }
@@ -77,6 +85,8 @@ export function assessClientRisk(clientFlags: string[]): RiskAssessment {
     else if (flagStr.includes('Indikasi Layer/Overlay') || flagStr.includes('OVERLAY')) event = 'OVERLAY_INDICATION';
     else if (flagStr.includes('Aktivitas Tidak Biasa')) event = 'UNUSUAL_ACTIVITY';
     else if (flagStr.includes('PICTURE-IN-PICTURE') || flagStr.includes('PIP')) event = 'PIP_ACTIVE';
+    // System & Health Check mapping (0 points)
+    else if (flagStr.includes('HEALTH_CHECK') || flagStr.includes('RECOVERY') || flagStr.includes('server')) event = 'SYSTEM_EVENT';
 
     flags.push(createRiskFlag(event));
   }

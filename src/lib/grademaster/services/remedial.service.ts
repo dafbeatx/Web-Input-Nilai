@@ -230,7 +230,8 @@ export async function submitRemedial(
     );
 
     const combinedRisk = mergeRiskAssessments(clientRisk, serverRisk);
-    const isFlagged = combinedRisk.shouldAutoFlag || status === 'CHEATED';
+    const systemFlagged = combinedRisk.shouldAutoFlag;
+    const explicitlyBlocked = status === 'CHEATED';
 
     // Essay scoring (server-side only)
     const answerKeys: string[] = session.scoring_config?.remedialAnswerKeys || [];
@@ -249,13 +250,14 @@ export async function submitRemedial(
     // Update student cache
     studentUpdate.remedial_answers = answers;
     studentUpdate.remedial_note = note;
-    studentUpdate.is_cheated = isFlagged;
+    studentUpdate.is_cheated = systemFlagged || explicitlyBlocked; 
     studentUpdate.cheating_flags = combinedRisk.flags.map(f => f.event);
     studentUpdate.essay_score_auto = essayResult.score;
     studentUpdate.essay_score_final = essayResult.score;
     studentUpdate.essay_auto_details = essayResult.details;
 
-    if (isFlagged) {
+    if (explicitlyBlocked) {
+      // Manual/Automatic lockout triggered (e.g. 3 strikes)
       attemptUpdate.status = 'CHEATED';
       studentUpdate.remedial_status = 'CHEATED';
       studentUpdate.remedial_score = 0;
@@ -264,7 +266,11 @@ export async function submitRemedial(
       studentUpdate.essay_score_final = 0;
       studentUpdate.teacher_reviewed = false;
     } else {
-      // Hardcode score to 70 (or 55 if penalty applied) and enforce COMPLETED status (No second chance)
+      // Normal submission (or system-flagged only)
+      // We don't force 0 score if it's just an automated flag. 
+      // Teacher will review the flags in the dashboard.
+      
+      // Hardcode score to 70 (or 55 if penalty applied) and enforce COMPLETED status
       const finalScore = isPenaltyApplied ? 55 : 70;
 
       studentUpdate.remedial_score = finalScore;
