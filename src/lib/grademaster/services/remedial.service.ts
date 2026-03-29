@@ -99,10 +99,46 @@ export async function submitRemedial(
     }
 
     if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(student.remedial_status)) {
-      throw new Error(`Remedial sudah pernah dilakukan atau dikunci (status: ${student.remedial_status}). Status ini bersifat permanen.`);
+      console.log(`[Remedial] Idempotent FINALIZATION: student=${studentName}, status is already ${student.remedial_status}`);
+      return {
+        ...student,
+        remedial_status: student.remedial_status,
+        newFinalScore: student.final_score,
+        subject: session.subject,
+        class_name: session.class_name,
+        remedialQuestions: session.scoring_config?.remedialQuestions || [],
+      };
     }
 
     // Validate state transition (allow NONE, FAILED → INITIATED)
+    // If already INITIATED, we handle it as idempotency below
+    if (student.remedial_status === 'INITIATED') {
+      const { data: existingAttempt } = await supabase
+        .from('gm_remedial_attempts')
+        .select('id, attempt_token, started_at')
+        .eq('student_id', studentId)
+        .eq('status', 'INITIATED')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+        
+      if (existingAttempt) {
+        console.log(`[Remedial] Idempotent INITIATED: student=${studentName}, reusing attempt=${existingAttempt.id}`);
+        return {
+          ...student,
+          remedial_status: 'INITIATED',
+          remedial_attempts: student.remedial_attempts,
+          remedial_location: location,
+          remedial_photo: photo,
+          attempt_id: existingAttempt.id,
+          attempt_token: existingAttempt.attempt_token,
+          subject: session.subject,
+          class_name: session.class_name,
+          remedialQuestions: session.scoring_config?.remedialQuestions || [],
+        };
+      }
+    }
+
     if (student.remedial_status && !['NONE', 'FAILED'].includes(student.remedial_status)) {
       validateStateTransition(student.remedial_status, 'INITIATED');
     }
