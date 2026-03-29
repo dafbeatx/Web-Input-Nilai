@@ -318,7 +318,104 @@ export default function StudentRemedialLayer({
   };
 
   const [agreedRules, setAgreedRules] = useState(false);
-  
+  const offlineBufferKey = `gm_log_buffer_${attemptId}`;
+
+  // ── ADVANCED MONITORING (Pulse & Surveillance) ──
+  const heartbeatTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isOnlineRef = useRef<boolean>(true);
+
+  const getLogBuffer = (): any[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const saved = localStorage.getItem(offlineBufferKey);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  };
+
+  const saveLogBuffer = (logs: any[]) => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(offlineBufferKey, JSON.stringify(logs.slice(-100))); // Cap at 100
+    } catch (e) { console.error('Failed to save log buffer', e); }
+  };
+
+  const flushOfflineLogs = async () => {
+    if (!attemptId || !navigator.onLine) return;
+    const buffer = getLogBuffer();
+    if (buffer.length === 0) return;
+
+    try {
+      const res = await fetch('/api/grademaster/activity-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId, events: buffer })
+      });
+      if (res.ok) {
+        localStorage.removeItem(offlineBufferKey);
+        console.log(`[Monitoring] Successfully flushed ${buffer.length} offline logs.`);
+      }
+    } catch (err) {
+      console.warn('[Monitoring] Flush failed, will retry later.', err);
+    }
+  };
+
+  const trackEvent = async (type: string, severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL', points: number, metadata: Record<string, any> = {}) => {
+    const event = {
+      eventType: type,
+      severity,
+      riskPoints: points,
+      metadata: {
+        ...metadata,
+        timestamp: new Date().toISOString(),
+        network: getNetworkInfo(),
+        device: getDeviceInfo()
+      }
+    };
+
+    if (!navigator.onLine) {
+      const buffer = getLogBuffer();
+      saveLogBuffer([...buffer, event]);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/grademaster/activity-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId, events: [event] })
+      });
+      if (!res.ok) throw new Error('Network response not ok');
+    } catch (err) {
+      const buffer = getLogBuffer();
+      saveLogBuffer([...buffer, event]);
+    }
+  };
+
+  const sendHeartbeat = async () => {
+    if (!attemptId || step !== 'EXAM') return;
+    
+    // Calculate Latency
+    const start = Date.now();
+    try {
+      const res = await fetch('/api/grademaster/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          attemptId, 
+          networkStatus: navigator.onLine ? 'ONLINE' : 'OFFLINE',
+          latencyMs: 0 // Will be updated on next heartbeat
+        })
+      });
+      const latency = Date.now() - start;
+      
+      if (res.ok) {
+        // Latency successful
+        flushOfflineLogs();
+      }
+    } catch (err) {
+      console.warn('[Pulse] Heartbeat failed (Offline/Silent)');
+    }
+  };
   const sendActivityLog = async (message: string, photo?: string, eventTypeOverride?: string) => {
     if (step !== 'EXAM') return;
 
@@ -1444,6 +1541,65 @@ export default function StudentRemedialLayer({
       clearTimeout(proctorTimerId);
     };
   }, [step]);
+
+  // ── MONITORING SETUP (Heartbeat & Event Listeners) ──
+  useEffect(() => {
+    if (step !== 'EXAM' || !attemptId) return;
+
+    // 1. Start Heartbeat Pulse (20s)
+    heartbeatTimerRef.current = setInterval(sendHeartbeat, 20000);
+    sendHeartbeat(); // Immediate first beat
+
+    // 2. Network Listeners
+    const handleOnline = () => {
+      trackEvent('NETWORK_ONLINE', 'LOW', 0, { reason: 'Connection restored' });
+      flushOfflineLogs();
+    };
+    const handleOffline = () => {
+      trackEvent('NETWORK_OFFLINE', 'HIGH', 10, { reason: 'Connection lost' });
+    };
+
+    // 3. Visibility Listener (Minimalize detection)
+    const handleVisibility = () => {
+      if (document.hidden) {
+        trackEvent('VISIBILITY_LOST', 'MEDIUM', 15, { reason: 'Siswa meminimalisir tab / buka aplikasi lain' });
+      } else {
+        trackEvent('VISIBILITY_RESTORED', 'LOW', 0, { reason: 'Siswa kembali fokus ke tab ujian' });
+        flushOfflineLogs();
+      }
+    };
+
+    // 4. Exit Protection (Beacon API for Stealth Logging)
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const beaconPayload = JSON.stringify({
+        attemptId,
+        events: [{
+          eventType: 'FORCE_EXIT',
+          severity: 'CRITICAL',
+          riskPoints: 50,
+          metadata: { reason: 'Siswa mencoba menutup tab / browser secara paksa' }
+        }]
+      });
+      navigator.sendBeacon('/api/grademaster/activity-log', beaconPayload);
+      
+      // Standard Alert
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [step, attemptId]);
 
   // Anti-cheat mechanism — 3 warnings before ban
   useEffect(() => {

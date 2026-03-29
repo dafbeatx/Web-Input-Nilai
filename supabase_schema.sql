@@ -235,6 +235,9 @@ CREATE TABLE IF NOT EXISTS public.gm_remedial_attempts (
     essay_auto_details JSONB DEFAULT '[]',
     essay_score_manual NUMERIC(5,2),
     essay_score_final NUMERIC(5,2) DEFAULT 0,
+    last_heartbeat_at TIMESTAMPTZ DEFAULT now(),
+    last_network_status TEXT DEFAULT 'ONLINE',
+    last_latency_ms INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -334,9 +337,9 @@ DECLARE
   v_attempt_id UUID;
 BEGIN
   INSERT INTO public.gm_remedial_attempts (
-    session_id, student_id, attempt_number, attempt_token, status, location, photo
+    session_id, student_id, attempt_number, attempt_token, status, location, photo, last_heartbeat_at, last_network_status
   ) VALUES (
-    p_session_id, p_student_id, p_attempt_number, p_attempt_token, 'INITIATED', p_location, p_photo
+    p_session_id, p_student_id, p_attempt_number, p_attempt_token, 'INITIATED', p_location, p_photo, now(), 'ONLINE'
   ) RETURNING id INTO v_attempt_id;
 
   UPDATE public.gm_students SET

@@ -502,7 +502,39 @@ async function renderStudentDetails(chatId: number, messageId: number | undefine
   const { data: s } = await supabase.from('gm_students').select('id, session_id, name, final_score, remedial_status, violation_count, is_cheated, cheating_flags, is_blocked, remedial_location').eq('id', studentId).single();
   if (!s) return;
 
+  // Fetch Heartbeat Status
+  const { data: attempt } = await supabase
+    .from('gm_remedial_attempts')
+    .select('last_heartbeat_at, last_network_status, last_latency_ms')
+    .eq('student_id', studentId)
+    .in('status', ['ACTIVE', 'INITIATED'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let statusIcon = '⚪ Offline';
+  let pulseDetail = '-';
+  
+  if (attempt?.last_heartbeat_at) {
+    const lastBeat = new Date(attempt.last_heartbeat_at).getTime();
+    const now = Date.now();
+    const diffSec = Math.floor((now - lastBeat) / 1000);
+    
+    if (diffSec < 60) {
+      statusIcon = '🟢 Online';
+      pulseDetail = `Aktif ${diffSec}s lalu | ${attempt.last_network_status || 'Wait'} | ${attempt.last_latency_ms || 0}ms`;
+    } else if (diffSec < 300) {
+      statusIcon = '🟡 Idle';
+      pulseDetail = `Terakhir terlihat ${Math.floor(diffSec/60)}m lalu`;
+    } else {
+       statusIcon = '⚪ Disconnected';
+       pulseDetail = `Hilang kontak >5m`;
+    }
+  }
+
   const msg = `👤 <b>${s.name}</b>\n\n` +
+    `📡 Status Live: <b>${statusIcon}</b>\n` +
+    `💓 Pulse: <code>${pulseDetail}</code>\n\n` +
     `📈 Nilai Final: <b>${s.final_score}</b>\n` +
     `📌 Status: <b>${s.remedial_status || 'NONE'}</b>\n` +
     `🚨 Curang: ${s.is_cheated ? 'YA' : 'TIDAK'} (${s.violation_count}⚠️)\n` +
