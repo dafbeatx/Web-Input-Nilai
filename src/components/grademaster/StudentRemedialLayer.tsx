@@ -128,6 +128,7 @@ export default function StudentRemedialLayer({
   const [showAiBotWarning, setShowAiBotWarning] = useState(false);
   const [aiCountdown, setAiCountdown] = useState(10);
   const aiDetectionRef = useRef<NodeJS.Timeout | null>(null);
+  const [overlayViolationCount, setOverlayViolationCount] = useState(0);
 
   const handleExit = () => {
     clearRemedialSession();
@@ -870,7 +871,6 @@ export default function StudentRemedialLayer({
     const saved = loadRemedialSession();
     if ((!remedialQuestions || remedialQuestions.length === 0) && (!saved?.remedialQuestions || saved.remedialQuestions.length === 0)) return;
 
-    const saved = loadRemedialSession();
     let indices: number[] = [];
     let sourceQuestions = remedialQuestions;
 
@@ -1386,8 +1386,13 @@ export default function StudentRemedialLayer({
         // it suggests an overlay or floating app is active.
         if (!document.hasFocus() && !document.hidden && !showAiBotWarning) {
            setShowAiBotWarning(true);
-           setAiCountdown(10); // Still use for UI visual, but we remove the Auto-Lock below
-           sendActivityLog("TERDETEKSI LAYER/OVERLAY (Indikasi Aktivitas Tidak Biasa) | Kepercayaan: LOW");
+           setAiCountdown(10);
+           setOverlayViolationCount(prev => {
+             const next = prev + 1;
+             const confidence = next >= 2 ? 'MEDIUM' : 'LOW';
+             sendActivityLog(`TERDETEKSI LAYER/OVERLAY (Indikasi Aktivitas Tidak Biasa) | Strike ${next}/3 | Kepercayaan: ${confidence}`);
+             return next;
+           });
         } else if (document.hidden) {
            // Normal tab leaving behavior
            sendActivityLog("Halaman kehilangan fokus (Blur)");
@@ -1440,7 +1445,12 @@ export default function StudentRemedialLayer({
       if (step === 'EXAM' && document.pictureInPictureElement && !showAiBotWarning) {
         setShowAiBotWarning(true);
         setAiCountdown(10);
-        sendActivityLog("TERDETEKSI PICTURE-IN-PICTURE (Indikasi Aktivitas Tidak Biasa) | Kepercayaan: LOW");
+        setOverlayViolationCount(prev => {
+          const next = prev + 1;
+          const confidence = next >= 2 ? 'MEDIUM' : 'LOW';
+          sendActivityLog(`TERDETEKSI PICTURE-IN-PICTURE (Indikasi Aktivitas Tidak Biasa) | Strike ${next}/3 | Kepercayaan: ${confidence}`);
+          return next;
+        });
       }
     }, 3000);
 
@@ -1455,7 +1465,7 @@ export default function StudentRemedialLayer({
     };
   }, [step, setToast, showAiBotWarning, isSubmitting]);
 
-  // AI Warning Feedback Timer (NO AUTO-LOCK)
+  // AI Warning Feedback Timer (WITH AUTO-LOCK ON STRIKE 3)
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (showAiBotWarning && aiCountdown > 0) {
@@ -1468,18 +1478,24 @@ export default function StudentRemedialLayer({
         }
       }, 1000);
     } else if (showAiBotWarning && aiCountdown === 0) {
-      // Flag instead of Lockout: Add to flags but don't terminate session
-      const reason = "Terdeteksi Indikasi Layer/Overlay (Aktivitas Tidak Biasa)";
-      setClientCheatingFlags(f => f.includes(reason) ? f : [...f, reason]);
-      
-      // Send Telegram with Medium Confidence since it persisted for 10s
-      sendTelegramNotify('ACTIVITY', undefined, `⚠️ ${reason} | Tingkat Kepercayaan: MEDIUM (Persisten 10s)`);
-      
-      // Stay visible for 5 more seconds then hide automatically to avoid blocking screen forever
-      setTimeout(() => setShowAiBotWarning(false), 5000);
+      if (overlayViolationCount >= 3) {
+        // LOCKOUT: Time is up and violation still detected on Strike 3
+        setShowAiBotWarning(false);
+        handleStatusUpdate('CHEATED', 'Terdeteksi penggunaan Layer/Overlay secara berulang (Auto-Lock)');
+      } else {
+        // Flag instead of Lockout: Add to flags but don't terminate session for Strike 1 & 2
+        const reason = `Indikasi Layer/Overlay (Strike ${overlayViolationCount}/3)`;
+        setClientCheatingFlags(f => f.includes(reason) ? f : [...f, reason]);
+        
+        // Send Telegram with Medium Confidence since it persisted for 10s
+        sendTelegramNotify('ACTIVITY', undefined, `⚠️ ${reason} | Tingkat Kepercayaan: MEDIUM (Persisten 10s)`);
+        
+        // Stay visible for 5 more seconds then hide automatically
+        setTimeout(() => setShowAiBotWarning(false), 5000);
+      }
     }
     return () => clearInterval(timer);
-  }, [showAiBotWarning, aiCountdown]);
+  }, [showAiBotWarning, aiCountdown, overlayViolationCount]);
 
   const handleExtendTime = async () => {
     const fixedPoints = 10;
@@ -2386,54 +2402,52 @@ export default function StudentRemedialLayer({
         }
       `}</style>
 
-      {/* AI Warning Modal - REFINED TERMINOLOGY */}
+      {/* AI Warning Modal - STRIKE SYSTEM UI */}
       {showAiBotWarning && step === 'EXAM' && (
          <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-xl animate-in fade-in duration-300">
-            <div className="bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-[0_0_100px_rgba(234,179,8,0.3)] border-4 border-amber-500 animate-in zoom-in-95">
-               <div className="bg-amber-500 p-8 flex flex-col items-center text-white text-center">
+            <div className={`bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 border-4 ${overlayViolationCount >= 3 ? 'shadow-rose-500/30 border-rose-500' : 'shadow-amber-500/30 border-amber-500'}`}>
+               <div className={`p-8 flex flex-col items-center text-white text-center ${overlayViolationCount >= 3 ? 'bg-rose-600' : 'bg-amber-500'}`}>
                   <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-6 relative">
-                     <AlertTriangle size={56} className="text-white relative z-10" />
+                     {overlayViolationCount >= 3 ? (
+                       <Cpu size={56} className="text-white relative z-10 animate-pulse" />
+                     ) : (
+                       <AlertTriangle size={56} className="text-white relative z-10" />
+                     )}
                   </div>
-                  <h2 className="text-xl font-black mb-2 tracking-tight font-outfit uppercase">INDIKASI AKTIVITAS TIDAK BIASA</h2>
-                  <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Terdeteksi Layer atau Aplikasi Mengambang</p>
+                  <h2 className="text-xl font-black mb-1 tracking-tight font-outfit uppercase">
+                    {overlayViolationCount >= 3 ? 'AI TERDETEKSI (KRITIS)' : 'INDIKASI AKTIVITAS TIDAK BIASA'}
+                  </h2>
+                  <div className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${overlayViolationCount >= 3 ? 'bg-rose-900/30' : 'bg-amber-900/30'}`}>
+                    Peringatan {overlayViolationCount} dari 3
+                  </div>
                </div>
                
                <div className="p-8 text-center bg-slate-50">
                   <p className="text-sm text-slate-700 font-bold leading-relaxed mb-6">
-                     Sistem mendeteksi adanya aktivitas layer atau aplikasi lain di atas layar ujian. Harap segera **tutup aplikasi tersebut** untuk menjaga integritas ujian.
+                     {overlayViolationCount >= 3 
+                       ? "Sistem mendeteksi aktivitas ilegal yang persisten. Harap matikan segera atau ujian akan dihentikan otomatis dalam:"
+                       : "Sistem mendeteksi adanya aktivitas layer atau aplikasi lain di atas layar ujian. Harap segera **tutup aplikasi tersebut**."}
                   </p>
                   
                   <div className="relative w-32 h-32 mx-auto mb-8">
                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-5xl font-black text-amber-600 font-mono tracking-tighter">
+                        <span className={`text-5xl font-black font-mono tracking-tighter ${overlayViolationCount >= 3 ? 'text-rose-600' : 'text-amber-600'}`}>
                            {aiCountdown}
                         </span>
                      </div>
                      <svg className="w-full h-full -rotate-90">
-                        <circle
-                          cx="64"
-                          cy="64"
-                          r="60"
-                          fill="transparent"
-                          stroke="rgba(245,158,11,0.1)"
-                          strokeWidth="8"
+                        <circle cx="64" cy="64" r="60" fill="transparent" strokeWidth="8"
+                          className={overlayViolationCount >= 3 ? 'stroke-rose-100' : 'stroke-amber-100'} 
                         />
-                        <circle
-                          cx="64"
-                          cy="64"
-                          r="60"
-                          fill="transparent"
-                          stroke="#f59e0b"
-                          strokeWidth="8"
-                          strokeDasharray="377"
+                        <circle cx="64" cy="64" r="60" fill="transparent" strokeWidth="8" strokeDasharray="377"
                           strokeDashoffset={377 - (377 * aiCountdown) / 10}
-                          className="transition-all duration-1000 ease-linear"
+                          className={`transition-all duration-1000 ease-linear ${overlayViolationCount >= 3 ? 'stroke-rose-600' : 'stroke-amber-600'}`}
                         />
                      </svg>
                   </div>
 
-                  <p className="text-[10px] text-amber-600 font-black uppercase tracking-widest">
-                     ⚠️ AKTIVITAS INI AKAN TERCATAT OLEH SISTEM PENGAWAS
+                  <p className={`text-[10px] font-black uppercase tracking-widest ${overlayViolationCount >= 3 ? 'text-rose-600' : 'text-amber-600'}`}>
+                     ⚠️ {overlayViolationCount >= 3 ? 'PELANGGARAN FINAL: HUBUNGI PENGAWAS JIKA TERKUNCI' : 'AKTIVITAS INI TERCATAT OLEH SISTEM PENGAWAS'}
                   </p>
                </div>
             </div>
