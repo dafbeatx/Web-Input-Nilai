@@ -618,7 +618,12 @@ export default function StudentRemedialLayer({
     const saved = loadRemedialSession();
     if (saved && (saved.studentName === studentName || !studentName)) {
       if (['EXAM', 'INFO', 'GUIDE'].includes(saved.step)) {
-        setStep(saved.step as RemedialStep);
+        // Determine if questions are available before restoring EXAM step
+        const hasPropsQuestions = remedialQuestions && remedialQuestions.length > 0;
+        const hasSavedQuestions = saved.remedialQuestions && saved.remedialQuestions.length > 0;
+        const questionsAvailable = hasPropsQuestions || hasSavedQuestions;
+
+        // Only restore non-EXAM meta immediately; EXAM step requires verified questions
         setAnswers(saved.answers.length === remedialEssayCount ? saved.answers : new Array(remedialEssayCount).fill(""));
         setNote(saved.note || '');
         setCurrentLocation(saved.location || '');
@@ -634,28 +639,62 @@ export default function StudentRemedialLayer({
           setIsPenaltyApplied(true);
         }
 
-        // Recovery for questions/timer if prop is empty (common on refresh)
-        if ((!remedialQuestions || remedialQuestions.length === 0) && saved.remedialQuestions) {
-          console.log("Recovering questions from local session...");
-        } else if ((!remedialQuestions || remedialQuestions.length === 0) && !saved.remedialQuestions) {
-          // Both prop and localStorage empty — force-fetch from server before giving up
-          console.warn("No questions in props or localStorage. Attempting server recovery...");
-          fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`, { cache: 'no-store' })
-            .then(res => res.ok ? res.json() : null)
-            .then(data => {
-              if (data && ['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(data.status)) {
-                setStep(data.status as RemedialStep);
-                return;
+        if (questionsAvailable) {
+          // Questions confirmed — safe to restore step
+          setStep(saved.step as RemedialStep);
+          console.log(hasPropsQuestions ? "Questions from props" : "Recovering questions from local session...");
+        } else {
+          // No questions in props or localStorage — fetch from server before setting EXAM
+          console.warn("No questions available on mount. Fetching from server before restoring EXAM...");
+          const fetchQuestionsWithRetry = async (retries = 3) => {
+            for (let i = 0; i < retries; i++) {
+              try {
+                const res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`, { cache: 'no-store' });
+                if (res.ok) {
+                  const data = await res.json();
+                  if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(data.status)) {
+                    setStep(data.status as RemedialStep);
+                    return;
+                  }
+                  if (data.status === null) {
+                    clearRemedialSession();
+                    setStep('RULES');
+                    return;
+                  }
+                }
+                // Status is active but we still need questions — re-fetch via INITIATED (idempotent)
+                const initRes = await fetch('/api/grademaster/students/remedial', {
+                  method: 'POST',
+                  cache: 'no-store' as RequestCache,
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ sessionId, studentName, status: 'INITIATED' })
+                });
+                if (initRes.ok) {
+                  const initData = await initRes.json();
+                  const serverQuestions = initData.remedialQuestions || [];
+                  if (serverQuestions.length > 0) {
+                    saveRemedialSession({ ...saved, remedialQuestions: serverQuestions });
+                    const indices = saved.shuffledIndices && saved.shuffledIndices.length > 0
+                      ? saved.shuffledIndices
+                      : serverQuestions.map((_: string, idx: number) => idx);
+                    setShuffledQuestions(indices.map((idx: number) => ({ text: serverQuestions[idx] || '', originalIndex: idx })));
+                    setStep(saved.step as RemedialStep);
+                    setToast({ message: "Soal berhasil dimuat dari server. Melanjutkan ujian...", type: "success" });
+                    return;
+                  }
+                }
+              } catch {
+                // Network error — retry with backoff
               }
-              console.error("Critical: No remedial questions found anywhere. Resetting.");
-              setToast({ message: "Data soal tidak ditemukan. Silakan masuk kembali.", type: "error" });
-              setTimeout(() => { clearRemedialSession(); handleExit(); }, 2000);
-            })
-            .catch(() => {
-              console.error("Server unreachable. Resetting session.");
-              setToast({ message: "Data soal tidak ditemukan. Silakan masuk kembali.", type: "error" });
-              setTimeout(() => { clearRemedialSession(); handleExit(); }, 2000);
-            });
+              if (i < retries - 1) {
+                await new Promise(r => setTimeout(r, 2000 * (i + 1)));
+              }
+            }
+            // All retries exhausted
+            setToast({ message: "Data soal tidak ditemukan. Silakan masuk kembali.", type: "error" });
+            setTimeout(() => { clearRemedialSession(); handleExit(); }, 2000);
+          };
+          fetchQuestionsWithRetry();
           return;
         }
 
@@ -665,7 +704,6 @@ export default function StudentRemedialLayer({
         if (remaining < 0) remaining = 0;
         setTimeLeft(remaining);
 
-        // Track refresh & Toast recovery
         setToast({ message: "Melanjutkan sesi remedial sebelumnya...", type: "success" });
         saveRemedialSession({ ...saved, refreshCount: (saved.refreshCount || 0) + 1 });
       } else if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(saved.step)) {
@@ -802,12 +840,15 @@ export default function StudentRemedialLayer({
   useEffect(() => { isSubmittingRef.current = isSubmitting; });
 
   // ── Session Health Monitoring ──
+  const healthCheckAttemptedRef = useRef(false);
   useEffect(() => {
-    if (step === 'EXAM' && shuffledQuestions.length === 0 && !isSubmitting && !isRefreshingRef.current) {
-      console.warn("Detected EXAM step with 0 questions. Attempting server recovery...");
-      sendTelegramNotify('ERROR', undefined, `⚠️ [HEALTH_CHECK] ${studentName} - Sesi EXAM tapi soal kosong. Mencoba recovery dari server...`);
+    if (step === 'EXAM' && shuffledQuestions.length === 0 && !isSubmitting && !isRefreshingRef.current && !healthCheckAttemptedRef.current) {
+      healthCheckAttemptedRef.current = true;
+      console.warn("Detected EXAM step with 0 questions. Attempting question recovery...");
+      sendTelegramNotify('ERROR', undefined, `⚠️ [HEALTH_CHECK] ${studentName} - Sesi EXAM tapi soal kosong. Mencoba recovery soal dari server...`);
 
       const attemptRecovery = async () => {
+        // 1. Check terminal status first
         try {
           const res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`, { cache: 'no-store' });
           if (res.ok) {
@@ -818,15 +859,56 @@ export default function StudentRemedialLayer({
               return;
             }
             if (data.status === null) {
-              console.log("Health check recovery: Session was reset on server.");
               clearRemedialSession();
               setStep('RULES');
               return;
             }
           }
-        } catch { /* server unreachable */ }
+        } catch { /* continue to question recovery */ }
 
-        // Recovery failed — reset
+        // 2. Try recovering questions from localStorage
+        const saved = loadRemedialSession();
+        if (saved?.remedialQuestions && saved.remedialQuestions.length > 0) {
+          const indices = saved.shuffledIndices && saved.shuffledIndices.length > 0
+            ? saved.shuffledIndices
+            : saved.remedialQuestions.map((_: string, i: number) => i);
+          setShuffledQuestions(indices.map((idx: number) => ({ text: saved.remedialQuestions![idx] || '', originalIndex: idx })));
+          sendTelegramNotify('ACTIVITY', undefined, `[HEALTH_CHECK] Recovery berhasil dari localStorage (${saved.remedialQuestions.length} soal)`);
+          healthCheckAttemptedRef.current = false;
+          return;
+        }
+
+        // 3. Fetch questions via INITIATED endpoint with retry (idempotent, critical for 3G)
+        for (let retry = 0; retry < 3; retry++) {
+          try {
+            const initRes = await fetch('/api/grademaster/students/remedial', {
+              method: 'POST',
+              cache: 'no-store' as RequestCache,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionId, studentName, status: 'INITIATED' })
+            });
+            if (initRes.ok) {
+              const initData = await initRes.json();
+              const serverQuestions = initData.remedialQuestions || [];
+              if (serverQuestions.length > 0) {
+                const indices = saved?.shuffledIndices && saved.shuffledIndices.length > 0
+                  ? saved.shuffledIndices
+                  : serverQuestions.map((_: string, i: number) => i);
+                setShuffledQuestions(indices.map((idx: number) => ({ text: serverQuestions[idx] || '', originalIndex: idx })));
+                if (saved) {
+                  saveRemedialSession({ ...saved, remedialQuestions: serverQuestions });
+                }
+                setToast({ message: "Soal berhasil dimuat ulang dari server.", type: "success" });
+                sendTelegramNotify('ACTIVITY', undefined, `[HEALTH_CHECK] Recovery berhasil dari server API (${serverQuestions.length} soal, retry ${retry + 1})`);
+                healthCheckAttemptedRef.current = false;
+                return;
+              }
+            }
+          } catch { /* network error, retry */ }
+          await new Promise(r => setTimeout(r, 3000 * (retry + 1)));
+        }
+
+        // 4. All recovery paths exhausted — reset
         setToast({ message: "Sesi tidak valid (soal kosong). Silakan masuk kembali.", type: "error" });
         setTimeout(() => {
           clearRemedialSession();
