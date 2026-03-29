@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle, us
 import { CameraOff, RefreshCw } from 'lucide-react';
 
 interface ProctoringCameraProps {
-  onViolation: (type: 'NO_FACE' | 'MULTIPLE_FACES' | 'FACE_UNALIGNED') => void;
+  onViolation: (type: 'NO_FACE' | 'MULTIPLE_FACES' | 'FACE_UNALIGNED' | 'PHONE_DETECTED') => void;
   onCameraError?: (error: string) => void;
   onCameraReady?: () => void;
 }
@@ -122,8 +122,11 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
         try {
           await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js');
           await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js');
+          // Add TFJS + COCO-SSD for Phone Detection
+          await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs');
+          await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd');
         } catch (scriptErr) {
-          console.warn('MediaPipe scripts failed to load, continuing without face detection:', scriptErr);
+          console.warn('AI scripts failed to load, some detection features may be unavailable:', scriptErr);
         }
 
         if (!isActiveRef.current || !internalVideoRef.current) return;
@@ -249,6 +252,37 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
             }, FACE_CHECK_INTERVAL);
           } catch (fdErr) {
             console.warn('FaceDetection init failed, camera still active without face detection:', fdErr);
+          }
+        }
+        
+        // ── Object Detection (Phone) ──
+        if (win.cocoSsd && typeof (win.cocoSsd as any).load === 'function') {
+          try {
+            const model = await (win.cocoSsd as any).load();
+            const objectInterval = setInterval(async () => {
+              if (!isActiveRef.current || !internalVideoRef.current || internalVideoRef.current.readyState < 2) return;
+              try {
+                const predictions = await model.detect(internalVideoRef.current);
+                const phone = predictions.find((p: any) => p.class === 'cell phone' && p.score > 0.6);
+                if (phone) {
+                  onViolationRef.current('PHONE_DETECTED');
+                }
+              } catch (err) {
+                // Ignore detection errors
+              }
+            }, 5000); // Check for phone every 5 seconds to save battery
+            
+            // Cleanup interval when component unmounts
+            const originalCleanup = stopCurrentStream;
+            const newCleanup = () => {
+              clearInterval(objectInterval);
+              originalCleanup();
+            };
+            // Update the effect's cleanup if we could, but here we just add to the ref
+            // Actually better to store it in a ref
+            (intervalRef as any).currentObject = objectInterval;
+          } catch (objErr) {
+            console.warn('Object detection init failed:', objErr);
           }
         }
 

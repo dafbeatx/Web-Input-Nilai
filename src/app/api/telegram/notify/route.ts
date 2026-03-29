@@ -76,6 +76,15 @@ export async function POST(req: NextRequest) {
                `⏰ Waktu: ${timestamp}${deviceStr}\n\n` +
                `<i>Siswa diberi 1x kesempatan terakhir. Pelanggaran berikutnya = diskualifikasi permanen.</i>`;
         break;
+      case 'PHONE_DETECTED':
+        text = `📱 <b>HP TERDETEKSI!</b>${contextStr}\n\n` +
+               `👤 Siswa: <b>${fallback(studentName)}</b>\n` +
+               `🏫 Kelas: ${fallback(className)}\n` +
+               `📚 Mapel: ${fallback(subject)}\n` +
+               `🔥 <b>PELANGGARAN KRITIS:</b> Sistem AI mendeteksi adanya HP / Ponsel di depan kamera!\n` +
+               `⏰ Waktu: ${timestamp}${deviceStr}\n\n` +
+               `🚩 <i>Snapshot foto di atas adalah bukti deteksi AI.</i>`;
+        break;
       default:
         text = message || 'Pesan otomatis dari GradeMaster';
     }

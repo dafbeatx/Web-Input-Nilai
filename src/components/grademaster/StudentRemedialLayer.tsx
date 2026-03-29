@@ -749,6 +749,8 @@ export default function StudentRemedialLayer({
       let flagMessage = "";
       if (type === 'NO_FACE') flagMessage = "Wajah tidak terdeteksi";
       if (type === 'MULTIPLE_FACES') flagMessage = "Terdeteksi lebih dari satu orang";
+      if (type === 'FACE_UNALIGNED') flagMessage = "Posisi wajah tidak sejajar";
+      if (type === 'PHONE_DETECTED') flagMessage = "Terdeteksi penggunaan HP (Ponsel)";
 
       const reason = `${flagMessage} (${newCount} kali)`;
 
@@ -773,6 +775,20 @@ export default function StudentRemedialLayer({
       } else {
         setToast({ message: `Peringatan Kamera: ${flagMessage} (${newCount}/10)`, type: "error" });
         
+        // Handle Phone detection with high priority notification & Modal
+        if (type === 'PHONE_DETECTED') {
+            const snap = capturePhoto();
+            sendTelegramNotify('PHONE_DETECTED', snap || undefined);
+            
+            // Show Urgent Modal for Phone Detection
+            setActiveWarning({
+                type: 'CAMERA',
+                count: newCount,
+                limit: 10,
+                message: "⚠️ HP TERDETEKSI! Sistem AI mendeteksi adanya ponsel di depan kamera. Penggunaan HP dilarang keras selama ujian! Aktivitas ini telah dilaporkan ke Admin Telegram."
+            });
+        }
+
         // Custom: Show Educational Popup if no face detected (debounce 1 minute)
         if (type === 'NO_FACE' && Date.now() - lastEducationShownRef.current > 60000) {
           setShowFaceEducation(true);
@@ -782,7 +798,7 @@ export default function StudentRemedialLayer({
 
       return newCount;
     });
-  }, [secondChanceUsed]);
+  }, [secondChanceUsed, capturePhoto]);
 
   // Shuffle logic
   useEffect(() => {
