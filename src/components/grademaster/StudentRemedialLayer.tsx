@@ -1732,7 +1732,7 @@ export default function StudentRemedialLayer({
             </li>
             <li className="flex gap-3 text-sm text-slate-600 font-bold items-start">
               <MapPin className="text-emerald-500 shrink-0 mt-0.5" size={18} />
-              <span>Lokasi <strong>(GPS) dipantau secara ketat</strong>. Dilarang mengerjakan secara berkelompok di satu alamat yang sama untuk mencegah kerjasama. Pelanggaran koordinat akan dilaporkan otomatis!</span>
+              <span>Lokasi <strong>(GPS) dipantau AI secara langsung</strong> untuk mendeteksi alamat yang sama. Dilarang mengerjakan secara berkelompok! Pelanggaran koordinat akan dilaporkan otomatis!</span>
             </li>
             <li className="flex gap-3 text-sm text-slate-600 font-bold items-start">
               <Clock className="text-amber-500 shrink-0 mt-0.5" size={18} />
