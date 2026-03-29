@@ -5,6 +5,7 @@ import { ToastType } from '@/lib/grademaster/types';
 import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin, User, Star, ShieldCheck, ArrowRight, Cpu, MonitorOff, Play } from 'lucide-react';
 import ProctoringCamera from './ProctoringCamera';
 import { saveRemedialSession, loadRemedialSession, clearRemedialSession } from '@/lib/grademaster/session';
+import { assessClientRisk } from '@/lib/grademaster/services/risk-engine.service';
 
 interface StudentRemedialLayerProps {
   studentName: string;
@@ -318,9 +319,40 @@ export default function StudentRemedialLayer({
 
   const [agreedRules, setAgreedRules] = useState(false);
   
-  const sendActivityLog = (message: string) => {
+  const sendActivityLog = async (message: string, photo?: string, eventTypeOverride?: string) => {
     if (step !== 'EXAM') return;
-    sendTelegramNotify('ACTIVITY', undefined, message);
+
+    const netInfo = getNetworkInfo();
+    const formattedMessage = message.includes('Network:') ? message : `${message} | Network: ${netInfo}`;
+
+    // 1. Send to Telegram for real-time alert
+    sendTelegramNotify(eventTypeOverride || 'ACTIVITY', photo, formattedMessage);
+
+    // 2. Send to Activity Log API for database synchronization & Risk Scoring
+    if (attemptId) {
+      try {
+        const assessment = assessClientRisk([message]); // Map message to structured risk event
+        const events = assessment.flags.map(f => ({
+          eventType: eventTypeOverride || f.event,
+          severity: f.severity,
+          riskPoints: f.points,
+          metadata: { 
+            originalMessage: formattedMessage,
+            network: netInfo,
+            device: getDeviceInfo(),
+            timestamp: new Date().toISOString()
+          }
+        }));
+
+        await fetch('/api/grademaster/activity-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attemptId, events })
+        });
+      } catch (err) {
+        console.error('Failed to sync data log:', err);
+      }
+    }
   };
 
   // Permission states
@@ -1487,8 +1519,8 @@ export default function StudentRemedialLayer({
         const reason = `Indikasi Layer/Overlay (Strike ${overlayViolationCount}/3)`;
         setClientCheatingFlags(f => f.includes(reason) ? f : [...f, reason]);
         
-        // Send Telegram with Medium Confidence since it persisted for 10s
-        sendTelegramNotify('ACTIVITY', undefined, `⚠️ ${reason} | Tingkat Kepercayaan: MEDIUM (Persisten 10s)`);
+        // Send synchronized log (DB + Tele) with Medium Confidence
+        sendActivityLog(`⚠️ ${reason} | Tingkat Kepercayaan: MEDIUM (Persisten 10s)`);
         
         // Stay visible for 5 more seconds then hide automatically
         setTimeout(() => setShowAiBotWarning(false), 5000);
