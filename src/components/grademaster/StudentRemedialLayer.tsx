@@ -660,6 +660,15 @@ export default function StudentRemedialLayer({
              setTabWarningCount(data.violationCount);
           }
           
+          // RESET DETECTION: If server says status is null/NONE and we aren't at START, clear local
+          if (data.status === null && step !== 'RULES') {
+            console.log("Server indicated session reset. Moving to RULES...");
+            clearRemedialSession();
+            setToast({ message: "Sesi Anda telah direset oleh Guru. Silakan masuk kembali.", type: "success" });
+            setStep('RULES');
+            return;
+          }
+
           // If server says terminal status, override local state
           if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(data.status)) {
             setStep(data.status as RemedialStep);
@@ -775,6 +784,12 @@ export default function StudentRemedialLayer({
               if (data.status === 'COMPLETED') setFinalScore(data.finalScore);
               return;
             }
+            if (data.status === null) {
+              console.log("Health check recovery: Session was reset on server.");
+              clearRemedialSession();
+              setStep('RULES');
+              return;
+            }
           }
         } catch { /* server unreachable */ }
 
@@ -852,7 +867,8 @@ export default function StudentRemedialLayer({
 
   // Shuffle logic
   useEffect(() => {
-    if (!remedialQuestions || remedialQuestions.length === 0) return;
+    const saved = loadRemedialSession();
+    if ((!remedialQuestions || remedialQuestions.length === 0) && (!saved?.remedialQuestions || saved.remedialQuestions.length === 0)) return;
 
     const saved = loadRemedialSession();
     let indices: number[] = [];
@@ -1362,22 +1378,22 @@ export default function StudentRemedialLayer({
 
     const handleBlur = () => {
       // PROCTORING: If focus is lost, check for AI overlay presence
-      // Delay check slightly to prevent false positive on quick system blips
+      // Increase delay to 1.5s to avoid false positives on quick system blips/tabs
       setTimeout(() => {
         if (step !== 'EXAM' || isSubmitting || isRefreshingRef.current) return;
         
         // If the window loses focus but the document IS NOT hidden, 
-        // it strongly suggests an overlay (AI Layer) is covering the window.
+        // it suggests an overlay or floating app is active.
         if (!document.hasFocus() && !document.hidden && !showAiBotWarning) {
            setShowAiBotWarning(true);
-           setAiCountdown(10);
-           sendActivityLog("TERDETEKSI OVERLAY/LAYER (AI BOT POSSIBLE)");
+           setAiCountdown(10); // Still use for UI visual, but we remove the Auto-Lock below
+           sendActivityLog("TERDETEKSI LAYER/OVERLAY (Indikasi Aktivitas Tidak Biasa) | Kepercayaan: LOW");
         } else if (document.hidden) {
            // Normal tab leaving behavior
            sendActivityLog("Halaman kehilangan fokus (Blur)");
            handleTabLeave();
         }
-      }, 500);
+      }, 1500);
     };
 
     const handleCopyPaste = (e: ClipboardEvent) => {
@@ -1424,9 +1440,9 @@ export default function StudentRemedialLayer({
       if (step === 'EXAM' && document.pictureInPictureElement && !showAiBotWarning) {
         setShowAiBotWarning(true);
         setAiCountdown(10);
-        sendActivityLog("TERDETEKSI PICTURE-IN-PICTURE (AI SCREEN LAYER)");
+        sendActivityLog("TERDETEKSI PICTURE-IN-PICTURE (Indikasi Aktivitas Tidak Biasa) | Kepercayaan: LOW");
       }
-    }, 2000);
+    }, 3000);
 
     return () => {
       window.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -1439,23 +1455,28 @@ export default function StudentRemedialLayer({
     };
   }, [step, setToast, showAiBotWarning, isSubmitting]);
 
-  // AI Warning Countdown Timer
+  // AI Warning Feedback Timer (NO AUTO-LOCK)
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (showAiBotWarning && aiCountdown > 0) {
       timer = setInterval(() => {
         setAiCountdown(prev => prev - 1);
         
-        // Secondary check: if they actually return focus/close PiP, hide warning early? 
-        // No, let's keep it strict for 10s or until they finish.
+        // Auto-release warning if they fix the issue (focus back & PiP closed)
         if (document.hasFocus() && !document.pictureInPictureElement) {
-           // If they fix the issue, we can potentially release them after 3s of good behavior
+           setShowAiBotWarning(false);
         }
       }, 1000);
     } else if (showAiBotWarning && aiCountdown === 0) {
-      // LOCKOUT: Time is up and violation still detected
-      setShowAiBotWarning(false);
-      handleStatusUpdate('CHEATED', 'Terdeteksi penggunaan AI Screen Layer/Overlay (Auto-Lock)');
+      // Flag instead of Lockout: Add to flags but don't terminate session
+      const reason = "Terdeteksi Indikasi Layer/Overlay (Aktivitas Tidak Biasa)";
+      setClientCheatingFlags(f => f.includes(reason) ? f : [...f, reason]);
+      
+      // Send Telegram with Medium Confidence since it persisted for 10s
+      sendTelegramNotify('ACTIVITY', undefined, `⚠️ ${reason} | Tingkat Kepercayaan: MEDIUM (Persisten 10s)`);
+      
+      // Stay visible for 5 more seconds then hide automatically to avoid blocking screen forever
+      setTimeout(() => setShowAiBotWarning(false), 5000);
     }
     return () => clearInterval(timer);
   }, [showAiBotWarning, aiCountdown]);
@@ -2365,60 +2386,58 @@ export default function StudentRemedialLayer({
         }
       `}</style>
 
-      {/* AI Bot Warning Modal (The most urgent) */}
+      {/* AI Warning Modal - REFINED TERMINOLOGY */}
       {showAiBotWarning && step === 'EXAM' && (
-        <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-xl animate-in fade-in duration-300">
-           <div className="bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-[0_0_100px_rgba(225,29,72,0.4)] border-4 border-rose-500 animate-in zoom-in-95">
-              <div className="bg-rose-600 p-8 flex flex-col items-center text-white text-center">
-                 <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-6 relative">
-                    <div className="absolute inset-0 bg-white/30 rounded-full animate-ping" />
-                    <Cpu size={56} className="text-white relative z-10" />
-                 </div>
-                 <h2 className="text-2xl font-black mb-2 tracking-tight font-outfit uppercase">AI TERDETEKSI!</h2>
-                 <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Screen Overlay / Bot Layer Aktif</p>
-              </div>
-              
-              <div className="p-8 text-center bg-slate-50">
-                 <p className="text-sm text-slate-700 font-bold leading-relaxed mb-6">
-                    Sistem mendeteksi adanya aplikasi <strong>AI Screen Layer</strong> atau <strong>Floating Window</strong> ilegal. Matikan segera dalam:
-                 </p>
-                 
-                 <div className="relative w-32 h-32 mx-auto mb-8">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                       <span className="text-5xl font-black text-rose-600 font-mono tracking-tighter">
-                          {aiCountdown}
-                       </span>
-                    </div>
-                    {/* SVG Circle Timer Animation Overlay */}
-                    <svg className="w-full h-full -rotate-90">
-                       <circle
-                         cx="64"
-                         cy="64"
-                         r="60"
-                         fill="transparent"
-                         stroke="rgba(225,29,72,0.1)"
-                         strokeWidth="8"
-                       />
-                       <circle
-                         cx="64"
-                         cy="64"
-                         r="60"
-                         fill="transparent"
-                         stroke="#e11d48"
-                         strokeWidth="8"
-                         strokeDasharray="377"
-                         strokeDashoffset={377 - (377 * aiCountdown) / 10}
-                         className="transition-all duration-1000 ease-linear"
-                       />
-                    </svg>
-                 </div>
+         <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-xl animate-in fade-in duration-300">
+            <div className="bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-[0_0_100px_rgba(234,179,8,0.3)] border-4 border-amber-500 animate-in zoom-in-95">
+               <div className="bg-amber-500 p-8 flex flex-col items-center text-white text-center">
+                  <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-6 relative">
+                     <AlertTriangle size={56} className="text-white relative z-10" />
+                  </div>
+                  <h2 className="text-xl font-black mb-2 tracking-tight font-outfit uppercase">INDIKASI AKTIVITAS TIDAK BIASA</h2>
+                  <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Terdeteksi Layer atau Aplikasi Mengambang</p>
+               </div>
+               
+               <div className="p-8 text-center bg-slate-50">
+                  <p className="text-sm text-slate-700 font-bold leading-relaxed mb-6">
+                     Sistem mendeteksi adanya aktivitas layer atau aplikasi lain di atas layar ujian. Harap segera **tutup aplikasi tersebut** untuk menjaga integritas ujian.
+                  </p>
+                  
+                  <div className="relative w-32 h-32 mx-auto mb-8">
+                     <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-5xl font-black text-amber-600 font-mono tracking-tighter">
+                           {aiCountdown}
+                        </span>
+                     </div>
+                     <svg className="w-full h-full -rotate-90">
+                        <circle
+                          cx="64"
+                          cy="64"
+                          r="60"
+                          fill="transparent"
+                          stroke="rgba(245,158,11,0.1)"
+                          strokeWidth="8"
+                        />
+                        <circle
+                          cx="64"
+                          cy="64"
+                          r="60"
+                          fill="transparent"
+                          stroke="#f59e0b"
+                          strokeWidth="8"
+                          strokeDasharray="377"
+                          strokeDashoffset={377 - (377 * aiCountdown) / 10}
+                          className="transition-all duration-1000 ease-linear"
+                        />
+                     </svg>
+                  </div>
 
-                 <p className="text-[10px] text-rose-500 font-black uppercase tracking-widest">
-                    ⚠️ ABAIKAN DAN UJIAN AKAN DIGAGALKAN (NILAI 0)
-                 </p>
-              </div>
-           </div>
-        </div>
+                  <p className="text-[10px] text-amber-600 font-black uppercase tracking-widest">
+                     ⚠️ AKTIVITAS INI AKAN TERCATAT OLEH SISTEM PENGAWAS
+                  </p>
+               </div>
+            </div>
+         </div>
       )}
 
       {/* Time Up Modal (Urgent Reminder) */}

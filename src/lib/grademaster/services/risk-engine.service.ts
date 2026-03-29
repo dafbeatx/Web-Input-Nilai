@@ -41,6 +41,9 @@ const EVENT_SEVERITY: Record<string, RiskSeverity> = {
   'HIGH_ESSAY_SIMILARITY': 'HIGH',
   'REPEATED_TAB_SWITCH': 'HIGH',
   'REPEATED_BACK_PRESS': 'HIGH',
+  'OVERLAY_INDICATION': 'LOW',
+  'UNUSUAL_ACTIVITY': 'MEDIUM',
+  'PIP_ACTIVE': 'HIGH',
 };
 
 function getRiskLevel(score: number): RiskLevel {
@@ -71,6 +74,9 @@ export function assessClientRisk(clientFlags: string[]): RiskAssessment {
     else if (flagStr.includes('Meninggalkan halaman')) event = 'TAB_SWITCH';
     else if (flagStr.includes('tombol kembali')) event = 'BACK_PRESS';
     else if (flagStr.includes('menyalin') || flagStr.includes('copy')) event = 'COPY_ATTEMPT';
+    else if (flagStr.includes('Indikasi Layer/Overlay') || flagStr.includes('OVERLAY')) event = 'OVERLAY_INDICATION';
+    else if (flagStr.includes('Aktivitas Tidak Biasa')) event = 'UNUSUAL_ACTIVITY';
+    else if (flagStr.includes('PICTURE-IN-PICTURE') || flagStr.includes('PIP')) event = 'PIP_ACTIVE';
 
     flags.push(createRiskFlag(event));
   }
