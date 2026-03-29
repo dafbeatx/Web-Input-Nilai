@@ -196,6 +196,25 @@ export async function submitRemedial(
   // Find active attempt with auto-recovery
   let attempt = await findActiveAttempt(sessionId, studentId, studentName);
 
+  // Mencegah Double Submit (Race Condition Protection)
+  if (['COMPLETED', 'CHEATED', 'TIME_UP', 'SUBMITTED', 'FAILED_EFFORT'].includes(attempt.status)) {
+    console.log(`[Remedial] Mencegah Double Submit untuk ${studentName} (Status: ${attempt.status})`);
+    return {
+      ...student,
+      remedial_status: attempt.status,
+      newFinalScore: student.final_score,
+      subject: session.subject,
+      class_name: session.class_name,
+      remedialQuestions: session.scoring_config?.remedialQuestions || [],
+    };
+  }
+
+  // Validasi Durasi di Backend (Mengabaikan data dari frontend)
+  let backendElapsedMs = elapsedTimeMs;
+  if (attempt.started_at) {
+    backendElapsedMs = Date.now() - new Date(attempt.started_at).getTime();
+  }
+
   const attemptUpdate: Record<string, unknown> = {
     status,
     completed_at: new Date().toISOString(),
@@ -225,7 +244,7 @@ export async function submitRemedial(
         remedialAnswers: s.remedial_answers || [],
       })),
       studentId,
-      elapsedTimeMs,
+      backendElapsedMs,
       session.remedial_timer || 15
     );
 
@@ -254,9 +273,13 @@ export async function submitRemedial(
 
     const hasEnoughEffort = validAnswers.length >= (answers.length / 2);
 
-    // Duration validation (Anti-Exploit: Too fast)
-    const minDurationMs = 5 * 60 * 1000; // 5 minutes
-    const isTooFast = (elapsedTimeMs || 0) < minDurationMs;
+    // Duration validation (Anti-Exploit: Too fast) - Validasi Backend Mutlak
+    const minDurationMs = 5 * 60 * 1000; // 5 minutes minimal
+    const isTooFast = backendElapsedMs < minDurationMs;
+    
+    // Timeout validation (Anti-Exploit: Melebihi waktu sangat lama)
+    const maxDurationMs = ((session.remedial_timer || 15) * 60 * 1000) + (2 * 60 * 1000); // Waktu ujian + toleransi 2 menit
+    const isTooLate = backendElapsedMs > maxDurationMs;
 
     // Essay scoring (server-side only)
     const answerKeys: string[] = session.scoring_config?.remedialAnswerKeys || [];
@@ -288,7 +311,17 @@ export async function submitRemedial(
     studentUpdate.essay_score_final = essayResult.score;
     studentUpdate.essay_auto_details = essayResult.details;
 
-    if (explicitlyBlocked) {
+    // Jika melebihi waktu maksimum, otomatis timeout/gagal
+    if (isTooLate && status !== 'CHEATED') {
+      studentUpdate.remedial_score = 0;
+      studentUpdate.final_score = 0;
+      studentUpdate.final_score_locked = 0;
+      studentUpdate.remedial_status = 'TIME_UP';
+      attemptUpdate.status = 'TIME_UP';
+      studentUpdate.teacher_reviewed = true;
+      finalFlags.push({ event: 'TIMEOUT_BYPASS', severity: 'HIGH', points: 30, timestamp: Date.now() });
+      attemptUpdate.risk_flags = finalFlags;
+    } else if (explicitlyBlocked) {
       // Manual/Automatic lockout triggered (e.g. 3 strikes)
       attemptUpdate.status = 'CHEATED';
       studentUpdate.remedial_status = 'CHEATED';
@@ -393,7 +426,7 @@ async function findActiveAttempt(
   sessionId: string,
   studentId: string,
   studentName: string
-): Promise<{ id: string; attempt_token: string; risk_score: number }> {
+): Promise<{ id: string; attempt_token: string; risk_score: number; started_at: string | null; status: string }> {
   // 0. Check student status first - if null/NONE, we should NOT try to recover an old attempt
   const { data: student } = await supabase
     .from('gm_students')
@@ -408,7 +441,7 @@ async function findActiveAttempt(
   // 1. Try finding ACTIVE attempt
   const { data: activeAttempt } = await supabase
     .from('gm_remedial_attempts')
-    .select('id, attempt_token, risk_score')
+    .select('id, attempt_token, risk_score, started_at, status')
     .eq('session_id', sessionId)
     .eq('student_id', studentId)
     .eq('status', 'ACTIVE')
@@ -426,7 +459,7 @@ async function findActiveAttempt(
 
   const { data: initiatedAttempt } = await supabase
     .from('gm_remedial_attempts')
-    .select('id, attempt_token, risk_score, session_id')
+    .select('id, attempt_token, risk_score, session_id, started_at, status')
     .eq('session_id', sessionId)
     .eq('student_id', studentId)
     .eq('status', 'INITIATED')
@@ -437,9 +470,10 @@ async function findActiveAttempt(
   if (initiatedAttempt) {
     console.warn(`[Remedial Recovery] Found INITIATED attempt ${initiatedAttempt.id}. Auto-activating...`);
 
+    const now = new Date().toISOString();
     await supabase
       .from('gm_remedial_attempts')
-      .update({ status: 'ACTIVE', started_at: new Date().toISOString() })
+      .update({ status: 'ACTIVE', started_at: now })
       .eq('id', initiatedAttempt.id);
 
     await supabase
@@ -447,6 +481,8 @@ async function findActiveAttempt(
       .update({ remedial_status: 'ACTIVE' })
       .eq('id', studentId);
 
+    initiatedAttempt.status = 'ACTIVE';
+    initiatedAttempt.started_at = now;
     return initiatedAttempt;
   }
 
@@ -466,7 +502,7 @@ async function findActiveAttempt(
       started_at: new Date().toISOString(),
       location: 'RECOVERY_AUTO',
     })
-    .select('id, attempt_token, risk_score')
+    .select('id, attempt_token, risk_score, started_at, status')
     .single();
 
   if (recoveryErr || !recoveryAttempt) {
