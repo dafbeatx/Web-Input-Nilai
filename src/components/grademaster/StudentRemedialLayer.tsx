@@ -1925,7 +1925,7 @@ export default function StudentRemedialLayer({
           </button>
 
           <p className="text-[10px] text-slate-400 font-bold">
-            Foto otomatis tetap diambil setiap 10 detik selama ujian berlangsung.
+            Tetap fokus pada layar untuk menghindari pelanggaran sistem.
           </p>
         </div>
       </div>
