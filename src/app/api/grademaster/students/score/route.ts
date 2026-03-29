@@ -20,10 +20,22 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Nilai harus antara 0 dan 100' }, { status: 400 });
     }
 
+    // Jika Admin mengganti skor secara manual, kita reset status remedialnya secara total (bersih)
     const { error } = await supabase
       .from('gm_students')
       .update({
-        final_score: newScore
+        final_score: newScore,
+        remedial_status: 'NONE',
+        remedial_score: 0,
+        remedial_location: null,
+        remedial_note: null,
+        remedial_answers: null,
+        is_cheated: false,
+        cheating_flags: [],
+        violation_count: 0,
+        is_blocked: false,
+        teacher_reviewed: true,
+        final_score_locked: newScore
       })
       .eq('id', studentId);
 
