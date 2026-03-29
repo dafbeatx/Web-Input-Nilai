@@ -594,8 +594,9 @@ export default function StudentRemedialLayer({
     if (!sessionId || !studentName) return;
 
     const checkServerStatus = async () => {
+      let res;
       try {
-        const res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`, { cache: 'no-store' });
+        res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           if (data.isBlocked) {
@@ -620,6 +621,14 @@ export default function StudentRemedialLayer({
                   setSessionCreatedAt(d.sessionCreatedAt);
                 });
             }
+          }
+        } else if (res.status === 400) {
+          // Handle error cases (e.g. data deleted by admin)
+          const errData = await res.json().catch(() => ({}));
+          if (errData.error === 'RESET_REQUIRED') {
+            console.log("Server indicated reset is required. Clearing local session...");
+            clearRemedialSession();
+            setStep('RULES');
           }
         }
       } catch (err) {
