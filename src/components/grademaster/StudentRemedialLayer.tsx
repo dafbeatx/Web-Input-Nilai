@@ -1684,7 +1684,7 @@ export default function StudentRemedialLayer({
             </li>
             <li className="flex gap-3 text-sm text-slate-600 font-bold items-start">
               <MapPin className="text-emerald-500 shrink-0 mt-0.5" size={18} />
-              <span>Lokasi <strong>(GPS) akan dicatat otomatis</strong> jika tersedia. Tidak wajib untuk memulai ujian.</span>
+              <span>Lokasi <strong>(GPS) dipantau secara ketat</strong>. Dilarang mengerjakan secara berkelompok di satu alamat yang sama untuk mencegah kerjasama. Pelanggaran koordinat akan dilaporkan otomatis!</span>
             </li>
             <li className="flex gap-3 text-sm text-slate-600 font-bold items-start">
               <Clock className="text-amber-500 shrink-0 mt-0.5" size={18} />
