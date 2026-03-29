@@ -2071,8 +2071,8 @@ export default function StudentRemedialLayer({
     const isCompleted = step === 'COMPLETED';
 
     const getRemainingTimeStr = () => {
-      if (!sessionCreatedAt) return "";
-      const deadline = new Date(sessionCreatedAt).getTime() + (5 * 24 * 60 * 60 * 1000);
+      // SET STATIS DEADLINE: SENIN, 30 MARET 2026 JAM 07:00 WIB
+      const deadline = new Date('2026-03-30T07:00:00+07:00').getTime();
       const diff = deadline - Date.now();
       if (diff <= 0) return "Waktu Habis";
 
@@ -2089,7 +2089,7 @@ export default function StudentRemedialLayer({
 
     const handleShare = () => {
       const timeStr = getRemainingTimeStr();
-      const text = `Halo! Saya sudah beres remedial ${subject} dengan nilai ${finalScore}. Yuk buruan remedial bagi yang belum, sisa waktu tinggal ${timeStr} lagi (Deadline Jakarta)!`;
+      const text = `SAYA SUDAH BERES REMEDIAL! 🎓\n\n👤 Nama: ${studentName}\n🏫 Kelas: ${className}\n📚 Mapel: ${subject}\n📊 Jenis: ${examType} (TA ${academicYear})\n🔥 Skor: ${finalScore}\n\nYuk buruan remedial bagi yang belum! Sisa waktu input nilai tinggal ${timeStr} lagi (Deadline Jakarta). Pantau terus ya!`;
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     };
 
