@@ -176,11 +176,17 @@ export default function StudentRemedialLayer({
 
   const sendTelegramNotify = async (event: string, photo?: string, message?: string, score?: number) => {
     try {
+      // 1. Double-layered fallback: props -> recovered session state -> 'Unknown'
+      const saved = loadRemedialSession();
+      const currentStudentName = studentName || saved?.studentName || 'Unknown Student';
+      const currentClassName = className || saved?.className || 'Unknown Class';
+      const currentSubject = subject || saved?.subject || 'Unknown Subject';
+
       const netInfo = getNetworkInfo();
       const payload = {
-        studentName: studentName || 'Unknown Student',
-        className: className || 'Unknown Class',
-        subject: subject || 'Unknown Subject',
+        studentName: currentStudentName,
+        className: currentClassName,
+        subject: currentSubject,
         event,
         message: message ? `${message}${message.includes('Network:') ? '' : ` | Network: ${netInfo}`}` : `Network: ${netInfo}`,
         photo,
@@ -681,10 +687,12 @@ export default function StudentRemedialLayer({
       studentId: currentStudentId || undefined,
       examMode,
       cameraStatus,
+      className,
+      subject,
       remedialQuestions: (remedialQuestions && remedialQuestions.length > 0) ? remedialQuestions : prevQuestions,
       remedialTimer: (remedialTimer && remedialTimer > 0) ? remedialTimer : prevTimer,
     });
-  }, [answers, note, step, sessionId, studentName, currentLocation, shuffledQuestions, currentStudentId, examMode, cameraStatus, remedialQuestions, remedialTimer]);
+  }, [answers, note, step, sessionId, studentName, className, subject, currentLocation, shuffledQuestions, currentStudentId, examMode, cameraStatus, remedialQuestions, remedialTimer]);
 
   const isSubmittingRef = useRef(isSubmitting);
   useEffect(() => { isSubmittingRef.current = isSubmitting; });
@@ -1099,6 +1107,8 @@ export default function StudentRemedialLayer({
         ...current,
         answers,
         note,
+        className,
+        subject,
         step: 'EXAM',
         lastUpdated: Date.now()
       });

@@ -11,6 +11,8 @@ export interface RemedialSession {
   answers: string[];
   note: string;
   location?: string;
+  subject?: string;
+  className?: string;
   refreshCount: number;
   shuffledIndices?: number[];
   remedialQuestions?: string[];

@@ -144,11 +144,12 @@ export default function GradeMaster() {
 
     // Restore active remedial exam session
     const remedialSession = loadRemedialSession();
-    if (remedialSession && (remedialSession.step === 'EXAM' || ['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(remedialSession.step))) {
-      setStudentName(remedialSession.studentName);
-      if (remedialSession.sessionId) {
-        setSessionId(remedialSession.sessionId);
-      }
+    const VALID_REMEDIAL_STEPS = ['RULES', 'INFO', 'GUIDE', 'EXAM', 'COMPLETED', 'CHEATED', 'TIMEOUT', 'SECOND_CHANCE'];
+    if (remedialSession && VALID_REMEDIAL_STEPS.includes(remedialSession.step)) {
+      if (remedialSession.studentName) setStudentName(remedialSession.studentName);
+      if (remedialSession.className) setStudentClass(remedialSession.className);
+      if (remedialSession.subject) setSubject(remedialSession.subject);
+      if (remedialSession.sessionId) setSessionId(remedialSession.sessionId);
       
       if (initialLayer !== 'remedial') {
         setInternalLayer('remedial');
@@ -243,8 +244,11 @@ export default function GradeMaster() {
       localStorage.setItem("gm_sessionName", sessionName);
       localStorage.setItem("gm_sessionPassword", sessionPassword);
       localStorage.setItem("gm_isPublicView", String(isPublicView));
+      localStorage.setItem("gm_studentName", studentName || "");
+      localStorage.setItem("gm_studentClass", studentClass || "");
+      localStorage.setItem("gm_subject", subject || "");
     }
-  }, [layer, sessionId, sessionName, sessionPassword, isPublicView]);
+  }, [layer, sessionId, sessionName, sessionPassword, isPublicView, studentName, studentClass, subject]);
 
 
 
