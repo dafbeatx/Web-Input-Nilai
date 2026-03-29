@@ -130,6 +130,40 @@ export default function StudentRemedialLayer({
   const [aiCountdown, setAiCountdown] = useState(10);
   const aiDetectionRef = useRef<NodeJS.Timeout | null>(null);
   const [overlayViolationCount, setOverlayViolationCount] = useState(0);
+  
+  // Monitoring & Lock States
+  const [isConnectionLocked, setIsConnectionLocked] = useState(false);
+  const [consecutiveHeartbeatFailures, setConsecutiveHeartbeatFailures] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const syncWithServer = async () => {
+    if (!attemptId || step !== 'EXAM') return;
+    setIsSyncing(true);
+    try {
+      // Perform a real handshake to ensure we are actually online and synced with the DB
+      const res = await fetch('/api/grademaster/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          attemptId, 
+          networkStatus: navigator.onLine ? 'ONLINE' : 'OFFLINE',
+          latencyMs: 0
+        })
+      });
+      if (res.ok) {
+        setIsConnectionLocked(false);
+        setConsecutiveHeartbeatFailures(0);
+        setToast({ message: "Koneksi pulih. Sinkronisasi sukses.", type: "success" });
+        flushOfflineLogs();
+      } else {
+        setToast({ message: "Sinkronisasi gagal. Pastikan internet stabil.", type: "error" });
+      }
+    } catch (err) {
+      setToast({ message: "Gagal terhubung ke server. Periksa koneksi Anda.", type: "error" });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleExit = () => {
     clearRemedialSession();
@@ -394,7 +428,6 @@ export default function StudentRemedialLayer({
   const sendHeartbeat = async () => {
     if (!attemptId || step !== 'EXAM') return;
     
-    // Calculate Latency
     const start = Date.now();
     try {
       const res = await fetch('/api/grademaster/heartbeat', {
@@ -403,17 +436,26 @@ export default function StudentRemedialLayer({
         body: JSON.stringify({ 
           attemptId, 
           networkStatus: navigator.onLine ? 'ONLINE' : 'OFFLINE',
-          latencyMs: 0 // Will be updated on next heartbeat
+          latencyMs: 0
         })
       });
-      const latency = Date.now() - start;
       
       if (res.ok) {
-        // Latency successful
+        setConsecutiveHeartbeatFailures(0);
         flushOfflineLogs();
+      } else {
+        throw new Error('Heartbeat non-ok response');
       }
     } catch (err) {
-      console.warn('[Pulse] Heartbeat failed (Offline/Silent)');
+      console.warn('[Pulse] Heartbeat failed');
+      const newFailCount = consecutiveHeartbeatFailures + 1;
+      setConsecutiveHeartbeatFailures(newFailCount);
+      
+      // If heartbeat fails consistently, lock the screen even if the browser thinks it is "online"
+      // (This prevents cases where the network is technically UP but proxy/firewall blocks us)
+      if (newFailCount >= 3) {
+        setIsConnectionLocked(true);
+      }
     }
   };
   const sendActivityLog = async (message: string, photo?: string, eventTypeOverride?: string) => {
@@ -1552,11 +1594,13 @@ export default function StudentRemedialLayer({
 
     // 2. Network Listeners
     const handleOnline = () => {
+      // Don't auto-unlock immediately, wait for syncWithServer handshake
+      syncWithServer();
       trackEvent('NETWORK_ONLINE', 'LOW', 0, { reason: 'Connection restored' });
-      flushOfflineLogs();
     };
     const handleOffline = () => {
-      trackEvent('NETWORK_OFFLINE', 'HIGH', 10, { reason: 'Connection lost' });
+      setIsConnectionLocked(true);
+      trackEvent('NETWORK_OFFLINE', 'HIGH', 15, { reason: 'Connection lost' });
     };
 
     // 3. Visibility Listener (Minimalize detection)
@@ -1565,7 +1609,8 @@ export default function StudentRemedialLayer({
         trackEvent('VISIBILITY_LOST', 'MEDIUM', 15, { reason: 'Siswa meminimalisir tab / buka aplikasi lain' });
       } else {
         trackEvent('VISIBILITY_RESTORED', 'LOW', 0, { reason: 'Siswa kembali fokus ke tab ujian' });
-        flushOfflineLogs();
+        // Also perform a sync check when visibility returns to ensure we weren't "locked out"
+        syncWithServer();
       }
     };
 
@@ -2990,7 +3035,7 @@ export default function StudentRemedialLayer({
         </div>
       )}
 
-      <div className={`privacy-mode ${(isTabHidden || isPermanentlyBlocked || isOffline) && step === 'EXAM' ? 'invisible' : ''}`}>
+      <div className={`privacy-mode ${(isTabHidden || isPermanentlyBlocked || isOffline || isConnectionLocked) && step === 'EXAM' ? 'invisible' : ''}`}>
 
       {/* Main Exam Content */}
       <div className="p-3 sm:p-5 lg:p-8 max-w-4xl mx-auto animate-in pt-8 md:pt-10">
@@ -3059,6 +3104,46 @@ export default function StudentRemedialLayer({
       </div>
     </div>
    </div>
+
+   {/* ── CONNECTION LOCK OVERLAY ── */}
+   {isConnectionLocked && step === 'EXAM' && (
+     <div className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
+       <div className="w-20 h-20 bg-rose-50 text-rose-600 rounded-3xl flex items-center justify-center mb-6 animate-bounce">
+         <MonitorOff size={40} />
+       </div>
+       <h2 className="text-2xl font-black text-slate-800 mb-2 font-outfit uppercase tracking-tight">Koneksi Terputus</h2>
+       <p className="text-sm text-slate-500 font-bold max-w-xs mb-8 leading-relaxed">
+         Halaman ujian dikosongkan sementara untuk menjaga keamanan. Silakan pulihkan internet Anda untuk melanjutkan.
+       </p>
+       
+       <button
+         onClick={syncWithServer}
+         disabled={isSyncing}
+         className={`flex items-center gap-2 px-8 py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-xl ${
+           isSyncing 
+            ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+            : 'bg-indigo-600 text-white hover:scale-105 active:scale-95 shadow-indigo-600/20'
+         }`}
+       >
+         {isSyncing ? (
+           <>
+             <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+             Menghubungkan...
+           </>
+         ) : (
+           <>
+             <Play size={18} /> Pulihkan Sesi
+           </>
+         )}
+       </button>
+       
+       {!navigator.onLine && (
+         <p className="mt-6 text-[10px] text-rose-500 font-black uppercase tracking-[0.2em] animate-pulse">
+           ⚠️ Perangkat Anda Offline
+         </p>
+       )}
+     </div>
+   )}
   </div>
   );
 }
