@@ -9,12 +9,13 @@ export async function POST(req: NextRequest) {
 
     if (update.callback_query) {
       const chatId = update.callback_query.message.chat.id;
+      const messageId = update.callback_query.message.message_id;
       const data = update.callback_query.data;
 
       await answerCallbackQuery(update.callback_query.id);
 
       if (isAdmin(chatId)) {
-        await handleAdminCallback(chatId, data);
+        await handleAdminCallback(chatId, data, messageId, update);
       } else {
         await handleUserCallback(chatId, data);
       }
@@ -24,10 +25,11 @@ export async function POST(req: NextRequest) {
 
     if (update.message?.text) {
       const chatId = update.message.chat.id;
+      const messageId = update.message.message_id;
       const text = update.message.text.trim();
 
       if (isAdmin(chatId)) {
-        await handleAdminCommand(chatId, text);
+        await handleAdminCommand(chatId, text, messageId);
       } else {
         await handleUserCommand(chatId, text);
       }

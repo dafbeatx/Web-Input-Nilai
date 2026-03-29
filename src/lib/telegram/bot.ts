@@ -25,7 +25,7 @@ export async function sendInlineKeyboard(
   text: string,
   keyboard: { text: string; callback_data: string }[][]
 ) {
-  await fetch(`${API_BASE}/sendMessage`, {
+  const res = await fetch(`${API_BASE}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -35,6 +35,30 @@ export async function sendInlineKeyboard(
       reply_markup: { inline_keyboard: keyboard },
     }),
   });
+  return res.json();
+}
+
+export async function editMessageText(
+  chatId: number | string,
+  messageId: number,
+  text: string,
+  keyboard?: { text: string; callback_data: string }[][]
+) {
+  const payload: any = {
+    chat_id: chatId,
+    message_id: messageId,
+    text,
+    parse_mode: 'HTML',
+  };
+  if (keyboard) {
+    payload.reply_markup = { inline_keyboard: keyboard };
+  }
+  const res = await fetch(`${API_BASE}/editMessageText`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return res.json();
 }
 
 export async function answerCallbackQuery(callbackQueryId: string, text?: string) {
@@ -60,7 +84,7 @@ export interface TelegramUpdate {
   callback_query?: {
     id: string;
     from: { id: number; first_name: string; username?: string };
-    message: { chat: { id: number } };
+    message: { message_id: number; chat: { id: number } };
     data: string;
   };
 }
