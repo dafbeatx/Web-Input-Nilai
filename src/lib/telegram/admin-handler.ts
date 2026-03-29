@@ -22,6 +22,7 @@ export async function handleAdminCommand(chatId: number, text: string) {
       `➕ /newsession — Buat sesi baru\n` +
       `🔑 /addkey — Input kunci jawaban\n` +
       `👥 /addstudents — Tambah daftar siswa\n` +
+      `🚨 /remedial — Cek siswa belum remed\n` +
       `🗑 /deletesession — Hapus sesi\n` +
       `ℹ️ /help — Bantuan`
     );
@@ -35,8 +36,9 @@ export async function handleAdminCommand(chatId: number, text: string) {
       `1. <b>/newsession</b> — Buat sesi kelas baru secara guided\n` +
       `2. <b>/addkey</b> — Tambah/update kunci jawaban untuk sesi\n` +
       `3. <b>/addstudents</b> — Tambah nama siswa ke sesi\n` +
-      `4. <b>/listsessions</b> — Lihat daftar semua sesi kelas\n` +
-      `5. <b>/deletesession</b> — Hapus sesi (butuh password)\n\n` +
+      `4. <b>/remedial</b> — Lihat daftar siswa yang belum mencapai KKM\n` +
+      `5. <b>/listsessions</b> — Lihat daftar semua sesi kelas\n` +
+      `6. <b>/deletesession</b> — Hapus sesi (butuh password)\n\n` +
       `Semua data tersinkronisasi dengan database web GradeMaster.`
     );
     return;
@@ -90,6 +92,12 @@ export async function handleAdminCommand(chatId: number, text: string) {
     await showSessionSelector(chatId, 'delete');
     return;
   }
+  
+  if (text === '/remedial') {
+    adminConversations.set(chatId, { step: 'remedial_select', data: {} });
+    await showSessionSelector(chatId, 'remedial');
+    return;
+  }
 
   if (conv) {
     await handleConversationStep(chatId, text, conv);
@@ -120,6 +128,46 @@ export async function handleAdminCallback(chatId: number, callbackData: string) 
   if (action === 'delete' && sessionName) {
     adminConversations.set(chatId, { step: 'delete_password', data: { sessionName } });
     await sendMessage(chatId, `🗑 Masukkan <b>password</b> sesi <b>${sessionName}</b> untuk menghapus:`);
+    return;
+  }
+
+  if (action === 'remedial' && sessionName) {
+    const { data: session } = await supabase
+      .from('gm_sessions')
+      .select('id, kkm, class_name, subject, academic_year')
+      .eq('session_name', sessionName)
+      .single();
+
+    if (!session) {
+      await sendMessage(chatId, '❌ Sesi tidak ditemukan.');
+      return;
+    }
+
+    const { data: students } = await supabase
+      .from('gm_students')
+      .select('name, final_score')
+      .eq('session_id', session.id)
+      .lt('final_score', session.kkm || 70)
+      .order('name');
+
+    if (!students || students.length === 0) {
+      await sendMessage(chatId, `✅ <b>Semua siswa di ${sessionName} sudah tuntas (KKM: ${session.kkm || 70}).</b>`);
+      return;
+    }
+
+    let msg = `🎓 <b>DATA SISWA BELUM REMEDIAL</b>\n\n`;
+    msg += `📚 <b>Sesi:</b> ${sessionName}\n`;
+    msg += `🏫 <b>Kelas:</b> ${session.class_name}\n`;
+    msg += `📖 <b>Mapel:</b> ${session.subject}\n`;
+    msg += `📅 <b>TA:</b> ${session.academic_year || '-'}\n`;
+    msg += `📌 <b>KKM:</b> ${session.kkm || 70}\n\n`;
+    msg += `👥 <b>Daftar Siswa (${students.length} orang):</b>\n`;
+    
+    students.forEach((s, i) => {
+      msg += `${i + 1}. ${s.name} (Nilai: <b>${s.final_score}</b>)\n`;
+    });
+
+    await sendMessage(chatId, msg);
     return;
   }
 
