@@ -438,8 +438,12 @@ export default function StudentRemedialLayer({
         } catch (err: unknown) {
           lastCamErr = err instanceof Error ? err : new Error(String(err));
           const errName = (err as { name?: string })?.name || '';
-          if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError' ||
-              errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
+          if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
+            // Log to Telegram: Student explicitly denied camera
+            sendTelegramNotify('ACTIVITY', undefined, `🚫 Siswa MENOLAK izin kamera pada perangkatnya.`);
+            break;
+          }
+          if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
             break;
           }
         }
@@ -854,6 +858,8 @@ export default function StudentRemedialLayer({
       // Try high accuracy first
       navigator.geolocation.getCurrentPosition(resolve, (errHigh) => {
         if (errHigh.code === 1) {
+          // Log to Telegram: Student explicitly denied location
+          sendTelegramNotify('ACTIVITY', undefined, `📍 Siswa MENOLAK izin lokasi (GPS) pada browser/perangkat.`);
           // If explicitly denied, fallback to IP immediately to prevent getting stuck
           fetchIpFallback(errHigh);
           return;
@@ -861,6 +867,8 @@ export default function StudentRemedialLayer({
         // Fallback: try without high accuracy
         navigator.geolocation.getCurrentPosition(resolve, (errLow) => {
           if (errLow.code === 1) {
+            // Log to Telegram: Student explicitly denied location (retry)
+            sendTelegramNotify('ACTIVITY', undefined, `📍 Siswa MENOLAK izin lokasi (GPS) pada percobaan kedua.`);
             fetchIpFallback(errLow);
             return;
           }
