@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
 
     console.log('Incoming remedial request:', JSON.stringify(body, null, 2));
 
-    const { sessionId, studentId, studentName, status, location, answers, note, elapsedTimeMs, clientCheatingFlags, photo, examMode, cameraStatus, riskLevel } = body;
+    const { sessionId, studentId, studentName, status, location, answers, note, elapsedTimeMs, clientCheatingFlags, photo, examMode, cameraStatus, riskLevel, isPenaltyApplied } = body;
     // status: 'STARTED' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT'
 
     if (!sessionId || (!studentName && !studentId) || !status) {
@@ -121,7 +121,8 @@ export async function POST(req: NextRequest) {
        photo,
        examMode,
        cameraStatus,
-       riskLevel
+       riskLevel,
+       isPenaltyApplied || false
     )) as any;
 
     return NextResponse.json({ 

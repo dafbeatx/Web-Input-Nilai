@@ -122,6 +122,7 @@ export default function StudentRemedialLayer({
   
   const [showFiveMinWarning, setShowFiveMinWarning] = useState(false);
   const hasShownFiveMinWarningRef = useRef(false);
+  const [isPenaltyApplied, setIsPenaltyApplied] = useState(false);
 
   const handleExit = () => {
     clearRemedialSession();
@@ -549,6 +550,9 @@ export default function StudentRemedialLayer({
         if (saved.examMode) {
           setExamMode(saved.examMode);
           setCameraStatus(saved.cameraStatus || 'ACTIVE');
+        }
+        if (saved.isPenaltyApplied) {
+          setIsPenaltyApplied(true);
         }
 
         // Recovery for questions/timer if prop is empty (common on refresh)
@@ -1144,9 +1148,14 @@ export default function StudentRemedialLayer({
         academicYear: academicYear || '2025/2026',
         examType: examType || 'UTS',
         step: 'EXAM',
+        isPenaltyApplied,
         lastUpdated: Date.now()
       });
-      setShowTimeUpModal(true);
+      
+      // If penalty is already applied, we don't show the modal again, just let them finish
+      if (!isPenaltyApplied) {
+        setShowTimeUpModal(true);
+      }
       return;
     }
 
@@ -1442,7 +1451,8 @@ export default function StudentRemedialLayer({
       examMode,
       cameraStatus,
       riskLevel: allFlags.length > 0 ? 'HIGH' : (examMode === 'LIMITED' ? 'MEDIUM' : 'LOW'),
-      cheatingReason: explicitReason
+      cheatingReason: explicitReason,
+      isPenaltyApplied
     };
 
     const MAX_SUBMIT_RETRIES = 3;
@@ -2255,6 +2265,63 @@ export default function StudentRemedialLayer({
           body { display: none !important; }
         }
       `}</style>
+
+      {/* Time Up Modal (Urgent Reminder) */}
+      {showTimeUpModal && step === 'EXAM' && (
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+           <div className="bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-2 border-rose-100 animate-in zoom-in-95">
+              <div className="bg-gradient-to-br from-rose-500 via-rose-600 to-rose-700 p-8 flex flex-col items-center text-white text-center relative overflow-hidden">
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-xl" />
+                 <div className="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center mb-6 backdrop-blur-md rotate-12">
+                    <Clock size={44} className="text-white drop-shadow-md" />
+                 </div>
+                 <h2 className="text-2xl font-black mb-2 tracking-tight font-outfit uppercase">Waktu Habis!</h2>
+                 <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Sesi Ujian Telah Berakhir</p>
+              </div>
+              
+              <div className="p-8 text-center">
+                 <p className="text-sm text-slate-600 font-bold leading-relaxed mb-6">
+                    Waktu pengerjaan Anda sudah habis. Silakan pilih tindakan berikut untuk melanjutkan.
+                 </p>
+                 
+                 <div className="space-y-3">
+                    <button
+                      onClick={() => {
+                        const saved = loadRemedialSession();
+                        saveRemedialSession({ 
+                          ...saved, 
+                          sessionId, 
+                          studentName, 
+                          step: 'EXAM',
+                          startedAt: saved?.startedAt || Date.now(),
+                          answers: saved?.answers || answers,
+                          note: saved?.note || note,
+                          refreshCount: saved?.refreshCount || 0,
+                          isPenaltyApplied: true 
+                        });
+                        setIsPenaltyApplied(true);
+                        setShowTimeUpModal(false);
+                      }}
+                      className="w-full py-4 bg-indigo-600 hover:bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 transition-all flex flex-col items-center justify-center gap-1"
+                    >
+                      <span>Selesaikan Soal</span>
+                      <span className="text-[8px] opacity-60 font-bold">Denda Pengurangan -15 Poin</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        setShowTimeUpModal(false);
+                        handleStatusUpdate('TIMEOUT');
+                      }}
+                      className="w-full py-4 bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all"
+                    >
+                      Kumpulkan & Keluar
+                    </button>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
 
       {/* 5 Minute Remaining Warning Modal */}
       {showFiveMinWarning && step === 'EXAM' && (

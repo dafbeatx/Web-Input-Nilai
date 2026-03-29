@@ -70,7 +70,8 @@ export async function submitRemedial(
   photo?: string,
   examMode?: string,
   cameraStatus?: string,
-  riskLevel?: string
+  riskLevel?: string,
+  isPenaltyApplied: boolean = false
 ) {
   const { data: student, error: fetchErr } = await supabase
     .from('gm_students')
@@ -263,8 +264,8 @@ export async function submitRemedial(
       studentUpdate.essay_score_final = 0;
       studentUpdate.teacher_reviewed = false;
     } else {
-      // Hardcode score to 70 and enforce COMPLETED status (No second chance)
-      const finalScore = 70;
+      // Hardcode score to 70 (or 55 if penalty applied) and enforce COMPLETED status (No second chance)
+      const finalScore = isPenaltyApplied ? 55 : 70;
 
       studentUpdate.remedial_score = finalScore;
       studentUpdate.final_score = finalScore;
@@ -273,6 +274,11 @@ export async function submitRemedial(
       studentUpdate.remedial_status = 'COMPLETED';
       studentUpdate.teacher_reviewed = true;
       attemptUpdate.status = 'COMPLETED';
+      
+      // Log penalty event if applied
+      if (isPenaltyApplied) {
+        studentUpdate.cheating_flags = [...(studentUpdate.cheating_flags as string[] || []), 'PENALTY: LATE_SUBMISSION (-15 Poin)'];
+      }
     }
   } else if (status === 'TIMEOUT') {
     // Essay scoring (even on timeout, give credit for what they did)
@@ -290,8 +296,8 @@ export async function submitRemedial(
     studentUpdate.essay_score_auto = essayResult.score;
     studentUpdate.essay_score_final = essayResult.score;
     
-    // Final score is hardcoded to 70
-    const finalScore = 70;
+    // If they exit manually when TIMEOUT, they don't get 70. They get their raw essay score.
+    const finalScore = Math.min(essayResult.score, 60); // Cap at 60 for non-finished TIMEOUT submission
     
     studentUpdate.final_score = finalScore;
     studentUpdate.final_score_locked = finalScore;
