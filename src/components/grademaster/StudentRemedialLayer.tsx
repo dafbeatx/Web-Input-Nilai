@@ -1545,10 +1545,21 @@ export default function StudentRemedialLayer({
     
     setExtendLoading(true);
     try {
+      // ATOMIC PROTECTION: Save answers before extending time
+      const s = loadRemedialSession();
+      if (s) {
+        saveRemedialSession({ ...s, answers, note, lastUpdated: Date.now() });
+      }
+
       const res = await fetch('/api/grademaster/behaviors/spend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentName, className, academicYear, pointsToSpend: fixedPoints })
+        body: JSON.stringify({ 
+          studentName, 
+          className, 
+          academicYear, 
+          pointsToSpend: fixedPoints 
+        })
       });
       
       let data: { error?: string; newPoints?: number };
@@ -1590,8 +1601,27 @@ export default function StudentRemedialLayer({
     }
   };
 
-  const handleStatusUpdate = async (status: 'COMPLETED' | 'CHEATED' | 'TIMEOUT', explicitReason?: string) => {
-    if (hasSubmittedRef.current) return;
+    const validateSubmission = () => {
+      const minLength = 20; // Minimum 20 chars per answer for it to be considered "valid effort"
+      const emptyCount = answers.filter(a => (a || '').trim().length < minLength).length;
+      
+      if (emptyCount > 0) {
+        setToast({ 
+          message: `⚠️ BELUM LENGKAP: Ada ${emptyCount} soal yang belum diisi dengan jawaban yang memadai (Min. ${minLength} karakter).`, 
+          type: "error" 
+        });
+        return false;
+      }
+      return true;
+    };
+
+    const handleStatusUpdate = async (status: 'COMPLETED' | 'CHEATED' | 'TIMEOUT', explicitReason?: string) => {
+      // For manual completion, we require validation
+      if (status === 'COMPLETED' && !validateSubmission()) {
+        return;
+      }
+
+      if (hasSubmittedRef.current) return;
     hasSubmittedRef.current = true;
     
     setIsSubmitting(true);
@@ -2082,8 +2112,8 @@ export default function StudentRemedialLayer({
             <Clock size={40} />
           </div>
           <h2 className="text-2xl font-black text-slate-800 mb-2 font-outfit uppercase tracking-tight">Waktu Habis!</h2>
-          <p className="text-sm font-bold text-slate-500 mb-6">
-            Pilih <strong className="text-indigo-600">Setuju</strong> di bawah ini untuk mengambil tambahan waktu 10 menit dengan memotong 10 Poin Disiplin Anda. Ujian tidak akan selesai sebelum Anda mengumpulkannya.
+          <p className="text-sm font-bold text-slate-500 mb-6 font-outfit">
+            Pilih <strong className="text-indigo-600">Setuju</strong> di bawah ini untuk mengambil tambahan waktu 10 menit dengan memotong <span className="text-rose-600">10 Poin Disiplin</span> Anda.
           </p>
           
           <div className="bg-slate-50 rounded-2xl w-full p-4 mb-6 border border-slate-100 shadow-sm text-center flex flex-col gap-3">
@@ -2111,9 +2141,10 @@ export default function StudentRemedialLayer({
             <button
               onClick={() => handleStatusUpdate('TIMEOUT')}
               disabled={extendLoading || isSubmitting}
-              className="w-full py-3 bg-slate-100 text-slate-500 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+              className="w-full py-3 bg-slate-100 text-rose-500 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-rose-50 transition-all active:scale-95 flex flex-col items-center justify-center gap-1"
             >
-              TIDAK, KUMPULKAN JAWABAN SEKARANG
+              <span>TIDAK, GAGALKAN SESI SEKARANG</span>
+              <span className="text-[8px] opacity-60 font-bold uppercase">Status: Tidak Valid (Skor 0)</span>
             </button>
             {(!pointsBal || pointsBal.total < 10 || pointsBal.usedToday >= 10) && pointsBal !== null && (
               <p className="text-[10px] md:text-xs text-rose-500 font-bold mt-2">
@@ -2533,9 +2564,10 @@ export default function StudentRemedialLayer({
                         setShowTimeUpModal(false);
                         handleStatusUpdate('TIMEOUT');
                       }}
-                      className="w-full py-4 bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all"
+                      className="w-full py-4 bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all flex flex-col items-center justify-center gap-1"
                     >
-                      Kumpulkan & Keluar
+                      <span>Gagalkan Sesi & Keluar</span>
+                      <span className="text-[8px] opacity-60 font-bold">Status: Tidak Valid (Skor 0)</span>
                     </button>
                  </div>
               </div>

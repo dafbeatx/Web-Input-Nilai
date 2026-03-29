@@ -233,6 +233,11 @@ export async function submitRemedial(
     const systemFlagged = combinedRisk.shouldAutoFlag;
     const explicitlyBlocked = status === 'CHEATED';
 
+    // Duration validation (Anti-Exploit: Too fast)
+    const minDurationMs = 5 * 60 * 1000; // 5 minutes
+    const isTooFast = (elapsedTimeMs || 0) < minDurationMs;
+    const hasEnoughEffort = answers.filter(a => (a || '').trim().length > 30).length >= (answers.length / 2);
+
     // Essay scoring (server-side only)
     const answerKeys: string[] = session.scoring_config?.remedialAnswerKeys || [];
     const essayResult = calculateEssayScore(answers, answerKeys);
@@ -242,7 +247,14 @@ export async function submitRemedial(
     attemptUpdate.note = note;
     attemptUpdate.risk_score = (attempt.risk_score || 0) + combinedRisk.totalScore;
     attemptUpdate.risk_level = combinedRisk.level;
-    attemptUpdate.risk_flags = combinedRisk.flags;
+    
+    // Add FAST_COMPLETION flag if necessary
+    const finalFlags = [...combinedRisk.flags];
+    if (isTooFast && status === 'COMPLETED') {
+      finalFlags.push({ event: 'FAST_COMPLETION', severity: 'CRITICAL', points: 50, timestamp: Date.now() });
+    }
+    attemptUpdate.risk_flags = finalFlags;
+
     attemptUpdate.essay_score_auto = essayResult.score;
     attemptUpdate.essay_auto_details = essayResult.details;
     attemptUpdate.essay_score_final = essayResult.score;
@@ -250,8 +262,8 @@ export async function submitRemedial(
     // Update student cache
     studentUpdate.remedial_answers = answers;
     studentUpdate.remedial_note = note;
-    studentUpdate.is_cheated = systemFlagged || explicitlyBlocked; 
-    studentUpdate.cheating_flags = combinedRisk.flags.map(f => f.event);
+    studentUpdate.is_cheated = systemFlagged || explicitlyBlocked || isTooFast; 
+    studentUpdate.cheating_flags = finalFlags.map(f => f.event);
     studentUpdate.essay_score_auto = essayResult.score;
     studentUpdate.essay_score_final = essayResult.score;
     studentUpdate.essay_auto_details = essayResult.details;
@@ -265,49 +277,40 @@ export async function submitRemedial(
       studentUpdate.final_score_locked = 0;
       studentUpdate.essay_score_final = 0;
       studentUpdate.teacher_reviewed = false;
-    } else {
+    } else if (status === 'COMPLETED') {
       // Normal submission (or system-flagged only)
-      // We don't force 0 score if it's just an automated flag. 
-      // Teacher will review the flags in the dashboard.
       
-      // Hardcode score to 70 (or 55 if penalty applied) and enforce COMPLETED status
-      const finalScore = isPenaltyApplied ? 55 : 70;
-
-      studentUpdate.remedial_score = finalScore;
-      studentUpdate.final_score = finalScore;
-      studentUpdate.final_score_locked = finalScore;
-      
-      studentUpdate.remedial_status = 'COMPLETED';
-      studentUpdate.teacher_reviewed = true;
-      attemptUpdate.status = 'COMPLETED';
+      // EXPLOIT PREVENTION: If no effort detected or too fast, set score to 0
+      if (!hasEnoughEffort || isTooFast) {
+        studentUpdate.remedial_score = 0;
+        studentUpdate.final_score = 0;
+        studentUpdate.final_score_locked = 0;
+        studentUpdate.remedial_status = 'FAILED';
+        attemptUpdate.status = 'FAILED';
+      } else {
+        // Valid effort
+        const finalScore = isPenaltyApplied ? 55 : 70;
+        studentUpdate.remedial_score = finalScore;
+        studentUpdate.final_score = finalScore;
+        studentUpdate.final_score_locked = finalScore;
+        studentUpdate.remedial_status = 'COMPLETED';
+        studentUpdate.teacher_reviewed = true;
+        attemptUpdate.status = 'COMPLETED';
+      }
       
       // Log penalty event if applied
       if (isPenaltyApplied) {
         studentUpdate.cheating_flags = [...(studentUpdate.cheating_flags as string[] || []), 'PENALTY: LATE_SUBMISSION (-15 Poin)'];
       }
+    } else if (status === 'TIMEOUT' || status === 'FAILED') {
+      // EXPLOIT PREVENTION: Logout/Timeout without manual completion yields 0
+      attemptUpdate.status = status;
+      studentUpdate.remedial_status = status;
+      studentUpdate.remedial_score = 0;
+      studentUpdate.final_score = 0;
+      studentUpdate.final_score_locked = 0;
+      studentUpdate.teacher_reviewed = true; // Auto-reviewed as zero
     }
-  } else if (status === 'TIMEOUT') {
-    // Essay scoring (even on timeout, give credit for what they did)
-    const answerKeys: string[] = session.scoring_config?.remedialAnswerKeys || [];
-    const essayResult = calculateEssayScore(answers, answerKeys);
-
-    attemptUpdate.answers = answers;
-    attemptUpdate.status = 'TIMEOUT';
-    attemptUpdate.essay_score_auto = essayResult.score;
-    attemptUpdate.essay_score_final = essayResult.score;
-
-    studentUpdate.remedial_answers = answers;
-    studentUpdate.remedial_status = 'TIMEOUT';
-    studentUpdate.remedial_score = essayResult.score;
-    studentUpdate.essay_score_auto = essayResult.score;
-    studentUpdate.essay_score_final = essayResult.score;
-    
-    // If they exit manually when TIMEOUT, they don't get 70. They get their raw essay score.
-    const finalScore = Math.min(essayResult.score, 60); // Cap at 60 for non-finished TIMEOUT submission
-    
-    studentUpdate.final_score = finalScore;
-    studentUpdate.final_score_locked = finalScore;
-    studentUpdate.teacher_reviewed = true;
   }
 
   // ── FINALIZATION: Transactional Update (Attempt + Student) ──
