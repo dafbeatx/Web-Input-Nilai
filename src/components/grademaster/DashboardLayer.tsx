@@ -19,7 +19,8 @@ import {
   Clock,
   Send,
   MonitorOff,
-  Cpu
+  Cpu,
+  Edit2
 } from 'lucide-react';
 import { GradedStudent, AnalyticsResult } from '@/lib/grademaster/types';
 import { getCsiLabel, getLpsLabel } from '@/lib/grademaster/scoring';
@@ -229,6 +230,38 @@ export default function DashboardLayer({
       alert('Gagal menghapus siswa. Silakan coba lagi.');
     } finally {
       setIsDeleting(null);
+    }
+  };
+
+  const [isEditingScore, setIsEditingScore] = useState<string | null>(null);
+  const handleEditScore = async (studentId: string, currentScore: number) => {
+    const newScoreStr = window.prompt("Ubah Nilai Akhir Siswa (0-100):\n\nCatatan: Perubahan nilai ini bersifat manual/override.", currentScore.toString());
+    if (newScoreStr === null) return; // cancelled
+    
+    const newScore = parseInt(newScoreStr);
+    if (isNaN(newScore) || newScore < 0 || newScore > 100) {
+      alert("Nilai tidak valid! Harus berupa angka 0-100.");
+      return;
+    }
+
+    setIsEditingScore(studentId);
+    try {
+      const res = await fetch('/api/grademaster/students/score', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, newScore })
+      });
+      
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || 'Gagal mengubah nilai');
+      }
+      
+      window.location.reload(); 
+    } catch (err: any) {
+      alert(`Gagal: ${err.message}`);
+    } finally {
+      setIsEditingScore(null);
     }
   };
 
@@ -662,8 +695,19 @@ export default function DashboardLayer({
                       </span>
                       <span className="text-xs font-black text-slate-700 truncate max-w-[140px] uppercase tracking-tight">{r.name}</span>
                     </div>
-                    <div className={`px-2.5 py-1 rounded-lg text-xs font-black ${r.finalScore >= kkm ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                      {r.finalScore}
+                    <div className="flex items-center gap-2">
+                      <div className={`px-2.5 py-1 rounded-lg text-xs font-black ${r.finalScore >= kkm ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                        {r.finalScore}
+                      </div>
+                      {!isPublicView && (
+                        <button
+                          onClick={() => handleEditScore(gradedStudents.find(s => s.name === r.name)?.id as string, r.finalScore)}
+                          disabled={isEditingScore === gradedStudents.find(s => s.name === r.name)?.id}
+                          className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                        >
+                          {isEditingScore === (gradedStudents.find(s => s.name === r.name)?.id) ? <div className="w-3 h-3 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" /> : <Edit2 size={12} />}
+                        </button>
+                      )}
                     </div>
                   </div>
                   
@@ -752,9 +796,21 @@ export default function DashboardLayer({
                       </td>
                       <td className="py-3.5 text-xs font-bold text-slate-700">{r.name}</td>
                       <td className="py-3.5">
-                        <span className={`px-2.5 py-1 rounded-lg text-xs font-black ${r.finalScore >= kkm ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                          {r.finalScore}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2.5 py-1 rounded-lg text-xs font-black ${r.finalScore >= kkm ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                            {r.finalScore}
+                          </span>
+                          {!isPublicView && (
+                            <button
+                              onClick={() => handleEditScore(gradedStudents.find(s => s.name === r.name)?.id as string, r.finalScore)}
+                              disabled={isEditingScore === gradedStudents.find(s => s.name === r.name)?.id}
+                              className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                              title="Ubah Nilai"
+                            >
+                              {isEditingScore === (gradedStudents.find(s => s.name === r.name)?.id) ? <div className="w-3 h-3 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" /> : <Edit2 size={12} />}
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3.5 text-xs font-bold">
                         {isPublicView ? (
