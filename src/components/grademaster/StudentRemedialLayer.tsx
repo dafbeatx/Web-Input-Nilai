@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ToastType } from '@/lib/grademaster/types';
-import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin, User, Star } from 'lucide-react';
+import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin, User, Star, ShieldCheck } from 'lucide-react';
 import ProctoringCamera from './ProctoringCamera';
 import { saveRemedialSession, loadRemedialSession, clearRemedialSession } from '@/lib/grademaster/session';
 
@@ -1755,9 +1755,21 @@ export default function StudentRemedialLayer({
           </div>
           
           <h2 className="text-2xl font-black text-slate-800 mb-2 font-outfit uppercase tracking-tight">Panduan Wajah (PENTING)</h2>
-          <p className="text-sm text-slate-500 font-bold mb-8 text-center leading-relaxed">
+          <p className="text-sm text-slate-500 font-bold mb-6 text-center leading-relaxed">
             Sistem proctoring membutuhkan wajah yang terlihat jelas untuk menghindari peringatan kecurangan otomatis.
           </p>
+
+          <div className="w-full p-4 bg-indigo-50 border border-indigo-100 rounded-2xl mb-6 flex items-start gap-3 shadow-sm">
+            <div className="bg-indigo-500 text-white p-2 rounded-xl shrink-0">
+               <ShieldCheck size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-1">🤖 Pengawasan AI Aktif</p>
+              <p className="text-[11px] text-indigo-900 font-bold leading-relaxed">
+                Ujian ini diawasi secara otomatis oleh **Artificial Intelligence**. Sistem akan mendeteksi wajah, pergerakan, dan aktivitas layar Anda secara real-time.
+              </p>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 w-full">
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center text-center">
