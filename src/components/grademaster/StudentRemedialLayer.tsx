@@ -226,27 +226,45 @@ export default function StudentRemedialLayer({
     if (!videoRef.current) return undefined;
     try {
       const video = videoRef.current;
-      if (video.readyState < 2 || video.videoWidth === 0 || video.paused || video.ended) {
-        console.warn('Video not ready for capture');
+      if (video.paused || video.ended) {
+        try { video.play(); } catch { /* ignore */ }
+      }
+      if (video.readyState < 2) {
+        console.warn('Video not ready for capture (readyState:', video.readyState, ')');
         return undefined;
       }
 
+      const w = video.videoWidth || 320;
+      const h = video.videoHeight || 240;
       const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth || 320;
-      canvas.height = video.videoHeight || 240;
+      canvas.width = w;
+      canvas.height = h;
       const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      if (!ctx) return undefined;
 
-        // Check for blank/black frame
-        const centerPixel = ctx.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data;
-        if (centerPixel[0] === 0 && centerPixel[1] === 0 && centerPixel[2] === 0) {
-          console.warn('Captured a blank/black frame, skipping');
-          return undefined;
+      ctx.drawImage(video, 0, 0, w, h);
+
+      const samplePoints = [
+        [Math.floor(w / 2), Math.floor(h / 2)],
+        [Math.floor(w * 0.25), Math.floor(h * 0.25)],
+        [Math.floor(w * 0.75), Math.floor(h * 0.25)],
+        [Math.floor(w * 0.25), Math.floor(h * 0.75)],
+        [Math.floor(w * 0.75), Math.floor(h * 0.75)],
+      ];
+      let allBlack = true;
+      for (const [sx, sy] of samplePoints) {
+        const px = ctx.getImageData(sx, sy, 1, 1).data;
+        if (px[0] > 5 || px[1] > 5 || px[2] > 5) {
+          allBlack = false;
+          break;
         }
-
-        return canvas.toDataURL('image/jpeg', 0.6);
       }
+      if (allBlack) {
+        console.warn('Captured a blank/black frame (5-point check), skipping');
+        return undefined;
+      }
+
+      return canvas.toDataURL('image/jpeg', 0.6);
     } catch (err) {
       console.error('Failed to capture photo:', err);
     }
@@ -397,26 +415,47 @@ export default function StudentRemedialLayer({
       sendTelegramNotify('ERROR', undefined, `Kamera gagal total (mediaDevices undefined). Siswa mengakses panel Bypass.`);
       camReady = false;
     } else {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 160, height: 120, facingMode: 'user' } });
-        stream.getTracks().forEach(t => t.stop());
-        camReady = true;
-        setCameraRetryCount(0);
-        setCameraErrorDetail(null);
-        setExamMode('STRICT');
-        setCameraStatus('ACTIVE');
-      } catch (err: any) {
-        camReady = false;
-        const detail = getCameraErrorMessage(err);
+      const constraintsList: MediaTrackConstraints[] = [
+        { width: 160, height: 120, facingMode: 'user' },
+        { width: { ideal: 160 }, height: { ideal: 120 }, facingMode: 'user' },
+        { facingMode: 'user' },
+        { facingMode: { ideal: 'user' } },
+        { width: { ideal: 160 } },
+        true as unknown as MediaTrackConstraints,
+      ];
+
+      let lastCamErr: Error | null = null;
+      for (const constraint of constraintsList) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: constraint, audio: false });
+          stream.getTracks().forEach(t => t.stop());
+          camReady = true;
+          setCameraRetryCount(0);
+          setCameraErrorDetail(null);
+          setExamMode('STRICT');
+          setCameraStatus('ACTIVE');
+          break;
+        } catch (err: unknown) {
+          lastCamErr = err instanceof Error ? err : new Error(String(err));
+          const errName = (err as { name?: string })?.name || '';
+          if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError' ||
+              errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
+            break;
+          }
+        }
+      }
+
+      if (!camReady && lastCamErr) {
+        const detail = getCameraErrorMessage(lastCamErr);
         setCameraErrorDetail(detail);
         setCameraRetryCount(prev => {
           const next = prev + 1;
           if (next >= MAX_CAMERA_RETRIES) {
-            sendTelegramNotify('ACTIVITY', undefined, `Kamera gagal ${next}x (${err?.name}). Siswa diarahkan ke Mode Terbatas.`);
+            sendTelegramNotify('ACTIVITY', undefined, `Kamera gagal ${next}x (${(lastCamErr as { name?: string })?.name}). Siswa diarahkan ke Mode Terbatas.`);
           }
           return next;
         });
-        sendTelegramNotify('ACTIVITY', undefined, `Kamera error: ${err?.name || 'unknown'} (percobaan ${cameraRetryCount + 1}/${MAX_CAMERA_RETRIES})`);
+        sendTelegramNotify('ACTIVITY', undefined, `Kamera error: ${(lastCamErr as { name?: string })?.name || 'unknown'} (percobaan ${cameraRetryCount + 1}/${MAX_CAMERA_RETRIES})`);
       }
     }
     setCameraOk(camReady);
@@ -1052,19 +1091,27 @@ export default function StudentRemedialLayer({
     return () => clearInterval(timerId);
   }, [step, timeLeft, showTimeUpModal, pointsBal]);
 
-  // Proctoring: START photo + 10s auto-snap (depends ONLY on step, NOT timeLeft)
+  // Proctoring: START photo + 30s auto-snap (depends ONLY on step, NOT timeLeft)
   useEffect(() => {
     if (step !== 'EXAM') return;
+
+    // Helper: retry capture with short delay between attempts
+    const captureWithRetry = async (maxAttempts = 3, delayMs = 500): Promise<string | undefined> => {
+      for (let i = 0; i < maxAttempts; i++) {
+        const snap = capturePhoto();
+        if (snap) return snap;
+        if (i < maxAttempts - 1) {
+          await new Promise(r => setTimeout(r, delayMs));
+        }
+      }
+      return undefined;
+    };
 
     // Auto-capture START photo when exam interface is fully rendered
     if (!hasSentStartNotifRef.current) {
       hasSentStartNotifRef.current = true;
       setTimeout(async () => {
-        let snap = capturePhoto();
-        if (!snap) {
-           await new Promise(r => setTimeout(r, 1000));
-           snap = capturePhoto();
-        }
+        const snap = await captureWithRetry(4, 800);
         const compressed = snap ? await compressImage(snap) : undefined;
         sendTelegramNotify('START', compressed);
         
@@ -1079,23 +1126,35 @@ export default function StudentRemedialLayer({
     // Using recursive setTimeout instead of setInterval to prevent overlap and backlog issues
     let isProctoringActive = true;
     let proctorTimerId: NodeJS.Timeout;
-    const PROCTOR_INTERVAL = 30000; // 30 seconds between captures
+    const PROCTOR_INTERVAL = 30000;
+    let consecutiveFailCount = 0;
+    const MAX_CONSECUTIVE_FAIL_BEFORE_ALERT = 5;
 
     const runProctorCycle = async () => {
       if (!isProctoringActive || step !== 'EXAM') return;
       
       try {
         if (!document.hidden) {
-          const snap = capturePhoto();
+          const snap = await captureWithRetry(3, 500);
           if (snap) {
-            if (isPhotoDuplicate(snap)) {
-              // Skip sending duplicate frames — log only if many in a row
-              if (consecutiveDupCountRef.current >= 3) {
-                console.warn(`Skipped ${consecutiveDupCountRef.current} consecutive duplicate proctoring frames`);
-              }
+            consecutiveFailCount = 0;
+
+            if (isPhotoDuplicate(snap) && consecutiveDupCountRef.current < 5) {
+              // Skip duplicate, tapi jangan terlalu lama — setelah 5 skip, kirim tetap
             } else {
+              if (consecutiveDupCountRef.current >= 5) {
+                consecutiveDupCountRef.current = 0;
+                lastPhotoHashRef.current = '';
+              }
               const compressed = await compressImage(snap);
               await sendTelegramNotify('PROCTORING', compressed, `📸 Auto-Snap`);
+            }
+          } else {
+            consecutiveFailCount++;
+            console.warn(`Proctoring snap gagal (${consecutiveFailCount}x berturut-turut)`);
+
+            if (consecutiveFailCount === MAX_CONSECUTIVE_FAIL_BEFORE_ALERT) {
+              sendTelegramNotify('ACTIVITY', undefined, `⚠️ Kamera siswa gagal di-capture ${MAX_CONSECUTIVE_FAIL_BEFORE_ALERT}x berturut-turut. Kemungkinan kamera mati / tertutup.`);
             }
           }
         }
@@ -1241,7 +1300,7 @@ export default function StudentRemedialLayer({
         body: JSON.stringify({ studentName, className, academicYear, pointsToSpend: fixedPoints })
       });
       
-      let data;
+      let data: { error?: string; newPoints?: number };
       try {
         data = await res.json();
       } catch (e) {
@@ -1266,7 +1325,7 @@ export default function StudentRemedialLayer({
       
       // Update UI state
       setTimeLeft(prev => prev > 0 ? prev + addedSeconds : addedSeconds);
-      setPointsBal(prev => prev ? { total: data.newPoints, usedToday: prev.usedToday + fixedPoints } : null);
+      setPointsBal(prev => prev ? { total: data.newPoints ?? prev.total, usedToday: prev.usedToday + fixedPoints } : null);
       
       // Success - Close modal
       setShowTimeUpModal(false);
@@ -2000,105 +2059,128 @@ export default function StudentRemedialLayer({
         }
       `}</style>
 
-      <div className={`privacy-mode ${(isTabHidden || isPermanentlyBlocked || isOffline) && step === 'EXAM' ? 'invisible' : ''}`}>
-        {/* Draggable Floating Camera (PiP) */}
-        {step === 'EXAM' && (
-          <div
-            ref={pipRef}
-            className="fixed z-50 rounded-2xl md:rounded-3xl overflow-hidden border-2 md:border-4 border-slate-900 shadow-2xl bg-slate-900 w-24 h-36 md:w-36 md:h-52 animate-in slide-in-from-right duration-500 cursor-grab active:cursor-grabbing select-none touch-none"
-            style={{
-              right: pipPos ? undefined : '16px',
-              bottom: pipPos ? undefined : '16px',
-              left: pipPos ? `${pipPos.x}px` : undefined,
-              top: pipPos ? `${pipPos.y}px` : undefined,
-              transition: isDraggingRef.current ? 'none' : 'box-shadow 0.3s',
-            }}
-            onMouseDown={(e) => {
-              if (!pipRef.current) return;
-              const rect = pipRef.current.getBoundingClientRect();
-              isDraggingRef.current = true;
-              wasDraggedRef.current = false;
-              dragOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-              dragStartPosRef.current = { x: e.clientX, y: e.clientY };
-              e.preventDefault();
+      {/* Draggable Floating Camera (PiP) — Di luar privacy-mode agar fixed positioning selalu benar */}
+      {step === 'EXAM' && (
+        <div
+          ref={pipRef}
+          className="fixed z-[60] rounded-2xl md:rounded-3xl overflow-hidden border-2 md:border-4 border-slate-900 shadow-2xl bg-slate-900 w-24 h-36 md:w-36 md:h-52 animate-in slide-in-from-right duration-500 cursor-grab active:cursor-grabbing select-none touch-none"
+          style={pipPos
+            ? { left: `${pipPos.x}px`, top: `${pipPos.y}px`, transition: isDraggingRef.current ? 'none' : 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)', willChange: 'left, top' as const }
+            : { right: '12px', top: '12px', transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)' }
+          }
+          onMouseDown={(e) => {
+            if (!pipRef.current) return;
+            const rect = pipRef.current.getBoundingClientRect();
+            isDraggingRef.current = true;
+            wasDraggedRef.current = false;
+            dragOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            dragStartPosRef.current = { x: e.clientX, y: e.clientY };
+            e.preventDefault();
 
-              const onMove = (ev: MouseEvent) => {
-                const dx = Math.abs(ev.clientX - dragStartPosRef.current.x);
-                const dy = Math.abs(ev.clientY - dragStartPosRef.current.y);
-                if (dx > 3 || dy > 3) wasDraggedRef.current = true;
-                const newX = Math.min(Math.max(0, ev.clientX - dragOffsetRef.current.x), window.innerWidth - (pipRef.current?.offsetWidth || 96));
-                const newY = Math.min(Math.max(0, ev.clientY - dragOffsetRef.current.y), window.innerHeight - (pipRef.current?.offsetHeight || 144));
-                setPipPos({ x: newX, y: newY });
-              };
-              const onUp = () => {
-                isDraggingRef.current = false;
-                window.removeEventListener('mousemove', onMove);
-                window.removeEventListener('mouseup', onUp);
-              };
-              window.addEventListener('mousemove', onMove);
-              window.addEventListener('mouseup', onUp);
-            }}
-            onTouchStart={(e) => {
-              if (!pipRef.current) return;
-              const touch = e.touches[0];
-              const rect = pipRef.current.getBoundingClientRect();
-              isDraggingRef.current = true;
-              wasDraggedRef.current = false;
-              dragOffsetRef.current = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
-              dragStartPosRef.current = { x: touch.clientX, y: touch.clientY };
-            }}
-            onTouchMove={(e) => {
-              if (!isDraggingRef.current || !pipRef.current) return;
-              const touch = e.touches[0];
-              const dx = Math.abs(touch.clientX - dragStartPosRef.current.x);
-              const dy = Math.abs(touch.clientY - dragStartPosRef.current.y);
+            const onMove = (ev: MouseEvent) => {
+              const dx = Math.abs(ev.clientX - dragStartPosRef.current.x);
+              const dy = Math.abs(ev.clientY - dragStartPosRef.current.y);
               if (dx > 3 || dy > 3) wasDraggedRef.current = true;
-              const newX = Math.min(Math.max(0, touch.clientX - dragOffsetRef.current.x), window.innerWidth - (pipRef.current?.offsetWidth || 96));
-              const newY = Math.min(Math.max(0, touch.clientY - dragOffsetRef.current.y), window.innerHeight - (pipRef.current?.offsetHeight || 144));
+              const elW = pipRef.current?.offsetWidth || 96;
+              const elH = pipRef.current?.offsetHeight || 144;
+              const newX = Math.min(Math.max(0, ev.clientX - dragOffsetRef.current.x), window.innerWidth - elW);
+              const newY = Math.min(Math.max(0, ev.clientY - dragOffsetRef.current.y), window.innerHeight - elH);
               setPipPos({ x: newX, y: newY });
-            }}
-            onTouchEnd={() => { isDraggingRef.current = false; }}
-          >
-            <div className="w-full h-full relative pointer-events-none">
-                <ProctoringCamera 
-                  ref={videoRef}
-                  onViolation={handleCameraViolation} 
-                />
-              </div>
-            
-            {/* Timer Label */}
-            <div className="absolute top-1 left-1 bg-black/70 text-white font-mono text-[9px] md:text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm tracking-wider font-bold pointer-events-none">
-              ⏱️ {formatTime(timeLeft)}
+            };
+            const onUp = (ev: MouseEvent) => {
+              isDraggingRef.current = false;
+              window.removeEventListener('mousemove', onMove);
+              window.removeEventListener('mouseup', onUp);
+              // Snap to nearest horizontal edge
+              if (pipRef.current) {
+                const elW = pipRef.current.offsetWidth;
+                const curX = ev.clientX - dragOffsetRef.current.x;
+                const centerX = curX + elW / 2;
+                const snapX = centerX < window.innerWidth / 2 ? 12 : window.innerWidth - elW - 12;
+                const curY = Math.min(Math.max(12, ev.clientY - dragOffsetRef.current.y), window.innerHeight - (pipRef.current.offsetHeight) - 12);
+                setPipPos({ x: snapX, y: curY });
+              }
+            };
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onUp);
+          }}
+          onTouchStart={(e) => {
+            if (!pipRef.current) return;
+            const touch = e.touches[0];
+            const rect = pipRef.current.getBoundingClientRect();
+            isDraggingRef.current = true;
+            wasDraggedRef.current = false;
+            dragOffsetRef.current = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+            dragStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+          }}
+          onTouchMove={(e) => {
+            if (!isDraggingRef.current || !pipRef.current) return;
+            const touch = e.touches[0];
+            const dx = Math.abs(touch.clientX - dragStartPosRef.current.x);
+            const dy = Math.abs(touch.clientY - dragStartPosRef.current.y);
+            if (dx > 3 || dy > 3) wasDraggedRef.current = true;
+            const elW = pipRef.current?.offsetWidth || 96;
+            const elH = pipRef.current?.offsetHeight || 144;
+            const newX = Math.min(Math.max(0, touch.clientX - dragOffsetRef.current.x), window.innerWidth - elW);
+            const newY = Math.min(Math.max(0, touch.clientY - dragOffsetRef.current.y), window.innerHeight - elH);
+            setPipPos({ x: newX, y: newY });
+          }}
+          onTouchEnd={(e) => {
+            isDraggingRef.current = false;
+            // Snap to nearest horizontal edge on touch release
+            if (pipRef.current) {
+              const elW = pipRef.current.offsetWidth;
+              const elH = pipRef.current.offsetHeight;
+              const rect = pipRef.current.getBoundingClientRect();
+              const centerX = rect.left + elW / 2;
+              const snapX = centerX < window.innerWidth / 2 ? 12 : window.innerWidth - elW - 12;
+              const snapY = Math.min(Math.max(12, rect.top), window.innerHeight - elH - 12);
+              setPipPos({ x: snapX, y: snapY });
+            }
+          }}
+        >
+          <div className="w-full h-full relative pointer-events-none">
+              <ProctoringCamera 
+                ref={videoRef}
+                onViolation={handleCameraViolation} 
+              />
             </div>
-    
-            {/* Monitoring Label */}
-            <div className="absolute bottom-1 left-1 flex items-center gap-1 bg-black/60 px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm pointer-events-none">
-               <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${examMode === 'STRICT' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-               <span className={`text-[7px] md:text-[8px] font-black uppercase tracking-wider ${examMode === 'STRICT' ? 'text-emerald-300' : 'text-amber-300'}`}>
-                 {examMode === 'STRICT' ? 'Strict Mode' : 'Limited Mode'}
-               </span>
-            </div>
-
-            {/* Drag Handle Indicator */}
-            <div className="absolute top-1 left-1/2 -translate-x-1/2 w-6 h-1 bg-white/30 rounded-full pointer-events-none" />
-    
-            {/* Penalty Info (if any) */}
-            {(warningCount > 0 || tabWarningCount > 0) && (
-              <div className="absolute top-1 right-1 flex flex-col gap-0.5 items-end pointer-events-none">
-                {tabWarningCount > 0 && (
-                  <span className="text-[7px] md:text-[8px] bg-rose-500/90 text-white px-1 rounded font-bold backdrop-blur-sm">
-                    TAB: {tabWarningCount}/{MAX_TAB_WARNINGS}
-                  </span>
-                )}
-                {warningCount > 0 && (
-                  <span className="text-[7px] md:text-[8px] bg-rose-500/90 text-white px-1 rounded font-bold backdrop-blur-sm">
-                    CAM: {warningCount}/10
-                  </span>
-                )}
-              </div>
-            )}
+          
+          {/* Timer Label */}
+          <div className="absolute top-1 left-1 bg-black/70 text-white font-mono text-[9px] md:text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm tracking-wider font-bold pointer-events-none">
+            ⏱️ {formatTime(timeLeft)}
           </div>
-        )}
+  
+          {/* Monitoring Label */}
+          <div className="absolute bottom-1 left-1 flex items-center gap-1 bg-black/60 px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm pointer-events-none">
+             <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${examMode === 'STRICT' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+             <span className={`text-[7px] md:text-[8px] font-black uppercase tracking-wider ${examMode === 'STRICT' ? 'text-emerald-300' : 'text-amber-300'}`}>
+               {examMode === 'STRICT' ? 'Strict Mode' : 'Limited Mode'}
+             </span>
+          </div>
+
+          {/* Drag Handle Indicator */}
+          <div className="absolute top-1 left-1/2 -translate-x-1/2 w-6 h-1 bg-white/30 rounded-full pointer-events-none" />
+  
+          {/* Penalty Info (if any) */}
+          {(warningCount > 0 || tabWarningCount > 0) && (
+            <div className="absolute top-1 right-1 flex flex-col gap-0.5 items-end pointer-events-none">
+              {tabWarningCount > 0 && (
+                <span className="text-[7px] md:text-[8px] bg-rose-500/90 text-white px-1 rounded font-bold backdrop-blur-sm">
+                  TAB: {tabWarningCount}/{MAX_TAB_WARNINGS}
+                </span>
+              )}
+              {warningCount > 0 && (
+                <span className="text-[7px] md:text-[8px] bg-rose-500/90 text-white px-1 rounded font-bold backdrop-blur-sm">
+                  CAM: {warningCount}/10
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className={`privacy-mode ${(isTabHidden || isPermanentlyBlocked || isOffline) && step === 'EXAM' ? 'invisible' : ''}`}>
 
       {/* Main Exam Content */}
       <div className="p-3 sm:p-5 lg:p-8 max-w-4xl mx-auto animate-in pt-8 md:pt-10">
