@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ToastType } from '@/lib/grademaster/types';
-import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin } from 'lucide-react';
+import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin, User, Star } from 'lucide-react';
 import ProctoringCamera from './ProctoringCamera';
 import { saveRemedialSession, loadRemedialSession, clearRemedialSession } from '@/lib/grademaster/session';
 
@@ -22,7 +22,7 @@ interface StudentRemedialLayerProps {
   setToast: (t: ToastType) => void;
 }
 
-type RemedialStep = 'RULES' | 'INFO' | 'EXAM' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT' | 'SECOND_CHANCE';
+type RemedialStep = 'RULES' | 'INFO' | 'GUIDE' | 'EXAM' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT' | 'SECOND_CHANCE';
 
 const Badge = ({ children, color = 'indigo' }: { children: React.ReactNode; color?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'rose' }) => {
   const colors = {
@@ -520,7 +520,7 @@ export default function StudentRemedialLayer({
   useEffect(() => {
     const saved = loadRemedialSession();
     if (saved && (saved.studentName === studentName || !studentName)) {
-      if (['EXAM', 'INFO'].includes(saved.step)) {
+      if (['EXAM', 'INFO', 'GUIDE'].includes(saved.step)) {
         setStep(saved.step as RemedialStep);
         setAnswers(saved.answers.length === remedialEssayCount ? saved.answers : new Array(remedialEssayCount).fill(""));
         setNote(saved.note || '');
@@ -1674,11 +1674,11 @@ export default function StudentRemedialLayer({
                   Anda masuk menggunakan Mode Terbatas karena keterbatasan perangkat (Gagal akses kamera/lokasi). Tindakan ini akan tercatat di sistem admin.
                 </p>
                 <button
-                  onClick={startExam}
+                  onClick={() => setStep('GUIDE')}
                   disabled={isSubmitting}
                   className="w-full py-4 rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl bg-orange-500 text-white shadow-orange-500/20 hover:scale-105 transition-all flex items-center justify-center"
                 >
-                  {isSubmitting ? 'MEMPROSES...' : 'SAYA MENGERTI, MULAI UJIAN'}
+                  {isSubmitting ? 'MEMPROSES...' : 'SAYA MENGERTI, LANJUTKAN'}
                 </button>
               </div>
             </>
@@ -1723,13 +1723,13 @@ export default function StudentRemedialLayer({
               )}
 
               <button
-                onClick={startExam}
+                onClick={() => setStep('GUIDE')}
                 disabled={isSubmitting || !allPermsOk || (remedialQuestions.length === 0 && !loadRemedialSession()?.remedialQuestions)}
                 className="w-full py-4 bg-indigo-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
               >
                 {isSubmitting ? 'MEMPROSES...' : 
                  (remedialQuestions.length === 0 && !loadRemedialSession()?.remedialQuestions) ? '⏳ MEMUAT DATA UJIAN...' :
-                 !allPermsOk ? '⛔ AKTIFKAN IZIN TERLEBIH DAHULU' : 'SAYA MENGERTI, MULAI REMEDIAL'}
+                 !allPermsOk ? '⛔ AKTIFKAN IZIN TERLEBIH DAHULU' : 'SAYA MENGERTI, LANJUTKAN'}
               </button>
             </>
           )}
@@ -1737,6 +1737,74 @@ export default function StudentRemedialLayer({
 
         {/* Camera preview removed from INFO screen to prevent dual-instance issues.
            The single ProctoringCamera instance renders in the EXAM step below. */}
+      </div>
+    );
+  }
+
+  // RENDER: GUIDE SCREEN (Educational instructions for proctoring camera)
+  if (step === 'GUIDE') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 animate-in">
+        <div className="bg-white max-w-lg w-full rounded-[2rem] p-8 md:p-10 shadow-2xl border border-slate-100 flex flex-col items-center">
+          <button onClick={() => setStep('INFO')} className="flex items-center gap-1.5 md:gap-2 text-slate-400 hover:text-indigo-600 font-bold text-[10px] md:text-xs uppercase tracking-widest transition-colors mb-6 w-full">
+            <ArrowLeft size={12} /> Kembali ke Persiapan
+          </button>
+          
+          <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-6">
+            <CheckCircle2 size={32} />
+          </div>
+          
+          <h2 className="text-2xl font-black text-slate-800 mb-2 font-outfit uppercase tracking-tight">Panduan Wajah (PENTING)</h2>
+          <p className="text-sm text-slate-500 font-bold mb-8 text-center leading-relaxed">
+            Sistem proctoring membutuhkan wajah yang terlihat jelas untuk menghindari peringatan kecurangan otomatis.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 w-full">
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center text-center">
+               <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-3">
+                 <User size={20} />
+               </div>
+               <p className="text-[10px] font-black uppercase text-indigo-900 mb-1">Wajah Penuh</p>
+               <p className="text-[9px] text-slate-500 font-bold">Pastikan seluruh wajah (dahi sampai dagu) masuk dalam layar.</p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center text-center">
+               <div className="w-10 h-10 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-3">
+                 <ShieldX size={20} />
+               </div>
+               <p className="text-[10px] font-black uppercase text-rose-900 mb-1">Tanpa Penutup</p>
+               <p className="text-[9px] text-slate-500 font-bold">Jangan menutupi wajah dengan tangan, masker, atau benda lain.</p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center text-center">
+               <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-3">
+                 <Star size={20} />
+               </div>
+               <p className="text-[10px] font-black uppercase text-amber-900 mb-1">Cukup Cahaya</p>
+               <p className="text-[9px] text-slate-500 font-bold">Cari ruangan yang terang. Jangan membelakangi lampu/jendela.</p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center text-center">
+               <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-3">
+                 <Camera size={20} />
+               </div>
+               <p className="text-[10px] font-black uppercase text-indigo-900 mb-1">Tetap Di Frame</p>
+               <p className="text-[9px] text-slate-500 font-bold">Jangan bergerak keluar dari jangkauan kamera selama ujian.</p>
+            </div>
+          </div>
+
+          <div className="w-full p-4 bg-amber-50 border-2 border-amber-200 rounded-2xl mb-8 flex gap-3">
+            <AlertTriangle className="text-amber-600 shrink-0" size={20} />
+            <p className="text-[10px] md:text-xs text-amber-800 font-black leading-snug">
+              ⚠️ PELANGGARAN TERHADAP POSISI WAJAH AKAN MENGURANGI POIN DISIPLIN DAN DAPAT MEMICU DISKUALIFIKASI OTOMATIS!
+            </p>
+          </div>
+
+          <button
+            onClick={startExam}
+            disabled={isSubmitting}
+            className="w-full py-4 bg-emerald-600 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? 'MEMPROSES...' : 'SAYA MENGERTI, MULAI REMEDIAL'}
+          </button>
+        </div>
       </div>
     );
   }
