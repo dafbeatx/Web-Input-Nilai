@@ -115,6 +115,10 @@ export default function StudentRemedialLayer({
   const dragOffsetRef = useRef({x: 0, y: 0});
   const dragStartPosRef = useRef({x: 0, y: 0});
   const wasDraggedRef = useRef(false);
+  
+  // Face Education Popup State
+  const [showFaceEducation, setShowFaceEducation] = useState(false);
+  const lastEducationShownRef = useRef(0);
 
   const handleExit = () => {
     clearRemedialSession();
@@ -748,6 +752,12 @@ export default function StudentRemedialLayer({
         }
       } else {
         setToast({ message: `Peringatan Kamera: ${flagMessage} (${newCount}/10)`, type: "error" });
+        
+        // Custom: Show Educational Popup if no face detected (debounce 1 minute)
+        if (type === 'NO_FACE' && Date.now() - lastEducationShownRef.current > 60000) {
+          setShowFaceEducation(true);
+          lastEducationShownRef.current = Date.now();
+        }
       }
 
       return newCount;
@@ -2102,6 +2112,49 @@ export default function StudentRemedialLayer({
                   (X) Saya Mengerti & Lanjut Ujian
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Face Education Modal (Automatic Guidance) */}
+      {showFaceEducation && step === 'EXAM' && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-amber-500/20">
+            <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-8 flex flex-col items-center text-white text-center">
+               <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-md">
+                 <User size={40} className="text-white" />
+               </div>
+               <h2 className="text-xl font-black uppercase tracking-tight">Wajah Tidak Terdeteksi</h2>
+               <p className="text-[11px] font-bold opacity-90 mt-1 uppercase tracking-widest">⚠️ Tindakan Diperlukan</p>
+            </div>
+            
+            <div className="p-8 flex flex-col items-center text-center">
+              <p className="text-sm font-bold text-slate-600 leading-relaxed mb-6">
+                Sistem tidak dapat mendeteksi wajah Anda. Harap ikuti panduan berikut agar tidak dianggap sebagai pelanggaran:
+              </p>
+              
+              <div className="space-y-4 mb-8 w-full">
+                 <div className="flex items-start gap-4 text-left p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 text-xs font-black">1</div>
+                    <p className="text-[11px] font-bold text-slate-700 leading-tight">Pastikan wajah terlihat **penuh** (dari kening hingga dagu) di kamera.</p>
+                 </div>
+                 <div className="flex items-start gap-4 text-left p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 text-xs font-black">2</div>
+                    <p className="text-[11px] font-bold text-slate-700 leading-tight">Jangan menutupi wajah dengan **tangan, masker, atau benda lain**.</p>
+                 </div>
+                 <div className="flex items-start gap-4 text-left p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 text-xs font-black">3</div>
+                    <p className="text-[11px] font-bold text-slate-700 leading-tight">Posisikan cahaya di depan wajah (jangan membelakangi lampu/jendela).</p>
+                 </div>
+              </div>
+
+              <button
+                onClick={() => setShowFaceEducation(false)}
+                className="w-full py-4 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-xl hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                Gerti, Saya Perbaiki Posisinya
+              </button>
             </div>
           </div>
         </div>
