@@ -64,12 +64,12 @@ export default function BehaviorLayer({
     } else {
       fetchAvailableClasses();
     }
-    if (className) fetchBehaviorSettings();
+    fetchBehaviorSettings();
   }, [activeClass, activeYear, academicYear, className]);
 
   const fetchBehaviorSettings = async () => {
     try {
-      const res = await fetch(`/api/grademaster/behaviors/settings?class=${encodeURIComponent(className)}&year=${encodeURIComponent(academicYear)}`);
+      const res = await fetch(`/api/grademaster/behaviors/settings?year=${encodeURIComponent(academicYear)}`);
       const data = await res.json();
       if (res.ok && data.settings) {
         setBehaviorReasons(data.settings.reasons);
@@ -84,11 +84,11 @@ export default function BehaviorLayer({
       const res = await fetch('/api/grademaster/behaviors/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ className, academicYear, reasons: updatedReasons })
+        body: JSON.stringify({ academicYear, reasons: updatedReasons })
       });
       if (!res.ok) throw new Error("Gagal menyimpan pengaturan");
       setBehaviorReasons(updatedReasons);
-      setToast({ message: "Kategori poin berhasil diperbarui", type: "success" });
+      setToast({ message: "Kategori poin global berhasil diperbarui", type: "success" });
     } catch (err: any) {
       setToast({ message: err.message, type: "error" });
     }
@@ -390,8 +390,8 @@ export default function BehaviorLayer({
         <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[1000] flex items-center justify-center p-4">
           <div className="bg-slate-900/50 border border-white/10 max-w-2xl w-full rounded-[3rem] overflow-hidden shadow-2xl">
              <div className="p-8 border-b border-white/10 bg-white/5">
-                <h2 className="text-xl font-black text-white uppercase font-outfit">Kelola Kategori Poin</h2>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Atur daftar tindakan terpuji & pelanggaran untuk Kelas {className}</p>
+                <h2 className="text-xl font-black text-white uppercase font-outfit">Kelola Kategori GLOBAL</h2>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Atur daftar tindakan terpuji & pelanggaran untuk SELURUH KELAS</p>
              </div>
              
              <div className="p-8 space-y-8">
