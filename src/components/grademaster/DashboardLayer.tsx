@@ -940,65 +940,7 @@ export default function DashboardLayer({
         )}
       </div>
 
-      {/* Behavior Section (Public View Only) */}
-      {isPublicView && Object.keys(behaviorMap).length > 0 && (
-        <div className="mt-6 md:mt-10 bg-slate-900/40 backdrop-blur-xl rounded-3xl p-5 md:p-6 border border-white/10">
-          <div className="flex items-center gap-2 mb-4 md:mb-6">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-              <ShieldCheck size={20} />
-            </div>
-            <div>
-              <h3 className="text-base md:text-lg font-black text-white font-headline">Rapor Kedisiplinan & Perilaku</h3>
-              <p className="text-[10px] md:text-xs font-bold text-slate-400">Catatan sikap siswa selama proses pembelajaran</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-            {analytics.ranking.map(r => {
-              const b = getBehavior(r.name);
-              if (!b) return null;
-              const summary = getBehaviorSummary(b.behavior_logs || []);
-              const label = getBehaviorLabel(b.total_points);
-              return (
-                <div key={r.name} className="border border-white/10 bg-slate-900/60 rounded-2xl p-4 md:p-5 hover:bg-slate-800/60 transition-all">
-                  <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-3">
-                    <h4 className="font-black text-sm text-slate-200 truncate mr-3">{r.name}</h4>
-                    <div className="flex items-center gap-1.5 shrink-0 bg-white/5 px-2 py-1 rounded-lg border border-white/10">
-                      <span className={`text-sm font-black ${
-                        b.total_points >= 80 ? 'text-emerald-500' :
-                        b.total_points >= 60 ? 'text-amber-500' :
-                        'text-rose-500'
-                      }`}>{b.total_points}</span>
-                    </div>
-                  </div>
 
-                  {(summary.good.length > 0 || summary.bad.length > 0) && (
-                    <div className="space-y-2 mt-2">
-                      {summary.good.length > 0 && (
-                        <div className="flex items-start gap-2">
-                          <ThumbsUp size={12} className="text-emerald-400 mt-0.5 shrink-0" />
-                          <p className="text-[11px] text-emerald-400/80 font-bold leading-relaxed">{summary.good.join(', ')}</p>
-                        </div>
-                      )}
-                      {summary.bad.length > 0 && (
-                        <div className="flex items-start gap-2">
-                          <ThumbsDown size={12} className="text-rose-400 mt-0.5 shrink-0" />
-                          <p className="text-[11px] text-rose-400/80 font-bold leading-relaxed">{summary.bad.join(', ')}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {summary.good.length === 0 && summary.bad.length === 0 && (
-                    <div className="text-center py-2">
-                      <p className="text-[10px] text-slate-400 font-bold">Belum ada catatan sikap khusus.</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Deadline Warning Modal */}
       {showDeadlineModal && (

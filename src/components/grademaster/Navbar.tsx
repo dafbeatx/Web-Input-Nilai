@@ -46,215 +46,154 @@ export default function Navbar({
 
   return (
     <>
-      <nav className="sticky top-0 z-[100] bg-slate-950/80 backdrop-blur-xl border-b border-white/10 shadow-lg">
-        <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
-          <div className="flex items-center justify-between h-14 md:h-16">
-            {/* Left: Logo + Title */}
-            <div className="flex items-center gap-2 md:gap-3 min-w-0">
-              <div className="w-8 h-8 md:w-9 md:h-9 bg-primary text-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/20">
-                <GraduationCap size={18} className="md:w-5 md:h-5" />
+      {/* Desktop Top Navbar */}
+      <nav className="hidden md:block sticky top-0 z-[100] bg-slate-950/80 backdrop-blur-xl border-b border-white/10 shadow-lg">
+        <div className="max-w-7xl mx-auto px-5 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Left: Logo */}
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-primary text-white rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                <GraduationCap size={20} />
               </div>
-              <div className="min-w-0">
-                <h1 className="text-sm md:text-base font-black text-white tracking-tight truncate">GradeMaster</h1>
-              </div>
+              <h1 className="text-base font-black text-white tracking-tight font-outfit uppercase">GradeMaster OS</h1>
             </div>
 
-            {/* Center: Desktop Navigation */}
-            {isAdmin && (
-              <div className="hidden md:flex items-center gap-1">
-                <button
-                  onClick={() => onNavigate('home')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${
-                    isActive('exam')
-                      ? 'bg-primary/20 text-primary border border-primary/20'
-                      : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
-                  }`}
-                >
-                  <ClipboardList size={14} /> Penilaian Ujian
-                </button>
-                <button
-                  onClick={() => onNavigate('behavior')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${
-                    isActive('behavior')
-                      ? 'bg-primary/20 text-primary border border-primary/20'
-                      : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
-                  }`}
-                >
-                  <Users size={14} /> Kehadiran & Perilaku
-                </button>
+            {/* Center: Navigation */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => onNavigate('home')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
+                  isActive('exam') ? 'bg-primary/20 text-primary border border-primary/20' : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
+                }`}
+              >
+                <ClipboardList size={14} /> Beranda
+              </button>
+              <button
+                onClick={() => onNavigate('behavior')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
+                  isActive('behavior') ? 'bg-primary/20 text-primary border border-primary/20' : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
+                }`}
+              >
+                <ShieldCheck size={14} /> Rapor Perilaku
+              </button>
+              {isAdmin && (
                 <button
                   onClick={() => onNavigate('remedial_dashboard')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${
-                    isActive('remedial')
-                      ? 'bg-primary/20 text-primary border border-primary/20'
-                      : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
+                    isActive('remedial') ? 'bg-primary/20 text-primary border border-primary/20' : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
                   }`}
                 >
                   <RefreshCcw size={14} /> Remedial
                 </button>
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* Right: Actions */}
-            <div className="flex items-center gap-2">
-              {isAdmin && (
+            {/* Right: User/Auth */}
+            <div className="flex items-center gap-3">
+              {isAdmin ? (
                 <>
-                  <span className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-emerald-500/20">
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-emerald-500/20">
                     <CheckCircle2 size={10} /> {adminUser || 'Admin'}
                   </span>
-                  <button
-                    onClick={onOpenSettings}
-                    className="hidden md:flex w-8 h-8 rounded-lg bg-white/5 text-slate-400 hover:text-primary hover:bg-white/10 items-center justify-center transition-colors border border-white/10"
-                    title="Pengaturan"
-                  >
+                  <button onClick={onOpenSettings} className="w-8 h-8 rounded-lg bg-white/5 text-slate-400 hover:text-primary hover:bg-white/10 flex items-center justify-center transition-colors border border-white/10">
                     <Settings size={14} />
                   </button>
-                  <button
-                    onClick={onLogout}
-                    className="hidden md:flex px-3 py-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 border border-transparent hover:border-rose-500/20"
-                  >
-                    <LogOut size={12} /> Logout
+                  <button onClick={onLogout} className="px-3 py-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border border-transparent hover:border-rose-500/20">
+                    <LogOut size={12} />
                   </button>
                 </>
-              )}
-              {!isAdmin && (
-                <button
-                  onClick={onLoginClick}
-                  className="hidden md:flex px-3 py-1.5 text-slate-400 hover:text-primary hover:bg-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 border border-transparent hover:border-white/10"
-                >
-                  <LogIn size={12} /> Login Admin
+              ) : (
+                <button onClick={onLoginClick} className="px-4 py-2 text-slate-400 hover:text-primary hover:bg-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+                  <LogIn size={14} className="inline mr-2" /> Login Admin
                 </button>
               )}
-
-              {/* Hamburger removed from top nav in mobile (moved to bottom nav) */}
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-slate-950/80 backdrop-blur-xl border-t border-white/10 shadow-2xl pb-safe">
-        <div className="flex items-center justify-around h-[68px] px-2">
-          {isAdmin ? (
-            <>
-              <button 
-                onClick={() => { onNavigate('home'); setIsMobileMenuOpen(false); }} 
-                className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors active:scale-95 ${isActive('exam') ? 'text-primary' : 'text-slate-500 hover:text-primary'}`}
-              >
-                <div className={`p-1.5 rounded-full ${isActive('exam') ? 'bg-primary/10' : 'bg-transparent'}`}>
-                  <ClipboardList size={22} className="stroke-[2]" />
-                </div>
-                <span className="text-[10px] font-bold -mt-1 uppercase tracking-tight">Ujian</span>
-              </button>
-              <button 
-                onClick={() => { onNavigate('behavior'); setIsMobileMenuOpen(false); }} 
-                className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors active:scale-95 ${isActive('behavior') ? 'text-primary' : 'text-slate-500 hover:text-primary'}`}
-              >
-                <div className={`p-1.5 rounded-full ${isActive('behavior') ? 'bg-primary/10' : 'bg-transparent'}`}>
-                  <Users size={22} className="stroke-[2]" />
-                </div>
-                <span className="text-[10px] font-bold -mt-1 uppercase tracking-tight">Kehadiran</span>
-              </button>
-              <button 
-                onClick={() => { onNavigate('remedial_dashboard'); setIsMobileMenuOpen(false); }} 
-                className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors active:scale-95 ${isActive('remedial') ? 'text-primary' : 'text-slate-500 hover:text-primary'}`}
-              >
-                <div className={`p-1.5 rounded-full ${isActive('remedial') ? 'bg-primary/10' : 'bg-transparent'}`}>
-                  <RefreshCcw size={22} className="stroke-[2]" />
-                </div>
-                <span className="text-[10px] font-bold -mt-1 uppercase tracking-tight">Remedial</span>
-              </button>
-              <button 
-                onClick={() => setIsMobileMenuOpen(true)} 
-                className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors active:scale-95 ${isMobileMenuOpen ? 'text-primary' : 'text-slate-500 hover:text-primary'}`}
-              >
-                <div className={`p-1.5 rounded-full ${isMobileMenuOpen ? 'bg-primary/10' : 'bg-transparent'}`}>
-                  <Menu size={22} className="stroke-[2]" />
-                </div>
-                <span className="text-[10px] font-bold -mt-1 uppercase tracking-tight">Menu</span>
-              </button>
-            </>
-          ) : (
-            <button 
-              onClick={() => { onLoginClick(); setIsMobileMenuOpen(false); }} 
-              className="flex flex-col items-center justify-center flex-1 h-full gap-1 text-slate-400 hover:text-primary transition-colors active:scale-95 cursor-pointer"
-            >
-              <div className="p-1.5 rounded-full bg-transparent">
-                  <LogIn size={22} className="stroke-[2]" />
-              </div>
-              <span className="text-[10px] font-bold -mt-1 uppercase tracking-tight">Login Admin</span>
-            </button>
-          )}
+      {/* Mobile Top Header (Just Brand) */}
+      <div className="md:hidden sticky top-0 z-[100] bg-slate-950/80 backdrop-blur-xl border-b border-white/10 p-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+           <div className="w-7 h-7 bg-primary text-white rounded-lg flex items-center justify-center">
+             <GraduationCap size={16} />
+           </div>
+           <span className="text-sm font-black text-white font-outfit uppercase tracking-tight">GradeMaster OS</span>
         </div>
+        {isAdmin && (
+           <button onClick={onOpenSettings} className="w-8 h-8 rounded-lg bg-white/5 text-slate-400 flex items-center justify-center border border-white/10">
+             <Settings size={14} />
+           </button>
+        )}
       </div>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Bottom Navigation (Ultra Modern Icon Only) */}
+      <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[1001] w-[90%] max-w-sm">
+        <div className="bg-slate-900/60 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-2 flex items-center justify-between shadow-2xl">
+          <button 
+            onClick={() => onNavigate('home')}
+            className={`flex-1 flex flex-col items-center justify-center py-3 rounded-2xl transition-all ${isActive('exam') ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500'}`}
+          >
+            <ClipboardList size={22} className={isActive('exam') ? 'animate-pulse' : ''} />
+            {isActive('exam') && <span className="text-[8px] font-black uppercase tracking-widest mt-1">Ujian</span>}
+          </button>
+          
+          <button 
+            onClick={() => onNavigate('behavior')}
+            className={`flex-1 flex flex-col items-center justify-center py-3 rounded-2xl transition-all ${isActive('behavior') ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500'}`}
+          >
+            <ShieldCheck size={22} className={isActive('behavior') ? 'animate-pulse' : ''} />
+            {isActive('behavior') && <span className="text-[8px] font-black uppercase tracking-widest mt-1">Sikap</span>}
+          </button>
+
+          {isAdmin && (
+            <button 
+              onClick={() => onNavigate('remedial_dashboard')}
+              className={`flex-1 flex flex-col items-center justify-center py-3 rounded-2xl transition-all ${isActive('remedial') ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500'}`}
+            >
+              <RefreshCcw size={22} className={isActive('remedial') ? 'animate-pulse' : ''} />
+              {isActive('remedial') && <span className="text-[8px] font-black uppercase tracking-widest mt-1">Remedial</span>}
+            </button>
+          )}
+
+          <button 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className={`flex-1 flex flex-col items-center justify-center py-3 rounded-2xl transition-all ${isMobileMenuOpen ? 'bg-white/10 text-white' : 'text-slate-500'}`}
+          >
+            <Menu size={22} />
+            {isMobileMenuOpen && <span className="text-[8px] font-black uppercase tracking-widest mt-1">Lainnya</span>}
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile Drawer (Menu Overlay) */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[190] md:hidden">
-          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
-          <div className="relative w-72 bg-slate-900 h-full shadow-2xl flex flex-col animate-in slide-in-from-left-full duration-200 border-r border-white/10">
-            <div className="p-6 border-b border-white/5 bg-white/5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 bg-primary text-white rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-                  <GraduationCap size={18} />
-                </div>
-                <div>
-                  <h2 className="font-black text-base text-white tracking-tight">GradeMaster</h2>
-                  {isAdmin && (
-                    <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1">
-                      <CheckCircle2 size={10} /> {adminUser || 'Admin'}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="flex-1 p-4 flex flex-col gap-2 overflow-y-auto bg-slate-900">
+        <div className="fixed inset-0 z-[1000] md:hidden animate-in fade-in duration-300">
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setIsMobileMenuOpen(false)} />
+          <div className="absolute bottom-[100px] left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-slate-900 rounded-[2.5rem] border border-white/10 p-6 animate-in slide-in-from-bottom-10 duration-500 shadow-2xl">
+            <div className="space-y-3">
               {isAdmin ? (
                 <>
-                  <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-2 mb-1 mt-2">Navigasi</p>
-                  <button
-                    onClick={() => { onNavigate('home'); setIsMobileMenuOpen(false); }}
-                    className={`p-3 rounded-xl text-left text-xs font-bold transition-all flex items-center gap-3 ${
-                      isActive('exam') ? 'bg-primary/20 text-primary border border-primary/20' : 'text-slate-300 hover:bg-white/5 border border-transparent'
-                    }`}
-                  >
-                    <ClipboardList size={16} /> Penilaian Ujian
+                  <div className="bg-white/5 p-4 rounded-3xl border border-white/5 mb-4">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Masuk Sebagai</p>
+                    <p className="text-sm font-black text-white uppercase">{adminUser || 'Administrator'}</p>
+                  </div>
+                  <button onClick={() => { onOpenSettings(); setIsMobileMenuOpen(false); }} className="w-full p-4 bg-white/5 text-slate-300 rounded-2xl text-xs font-black uppercase tracking-widest text-left flex items-center gap-3">
+                    <Settings size={16} /> Pengaturan Profil
                   </button>
-                  <button
-                    onClick={() => { onNavigate('remedial_dashboard'); setIsMobileMenuOpen(false); }}
-                    className={`p-3 rounded-xl text-left text-xs font-bold transition-all flex items-center gap-3 ${
-                      isActive('remedial') ? 'bg-primary/20 text-primary border border-primary/20' : 'text-slate-300 hover:bg-white/5 border border-transparent'
-                    }`}
-                  >
-                    <RefreshCcw size={16} /> Remedial
-                  </button>
-                  <div className="h-px bg-white/10 my-2" />
-                  <button
-                    onClick={() => { onOpenSettings(); setIsMobileMenuOpen(false); }}
-                    className="p-3 rounded-xl text-left text-xs font-bold text-slate-300 hover:bg-white/5 flex items-center gap-3 border border-white/5 transition-all"
-                  >
-                    <Settings size={16} /> Pengaturan Admin
+                  <button onClick={() => { onLogout(); setIsMobileMenuOpen(false); }} className="w-full p-4 bg-rose-500/10 text-rose-400 rounded-2xl text-xs font-black uppercase tracking-widest text-left flex items-center gap-3">
+                    <LogOut size={16} /> Logout Sistem
                   </button>
                 </>
               ) : (
-                <button
-                  onClick={() => { onLoginClick(); setIsMobileMenuOpen(false); }}
-                  className="p-3 rounded-xl text-left text-xs font-bold text-primary hover:bg-primary/10 flex items-center gap-3 border border-transparent transition-all mt-2"
-                >
-                  <LogIn size={16} /> Login Admin
+                <button onClick={() => { onLoginClick(); setIsMobileMenuOpen(false); }} className="w-full p-6 bg-primary text-white rounded-[2rem] text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20">
+                  <LogIn size={20} className="inline mr-2" /> Login Admin
                 </button>
               )}
+              <button onClick={() => setIsMobileMenuOpen(false)} className="w-full p-4 bg-white/5 text-slate-500 rounded-2xl text-[10px] font-black uppercase tracking-widest">
+                Tutup Menu
+              </button>
             </div>
-            {isAdmin && (
-              <div className="p-4 border-t border-white/5 bg-slate-900">
-                <button
-                  onClick={() => { onLogout(); setIsMobileMenuOpen(false); }}
-                  className="w-full p-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl text-xs font-black uppercase tracking-widest transition-colors text-center border border-rose-500/20"
-                >
-                  <LogOut size={14} className="inline mr-2" /> Logout
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}

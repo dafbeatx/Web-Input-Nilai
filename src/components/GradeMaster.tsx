@@ -916,9 +916,13 @@ export default function GradeMaster() {
       )}
 
       {layer === "behavior" && (
-        <BehaviorLayer
-          onBack={() => setLayer("home")}
+        <BehaviorLayer 
+          onBack={() => setLayer("home")} 
           setToast={setToast}
+          isAdmin={isAdmin}
+          activeClass={studentClass}
+          activeYear={academicYear}
+          gradedStudents={gradedStudents}
         />
       )}
 
