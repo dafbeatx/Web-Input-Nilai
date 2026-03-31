@@ -167,7 +167,7 @@ export default function AttendanceLayer({
           </select>
         </div>
         <div>
-          <label className="block text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2 text-primary flex items-center gap-2">
+          <label className="flex items-center gap-2 text-[8px] md:text-[10px] font-black text-primary uppercase tracking-widest mb-1.5 md:mb-2">
             <Clock size={12} /> Tanggal
           </label>
           <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 md:p-4 text-xs md:text-sm font-black text-white outline-none focus:border-primary transition-all" />
