@@ -112,7 +112,7 @@ export default function HomeLayer({
             <span className="text-[10px] md:text-xs font-black text-slate-700">•</span>
             <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em] opacity-80">SMA Terpadu As Salaam</span>
           </div>
-          <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight flex items-center gap-3">
+          <h1 className="text-xl md:text-4xl font-black text-white tracking-tight flex items-center gap-2 md:gap-3">
             {expandedGroup ? (
               <>
                 <button onClick={() => setExpandedClass(null)} className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/5 text-slate-400 hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-colors border border-white/10 hover:border-primary/20">
@@ -162,7 +162,7 @@ export default function HomeLayer({
             <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-primary/10 text-primary rounded-2xl mb-4 md:mb-6 shadow-lg shadow-primary/20">
               <GraduationCap size={28} className="md:w-8 md:h-8" />
             </div>
-            <h3 className="text-xl md:text-3xl font-black text-white mb-2 md:mb-3 font-outfit">Selamat Datang di GradeMaster OS</h3>
+            <h3 className="text-lg md:text-3xl font-black text-white mb-2 md:mb-3 font-outfit">Selamat Datang di GradeMaster OS</h3>
             <p className="text-xs md:text-sm text-slate-400 font-bold mb-6 md:mb-10 max-w-2xl mx-auto leading-relaxed">
               Platform koreksi lembar jawaban dan analitik performa cerdas untuk pendidik modern.
               Tinggalkan cara manual, kini Anda dapat mengelola puluhan kelas hanya dengan beberapa klik.
@@ -198,7 +198,7 @@ export default function HomeLayer({
             <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-white/5 shadow-inner text-slate-700 rounded-full mb-4 border border-white/5">
               <GraduationCap size={28} className="md:w-8 md:h-8" />
             </div>
-            <h3 className="text-lg md:text-xl font-black text-white mb-1">Belum Ada Data</h3>
+            <h3 className="text-base md:text-xl font-black text-white mb-1">Belum Ada Data</h3>
             <p className="text-xs md:text-sm text-slate-500 font-bold">Saat ini tidak ada sesi evaluasi yang aktif untuk ditampilkan.</p>
           </div>
         )
@@ -207,7 +207,7 @@ export default function HomeLayer({
         <div className="animate-in fade-in slide-in-from-right-4 duration-300">
           {/* Sessions */}
           <div className="mb-6">
-            <h2 className="text-xs md:text-sm font-black text-slate-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <h2 className="text-[10px] md:text-sm font-black text-slate-600 uppercase tracking-widest mb-4 flex items-center gap-2">
               <BookOpen size={16} /> Sesi Ujian
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
@@ -247,7 +247,7 @@ export default function HomeLayer({
                         </span>
                       </div>
                   </div>
-                  <h3 className="text-base md:text-lg font-black text-white mb-0.5 truncate">{s.session_name}</h3>
+                  <h3 className="text-sm md:text-lg font-black text-white mb-0.5 truncate">{s.session_name}</h3>
                   <p className="text-xs font-bold text-slate-500 truncate">{s.subject || 'Mapel'}</p>
                   <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">

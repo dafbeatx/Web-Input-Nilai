@@ -125,10 +125,10 @@ export default function BehaviorLayer({
           <button type="button" onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-primary font-black text-[10px] uppercase tracking-widest transition-all mb-4 bg-white/5 px-4 py-2 rounded-xl border border-white/10 hover:border-primary/20">
             <ArrowLeft size={14} /> Beranda
           </button>
-          <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight flex items-center gap-3 font-outfit uppercase">
+          <h1 className="text-xl md:text-4xl font-black text-white tracking-tight flex items-center gap-2 md:gap-3 font-outfit uppercase">
             Rapor Kedisiplinan & Perilaku
           </h1>
-          <p className="text-xs md:text-sm text-slate-500 font-bold mt-1 md:mt-2 uppercase tracking-widest">Transparansi Catatan Sikap & Poin Keseharian Siswa</p>
+          <p className="text-[10px] md:text-sm text-slate-500 font-bold mt-1 md:mt-2 uppercase tracking-widest">Transparansi Catatan Sikap & Poin Keseharian Siswa</p>
         </div>
 
         {isAdmin && isLoaded && (
@@ -149,19 +149,18 @@ export default function BehaviorLayer({
         )}
       </header>
 
-      {/* SEARCH / FILTER (Only Admin or if no class loaded) */}
       {(!isLoaded || isAdmin) && (
-        <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2rem] p-6 shadow-2xl border border-white/10 flex flex-col md:flex-row gap-4 items-end mb-8 relative z-10">
+        <div className="bg-slate-900/40 backdrop-blur-xl rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 shadow-2xl border border-white/10 flex flex-col md:flex-row gap-4 items-end mb-6 md:mb-8 relative z-10">
           <div className="w-full md:w-1/3">
-            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Pilih Kelas</label>
-            <input type="text" placeholder="Contoh: 12-IPA-1" value={className} onChange={(e) => setClassName(e.target.value.toUpperCase())} className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-4 text-sm font-black text-white outline-none focus:border-primary transition-all uppercase" />
+            <label className="block text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2">Pilih Kelas</label>
+            <input type="text" placeholder="Contoh: 12-IPA-1" value={className} onChange={(e: any) => setClassName(e.target.value.toUpperCase())} className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 md:p-4 text-xs md:text-sm font-black text-white outline-none focus:border-primary transition-all uppercase" />
           </div>
           <div className="w-full md:w-1/3">
-            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Tahun Ajaran</label>
-            <input type="text" value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-4 text-sm font-black text-white outline-none focus:border-primary transition-all" />
+            <label className="block text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2">Tahun Ajaran</label>
+            <input type="text" value={academicYear} onChange={(e: any) => setAcademicYear(e.target.value)} className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 md:p-4 text-xs md:text-sm font-black text-white outline-none focus:border-primary transition-all" />
           </div>
-          <button onClick={fetchStudents} disabled={isLoading} className="w-full md:w-auto px-10 py-4 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3">
-             {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />} Muat Data
+          <button onClick={fetchStudents} disabled={isLoading} className="w-full md:w-auto px-8 md:px-10 py-3 md:py-4 bg-primary text-white rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 md:gap-3">
+             {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />} Muat Data
           </button>
         </div>
       )}
@@ -179,15 +178,15 @@ export default function BehaviorLayer({
               students.map((s: BehaviorStudent) => {
                 const summary = getBehaviorSummary(s.behavior_logs || []);
                 return (
-                  <div key={s.id} className="bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] p-8 border border-white/10 shadow-2xl relative overflow-hidden group hover:border-primary/30 transition-all">
-                    <div className="absolute top-0 left-0 w-1.5 h-full bg-primary/20 group-hover:bg-primary transition-all duration-500" />
+                  <div key={s.id} className="bg-slate-900/40 backdrop-blur-2xl rounded-3xl md:rounded-[2.5rem] p-5 md:p-8 border border-white/10 shadow-2xl relative overflow-hidden group hover:border-primary/30 transition-all">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary transition-all duration-500" />
                     
-                    <div className="flex items-center justify-between mb-8 border-b border-white/5 pb-6">
+                    <div className="flex items-center justify-between mb-4 md:mb-8 border-b border-white/5 pb-4 md:pb-6">
                       <div>
-                        <h4 className="font-black text-lg text-white uppercase tracking-tight font-outfit mb-1">{s.student_name}</h4>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Kelas {className}</p>
+                        <h4 className="font-black text-sm md:text-lg text-white uppercase tracking-tight font-outfit mb-0.5 md:mb-1">{s.student_name}</h4>
+                        <p className="text-[8px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest">Kelas {className}</p>
                       </div>
-                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black border shadow-lg ${
+                      <div className={`w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center text-sm md:text-xl font-black border shadow-lg ${
                         s.total_points >= 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/20' :
                         s.total_points >= 70 ? 'bg-primary/10 text-primary border-primary/20 shadow-primary/20' :
                         'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-rose-500/20'
@@ -196,28 +195,27 @@ export default function BehaviorLayer({
                       </div>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-3 md:space-y-4">
                       {summary.good.length > 0 && (
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0 border border-emerald-500/20">
-                            <ThumbsUp size={14} />
+                        <div className="flex items-start gap-2 md:gap-3">
+                          <div className="w-6 h-6 md:w-8 md:h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0 border border-emerald-500/20">
+                            <ThumbsUp size={12} className="md:w-3.5 md:h-3.5" />
                           </div>
-                          <p className="text-xs font-bold text-emerald-400/80 leading-relaxed capitalize">{summary.good.join(', ')}</p>
+                          <p className="text-[10px] md:text-xs font-bold text-emerald-400/80 leading-relaxed capitalize">{summary.good.join(', ')}</p>
                         </div>
                       )}
                       {summary.bad.length > 0 && (
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400 shrink-0 border border-rose-500/20">
-                            <ThumbsDown size={14} />
+                        <div className="flex items-start gap-2 md:gap-3">
+                          <div className="w-6 h-6 md:w-8 md:h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400 shrink-0 border border-rose-500/20">
+                            <ThumbsDown size={12} className="md:w-3.5 md:h-3.5" />
                           </div>
-                          <p className="text-xs font-bold text-rose-400/80 leading-relaxed capitalize">{summary.bad.join(', ')}</p>
+                          <p className="text-[10px] md:text-xs font-bold text-rose-400/80 leading-relaxed capitalize">{summary.bad.join(', ')}</p>
                         </div>
                       )}
                       {summary.good.length === 0 && summary.bad.length === 0 && (
-                        <div className="text-center py-6 bg-slate-950/50 rounded-3xl border border-white/5">
-                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
-                            Belum ada catatan sikap khusus.<br/>
-                            <span className="text-[8px] opacity-60">Status: Netral</span>
+                        <div className="text-center py-4 md:py-6 bg-slate-950/50 rounded-2xl md:rounded-3xl border border-white/5">
+                          <p className="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
+                            Belum ada catatan khusus.
                           </p>
                         </div>
                       )}
@@ -226,7 +224,7 @@ export default function BehaviorLayer({
                     {isAdmin && (
                        <button 
                         onClick={() => { setSelectedStudent(s); setViewMode('MANAGEMENT'); }}
-                        className="w-full mt-8 py-4 bg-white/5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] rounded-xl border border-white/10 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
+                        className="w-full mt-6 md:mt-8 py-3 md:py-4 bg-white/5 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] rounded-xl border border-white/10 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
                        >
                          Kelola Poin
                        </button>

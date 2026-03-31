@@ -419,7 +419,7 @@ export default function DashboardLayer({
         <div className="inline-flex items-center gap-1.5 md:gap-2 px-3 py-1 md:px-4 md:py-1.5 bg-primary/10 text-primary rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-3 md:mb-4 border border-primary/20">
           <LayoutGrid size={12} className="md:w-3.5 md:h-3.5" /> Dashboard Analitik
         </div>
-        <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight font-headline mb-2 md:mb-3">
+        <h1 className="text-xl md:text-4xl font-black text-white tracking-tight font-headline mb-2 md:mb-3">
           {isPublicView ? 'Hasil Evaluasi Siswa' : 'Ikhtisar Kelas'}
         </h1>
         <div className="flex flex-wrap items-center justify-center gap-2 mb-4">

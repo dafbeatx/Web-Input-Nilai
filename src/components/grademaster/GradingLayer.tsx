@@ -240,7 +240,7 @@ export default function GradingLayer(props: GradingLayerProps) {
             <GraduationCap size={20} className="md:w-6 md:h-6" />
             <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em]">Koreksi Otomatis</span>
           </div>
-          <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight">{teacherName}</h1>
+          <h1 className="text-[22px] md:text-4xl font-black text-white tracking-tight">{teacherName}</h1>
           <p className="text-xs md:text-sm text-slate-400 font-bold mt-1">{subject} • {totalQuestions} Soal PG</p>
         </div>
 
@@ -257,7 +257,7 @@ export default function GradingLayer(props: GradingLayerProps) {
       <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-start">
         <div className="lg:col-span-8 space-y-4 md:space-y-6">
           {/* Student Identity */}
-          <section className="bg-slate-900/40 backdrop-blur-xl rounded-2xl p-4 sm:p-6 md:p-8 border border-white/10 shadow-2xl relative">
+          <section className="bg-slate-900/40 backdrop-blur-xl rounded-2xl p-4 md:p-6 border border-white/10 shadow-2xl relative">
             {isDetecting && (
               <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm z-40 flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center text-primary bg-slate-900 border border-white/10 p-6 rounded-2xl shadow-2xl">
@@ -419,7 +419,7 @@ export default function GradingLayer(props: GradingLayerProps) {
 
         {/* Score Sidebar */}
         <aside className="lg:col-span-4 lg:sticky lg:top-24 space-y-4 md:space-y-6 pb-24">
-          <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl p-5 md:p-8 border border-white/10 shadow-2xl overflow-hidden relative">
+          <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl p-4 md:p-6 border border-white/10 shadow-2xl overflow-hidden relative">
             <div className="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 bg-primary/10 rounded-bl-full -z-10"></div>
 
             <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Skor Akhir</p>

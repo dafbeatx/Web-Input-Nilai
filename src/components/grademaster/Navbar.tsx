@@ -113,7 +113,7 @@ export default function Navbar({
       </nav>
 
       {/* Mobile Top Header (Just Brand) */}
-      <div className="md:hidden sticky top-0 z-[100] bg-slate-950/80 backdrop-blur-xl border-b border-white/10 p-4 flex items-center justify-between">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-[100] bg-slate-950/80 backdrop-blur-xl border-b border-white/10 p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
            <div className="w-7 h-7 bg-primary text-white rounded-lg flex items-center justify-center">
              <GraduationCap size={16} />
