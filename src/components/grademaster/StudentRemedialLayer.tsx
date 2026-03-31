@@ -2274,7 +2274,7 @@ export default function StudentRemedialLayer({
               { icon: <Star size={20}/>, title: "Cahaya Cukup", desc: "Pastikan area wajah terang & tidak silau." },
               { icon: <Camera size={20}/>, title: "Tetap Fokus", desc: "Jangan bergerak keluar dari jangkauan kamera." }
             ].map((item, idx) => (
-              <div key={idx} className="bg-white/5 border border-white/10 p-5 rounded-2xl flex flex-col items-center text-center group hover:bg-white/10 transition-all border border-white/5 hover:border-primary/30">
+              <div key={idx} className="bg-white/5 border border-white/10 p-5 rounded-2xl flex flex-col items-center text-center group hover:bg-white/10 transition-all hover:border-primary/30">
                  <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center mb-4 border border-primary/20 group-hover:scale-110 transition-transform">
                    {item.icon}
                  </div>

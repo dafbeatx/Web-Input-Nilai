@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { 
-  ArrowLeft, RefreshCcw, User, MapPin, Clock, Eye, CheckCircle2, AlertTriangle, FileText, Search, ChevronDown, ChevronUp, Plus, Trash2, Save, Settings2, ShieldAlert, Check, RotateCcw
+  ArrowLeft, RefreshCcw, User, MapPin, Clock, Eye, CheckCircle2, AlertTriangle, AlertCircle, FileText, Search, ChevronDown, ChevronUp, Plus, Trash2, Save, Settings2, ShieldAlert, Check, RotateCcw
 } from 'lucide-react';
 import { GradedStudent, ScoringConfig } from '@/lib/grademaster/types';
 
