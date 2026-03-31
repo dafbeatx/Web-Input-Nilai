@@ -28,7 +28,7 @@ import StudentRemedialLayer from "./grademaster/StudentRemedialLayer";
 import BehaviorLayer from "./grademaster/BehaviorLayer";
 import RemedialDashboardLayer from "./grademaster/RemedialDashboardLayer";
 import AttendanceLayer from "./grademaster/AttendanceLayer";
-import Navbar from "./grademaster/Navbar";
+import { useGradeMaster } from "@/context/GradeMasterContext";
 
 const ESSAY_COUNT = 5;
 
@@ -65,83 +65,30 @@ export default function GradeMaster() {
   const [essayScores, setEssayScores] = useState<number[]>(new Array(ESSAY_COUNT).fill(0));
   const [gradedStudents, setGradedStudents] = useState<GradedStudent[]>([]);
 
-  // UI state
-  const [layer, setInternalLayer] = useState<Layer>("home");
+  // UI state from Context
+  const { 
+    layer, setLayer, 
+    isAdmin, setIsAdmin, 
+    adminUser, setAdminUser, 
+    toast, setToast, 
+    modal, setModal, 
+    logout 
+  } = useGradeMaster();
+
   const [isPublicView, setIsPublicView] = useState(false);
   const [isSessionPublic, setIsSessionPublic] = useState(true);
   const [isDemo, setIsDemo] = useState(false);
-  const [modal, setModal] = useState<ModalType>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState("");
-  const [toast, setToast] = useState<ToastType>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminUser, setAdminUser] = useState<string | null>(null);
   const [apiQuestionDifficulties, setApiQuestionDifficulties] = useState<any[]>([]);
-
-  const setLayer = useCallback((newLayer: Layer) => {
-    // Route guard: only admin can access setup
-    if (newLayer === 'setup') {
-      const adminSession = getAdminSession();
-      if (!adminSession?.isAdmin) {
-        newLayer = 'login';
-      }
-    }
-
-    setInternalLayer((prev) => {
-      if (prev === newLayer) return prev;
-      
-      if (prev === 'home' && newLayer !== 'home') {
-        window.history.pushState({ layer: newLayer }, '', `#${newLayer}`);
-      } else {
-        window.history.replaceState({ layer: newLayer }, '', `#${newLayer}`);
-      }
-      return newLayer;
-    });
-  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const savedLayer = localStorage.getItem("gm_layer");
     const savedSessionId = localStorage.getItem("gm_sessionId");
     const savedSessionName = localStorage.getItem("gm_sessionName");
     const savedSessionPassword = localStorage.getItem("gm_sessionPassword");
     const savedIsPublicView = localStorage.getItem("gm_isPublicView") === "true";
-
-    const hash = window.location.hash.replace('#', '');
-    const validLayers = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'attendance'];
-    
-    // Restore admin session
-    const adminSession = getAdminSession();
-    const isUserAdmin = adminSession ? adminSession.isAdmin : false;
-    if (isUserAdmin) {
-      setIsAdmin(true);
-      setAdminUser(adminSession!.adminUser);
-    }
-    
-    let initialLayer: Layer = 'home';
-    
-    // Hash takes precedence if valid, otherwise use persisted, otherwise home
-    if (validLayers.includes(hash)) {
-      initialLayer = hash as Layer;
-    } else if (!hash) {
-      // If no hash, force home to be the landing page
-      initialLayer = 'home';
-    } else {
-      const persistedLayer = getActiveLayer() || (savedLayer as Layer) || 'home';
-      if (validLayers.includes(persistedLayer)) {
-        initialLayer = persistedLayer as Layer;
-      }
-    }
-
-    // Apply route guard for setup
-    if (initialLayer === 'setup' && !isUserAdmin) {
-      initialLayer = 'login';
-    }
-
-    setInternalLayer(initialLayer);
-    saveActiveLayer(initialLayer);
-    window.history.replaceState({ layer: initialLayer }, '', `#${initialLayer}`);
 
     // Restore active remedial exam session
     const remedialSession = loadRemedialSession();
@@ -152,9 +99,8 @@ export default function GradeMaster() {
       if (remedialSession.subject) setSubject(remedialSession.subject);
       if (remedialSession.sessionId) setSessionId(remedialSession.sessionId);
       
-      if (initialLayer !== 'remedial') {
-        setInternalLayer('remedial');
-        window.history.replaceState({ layer: 'remedial' }, '', '#remedial');
+      if (layer !== 'remedial') {
+        setLayer('remedial');
       }
     }
 
@@ -205,42 +151,11 @@ export default function GradeMaster() {
         }, 100);
       }
     }
-
-    const handlePopState = (e: PopStateEvent) => {
-      const hash = window.location.hash.replace('#', '');
-      const validLayers = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login', 'attendance'];
-      
-      setInternalLayer((prev) => {
-        let dest = hash as Layer;
-
-        // Apply route guard for setup on popstate
-        if (dest === 'setup') {
-          const s = getAdminSession();
-          if (!s?.isAdmin) {
-            window.history.replaceState({ layer: 'login' }, '', '#login');
-            return 'login';
-          }
-        }
-
-        if (validLayers.includes(dest)) {
-          return dest;
-        }
-        if (prev !== 'home') {
-          window.history.replaceState({ layer: 'home' }, '', '#home');
-          return 'home';
-        }
-        return prev;
-      });
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Save state to localStorage
+  // Save state to localStorage (excluding layer which is handled by Context)
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("gm_layer", layer);
       localStorage.setItem("gm_sessionId", sessionId);
       localStorage.setItem("gm_sessionName", sessionName);
       localStorage.setItem("gm_sessionPassword", sessionPassword);
@@ -732,19 +647,7 @@ export default function GradeMaster() {
   // ── Render ──
 
   return (
-    <div className="relative flex flex-col bg-slate-950 min-h-screen pb-24 md:pb-0 transition-colors duration-500">
-      {!['login', 'remedial'].includes(layer) && (
-        <Navbar
-          isAdmin={isAdmin}
-          adminUser={adminUser}
-          layer={layer}
-          onNavigate={(target) => setLayer(target)}
-          onLogout={handleAdminLogout}
-          onLoginClick={() => setLayer("login")}
-          onOpenSettings={() => setModal("adminSettings")}
-        />
-      )}
-
+    <div className="relative flex flex-col bg-slate-950 min-h-screen pb-24 md:pb-8 transition-colors duration-500">
       <div className="w-full">
         {layer === "home" && (
         <HomeLayer

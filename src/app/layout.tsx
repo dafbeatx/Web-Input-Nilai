@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   },
 };
 
+import { GradeMasterProvider } from '@/context/GradeMasterContext';
+import Navbar from '@/components/grademaster/Navbar';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,8 +34,13 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
       </head>
-      <body className={`${inter.variable} ${outfit.variable} ${amiri.variable} ${manrope.variable} font-sans bg-slate-950 text-slate-50 antialiased min-h-full pb-[env(safe-area-inset-bottom)]`}>
-        {children}
+      <body className={`${inter.variable} ${outfit.variable} ${amiri.variable} ${manrope.variable} font-sans bg-slate-950 text-slate-50 antialiased min-h-full selection:bg-primary/30`}>
+        <GradeMasterProvider>
+          <Navbar />
+          <main className="relative min-h-screen">
+            {children}
+          </main>
+        </GradeMasterProvider>
       </body>
     </html>
   );

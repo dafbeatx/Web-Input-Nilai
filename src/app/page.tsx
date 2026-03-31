@@ -10,14 +10,10 @@ import DeploymentGuard from "@/components/grademaster/DeploymentGuard";
  */
 export default function GradeMasterOS() {
   return (
-    <main className="relative min-h-screen bg-slate-50">
+    <>
       <DeploymentGuard />
-      <div className="bg-grid absolute inset-0 opacity-20 pointer-events-none"></div>
-      
-      {/* GradeMaster Component - Direct Interaction Layer */}
-      <div className="relative z-10 animate-in fade-in duration-500">
-        <GradeMaster />
-      </div>
-    </main>
+      <div className="bg-grid absolute inset-0 opacity-20 pointer-events-none -z-10"></div>
+      <GradeMaster />
+    </>
   );
 }

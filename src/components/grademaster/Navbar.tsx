@@ -15,28 +15,25 @@ import {
   RefreshCcw,
   Calendar,
 } from 'lucide-react';
-import { Layer } from '@/lib/grademaster/types';
+import { useGradeMaster } from '@/context/GradeMasterContext';
 
-interface NavbarProps {
-  isAdmin: boolean;
-  adminUser: string | null;
-  layer: Layer;
-  onNavigate: (layer: Layer) => void;
-  onLogout: () => void;
-  onLoginClick: () => void;
-  onOpenSettings: () => void;
-}
+export default function Navbar() {
+  const { 
+    isAdmin, 
+    adminUser, 
+    layer, 
+    setLayer: onNavigate, 
+    logout: onLogout, 
+    setModal 
+  } = useGradeMaster();
 
-export default function Navbar({
-  isAdmin,
-  adminUser,
-  layer,
-  onNavigate,
-  onLogout,
-  onLoginClick,
-  onOpenSettings,
-}: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Hidden in exam and login
+  if (['login', 'remedial'].includes(layer)) return null;
+
+  const onOpenSettings = () => setModal("adminSettings");
+  const onLoginClick = () => onNavigate("login");
 
   const isActive = (target: string) => {
     if (target === 'exam') return ['home', 'setup', 'dashboard', 'grading'].includes(layer);
