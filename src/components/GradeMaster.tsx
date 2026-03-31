@@ -732,7 +732,7 @@ export default function GradeMaster() {
   // ── Render ──
 
   return (
-    <div className="relative flex flex-col bg-slate-50 min-h-screen">
+    <div className="relative flex flex-col bg-slate-950 min-h-screen pb-24 md:pb-0 transition-colors duration-500">
       {!['login', 'remedial'].includes(layer) && (
         <Navbar
           isAdmin={isAdmin}

@@ -137,9 +137,9 @@ export default function Navbar({
         )}
       </div>
 
-      {/* Mobile Bottom Navigation (Ultra Modern Icon Only) */}
-      <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[1001] w-[90%] max-w-sm">
-        <div className="bg-slate-900/60 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-2 flex items-center justify-between shadow-2xl">
+      {/* Mobile Bottom Navigation (Pinned to Bottom) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[1001] bg-slate-900/80 backdrop-blur-3xl border-t border-white/5 pb-[env(safe-area-inset-bottom)] px-4">
+        <div className="flex items-center justify-between h-16">
           <button 
             onClick={() => onNavigate('home')}
             className={`flex-1 flex flex-col items-center justify-center py-3 rounded-2xl transition-all ${isActive('exam') ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500'}`}
@@ -186,9 +186,9 @@ export default function Navbar({
 
       {/* Mobile Drawer (Menu Overlay) */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[1000] md:hidden animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[1002] md:hidden animate-in fade-in duration-300">
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setIsMobileMenuOpen(false)} />
-          <div className="absolute bottom-[100px] left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-slate-900 rounded-[2.5rem] border border-white/10 p-6 animate-in slide-in-from-bottom-10 duration-500 shadow-2xl">
+          <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] bg-slate-900 rounded-t-[2.5rem] border-t border-white/10 p-8 pb-[calc(1.5rem + env(safe-area-inset-bottom))] animate-in slide-in-from-bottom-full duration-500 shadow-2xl overflow-y-auto">
             <div className="space-y-3">
               {isAdmin ? (
                 <>

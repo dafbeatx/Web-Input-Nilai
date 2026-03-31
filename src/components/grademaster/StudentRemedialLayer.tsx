@@ -6,6 +6,7 @@ import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, M
 import ProctoringCamera from './ProctoringCamera';
 import { saveRemedialSession, loadRemedialSession, clearRemedialSession } from '@/lib/grademaster/session';
 import { assessClientRisk } from '@/lib/grademaster/services/risk-engine.service';
+import { useExamMonitor } from '@/lib/grademaster/hooks/useExamMonitor';
 
 interface StudentRemedialLayerProps {
   studentName: string;
@@ -140,6 +141,35 @@ export default function StudentRemedialLayer({
   // Split Screen Detection
   const [splitScreenViolationCount, setSplitScreenViolationCount] = useState(0);
   const [isSplitLocked, setIsSplitLocked] = useState(false);
+
+  // Monitor Hook Integration
+  const { sendLog } = useExamMonitor({
+    attemptId,
+    examState: step,
+    onNetworkChange: (online) => {
+      setIsOffline(!online);
+      if (!online) {
+        setIsConnectionLocked(true);
+      } else {
+        // Auto-sync on reconnect
+        syncWithServer();
+      }
+    },
+    onViolation: (type, message, severity) => {
+      setWarningCount(prev => prev + 1);
+      if (type === 'TAB_SWITCH') {
+        setTabWarningCount(prev => prev + 1);
+        setToast({ message: "Peringatan: Jangan pindah tab atau aplikasi!", type: "error" });
+      }
+      if (type === 'SPLIT_SCREEN') {
+        setSplitScreenViolationCount(prev => prev + 1);
+        setToast({ message: "Layar Terbagi (Split Screen) Terdeteksi!", type: "error" });
+      }
+      
+      // Update DB with violation
+      sendTelegramNotify("SECURITY_VIOLATION", undefined, `${type}: ${message} (Severity: ${severity})`);
+    }
+  });
 
   const syncWithServer = async () => {
     if (!attemptId || step !== 'EXAM') return;
@@ -1608,213 +1638,41 @@ export default function StudentRemedialLayer({
       trackEvent('NETWORK_OFFLINE', 'HIGH', 15, { reason: 'Connection lost' });
     };
 
-    // 3. Visibility Listener (Minimalize detection)
     const handleVisibility = () => {
       if (document.hidden) {
         trackEvent('VISIBILITY_LOST', 'MEDIUM', 15, { reason: 'Siswa meminimalisir tab / buka aplikasi lain' });
       } else {
         trackEvent('VISIBILITY_RESTORED', 'LOW', 0, { reason: 'Siswa kembali fokus ke tab ujian' });
-        // Also perform a sync check when visibility returns to ensure we weren't "locked out"
         syncWithServer();
       }
     };
 
-    // 4. Exit Protection (Beacon API for Stealth Logging)
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      const beaconPayload = JSON.stringify({
-        attemptId,
-        events: [{
-          eventType: 'FORCE_EXIT',
-          severity: 'CRITICAL',
-          riskPoints: 50,
-          metadata: { reason: 'Siswa mencoba menutup tab / browser secara paksa' }
-        }]
-      });
-      navigator.sendBeacon('/api/grademaster/activity-log', beaconPayload);
-      
-      // Standard Alert
-      e.preventDefault();
-      e.returnValue = '';
-    };
-
-    // 5. Split-Screen / Resize Detector (Multi-window)
-    const handleResize = () => {
-      if (step !== 'EXAM') return;
-      
-      const vh = window.innerHeight;
-      const vw = window.innerWidth;
-      const sh = window.screen.height;
-      
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      if (!isMobile) return;
-
-      const isInputActive = document.activeElement?.tagName === 'TEXTAREA' || document.activeElement?.tagName === 'INPUT';
-      
-      // Heuristic: Split-screen typically takes 50-70% of the screen. 
-      // Virtual keyboard also shrinks vh, but only when input is active.
-      const heightRatio = vh / sh;
-      
-      if (heightRatio < 0.7 && !isInputActive) {
-        // High probability of split screen
-        setIsSplitLocked(true);
-        trackEvent('SECURITY_SPLIT_SCREEN', 'MEDIUM', 10, { vh, vw, sh, ratio: heightRatio });
-      } else {
-        // Auto-unlock if restored to near full-screen
-        if (heightRatio > 0.8) {
-          setIsSplitLocked(false);
-        }
-      }
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    if (step !== 'EXAM') return;
+    
     document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('resize', handleResize);
-
     return () => {
-      if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
       document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('resize', handleResize);
     };
   }, [step, attemptId]);
 
-  // Anti-cheat mechanism — 3 warnings before ban
+  // Anti-cheat mechanism — basic keyboard protection
   useEffect(() => {
     if (step !== 'EXAM') return;
-
-    const handleTabLeave = async () => {
-      if (isRefreshingRef.current || hasTriggeredCheatingRef.current || isPermanentlyBlocked) return;
-      
-      try {
-        const res = await fetch('/api/grademaster/students/remedial/violation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId, studentName })
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          if (data.isBlocked) {
-             setClientCheatingFlags(f => [...f, `Batas maksimal pelanggaran tab tercapai`]);
-             setIsPermanentlyBlocked(true);
-             hasTriggeredCheatingRef.current = true;
-             setActiveWarning({ type: 'TAB', count: data.count, limit: data.limit, message: 'Batas Anda sudah habis tertangkap meninggalkan halaman ujian.' });
-             sendTelegramNotify('CHEATED', capturePhoto() || undefined, 'Meninggalkan halaman ujian melebihi batas yang diizinkan sistem.');
-             handleStatusUpdate('CHEATED', 'Meninggalkan tab browser melebihi batas 3 kali');
-          } else {
-             setActiveWarning({ type: 'TAB', count: data.count, limit: data.limit, message: 'Sistem mendeteksi Anda meninggalkan halaman ujian. Dilarang membuka aplikasi atau tab lain selama ujian!' });
-          }
-        }
-      } catch (err) {
-        console.error('Failed to log violation via API:', err);
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-         setIsTabHidden(true);
-         if (!isRefreshingRef.current && !isDeploymentReloadRef.current) {
-           sendActivityLog("Meninggalkan layar ujian (Tab Switch / Task Switcher)");
-           handleTabLeave();
-         }
-      } else {
-         setIsTabHidden(false);
-         sendActivityLog("Kembali ke layar ujian");
-      }
-    };
-
-    const handleBlur = () => {
-      // PROCTORING: If focus is lost, check for AI overlay presence
-      // Increase delay to 1.5s to avoid false positives on quick system blips/tabs
-      setTimeout(() => {
-        if (step !== 'EXAM' || isSubmitting || isRefreshingRef.current) return;
-        
-        // If the window loses focus but the document IS NOT hidden, 
-        // it suggests an overlay or floating app is active.
-        if (!document.hasFocus() && !document.hidden && !showAiBotWarning) {
-           setShowAiBotWarning(true);
-           setAiCountdown(10);
-           setOverlayViolationCount(prev => {
-             const next = prev + 1;
-             const confidence = next >= 2 ? 'MEDIUM' : 'LOW';
-             sendActivityLog(`TERDETEKSI LAYER/OVERLAY (Indikasi Aktivitas Tidak Biasa) | Strike ${next}/3 | Kepercayaan: ${confidence}`);
-             return next;
-           });
-        } else if (document.hidden) {
-           // Normal tab leaving behavior
-           sendActivityLog("Halaman kehilangan fokus (Blur)");
-           handleTabLeave();
-        }
-      }, 1500);
-    };
 
     const handleCopyPaste = (e: ClipboardEvent) => {
       e.preventDefault();
       setToast({ message: "Tidak diperkenankan untuk menyalin lembar soal", type: "error" });
-      sendActivityLog("Mencoba menyalin/copy teks soal");
+      sendLog('CLIPBOARD_VIOLATION', 'LOW', { action: e.type });
     };
 
-    window.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleBlur);
     document.addEventListener("copy", handleCopyPaste);
     document.addEventListener("paste", handleCopyPaste);
 
-    const handleOffline = () => {
-      setIsOffline(true);
-      setNetworkWarningCount(prev => {
-        const next = prev + 1;
-        const reason = `Mematikan koneksi internet (Peringatan ${next})`;
-        if (next >= MAX_NETWORK_WARNINGS) {
-          setClientCheatingFlags(f => [...f, reason]);
-          hasTriggeredCheatingRef.current = true;
-          setActiveWarning({ type: 'NETWORK', count: next, limit: MAX_NETWORK_WARNINGS, message: 'Batas mematikan koneksi tercapai.' });
-          handleStatusUpdate('CHEATED', 'Mematikan internet melebihi batas yang diizinkan sistem');
-        } else {
-          sendActivityLog(reason);
-          setActiveWarning({ type: 'NETWORK', count: next, limit: MAX_NETWORK_WARNINGS, message: 'Koneksi terputus tiba-tiba atau sengaja dimatikan. Pastikan koneksi stabil untuk mencegah ujian digagalkan!' });
-        }
-        return next;
-      });
-    };
-
-    const handleOnline = () => {
-      setIsOffline(false);
-      sendActivityLog("Koneksi internet kembali aktif");
-      // setToast({ message: "Koneksi terhubung kembali. Lanjutkan ujian.", type: "success" });
-    };
-
-    window.addEventListener("offline", handleOffline);
-    window.addEventListener("online", handleOnline);
-    
-    // PiP Detector: Polling for Picture-in-Picture usage (usually AI bot overlays)
-    // We don't use PiP for our camera, so any PiP is a violation
-    const pipCheck = setInterval(() => {
-      if (step === 'EXAM' && document.pictureInPictureElement && !showAiBotWarning) {
-        setShowAiBotWarning(true);
-        setAiCountdown(10);
-        setOverlayViolationCount(prev => {
-          const next = prev + 1;
-          const confidence = next >= 2 ? 'MEDIUM' : 'LOW';
-          sendActivityLog(`TERDETEKSI PICTURE-IN-PICTURE (Indikasi Aktivitas Tidak Biasa) | Strike ${next}/3 | Kepercayaan: ${confidence}`);
-          return next;
-        });
-      }
-    }, 3000);
-
     return () => {
-      window.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleBlur);
-      window.removeEventListener("copy", handleCopyPaste);
-      window.removeEventListener("paste", handleCopyPaste);
-      window.removeEventListener("offline", handleOffline);
-      window.removeEventListener("online", handleOnline);
-      clearInterval(pipCheck);
+      document.removeEventListener("copy", handleCopyPaste);
+      document.removeEventListener("paste", handleCopyPaste);
     };
-  }, [step, setToast, showAiBotWarning, isSubmitting]);
+  }, [step, setToast, sendLog]);
 
   // AI Warning Feedback Timer (WITH AUTO-LOCK ON STRIKE 3)
   useEffect(() => {
@@ -2920,6 +2778,40 @@ export default function StudentRemedialLayer({
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.3); }
         .privacy-mode { filter: blur(0px); transition: filter 0.3s; }
       `}</style>
+      {/* Offline Security Overlay */}
+      {(isOffline || isConnectionLocked) && step === 'EXAM' && (
+        <div className="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+           <div className="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center mb-8 border border-rose-500/20 animate-pulse">
+              <Wifi size={48} />
+           </div>
+           <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-4">Koneksi Terputus</h2>
+           <p className="text-slate-400 max-w-xs mb-8 font-bold leading-relaxed">
+             Sistem mengunci ujian untuk mencegah kecurangan. Konten disembunyikan sampai koneksi kembali stabil.
+           </p>
+           
+           <div className="flex flex-col gap-3 w-full max-w-xs">
+              <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center gap-3">
+                 <RefreshCw size={20} className="text-primary animate-spin" />
+                 <div className="text-left">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Status Sinkronisasi</p>
+                    <p className="text-xs font-black text-white">{isSyncing ? "Menghubungkan..." : "Menunggu Sinyal..."}</p>
+                 </div>
+              </div>
+              
+              <button 
+                onClick={syncWithServer}
+                disabled={isSyncing}
+                className="w-full py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+              >
+                {isSyncing ? "Mencoba Re-koneksi..." : "Coba Hubungkan Sekarang"}
+              </button>
+           </div>
+           
+           <div className="mt-12">
+              <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">GradeMaster Dynamic Security v2.0</p>
+           </div>
+        </div>
+      )}
     </div>
   );
 }
