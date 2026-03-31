@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ToastType } from '@/lib/grademaster/types';
-import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin, User, Star, ShieldCheck, ArrowRight, Cpu, MonitorOff, Play, Monitor } from 'lucide-react';
+import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin, User, Star, ShieldCheck, ArrowRight, Cpu, MonitorOff, Play, Monitor, Activity, AppWindow, Wifi, Video, CloudLightning, Info, FileText, CircleHelp, Settings, LayoutTemplate, RefreshCw } from 'lucide-react';
 import ProctoringCamera from './ProctoringCamera';
 import { saveRemedialSession, loadRemedialSession, clearRemedialSession } from '@/lib/grademaster/session';
 import { assessClientRisk } from '@/lib/grademaster/services/risk-engine.service';
@@ -56,6 +56,7 @@ export default function StudentRemedialLayer({
   setToast,
 }: StudentRemedialLayerProps) {
   const [step, setStep] = useState<RemedialStep>('RULES');
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>(new Array(remedialEssayCount).fill(""));
   const [timeLeft, setTimeLeft] = useState(remedialTimer * 60);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -2675,288 +2676,187 @@ export default function StudentRemedialLayer({
   };
 
   return (
-    <div className="relative min-h-screen bg-slate-50 pb-20 overflow-x-hidden">
+    <div className="relative min-h-screen bg-surface font-body text-on-surface selection:bg-primary-container selection:text-on-primary-container overflow-x-hidden">
       
-      {/* Big Warning Modal Inject */}
-      {activeWarning && step === 'EXAM' && (
-        <div className="fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-xl flex justify-center items-center p-4 shadow-2xl">
-          <div className="bg-white max-w-sm w-full rounded-[2rem] shadow-[0_0_100px_rgba(244,63,94,0.3)] overflow-hidden animate-in zoom-in-95 duration-200 border-4 border-rose-500/20">
-            <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-8 flex flex-col items-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10" />
-              <AlertTriangle size={64} className="text-white drop-shadow-md relative z-10" />
-              <h2 className="text-2xl font-black text-white mt-4 tracking-widest text-center relative z-10">PELANGGARAN</h2>
+      {/* ── TOP APP BAR (Premium Header) ── */}
+      <header className="fixed top-0 w-full z-50 glass-header shadow-[0px_12px_32px_rgba(25,28,30,0.06)] px-6 py-3 md:px-8 md:py-4">
+        <div className="flex justify-between items-center w-full max-w-7xl mx-auto">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20 overflow-hidden shadow-sm">
+              <span className="text-primary font-bold text-lg font-headline">
+                {studentName.charAt(0).toUpperCase()}
+              </span>
             </div>
-            <div className="p-6 md:p-8 text-center flex flex-col items-center">
-              <div className="bg-rose-50 border border-rose-100 px-5 py-2.5 rounded-full text-base font-black text-rose-600 mb-6 w-full shadow-inner">
-                Peringatan ke-{activeWarning.count} dari maksimum {activeWarning.limit}
-              </div>
-              <p className="text-xs md:text-sm text-slate-600 font-bold leading-relaxed mb-6">
-                {activeWarning.message}
-              </p>
-              
-              <div className="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl mb-6">
-                <p className="text-[10px] md:text-xs text-slate-500 font-black uppercase tracking-wider mb-1">
-                  KONSEKUENSI BERIKUTNYA:
-                </p>
-                <p className="text-rose-600 text-[11px] md:text-xs font-black leading-snug">
-                  JIKA TERUS MELANGGAR BATAS, UJIAN AKAN DITUTUP SECARA PERMANEN DAN NILAI OTOMATIS MENJADI ANGKA 0.
-                </p>
-              </div>
-              
-              {(activeWarning.count >= activeWarning.limit) ? (
-                 <div className="w-full py-4 rounded-xl text-center bg-slate-100 text-slate-400 font-black text-xs uppercase tracking-widest cursor-not-allowed">
-                   Akses Dikunci. Mengirim Laporan...
-                 </div>
-              ) : (
-                <button 
-                  onClick={() => setActiveWarning(null)}
-                  className="w-full py-4 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-slate-900/20 transition-all focus:outline-none focus:ring-4 focus:ring-slate-200"
-                >
-                  (X) Saya Mengerti & Lanjut Ujian
-                </button>
-              )}
+            <div className="flex flex-col">
+              <h1 className="text-xl font-bold tracking-tighter text-on-surface font-headline leading-tight">The Vigilant Editorial</h1>
+              <span className="text-[10px] font-medium tracking-wider uppercase text-slate-500 font-label">GradeMaster OS</span>
             </div>
           </div>
-        </div>
-      )}
+          
+          {/* Header Stats (Desktop) */}
+          <div className="hidden md:flex items-center gap-8">
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] font-medium text-slate-500 font-label uppercase">Sisa Waktu</span>
+              <span className="text-2xl font-bold tracking-tighter font-headline text-primary tabular-nums">
+                {formatTime(timeLeft)}
+              </span>
+            </div>
+            <div className="h-8 w-[1px] bg-outline-variant/20"></div>
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold text-on-surface line-clamp-1 max-w-[200px]">{subject}</span>
+              <span className="text-[10px] text-slate-500 uppercase font-black tracking-tight">{examType} (TA {academicYear})</span>
+            </div>
+          </div>
 
-      {/* Face Education Modal (Automatic Guidance) */}
-      {showFaceEducation && step === 'EXAM' && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className="bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-amber-500/20">
-            <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-8 flex flex-col items-center text-white text-center">
-               <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-md">
-                 <User size={40} className="text-white" />
-               </div>
-               <h2 className="text-xl font-black uppercase tracking-tight">Wajah Tidak Terdeteksi</h2>
-               <p className="text-[11px] font-bold opacity-90 mt-1 uppercase tracking-widest">⚠️ Tindakan Diperlukan</p>
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-tertiary-fixed/20">
+              <span className={`w-2 h-2 rounded-full emerald-pulse ${isOffline ? 'bg-rose-500' : 'bg-tertiary'}`}></span>
+              <span className={`text-[10px] font-bold font-label uppercase ${isOffline ? 'text-rose-600' : 'text-tertiary'}`}>
+                {isOffline ? 'OFFLINE' : 'ONLINE'}
+              </span>
+            </div>
+            <button 
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="bg-gradient-to-br from-primary to-primary-container text-on-primary px-6 py-2.5 rounded-xl text-sm font-semibold hover:scale-105 active:opacity-90 transition-all duration-200 shadow-lg shadow-primary/20 disabled:opacity-50 flex items-center gap-2"
+            >
+              {isSubmitting ? <RefreshCw className="animate-spin" size={16} /> : <Send size={16} />}
+              <span className="hidden xs:inline">Submit</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* ── MAIN CONTENT (Dashboard Layout) ── */}
+      <main className={`max-w-7xl mx-auto px-6 pt-24 md:pt-32 pb-20 flex flex-col lg:flex-row gap-8 transition-opacity duration-500 ${(isTabHidden || isPermanentlyBlocked || isOffline || isConnectionLocked) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        
+        {/* Monitoring Panel */}
+        <aside className="w-full lg:w-64 lg:sticky lg:top-24 h-fit space-y-6 animate-in slide-in-from-left duration-700">
+          <div className="bg-surface-container-low p-6 rounded-2xl flex flex-col gap-4 border border-outline-variant/30 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-bold font-headline text-on-surface">Monitoring</h2>
+              <Monitor className="text-primary" size={20} />
             </div>
             
-            <div className="p-8 flex flex-col items-center text-center">
-              <p className="text-sm font-bold text-slate-600 leading-relaxed mb-6">
-                Sistem tidak dapat mendeteksi wajah Anda. Harap ikuti panduan berikut agar tidak dianggap sebagai pelanggaran:
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-white text-primary font-bold rounded-xl shadow-sm border border-primary/10">
+                <ShieldCheck size={18} />
+                <span className="text-xs font-label">Proteksi Aktif</span>
+              </div>
+              
+              <div className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${tabWarningCount > 0 ? 'bg-rose-50 border-rose-100 text-rose-600' : 'bg-slate-50 border-slate-100 text-slate-600'}`}>
+                <AppWindow size={18} />
+                <span className="text-xs font-bold font-label uppercase">Tab Switches: {tabWarningCount}/{MAX_TAB_WARNINGS}</span>
+              </div>
+
+              <div className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${isOffline ? 'bg-rose-50 border-rose-100 text-rose-600' : 'bg-slate-50 border-slate-100 text-slate-600'}`}>
+                <Wifi size={18} />
+                <span className="text-xs font-bold font-label uppercase">{isOffline ? 'Offline' : 'Koneksi Stabil'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Progress Card */}
+          <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10 shadow-sm">
+            <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Pengerjaan</p>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl font-bold font-headline text-primary">
+                {answers.filter(a => a.trim() !== '').length}/{remedialEssayCount}
               </p>
-              
-              <div className="space-y-4 mb-8 w-full">
-                 <div className="flex items-start gap-4 text-left p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                    <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 text-xs font-black">1</div>
-                    <p className="text-[11px] font-bold text-slate-700 leading-tight">Pastikan wajah terlihat **penuh** (dari kening hingga dagu) di kamera.</p>
-                 </div>
-                 <div className="flex items-start gap-4 text-left p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                    <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 text-xs font-black">2</div>
-                    <p className="text-[11px] font-bold text-slate-700 leading-tight">Jangan menutupi wajah dengan **tangan, masker, atau benda lain**.</p>
-                 </div>
-                 <div className="flex items-start gap-4 text-left p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                    <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 text-xs font-black">3</div>
-                    <p className="text-[11px] font-bold text-slate-700 leading-tight">Posisikan cahaya di depan wajah (jangan membelakangi lampu/jendela).</p>
-                 </div>
-              </div>
-
-              <button
-                onClick={() => setShowFaceEducation(false)}
-                className="w-full py-4 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-xl hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                Gerti, Saya Perbaiki Posisinya
-              </button>
+              <p className="text-[10px] font-bold text-slate-400 mb-1 italic">Soal Terisi</p>
+            </div>
+            <div className="w-full h-2 bg-primary/10 rounded-full mt-3 overflow-hidden">
+              <div 
+                className="h-full bg-primary transition-all duration-700 ease-out" 
+                style={{ width: `${(answers.filter(a => a.trim() !== '').length / remedialEssayCount) * 100}%` }}
+              />
             </div>
           </div>
-        </div>
-      )}
+        </aside>
 
-      {/* Anti-Screenshot / Privacy Overlay */}
-      {(isTabHidden || isPermanentlyBlocked) && step === 'EXAM' && (
-        <div className="fixed inset-0 z-[10000] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center text-center p-4 md:p-8 animate-in fade-in zoom-in duration-300">
-           <div className="w-16 h-16 md:w-24 md:h-24 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mb-4 md:mb-6 animate-pulse ring-4 ring-rose-500/10">
-              <ShieldX size={32} className="md:w-12 md:h-12" />
-           </div>
-           
-           <h2 className="text-lg md:text-2xl font-black text-white mb-2 font-outfit uppercase tracking-tight">Layar Diproteksi</h2>
-           
-           <p className="text-slate-400 text-[10px] md:text-sm font-bold max-w-xs md:max-w-md leading-relaxed mb-6">
-             {isPermanentlyBlocked 
-                ? "Akses Anda diblokir permanen karena melanggar aturan meninggalkan halaman ujian. Silakan hubungi Guru Pengawas untuk informasi lebih lanjut." 
-                : "Konten disembunyikan otomatis untuk pengawasan. Kembalilah fokus ke halaman ujian ini sekarang."}
-           </p>
-
-           {isPermanentlyBlocked && (
-             <button
-               onClick={handleExit}
-               className="px-8 py-3 bg-slate-800 text-white border border-slate-700 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-slate-700 transition-all flex items-center gap-2 shadow-2xl"
-             >
-               <ArrowLeft size={14} /> Keluar dari Ujian
-             </button>
-           )}
-        </div>
-      )}
-
-      {/* Global Anti-Selection Styles */}
-      <style jsx global>{`
-        .privacy-mode {
-          -webkit-user-select: none;
-          -moz-user-select: none;
-          -ms-user-select: none;
-          user-select: none;
-          -webkit-touch-callout: none;
-        }
-        @media print {
-          body { display: none !important; }
-        }
-      `}</style>
-
-      {/* AI Warning Modal - STRIKE SYSTEM UI */}
-      {showAiBotWarning && step === 'EXAM' && (
-         <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-xl animate-in fade-in duration-300">
-            <div className={`bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 border-4 ${overlayViolationCount >= 3 ? 'shadow-rose-500/30 border-rose-500' : 'shadow-amber-500/30 border-amber-500'}`}>
-               <div className={`p-8 flex flex-col items-center text-white text-center ${overlayViolationCount >= 3 ? 'bg-rose-600' : 'bg-amber-500'}`}>
-                  <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-6 relative">
-                     {overlayViolationCount >= 3 ? (
-                       <Cpu size={56} className="text-white relative z-10 animate-pulse" />
-                     ) : (
-                       <AlertTriangle size={56} className="text-white relative z-10" />
-                     )}
-                  </div>
-                  <h2 className="text-xl font-black mb-1 tracking-tight font-outfit uppercase">
-                    {overlayViolationCount >= 3 ? 'AI TERDETEKSI (KRITIS)' : 'INDIKASI AKTIVITAS TIDAK BIASA'}
-                  </h2>
-                  <div className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${overlayViolationCount >= 3 ? 'bg-rose-900/30' : 'bg-amber-900/30'}`}>
-                    Peringatan {overlayViolationCount} dari 3
-                  </div>
-               </div>
-               
-               <div className="p-8 text-center bg-slate-50">
-                  <p className="text-sm text-slate-700 font-bold leading-relaxed mb-6">
-                     {overlayViolationCount >= 3 
-                       ? "Sistem mendeteksi aktivitas ilegal yang persisten. Harap matikan segera atau ujian akan dihentikan otomatis dalam:"
-                       : "Sistem mendeteksi adanya aktivitas layer atau aplikasi lain di atas layar ujian. Harap segera **tutup aplikasi tersebut**."}
-                  </p>
-                  
-                  <div className="relative w-32 h-32 mx-auto mb-8">
-                     <div className="absolute inset-0 flex items-center justify-center">
-                        <span className={`text-5xl font-black font-mono tracking-tighter ${overlayViolationCount >= 3 ? 'text-rose-600' : 'text-amber-600'}`}>
-                           {aiCountdown}
-                        </span>
-                     </div>
-                     <svg className="w-full h-full -rotate-90">
-                        <circle cx="64" cy="64" r="60" fill="transparent" strokeWidth="8"
-                          className={overlayViolationCount >= 3 ? 'stroke-rose-100' : 'stroke-amber-100'} 
-                        />
-                        <circle cx="64" cy="64" r="60" fill="transparent" strokeWidth="8" strokeDasharray="377"
-                          strokeDashoffset={377 - (377 * aiCountdown) / 10}
-                          className={`transition-all duration-1000 ease-linear ${overlayViolationCount >= 3 ? 'stroke-rose-600' : 'stroke-amber-600'}`}
-                        />
-                     </svg>
-                  </div>
-
-                  <p className={`text-[10px] font-black uppercase tracking-widest ${overlayViolationCount >= 3 ? 'text-rose-600' : 'text-amber-600'}`}>
-                     ⚠️ {overlayViolationCount >= 3 ? 'PELANGGARAN FINAL: HUBUNGI PENGAWAS JIKA TERKUNCI' : 'AKTIVITAS INI TERCATAT OLEH SISTEM PENGAWAS'}
-                  </p>
-               </div>
-            </div>
-         </div>
-      )}
-
-      {/* Time Up Modal (Urgent Reminder) */}
-      {showTimeUpModal && step === 'EXAM' && (
-        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-           <div className="bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-2 border-rose-100 animate-in zoom-in-95">
-              <div className="bg-gradient-to-br from-rose-500 via-rose-600 to-rose-700 p-8 flex flex-col items-center text-white text-center relative overflow-hidden">
-                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-xl" />
-                 <div className="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center mb-6 backdrop-blur-md rotate-12">
-                    <Clock size={44} className="text-white drop-shadow-md" />
-                 </div>
-                 <h2 className="text-2xl font-black mb-2 tracking-tight font-outfit uppercase">Waktu Habis!</h2>
-                 <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Sesi Ujian Telah Berakhir</p>
-              </div>
+        {/* Question Area */}
+        <section className="flex-1 space-y-8 privacy-mode animate-in fade-in duration-1000">
+          {answers.map((ans, idx) => (
+            <div key={idx} className="bg-white rounded-[2.5rem] p-8 md:p-12 border border-outline-variant/30 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+              <div className="absolute top-0 left-0 w-2 h-full bg-primary/10 group-hover:bg-primary transition-colors duration-500" />
               
-              <div className="p-8 text-center">
-                 <p className="text-sm text-slate-600 font-bold leading-relaxed mb-6">
-                    Waktu pengerjaan Anda sudah habis. Silakan pilih tindakan berikut untuk melanjutkan.
-                 </p>
-                 
-                 <div className="space-y-3">
-                    <button
-                      onClick={() => {
-                        const saved = loadRemedialSession();
-                        saveRemedialSession({ 
-                          ...saved, 
-                          sessionId, 
-                          studentName, 
-                          step: 'EXAM',
-                          startedAt: saved?.startedAt || Date.now(),
-                          answers: saved?.answers || answers,
-                          note: saved?.note || note,
-                          refreshCount: saved?.refreshCount || 0,
-                          isPenaltyApplied: true 
-                        });
-                        setIsPenaltyApplied(true);
-                        setShowTimeUpModal(false);
-                      }}
-                      className="w-full py-4 bg-indigo-600 hover:bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 transition-all flex flex-col items-center justify-center gap-1"
-                    >
-                      <span>Selesaikan Soal</span>
-                      <span className="text-[8px] opacity-60 font-bold">Denda Pengurangan -15 Poin</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => {
-                        setShowTimeUpModal(false);
-                        handleStatusUpdate('TIMEOUT');
-                      }}
-                      className="w-full py-4 bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all flex flex-col items-center justify-center gap-1"
-                    >
-                      <span>Gagalkan Sesi & Keluar</span>
-                      <span className="text-[8px] opacity-60 font-bold">Status: Tidak Valid (Skor 0)</span>
-                    </button>
-                 </div>
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black text-lg font-headline border-2 border-primary/20">
+                  {idx + 1}
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-on-surface tracking-tighter font-headline">Soal Essay {idx + 1}</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Pengerjaan Mandiri</p>
+                </div>
               </div>
-           </div>
-        </div>
-      )}
 
-      {/* 5 Minute Remaining Warning Modal */}
-      {showFiveMinWarning && step === 'EXAM' && (
-        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-2 border-indigo-100 animate-in zoom-in-95">
-             <div className="bg-gradient-to-br from-indigo-500 via-indigo-600 to-blue-700 p-8 flex flex-col items-center text-white text-center relative overflow-hidden">
-                {/* Decoration */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-xl" />
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-400/20 rounded-full -ml-12 -mb-12 blur-lg" />
-                
-                <div className="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center mb-6 backdrop-blur-md rotate-12 animate-pulse relative z-10">
-                   <Clock size={44} className="text-white drop-shadow-md" />
+              {shuffledQuestions[idx] && (
+                <div className="bg-surface-container-lowest p-8 rounded-[2rem] mb-10 border border-outline-variant/10 shadow-inner">
+                  <p className="text-on-surface font-medium leading-relaxed whitespace-pre-wrap text-lg italic">
+                    "{shuffledQuestions[idx].text}"
+                  </p>
                 </div>
-                <h2 className="text-2xl font-black mb-2 tracking-tight relative z-10 font-outfit uppercase">Waktu Kritis!</h2>
-                <div className="px-4 py-1.5 bg-white/20 rounded-full backdrop-blur-md text-[10px] font-black uppercase tracking-widest border border-white/30 relative z-10">
-                   Peringatan 5 Menit Terakhir
-                </div>
-             </div>
-             
-             <div className="p-8 pb-10 text-center">
-                <p className="text-sm text-slate-600 font-bold leading-relaxed mb-8">
-                   Halo <span className="text-indigo-600 font-black">{studentName}</span>, waktu pengerjaan kamu hanya tersisa <span className="underline decoration-indigo-200 decoration-4 underline-offset-4">5 menit lagi</span>. 
-                   <br /><br />
-                   Segera periksa kembali jawaban kamu dan pastikan <span className="text-slate-800 font-black italic">semua soal essay telah terisi</span> sebelum sistem terkunci otomatis.
-                </p>
-                
-                <button
-                  onClick={() => setShowFiveMinWarning(false)}
-                  className="w-full py-4 bg-indigo-600 hover:bg-slate-900 active:scale-[0.98] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 transition-all focus:outline-none flex items-center justify-center gap-2 group"
-                >
-                  Iyah Saya Mengerti & Lanjutkan <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                </button>
-             </div>
+              )}
+
+              <textarea
+                className="w-full bg-slate-50 border-2 border-slate-100 rounded-[2rem] p-8 text-lg font-medium text-on-surface outline-none focus:border-primary focus:ring-8 focus:ring-primary/5 transition-all resize-none min-h-[300px] shadow-sm"
+                placeholder="Ketikkan jawaban lengkap Anda di sini..."
+                value={ans}
+                onChange={(e) => handleChange(idx, e.target.value)}
+                onCopy={(e) => e.preventDefault()}
+                onPaste={(e) => e.preventDefault()}
+                autoComplete="off"
+                spellCheck="false"
+              />
+              
+              <div className="mt-6 flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-2">
+                <span className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Penyimpanan Otomatis Aktif
+                </span>
+                <span>{ans.length} Karakter</span>
+              </div>
+            </div>
+          ))}
+
+          {/* Bottom Actions */}
+          <div className="bg-surface-container p-10 rounded-[2.5rem] border border-outline-variant/30 flex flex-col items-center text-center">
+            <h3 className="text-2xl font-black text-on-surface mb-2 font-headline uppercase tracking-tighter">Selesaikan Ujian</h3>
+            <p className="text-sm text-slate-500 font-medium mb-8 max-w-md">Pastikan semua jawaban telah terisi dan diperiksa kembali sebelum dikumpulkan.</p>
+            
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting || isOffline}
+              className={`group flex items-center gap-4 px-12 py-5 rounded-[2rem] text-lg font-black uppercase tracking-widest transition-all shadow-2xl ${
+                isSubmitting || isOffline 
+                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
+                  : 'bg-primary text-on-primary hover:scale-105 active:scale-95 shadow-primary/30'
+              }`}
+            >
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="animate-spin" size={24} />
+                  Mengirim...
+                </>
+              ) : (
+                <>
+                  <Send className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" size={24} />
+                  Kumpulkan Jawaban
+                </>
+              )}
+            </button>
           </div>
-        </div>
-      )}
+        </section>
+      </main>
 
-      {/* Draggable Floating Camera (PiP) — Di luar privacy-mode agar fixed positioning selalu benar */}
+      {/* ── DRAGGABLE CAMERA (PiP) ── */}
       {step === 'EXAM' && (
         <div
           ref={pipRef}
-          className="fixed z-[60] rounded-2xl md:rounded-3xl overflow-hidden border-2 md:border-4 border-slate-900 shadow-2xl bg-slate-900 w-24 h-36 md:w-36 md:h-52 animate-in slide-in-from-right duration-500 cursor-grab active:cursor-grabbing select-none touch-none"
+          className="fixed z-[60] rounded-[2rem] overflow-hidden border-4 border-on-surface shadow-2xl bg-surface w-24 h-36 md:w-44 md:h-64 animate-in slide-in-from-right duration-500 cursor-grab active:cursor-grabbing select-none touch-none"
           style={pipPos
-            ? { left: `${pipPos.x}px`, top: `${pipPos.y}px`, transition: isDraggingRef.current ? 'none' : 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)', willChange: 'left, top' as const }
-            : { right: '12px', top: '12px', transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)' }
+            ? { left: `${pipPos.x}px`, top: `${pipPos.y}px`, transition: isDraggingRef.current ? 'none' : 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)' }
+            : { right: '32px', bottom: '32px' }
           }
           onMouseDown={(e) => {
             if (!pipRef.current) return;
@@ -2973,21 +2873,20 @@ export default function StudentRemedialLayer({
               if (dx > 3 || dy > 3) wasDraggedRef.current = true;
               const elW = pipRef.current?.offsetWidth || 96;
               const elH = pipRef.current?.offsetHeight || 144;
-              const newX = Math.min(Math.max(0, ev.clientX - dragOffsetRef.current.x), window.innerWidth - elW);
-              const newY = Math.min(Math.max(0, ev.clientY - dragOffsetRef.current.y), window.innerHeight - elH);
+              const newX = Math.min(Math.max(12, ev.clientX - dragOffsetRef.current.x), window.innerWidth - elW - 12);
+              const newY = Math.min(Math.max(12, ev.clientY - dragOffsetRef.current.y), window.innerHeight - elH - 12);
               setPipPos({ x: newX, y: newY });
             };
             const onUp = (ev: MouseEvent) => {
               isDraggingRef.current = false;
               window.removeEventListener('mousemove', onMove);
               window.removeEventListener('mouseup', onUp);
-              // Snap to nearest horizontal edge
               if (pipRef.current) {
                 const elW = pipRef.current.offsetWidth;
-                const curX = ev.clientX - dragOffsetRef.current.x;
-                const centerX = curX + elW / 2;
-                const snapX = centerX < window.innerWidth / 2 ? 12 : window.innerWidth - elW - 12;
-                const curY = Math.min(Math.max(12, ev.clientY - dragOffsetRef.current.y), window.innerHeight - (pipRef.current.offsetHeight) - 12);
+                const rectInner = pipRef.current.getBoundingClientRect();
+                const centerX = rectInner.left + elW / 2;
+                const snapX = centerX < window.innerWidth / 2 ? 24 : window.innerWidth - elW - 24;
+                const curY = Math.min(Math.max(24, rectInner.top), window.innerHeight - pipRef.current.offsetHeight - 24);
                 setPipPos({ x: snapX, y: curY });
               }
             };
@@ -3011,191 +2910,137 @@ export default function StudentRemedialLayer({
             if (dx > 3 || dy > 3) wasDraggedRef.current = true;
             const elW = pipRef.current?.offsetWidth || 96;
             const elH = pipRef.current?.offsetHeight || 144;
-            const newX = Math.min(Math.max(0, touch.clientX - dragOffsetRef.current.x), window.innerWidth - elW);
-            const newY = Math.min(Math.max(0, touch.clientY - dragOffsetRef.current.y), window.innerHeight - elH);
+            const newX = Math.min(Math.max(12, touch.clientX - dragOffsetRef.current.x), window.innerWidth - elW - 12);
+            const newY = Math.min(Math.max(12, touch.clientY - dragOffsetRef.current.y), window.innerHeight - elH - 12);
             setPipPos({ x: newX, y: newY });
           }}
           onTouchEnd={(e) => {
             isDraggingRef.current = false;
-            // Snap to nearest horizontal edge on touch release
             if (pipRef.current) {
               const elW = pipRef.current.offsetWidth;
-              const elH = pipRef.current.offsetHeight;
-              const rect = pipRef.current.getBoundingClientRect();
-              const centerX = rect.left + elW / 2;
-              const snapX = centerX < window.innerWidth / 2 ? 12 : window.innerWidth - elW - 12;
-              const snapY = Math.min(Math.max(12, rect.top), window.innerHeight - elH - 12);
+              const rectInner = pipRef.current.getBoundingClientRect();
+              const centerX = rectInner.left + elW / 2;
+              const snapX = centerX < window.innerWidth / 2 ? 24 : window.innerWidth - elW - 24;
+              const snapY = Math.min(Math.max(24, rectInner.top), window.innerHeight - pipRef.current.offsetHeight - 24);
               setPipPos({ x: snapX, y: snapY });
             }
           }}
         >
-          <div className="w-full h-full relative pointer-events-none">
-              <ProctoringCamera 
-                ref={videoRef}
-                onViolation={handleCameraViolation} 
-              />
+          <div className="w-full h-full relative pointer-events-none grayscale hover:grayscale-0 transition-all duration-500">
+            <ProctoringCamera ref={videoRef} onViolation={handleCameraViolation} />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+            <div className="absolute bottom-4 left-4 flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[10px] font-black text-white uppercase tracking-widest">Monitoring AI</span>
+              </div>
+              <div className="text-[12px] font-black font-mono text-white/80">{formatTime(timeLeft)}</div>
             </div>
-          
-          {/* Timer Label */}
-          <div className="absolute top-1 left-1 bg-black/70 text-white font-mono text-[9px] md:text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm tracking-wider font-bold pointer-events-none">
-            ⏱️ {formatTime(timeLeft)}
           </div>
-  
-          {/* Monitoring Label */}
-          <div className="absolute bottom-1 left-1 flex items-center gap-1 bg-black/60 px-1.5 md:px-2 py-0.5 md:py-1 rounded backdrop-blur-sm pointer-events-none">
-             <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${examMode === 'STRICT' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-             <span className={`text-[7px] md:text-[8px] font-black uppercase tracking-wider ${examMode === 'STRICT' ? 'text-emerald-300' : 'text-amber-300'}`}>
-               {examMode === 'STRICT' ? 'Strict Mode' : 'Limited Mode'}
-             </span>
-          </div>
+        </div>
+      )}
 
-          {/* Drag Handle Indicator */}
-          <div className="absolute top-1 left-1/2 -translate-x-1/2 w-6 h-1 bg-white/30 rounded-full pointer-events-none" />
-  
-          {/* Penalty Info (if any) */}
-          {(warningCount > 0 || tabWarningCount > 0) && (
-            <div className="absolute top-1 right-1 flex flex-col gap-0.5 items-end pointer-events-none">
-              {tabWarningCount > 0 && (
-                <span className="text-[7px] md:text-[8px] bg-rose-500/90 text-white px-1 rounded font-bold backdrop-blur-sm">
-                  TAB: {tabWarningCount}/{MAX_TAB_WARNINGS}
-                </span>
-              )}
-              {warningCount > 0 && (
-                <span className="text-[7px] md:text-[8px] bg-rose-500/90 text-white px-1 rounded font-bold backdrop-blur-sm">
-                  CAM: {warningCount}/10
-                </span>
-              )}
+      {/* ── MODALS & OVERLAYS ── */}
+      {activeWarning && step === 'EXAM' && (
+        <div className="fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-xl flex justify-center items-center p-4">
+          <div className="bg-white max-w-sm w-full rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 border-4 border-rose-500/20">
+            <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-8 flex flex-col items-center">
+              <AlertTriangle size={64} className="text-white" />
+              <h2 className="text-2xl font-black text-white mt-4 uppercase">Pelanggaran</h2>
             </div>
+            <div className="p-6 text-center">
+              <div className="bg-rose-50 border border-rose-100 px-5 py-2.5 rounded-full text-base font-black text-rose-600 mb-6">
+                Peringatan {activeWarning.count}/{activeWarning.limit}
+              </div>
+              <p className="text-xs text-slate-600 font-bold mb-6">{activeWarning.message}</p>
+              <button 
+                onClick={() => setActiveWarning(null)}
+                className="w-full py-4 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl"
+              >
+                Saya Mengerti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAiBotWarning && step === 'EXAM' && (
+         <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-xl animate-in fade-in duration-300">
+            <div className={`bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 border-4 ${overlayViolationCount >= 3 ? 'shadow-rose-500/30 border-rose-500' : 'shadow-amber-500/30 border-amber-500'}`}>
+               <div className={`p-8 flex flex-col items-center text-white text-center ${overlayViolationCount >= 3 ? 'bg-rose-600' : 'bg-amber-500'}`}>
+                  <Cpu size={56} className="text-white mb-6 animate-pulse" />
+                  <h2 className="text-xl font-black mb-1 tracking-tight font-outfit uppercase">
+                    {overlayViolationCount >= 3 ? 'AI TERDETEKSI (KRITIS)' : 'INDIKASI AKTIVITAS TIDAK BIASA'}
+                  </h2>
+                  <div className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${overlayViolationCount >= 3 ? 'bg-rose-900/30' : 'bg-amber-900/30'}`}>
+                    Peringatan {overlayViolationCount} dari 3
+                  </div>
+               </div>
+               <div className="p-8 text-center bg-slate-50">
+                  <p className="text-sm text-slate-700 font-bold leading-relaxed mb-6">
+                    Sistem mendeteksi adanya aktivitas mencurigakan. Harap matikan aplikasi lain demi integritas ujian.
+                  </p>
+                  <div className="text-5xl font-black text-primary font-mono">{aiCountdown}</div>
+               </div>
+            </div>
+         </div>
+      )}
+
+      {showTimeUpModal && step === 'EXAM' && (
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+           <div className="bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-2xl">
+              <div className="bg-rose-600 p-8 text-white text-center">
+                 <Clock size={44} className="mx-auto mb-4" />
+                 <h2 className="text-2xl font-black uppercase">Waktu Habis!</h2>
+              </div>
+              <div className="p-8 text-center">
+                 <p className="text-sm text-slate-600 font-bold mb-6">Sesi pengerjaan Anda telah berakhir secara sistem.</p>
+                 <button onClick={() => handleStatusUpdate('TIMEOUT')} className="w-full py-4 bg-primary text-white rounded-xl font-black uppercase tracking-widest">Selesaikan Sesi</button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {showFiveMinWarning && step === 'EXAM' && (
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md">
+          <div className="bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-2 border-indigo-100">
+             <div className="bg-indigo-600 p-8 text-white text-center">
+                <Clock size={44} className="mx-auto mb-4 animate-pulse" />
+                <h2 className="text-2xl font-black uppercase">Waktu Kritis!</h2>
+             </div>
+             <div className="p-8 text-center">
+                <p className="text-sm text-slate-600 font-bold mb-8">Waktu pengerjaan Anda tersisa kurang dari 5 menit.</p>
+                <button onClick={() => setShowFiveMinWarning(false)} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black uppercase tracking-widest">Saya Mengerti</button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {(isConnectionLocked || isSplitLocked) && step === 'EXAM' && (
+        <div className="fixed inset-0 z-[10000] bg-white flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
+          <div className="w-24 h-24 bg-rose-50 text-rose-600 rounded-[2rem] flex items-center justify-center mb-8 animate-bounce shadow-xl shadow-rose-500/10">
+            {isConnectionLocked ? <MonitorOff size={48} /> : <Monitor size={48} />}
+          </div>
+          <h2 className="text-3xl font-black text-on-surface mb-3 font-headline uppercase tracking-tighter">
+            {isConnectionLocked ? 'Koneksi Terputus' : 'Layar Terbagi Terdeteksi'}
+          </h2>
+          <p className="text-slate-500 font-medium max-w-xs mb-10 leading-relaxed">
+            {isConnectionLocked 
+               ? 'Ujian ditangguhkan sementara untuk keamanan data. Silakan sambungkan kembali internet Anda.' 
+               : 'Gunakan mode layar penuh (Full Screen) untuk melanjutkan ujian demi menjaga integritas pengawasan.'}
+          </p>
+          {isConnectionLocked && (
+            <button onClick={syncWithServer} className="px-10 py-4 bg-primary text-on-primary rounded-2xl font-black uppercase tracking-widest shadow-2xl hover:scale-105 transition-all">Coba Pulihkan Sesi</button>
           )}
         </div>
       )}
 
-      <div className={`privacy-mode ${(isTabHidden || isPermanentlyBlocked || isOffline || isConnectionLocked) && step === 'EXAM' ? 'invisible' : ''}`}>
-
-      {/* Main Exam Content */}
-      <div className="p-3 sm:p-5 lg:p-8 max-w-4xl mx-auto animate-in pt-8 md:pt-10">
-
-      <header className="mb-6 md:mb-10 text-center">
-        <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight font-outfit mb-2">Remedial {subject}</h1>
-        <p className="text-xs md:text-sm text-slate-500 font-bold">Harap kerjakan {remedialEssayCount} soal essay berikut. <strong>Jangan tinggalkan halaman ini!</strong></p>
-      </header>
-
-      <div className="space-y-4 md:space-y-6">
-        {answers.map((ans, idx) => (
-          <div key={idx} className="bg-white rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />
-            <h3 className="text-sm md:text-base font-black text-slate-800 mb-2">Soal Essay #{idx + 1}</h3>
-            {shuffledQuestions[idx] && shuffledQuestions[idx].text.trim() !== "" && (
-              <p className="text-xs md:text-sm text-slate-600 font-medium mb-4 p-3 bg-slate-50 border border-slate-100 rounded-lg whitespace-pre-wrap">
-                {shuffledQuestions[idx].text}
-              </p>
-            )}
-            <textarea
-              className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all resize-none"
-              rows={5}
-              placeholder="Ketik jawaban Anda di sini. Jangan menempel (paste) jawaban dari sumber lain..."
-              value={ans}
-              onChange={(e) => handleChange(idx, e.target.value)}
-              onCopy={(e) => e.preventDefault()}
-              onPaste={(e) => e.preventDefault()}
-              autoComplete="off"
-              spellCheck="false"
-            />
-          </div>
-        ))}
-        <div className="bg-white rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm relative overflow-hidden group mt-8">
-           <div className="absolute top-0 left-0 w-1 h-full bg-slate-300" />
-           <h3 className="text-sm md:text-base font-black text-slate-800 mb-2">Catatan untuk Guru (Opsional)</h3>
-           <textarea
-             className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all resize-none"
-             rows={3}
-             placeholder="Tuliskan pesan atau catatan Anda jika ada..."
-             value={note}
-             onChange={(e) => setNote(e.target.value)}
-           />
-        </div>
-
-      </div>
-
-      <div className="mt-8 flex justify-end pb-24">
-        {shuffledQuestions.length > 0 ? (
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting || isOffline}
-            className={`px-6 py-4 rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 w-full md:w-auto ${
-              isSubmitting || isOffline
-                ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                : 'bg-indigo-600 text-white shadow-indigo-600/20'
-            }`}
-          >
-            <Send size={16} /> {isSubmitting ? 'Memproses...' : 'Kumpulkan Jawaban'}
-          </button>
-        ) : (
-          <div className="flex items-center gap-2 px-4 py-4 bg-rose-50 text-rose-600 rounded-2xl border border-rose-100 text-[10px] md:text-xs font-bold justify-center w-full">
-            <AlertTriangle size={16} />
-            DATA SOAL TIDAK TERSEDIA
-          </div>
-        )}
-      </div>
+      {/* Global Style Tags */}
+      <style jsx global>{`
+        .glass-header { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(0, 0, 0, 0.05); }
+        .emerald-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+      `}</style>
     </div>
-   </div>
-
-   {/* ── CONNECTION LOCK OVERLAY ── */}
-   {isConnectionLocked && step === 'EXAM' && (
-     <div className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
-       <div className="w-20 h-20 bg-rose-50 text-rose-600 rounded-3xl flex items-center justify-center mb-6 animate-bounce">
-         <MonitorOff size={40} />
-       </div>
-       <h2 className="text-2xl font-black text-slate-800 mb-2 font-outfit uppercase tracking-tight">Koneksi Terputus</h2>
-       <p className="text-sm text-slate-500 font-bold max-w-xs mb-8 leading-relaxed">
-         Halaman ujian dikosongkan sementara untuk menjaga keamanan. Silakan pulihkan internet Anda untuk melanjutkan.
-       </p>
-       
-       <button
-         onClick={syncWithServer}
-         disabled={isSyncing}
-         className={`flex items-center gap-2 px-8 py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-xl ${
-           isSyncing 
-            ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
-            : 'bg-indigo-600 text-white hover:scale-105 active:scale-95 shadow-indigo-600/20'
-         }`}
-       >
-         {isSyncing ? (
-           <>
-             <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-             Menghubungkan...
-           </>
-         ) : (
-           <>
-             <Play size={18} /> Pulihkan Sesi
-           </>
-         )}
-       </button>
-       
-       {!navigator.onLine && (
-         <p className="mt-6 text-[10px] text-rose-500 font-black uppercase tracking-[0.2em] animate-pulse">
-           ⚠️ Perangkat Anda Offline
-         </p>
-       )}
-     </div>
-   )}
-    {/* ── SPLIT SCREEN LOCK OVERLAY ── */}
-    {isSplitLocked && step === 'EXAM' && !isConnectionLocked && (
-      <div className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
-        <div className="w-20 h-20 bg-amber-50 text-amber-600 rounded-3xl flex items-center justify-center mb-6 animate-bounce">
-          <Monitor size={40} />
-        </div>
-        <h2 className="text-2xl font-black text-slate-800 mb-2 font-outfit uppercase tracking-tight">Layar Terbagi Terdeteksi</h2>
-        <p className="text-sm text-slate-500 font-bold max-w-xs mb-8 leading-relaxed">
-          Sistem mendeteksi Anda menggunakan fitur **Split Screen** atau **Multi-Window**. <br /><br />
-          Gunakan **Full Screen (Layar Penuh)** untuk melanjutkan ujian.
-        </p>
-        
-        <div className="px-6 py-3 bg-slate-100 rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest">
-          Menunggu Layar Penuh...
-        </div>
-      </div>
-    )}
-  </div>
   );
 }

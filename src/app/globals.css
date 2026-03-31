@@ -230,3 +230,30 @@
 .font-arabic {
   font-family: 'Amiri', serif;
 }
+
+/* ── NEW EXAM UI STYLES ── */
+.glass-header {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.emerald-pulse {
+  box-shadow: 0 0 0 0 rgba(0, 98, 66, 0.4);
+  animation: pulse-emerald 2s infinite;
+}
+
+@keyframes pulse-emerald {
+  0% { box-shadow: 0 0 0 0 rgba(0, 98, 66, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(0, 98, 66, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 98, 66, 0); }
+}
+
+.tonal-shift {
+  background: #f2f4f6;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
