@@ -119,26 +119,26 @@ export default function SetupLayer(props: SetupLayerProps) {
     }
   };
 
-  const inputClass = "w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300";
+  const inputClass = "w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm font-bold text-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-600";
   const labelClass = "flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2";
-  const sectionTitleClass = "flex items-center gap-2 text-sm font-black text-slate-800 uppercase tracking-widest mb-6 pb-4 border-b border-slate-100";
-  const cardClass = "bg-white rounded-2xl p-6 shadow-sm border border-slate-100";
+  const sectionTitleClass = "flex items-center gap-2 text-sm font-black text-white uppercase tracking-widest mb-6 pb-4 border-b border-white/10";
+  const cardClass = "bg-slate-900/40 backdrop-blur-xl rounded-2xl p-6 shadow-2xl border border-white/10";
 
   return (
-    <div className="min-h-screen flex items-start justify-center p-4 py-8 lg:py-12 animate-in bg-slate-50">
+    <div className="min-h-screen flex items-start justify-center p-4 py-8 lg:py-12 animate-in bg-slate-950">
       <div className="w-full max-w-6xl space-y-8">
         
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-100 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-3 border border-indigo-200">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest mb-3 border border-primary/20">
               <GraduationCap size={14} /> Setup Sesi Ujian
             </div>
-            <h1 className="text-3xl md:text-5xl font-black text-slate-800 tracking-tight font-outfit">GradeMaster</h1>
-            <p className="text-slate-500 text-sm mt-1">Atur parameter dan soal untuk sesi ujian baru secara lengkap.</p>
+            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight font-outfit">GradeMaster</h1>
+            <p className="text-slate-400 text-sm mt-1">Atur parameter dan soal untuk sesi ujian baru secara lengkap.</p>
           </div>
           <div className="hidden lg:block">
-            <button onClick={onBack} className="inline-flex items-center gap-2 text-xs font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest transition-colors bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm hover:shadow-md">
+            <button onClick={onBack} className="inline-flex items-center gap-2 text-xs font-black text-slate-400 hover:text-primary uppercase tracking-widest transition-colors bg-white/5 px-4 py-2 rounded-xl border border-white/10 shadow-sm hover:shadow-md">
               <ArrowLeft size={14} /> Kembali ke Menu
             </button>
           </div>
@@ -152,7 +152,7 @@ export default function SetupLayer(props: SetupLayerProps) {
             
             {/* 1. INFORMASI UJIAN */}
             <div className={cardClass}>
-              <h2 className={sectionTitleClass}><FolderOpen className="text-indigo-500" /> Informasi Ujian</h2>
+              <h2 className={sectionTitleClass}><FolderOpen className="text-primary" /> Informasi Ujian</h2>
               <div className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -256,7 +256,7 @@ export default function SetupLayer(props: SetupLayerProps) {
 
             {/* 3. KUNCI JAWABAN PG */}
             <div className={cardClass}>
-              <h2 className={sectionTitleClass}><Key className="text-indigo-500" /> Kunci Jawaban Pilihan Ganda (PG)</h2>
+              <h2 className={sectionTitleClass}><Key className="text-primary" /> Kunci Jawaban Pilihan Ganda (PG)</h2>
               <div>
                 <textarea
                   value={keyInput}
@@ -276,7 +276,7 @@ export default function SetupLayer(props: SetupLayerProps) {
 
             {/* PENGATURAN */}
             <div className={cardClass}>
-              <h2 className={sectionTitleClass}><Settings className="text-indigo-500" /> Pengaturan</h2>
+              <h2 className={sectionTitleClass}><Settings className="text-primary" /> Pengaturan</h2>
               <div className="space-y-5">
                 <div>
                   <label className={labelClass}><CheckCircle2 size={14} /> Nilai Minimal (KKM)</label>
@@ -293,19 +293,19 @@ export default function SetupLayer(props: SetupLayerProps) {
                 </div>
                 <div>
                   <label className={labelClass}>Sesi Publik</label>
-                  <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border-2 border-slate-100">
+                  <div className="flex items-center justify-between p-3.5 bg-white/5 rounded-xl border border-white/10">
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isPublic ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-500'}`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isPublic ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-slate-500'}`}>
                         {isPublic ? '🔓' : '🔒'}
                       </div>
                       <div>
-                        <h4 className="text-xs font-black text-slate-700">Hasil Publik</h4>
-                        <p className="text-[9px] font-bold text-slate-400">Siswa bisa melihat nilai</p>
+                        <h4 className="text-xs font-black text-slate-200">Hasil Publik</h4>
+                        <p className="text-[9px] font-bold text-slate-500">Siswa bisa melihat nilai</p>
                       </div>
                     </div>
                     <button
                       onClick={() => setIsPublic(!isPublic)}
-                      className={`w-12 h-6 rounded-full transition-all relative ${isPublic ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                      className={`w-12 h-6 rounded-full transition-all relative ${isPublic ? 'bg-emerald-500' : 'bg-slate-700'}`}
                     >
                       <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isPublic ? 'left-7' : 'left-1'}`} />
                     </button>
@@ -314,19 +314,19 @@ export default function SetupLayer(props: SetupLayerProps) {
                 {setIsDemo && (
                   <div>
                     <label className={labelClass}>Mode Sandbox</label>
-                    <div className="flex items-center justify-between p-3.5 bg-amber-50 rounded-xl border-2 border-amber-100">
+                    <div className="flex items-center justify-between p-3.5 bg-amber-500/10 rounded-xl border border-amber-500/20">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isDemo ? 'bg-amber-200 text-amber-600' : 'bg-slate-200 text-slate-500'}`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isDemo ? 'bg-amber-500/30 text-amber-400' : 'bg-white/10 text-slate-500'}`}>
                           {isDemo ? '🧪' : '🛑'}
                         </div>
                         <div>
-                          <h4 className="text-xs font-black text-amber-700">Mode Demo (Testing)</h4>
-                          <p className="text-[9px] font-bold text-amber-600/70">Sembunyikan dari list siswa</p>
+                          <h4 className="text-xs font-black text-amber-400">Mode Demo (Testing)</h4>
+                          <p className="text-[9px] font-bold text-amber-500/60">Sembunyikan dari list siswa</p>
                         </div>
                       </div>
                       <button
                         onClick={() => setIsDemo(!isDemo)}
-                        className={`w-12 h-6 rounded-full transition-all relative ${isDemo ? 'bg-amber-500' : 'bg-slate-300'}`}
+                        className={`w-12 h-6 rounded-full transition-all relative ${isDemo ? 'bg-amber-500' : 'bg-slate-700'}`}
                       >
                         <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isDemo ? 'left-7' : 'left-1'}`} />
                       </button>
@@ -341,18 +341,18 @@ export default function SetupLayer(props: SetupLayerProps) {
 
               {/* Preview PG Keys */}
               {parsedCount > 0 && (
-                <div className="bg-white rounded-2xl p-5 shadow-sm border border-sky-100 border-t-4 border-t-sky-500">
+                <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl p-5 shadow-2xl border border-primary/20 border-t-4 border-t-primary">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-sky-600">Preview Kunci PG</span>
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-sky-50 text-sky-600">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">Preview Kunci PG</span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-primary/20 text-primary">
                       {parsedCount}
                     </span>
                   </div>
                   <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-60 overflow-y-auto pr-2">
                     {parsedPreview.map((ans, idx) => (
-                      <span key={idx} className="inline-flex justify-center items-center gap-1.5 px-2 py-1.5 bg-slate-50 rounded-lg border border-slate-200 text-[10px] font-bold">
-                        <span className="text-slate-400">{idx + 1}.</span>
-                        <span className="text-sky-600">{ans}</span>
+                      <span key={idx} className="inline-flex justify-center items-center gap-1.5 px-2 py-1.5 bg-white/5 rounded-lg border border-white/10 text-[10px] font-bold">
+                        <span className="text-slate-500">{idx + 1}.</span>
+                        <span className="text-primary">{ans}</span>
                       </span>
                     ))}
                   </div>
@@ -361,17 +361,17 @@ export default function SetupLayer(props: SetupLayerProps) {
             </div>
 
             {/* ACTION BUTTON (Desktop Static, Mobile Sticky) */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 z-50 lg:static lg:bg-transparent lg:border-none lg:p-0">
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900 border-t border-white/10 z-50 lg:static lg:bg-transparent lg:border-none lg:p-0">
               <button
                 onClick={handleSubmit}
                 disabled={isLoading}
-                className="w-full py-4 bg-indigo-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-4 bg-primary text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />} Simpan & Mulai Sesi
               </button>
               <button 
                 onClick={onBack} 
-                className="w-full mt-3 py-3 bg-slate-100 text-slate-500 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors lg:hidden flex items-center justify-center gap-2"
+                className="w-full mt-3 py-3 bg-white/5 text-slate-400 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-colors lg:hidden flex items-center justify-center gap-2 border border-white/5"
               >
                 <ArrowLeft size={14} /> Kembali
               </button>

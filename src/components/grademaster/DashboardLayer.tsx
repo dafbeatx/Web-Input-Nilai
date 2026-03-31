@@ -464,8 +464,8 @@ export default function DashboardLayer({
           <h3 className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-500 mb-4 text-center">🏆 Bintang Kelas (Top 3)</h3>
           <div className="flex flex-col md:flex-row items-end justify-center gap-4 max-w-3xl mx-auto">
             {/* Juara 2 */}
-            <div className="order-2 md:order-1 flex-1 bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-5 text-center transform md:-translate-y-4 hover:-translate-y-6 transition-transform relative w-full min-w-0">
-              <div className="w-12 h-12 md:w-14 md:h-14 mx-auto bg-slate-800 rounded-full flex items-center justify-center text-2xl mb-3">🥈</div>
+            <div className="order-2 md:order-1 flex-1 bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-5 text-center transform md:-translate-y-4 hover:-translate-y-6 transition-transform relative w-full min-w-0 shadow-2xl">
+              <div className="w-12 h-12 md:w-14 md:h-14 mx-auto bg-slate-800/50 border border-white/10 rounded-full flex items-center justify-center text-2xl mb-3">🥈</div>
               <h4 className="font-bold text-slate-300 text-sm md:text-base truncate px-2">{analytics.ranking.length > 1 ? analytics.ranking[1].name : '-'}</h4>
               <p className="text-white font-black text-xl mt-1">{analytics.ranking.length > 1 ? analytics.ranking[1].finalScore : 0}</p>
             </div>
@@ -477,8 +477,8 @@ export default function DashboardLayer({
               <p className="text-amber-400 font-black text-2xl mt-1">{analytics.ranking.length > 0 ? analytics.ranking[0].finalScore : 0}</p>
             </div>
             {/* Juara 3 */}
-            <div className="order-3 md:order-3 flex-1 bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-5 text-center transform hover:-translate-y-2 transition-transform relative w-full min-w-0">
-              <div className="w-12 h-12 md:w-14 md:h-14 mx-auto bg-orange-500/20 rounded-full flex items-center justify-center text-2xl mb-3">🥉</div>
+            <div className="order-3 md:order-3 flex-1 bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-5 text-center transform hover:-translate-y-2 transition-transform relative w-full min-w-0 shadow-2xl">
+              <div className="w-12 h-12 md:w-14 md:h-14 mx-auto bg-orange-500/10 border border-orange-500/20 rounded-full flex items-center justify-center text-2xl mb-3">🥉</div>
               <h4 className="font-bold text-orange-300 text-sm md:text-base truncate px-2">{analytics.ranking.length > 2 ? analytics.ranking[2].name : '-'}</h4>
               <p className="text-orange-400 font-black text-xl mt-1">{analytics.ranking.length > 2 ? analytics.ranking[2].finalScore : 0}</p>
             </div>
@@ -750,22 +750,22 @@ export default function DashboardLayer({
                 <div key={r.rank} className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black ${r.rank <= 3 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>
+                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border ${r.rank <= 3 ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-white/5 text-slate-500 border-white/10'}`}>
                         {r.rank}
                       </span>
                       <span className="text-xs font-black text-slate-200 truncate max-w-[140px] uppercase tracking-tight">{r.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className={`px-2.5 py-1 rounded-lg text-xs font-black ${r.finalScore >= kkm ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                      <div className={`px-2.5 py-1 rounded-lg text-xs font-black border ${r.finalScore >= kkm ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
                         {r.finalScore}
                       </div>
                       {!isPublicView && (
                         <button
                           onClick={() => handleEditScore(gradedStudents.find(s => s.name === r.name)?.id as string, r.finalScore)}
                           disabled={isEditingScore === gradedStudents.find(s => s.name === r.name)?.id}
-                          className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded transition-colors border border-transparent hover:border-primary/20"
                         >
-                          {isEditingScore === (gradedStudents.find(s => s.name === r.name)?.id) ? <div className="w-3 h-3 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" /> : <Edit2 size={12} />}
+                          {isEditingScore === (gradedStudents.find(s => s.name === r.name)?.id) ? <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Edit2 size={12} />}
                         </button>
                       )}
                     </div>
@@ -814,7 +814,7 @@ export default function DashboardLayer({
                           ) : (
                             <button 
                               onClick={() => handleStartRemedial(r.name, r.finalScore)} 
-                              className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-rose-100 active:scale-95 flex items-center gap-1.5"
+                              className="px-3 py-1.5 bg-rose-500/10 text-rose-400 rounded-lg text-[9px] font-black uppercase tracking-widest border border-rose-500/20 active:scale-95 flex items-center gap-1.5 hover:bg-rose-500 hover:text-white transition-all"
                             >
                               <Plus size={10} /> Mulai Remedial
                             </button>
@@ -825,10 +825,10 @@ export default function DashboardLayer({
                         <button 
                           onClick={() => handleDeleteStudent(r.name)}
                           disabled={isDeleting === (gradedStudents.find(s => s.name === r.name)?.id)}
-                          className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-rose-100"
+                          className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-500/10 rounded-lg transition-colors border border-rose-500/20"
                           title="Hapus Data Siswa"
                         >
-                          {isDeleting === (gradedStudents.find(s => s.name === r.name)?.id) ? <div className="w-3.5 h-3.5 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" /> : <Trash2 size={14} />}
+                          {isDeleting === (gradedStudents.find(s => s.name === r.name)?.id) ? <div className="w-3.5 h-3.5 border-2 border-rose-400 border-t-transparent rounded-full animate-spin" /> : <Trash2 size={14} />}
                         </button>
                       </div>
                     )}
@@ -852,22 +852,22 @@ export default function DashboardLayer({
                   {analytics.ranking.map(r => (
                     <tr key={r.rank} className={`border-b border-white/5 hover:bg-white/5 transition-colors`}>
                       <td className="py-3.5 text-xs font-black text-slate-400 pl-2">
-                        <span className={`w-6 h-6 rounded-full flex items-center justify-center ${r.rank <= 3 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>{r.rank}</span>
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] border ${r.rank <= 3 ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-white/5 text-slate-600 border-white/5'}`}>{r.rank}</span>
                       </td>
                       <td className="py-3.5 text-xs font-bold text-slate-300">{r.name}</td>
                       <td className="py-3.5">
                         <div className="flex items-center gap-2">
-                          <span className={`px-2.5 py-1 rounded-lg text-xs font-black ${r.finalScore >= kkm ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                          <span className={`px-2.5 py-1 rounded-lg text-xs font-black border ${r.finalScore >= kkm ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
                             {r.finalScore}
                           </span>
                           {!isPublicView && (
                             <button
                               onClick={() => handleEditScore(gradedStudents.find(s => s.name === r.name)?.id as string, r.finalScore)}
                               disabled={isEditingScore === gradedStudents.find(s => s.name === r.name)?.id}
-                              className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                              className="p-1.5 text-slate-500 hover:text-primary hover:bg-primary/10 rounded transition-all border border-transparent hover:border-primary/20"
                               title="Ubah Nilai"
                             >
-                              {isEditingScore === (gradedStudents.find(s => s.name === r.name)?.id) ? <div className="w-3 h-3 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" /> : <Edit2 size={12} />}
+                              {isEditingScore === (gradedStudents.find(s => s.name === r.name)?.id) ? <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Edit2 size={12} />}
                             </button>
                           )}
                         </div>
@@ -886,11 +886,11 @@ export default function DashboardLayer({
                             ) : (
                               <div className="flex flex-col gap-2">
                                 <div className="flex items-center gap-1.5 text-rose-500">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"/> Perlu Bimbingan
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"/> Perlu Bimbingan
                                 </div>
                                 <button 
                                   onClick={() => handleStartRemedial(r.name, r.finalScore)} 
-                                  className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-rose-600 transition-all shadow-sm shadow-rose-200 flex items-center justify-center gap-1.5 w-fit active:scale-95"
+                                  className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-rose-600 transition-all shadow-xl shadow-rose-500/20 flex items-center justify-center gap-1.5 w-fit active:scale-95"
                                 >
                                   <Plus size={12} /> Mulai Remedial
                                 </button>
@@ -913,7 +913,7 @@ export default function DashboardLayer({
                                    r.remedialStatus === 'CHEATED' ? 'Diskualifikasi 🚫' : 'Waktu Habis ⏰'}
                                 </span>
                               ) : (
-                                <button onClick={() => handleStartRemedial(r.name, r.finalScore)} className="px-3 py-1.5 text-[10px] bg-rose-50 text-rose-600 rounded-lg font-black uppercase tracking-wider hover:bg-rose-100 transition-colors border border-rose-100 active:scale-95 flex items-center gap-1.5">
+                                <button onClick={() => handleStartRemedial(r.name, r.finalScore)} className="px-3 py-1.5 text-[10px] bg-rose-500/10 text-rose-400 rounded-lg font-black uppercase tracking-wider hover:bg-rose-500 hover:text-white transition-all border border-rose-500/20 active:scale-95 flex items-center gap-1.5">
                                   <Plus size={12} /> Mulai Remedial
                                 </button>
                               )
@@ -923,10 +923,10 @@ export default function DashboardLayer({
                             <button 
                               onClick={() => handleDeleteStudent(r.name)}
                               disabled={isDeleting === (gradedStudents.find(s => s.name === r.name)?.id)}
-                              className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-rose-100"
+                              className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-500/10 rounded-lg transition-colors border border-rose-500/20"
                               title="Hapus Data Siswa"
                             >
-                              {isDeleting === (gradedStudents.find(s => s.name === r.name)?.id) ? <div className="w-3.5 h-3.5 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" /> : <Trash2 size={16} />}
+                              {isDeleting === (gradedStudents.find(s => s.name === r.name)?.id) ? <div className="w-3.5 h-3.5 border-2 border-rose-400 border-t-transparent rounded-full animate-spin" /> : <Trash2 size={16} />}
                             </button>
                           </div>
                         )}
@@ -975,14 +975,14 @@ export default function DashboardLayer({
                     <div className="space-y-2 mt-2">
                       {summary.good.length > 0 && (
                         <div className="flex items-start gap-2">
-                          <ThumbsUp size={12} className="text-emerald-500 mt-0.5 shrink-0" />
-                          <p className="text-[11px] text-emerald-700 font-bold leading-relaxed">{summary.good.join(', ')}</p>
+                          <ThumbsUp size={12} className="text-emerald-400 mt-0.5 shrink-0" />
+                          <p className="text-[11px] text-emerald-400/80 font-bold leading-relaxed">{summary.good.join(', ')}</p>
                         </div>
                       )}
                       {summary.bad.length > 0 && (
                         <div className="flex items-start gap-2">
-                          <ThumbsDown size={12} className="text-rose-500 mt-0.5 shrink-0" />
-                          <p className="text-[11px] text-rose-700 font-bold leading-relaxed">{summary.bad.join(', ')}</p>
+                          <ThumbsDown size={12} className="text-rose-400 mt-0.5 shrink-0" />
+                          <p className="text-[11px] text-rose-400/80 font-bold leading-relaxed">{summary.bad.join(', ')}</p>
                         </div>
                       )}
                     </div>
@@ -1002,32 +1002,32 @@ export default function DashboardLayer({
 
       {/* Deadline Warning Modal */}
       {showDeadlineModal && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className="bg-white max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-rose-500/20 animate-in zoom-in-95">
-             <div className="bg-rose-600 p-8 flex flex-col items-center text-white text-center">
-                <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4">
-                   <MonitorOff size={40} className="text-white" />
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="bg-slate-900 max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 animate-in zoom-in-95">
+             <div className="bg-rose-600/20 p-8 flex flex-col items-center text-white text-center border-b border-white/10">
+                <div className="w-20 h-20 bg-rose-500/20 rounded-full flex items-center justify-center mb-4 border border-rose-500/20">
+                   <MonitorOff size={40} className="text-rose-500" />
                 </div>
-                <h2 className="text-xl font-black uppercase tracking-tight">Sesi Remedial Selesai</h2>
-                <p className="text-[10px] font-bold opacity-80 uppercase tracking-[0.2em] mt-2 italic">Akses Telah Ditutup</p>
+                <h2 className="text-xl font-black uppercase tracking-tight text-rose-500">Sesi Remedial Selesai</h2>
+                <p className="text-[10px] font-bold text-rose-400/60 uppercase tracking-[0.2em] mt-2 italic">Akses Telah Ditutup</p>
              </div>
              
              <div className="p-8 text-center flex flex-col items-center">
-                <p className="text-sm font-bold text-slate-700 leading-relaxed mb-6">
-                   Sesi remedial telah selesai. Nilai pengerjaan baru Anda sekarang adalah **0 (NOL)**.
+                <p className="text-sm font-bold text-slate-300 leading-relaxed mb-6">
+                   Sesi remedial telah selesai. Nilai pengerjaan baru Anda sekarang adalah <b className="text-rose-500">0 (NOL)</b>.
                 </p>
                 
-                <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl mb-8 w-full">
-                  <p className="text-[10px] text-rose-500 font-black uppercase tracking-widest mb-1">INFO PERBAIKAN:</p>
-                  <p className="text-xs font-black text-rose-700 leading-snug">
-                     Jika ingin perbaikan, Anda harus mendapatkan **Poin Kebaikan** melalui Guru.
+                <div className="bg-white/5 border border-white/10 p-4 rounded-2xl mb-8 w-full">
+                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">INFO PERBAIKAN:</p>
+                  <p className="text-xs font-black text-slate-300 leading-snug">
+                     Jika ingin perbaikan, Anda harus mendapatkan <span className="text-primary">Poin Kebaikan</span> melalui Guru.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 w-full">
                   <button
                     onClick={() => setShowDeadlineModal(false)}
-                    className="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all active:scale-95"
+                    className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all active:scale-95"
                   >
                     Saya Mengerti & Kembali
                   </button>
@@ -1039,60 +1039,60 @@ export default function DashboardLayer({
 
       {/* Similarity Report Modal */}
       {similarityReports !== null && similarityReports.length > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-200">
+          <div className="bg-slate-900 rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] border border-white/10">
+            <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/5">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center border border-rose-500/20">
                   <AlertOctagon size={20} />
                 </div>
                 <div>
-                  <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Deteksi Kemiripan Jawaban</h2>
+                  <h2 className="text-lg font-black text-white uppercase tracking-tight">Deteksi Kemiripan Jawaban</h2>
                   <p className="text-[10px] md:text-xs font-bold text-slate-500">
                     {similarityMetadata ? (
-                      <>Dianalisis: <span className="text-slate-800">{similarityMetadata.totalStudents} siswa</span> ({similarityMetadata.totalPairs} pasangan) &bull; </>
+                      <>Dianalisis: <span className="text-slate-300">{similarityMetadata.totalStudents} siswa</span> ({similarityMetadata.totalPairs} pasangan) &bull; </>
                     ) : null}
-                    Ditemukan <span className="text-rose-600">{similarityReports.filter(r => r.final_score > 0).length} pasangan dengan kemiripan signifikan</span>.
+                    Ditemukan <span className="text-rose-400">{similarityReports.filter(r => r.final_score > 0).length} pasangan dengan kemiripan signifikan</span>.
                   </p>
                 </div>
               </div>
-              <button onClick={() => { setSimilarityReports(null); setSimilarityMetadata(null); }} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">
+              <button onClick={() => { setSimilarityReports(null); setSimilarityMetadata(null); }} className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors border border-transparent hover:border-white/10">
                 Tutup
               </button>
             </div>
             
-            <div className="p-6 overflow-y-auto bg-slate-50/50 flex-1 custom-scrollbar">
+            <div className="p-6 overflow-y-auto bg-slate-900/20 flex-1 custom-scrollbar">
               <div className="space-y-4">
                 {similarityReports.filter(r => r.final_score > 0).map((report, idx) => (
-                  <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                  <div key={idx} className="bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-sm hover:border-rose-500/30 transition-all relative overflow-hidden group">
                     {/* Status Badge */}
                     <div className={`absolute top-0 right-0 px-4 py-1.5 rounded-bl-2xl text-[10px] font-black uppercase tracking-widest ${
-                      report.risk_level === 'HIGH_RISK' ? 'bg-rose-500 text-white' : 'bg-amber-400 text-amber-950'
+                      report.risk_level === 'HIGH_RISK' ? 'bg-rose-500 text-white' : 'bg-amber-500 text-white'
                     }`}>
                       {report.risk_level === 'HIGH_RISK' ? 'RESIKO TINGGI' : 'MENCURIGAKAN'}
                     </div>
 
                     <div className="flex items-center gap-3 mb-4 mt-2">
-                       <Users size={16} className="text-slate-400" />
+                       <Users size={16} className="text-slate-600" />
                        <div className="flex-1 flex flex-wrap items-center gap-2">
-                         <span className="text-sm font-black text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{report.student_a_name}</span>
-                         <span className="text-xs font-black text-slate-400">dengan</span>
-                         <span className="text-sm font-black text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{report.student_b_name}</span>
+                         <span className="text-sm font-black text-white bg-white/5 px-3 py-1 rounded-lg border border-white/5 group-hover:border-primary/30 transition-colors">{report.student_a_name}</span>
+                         <span className="text-xs font-black text-slate-600">dengan</span>
+                         <span className="text-sm font-black text-white bg-white/5 px-3 py-1 rounded-lg border border-white/5 group-hover:border-primary/30 transition-colors">{report.student_b_name}</span>
                        </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">
-                       <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-center">
-                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Kemiripan PG</p>
-                         <p className="text-lg font-black text-slate-700">{((report.pg_similarity || 0) * 100).toFixed(1)}%</p>
+                       <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-center">
+                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-600 mb-1">Kemiripan PG</p>
+                         <p className="text-lg font-black text-slate-300">{((report.pg_similarity || 0) * 100).toFixed(1)}%</p>
                        </div>
-                       <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-center">
-                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Kemiripan Essay</p>
-                         <p className="text-lg font-black text-slate-700">{((report.essay_similarity || 0) * 100).toFixed(1)}%</p>
+                       <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-center">
+                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-600 mb-1">Kemiripan Essay</p>
+                         <p className="text-lg font-black text-slate-300">{((report.essay_similarity || 0) * 100).toFixed(1)}%</p>
                        </div>
-                       <div className="p-3 bg-rose-50 rounded-xl border border-rose-100 text-center">
-                         <p className="text-[9px] font-black uppercase tracking-widest text-rose-400 mb-1">Skor Akhir</p>
-                         <p className="text-lg font-black text-rose-600">{((report.final_score || 0) * 100).toFixed(1)}%</p>
+                       <div className="p-3 bg-rose-500/5 rounded-xl border border-rose-500/10 text-center">
+                         <p className="text-[9px] font-black uppercase tracking-widest text-rose-500/60 mb-1">Skor Akhir</p>
+                         <p className="text-lg font-black text-rose-500">{((report.final_score || 0) * 100).toFixed(1)}%</p>
                        </div>
                     </div>
                   </div>
@@ -1100,8 +1100,8 @@ export default function DashboardLayer({
               </div>
             </div>
             
-            <div className="p-4 border-t border-slate-100 bg-white">
-               <p className="text-[10px] font-bold text-slate-400 text-center">Sistem ini membandingkan exact match jawaban PG dan skor essay per soal. Gunakan data ini sebagai referensi, bukan tuduhan pasti.</p>
+            <div className="p-4 border-t border-white/10 bg-white/5">
+               <p className="text-[10px] font-bold text-slate-600 text-center uppercase tracking-widest">SISTEM ANALISIS KEMIRIPAN JAWABAN &bull; DOKUMEN INTERNAL GURU</p>
             </div>
           </div>
         </div>

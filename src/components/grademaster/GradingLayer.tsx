@@ -230,25 +230,25 @@ export default function GradingLayer(props: GradingLayerProps) {
   const answeredCount = Object.keys(userAnswers).length;
 
   return (
-    <div className="p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in">
+    <div className="min-h-screen bg-slate-950 p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in pt-16">
       <header className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
         <div>
-          <button onClick={onBack} className="flex items-center gap-1.5 md:gap-2 text-slate-400 hover:text-indigo-600 font-bold text-[10px] md:text-xs uppercase tracking-widest transition-colors mb-2 md:mb-3">
+          <button onClick={onBack} className="flex items-center gap-1.5 md:gap-2 text-slate-500 hover:text-primary font-bold text-[10px] md:text-xs uppercase tracking-widest transition-colors mb-2 md:mb-3 border border-transparent hover:border-primary/20 px-3 py-1.5 rounded-xl hover:bg-primary/10 w-fit">
             <ArrowLeft size={12} className="md:w-[14px] md:h-[14px]" /> Kembali ke Dashboard
           </button>
-          <div className="flex items-center gap-2 md:gap-3 text-indigo-600 mb-1">
+          <div className="flex items-center gap-2 md:gap-3 text-primary mb-1">
             <GraduationCap size={20} className="md:w-6 md:h-6" />
             <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em]">Koreksi Otomatis</span>
           </div>
-          <h1 className="text-2xl md:text-4xl font-black text-slate-800 tracking-tight">{teacherName}</h1>
+          <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight">{teacherName}</h1>
           <p className="text-xs md:text-sm text-slate-400 font-bold mt-1">{subject} • {totalQuestions} Soal PG</p>
         </div>
 
         <div className="flex items-center gap-2 md:gap-3">
-          <button onClick={handleUndo} disabled={undoStack.current.length === 0} className="px-3 py-2.5 md:px-4 md:py-3 bg-white border border-slate-200 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-100 transition-all flex items-center gap-1.5 disabled:opacity-30">
+          <button onClick={handleUndo} disabled={undoStack.current.length === 0} className="px-3 py-2.5 md:px-4 md:py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-400 hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/20 transition-all flex items-center gap-1.5 disabled:opacity-30">
             <Undo2 size={12} className="md:w-[14px] md:h-[14px]" /> Undo
           </button>
-          <button onClick={onReset} className="px-3 py-2.5 md:px-4 md:py-3 bg-white border border-slate-200 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all flex items-center gap-1.5">
+          <button onClick={onReset} className="px-3 py-2.5 md:px-4 md:py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20 transition-all flex items-center gap-1.5">
             <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Reset
           </button>
         </div>
@@ -257,29 +257,29 @@ export default function GradingLayer(props: GradingLayerProps) {
       <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-start">
         <div className="lg:col-span-8 space-y-4 md:space-y-6">
           {/* Student Identity */}
-          <section className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-100 shadow-sm relative">
+          <section className="bg-slate-900/40 backdrop-blur-xl rounded-2xl p-4 sm:p-6 md:p-8 border border-white/10 shadow-2xl relative">
             {isDetecting && (
-              <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-40 flex items-center justify-center">
-                <div className="flex flex-col items-center justify-center text-indigo-600 bg-white/90 p-4 rounded-xl shadow-lg border border-indigo-100">
+              <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm z-40 flex items-center justify-center">
+                <div className="flex flex-col items-center justify-center text-primary bg-slate-900 border border-white/10 p-6 rounded-2xl shadow-2xl">
                   <Loader2 size={24} className="animate-spin mb-2" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Memproses LJK...</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary">Memproses LJK...</span>
                 </div>
               </div>
             )}
             <div className="flex items-center gap-2.5 md:gap-3 mb-4">
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-sky-100 text-sky-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 md:w-10 md:h-10 bg-primary/10 text-primary rounded-lg flex items-center justify-center border border-primary/20">
                 <User size={16} className="md:w-5 md:h-5" />
               </div>
               <div>
-                <h2 className="font-bold text-slate-800 text-sm md:text-base">Data Siswa</h2>
-                <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kelas {studentClass}</p>
+                <h2 className="font-bold text-white text-sm md:text-base">Data Siswa</h2>
+                <p className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest">Kelas {studentClass}</p>
               </div>
             </div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest">Nama Siswa</label>
-              <label className="cursor-pointer flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 transition-colors bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full border border-indigo-200 shadow-sm active:scale-95">
-                <ScanSearch size={12} className="md:w-3.5 md:h-3.5" />
-                <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider">Auto-Detect LJK</span>
+              <label className="cursor-pointer flex items-center gap-1.5 text-primary hover:text-white transition-all bg-primary/10 hover:bg-primary px-3 py-1.5 rounded-full border border-primary/20 shadow-sm active:scale-95 group">
+                <ScanSearch size={12} className="md:w-3.5 md:h-3.5 group-hover:scale-110 transition-transform" />
+                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-wider">Auto-Detect LJK</span>
                 <input type="file" accept="image/*,.pdf,.doc,.docx" className="hidden" onChange={handleAutoDetect} />
               </label>
             </div>
@@ -298,11 +298,11 @@ export default function GradingLayer(props: GradingLayerProps) {
                   if (!isNewStudent) setIsDropdownOpen(true);
                 }}
                 placeholder="Cari atau ketik nama siswa..."
-                className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-xs md:text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"
+                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs md:text-sm font-bold text-slate-200 outline-none focus:border-primary transition-all placeholder:text-slate-700"
               />
               
               {isDropdownOpen && !isNewStudent && (
-                <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 shadow-xl rounded-xl max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2">
+                <div className="absolute z-50 w-full mt-2 bg-slate-900 border border-white/10 shadow-2xl rounded-xl max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2">
                   {filteredStudents.length > 0 ? (
                     <ul className="p-2 space-y-1">
                       {filteredStudents.map(s => (
@@ -310,13 +310,13 @@ export default function GradingLayer(props: GradingLayerProps) {
                           <button
                             type="button"
                             onClick={() => selectStudent(s.id, s.name)}
-                            className="w-full text-left px-3 py-2 text-xs md:text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg transition-colors flex items-center justify-between"
+                            className="w-full text-left px-3 py-2 text-xs md:text-sm font-bold text-slate-300 hover:bg-primary/20 hover:text-primary rounded-lg transition-colors flex items-center justify-between"
                           >
                             <span>{s.name}</span>
                           </button>
                         </li>
                       ))}
-                      <div className="h-px bg-slate-100 my-1" />
+                      <div className="h-px bg-white/5 my-1" />
                       <li>
                         <button
                           type="button"
@@ -324,7 +324,7 @@ export default function GradingLayer(props: GradingLayerProps) {
                             setIsNewStudent(true);
                             setIsDropdownOpen(false);
                           }}
-                          className="w-full text-left px-3 py-2 text-xs md:text-sm font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-2"
+                          className="w-full text-left px-3 py-2 text-xs md:text-sm font-bold text-primary hover:bg-primary/10 rounded-lg transition-colors flex items-center gap-2"
                         >
                           <User size={14} /> Tambah "{studentName || 'baru'}" sebagai siswa baru
                         </button>
@@ -339,7 +339,7 @@ export default function GradingLayer(props: GradingLayerProps) {
                           setIsNewStudent(true);
                           setIsDropdownOpen(false);
                         }}
-                        className="px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-lg hover:bg-indigo-100 transition-colors"
+                        className="px-4 py-2 bg-primary/10 text-primary text-xs font-bold rounded-lg hover:bg-primary/20 transition-colors border border-primary/20"
                       >
                         Tambah siswa baru
                       </button>
@@ -364,12 +364,12 @@ export default function GradingLayer(props: GradingLayerProps) {
           {/* Answer Sheet */}
           <section className="space-y-3">
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 md:w-10 md:h-10 bg-emerald-500/10 text-emerald-400 rounded-lg flex items-center justify-center border border-emerald-500/20">
                 <ClipboardList size={16} className="md:w-5 md:h-5" />
               </div>
               <div>
-                <h2 className="font-bold text-slate-800 text-sm md:text-base">Lembar Jawaban ({answeredCount}/{totalQuestions})</h2>
-                <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Klik pilihan — otomatis ke soal berikutnya</p>
+                <h2 className="font-bold text-white text-sm md:text-base">Lembar Jawaban ({answeredCount}/{totalQuestions})</h2>
+                <p className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest">Klik pilihan — otomatis ke soal berikutnya</p>
               </div>
             </div>
 
@@ -383,19 +383,19 @@ export default function GradingLayer(props: GradingLayerProps) {
                 <div
                   key={qNum}
                   ref={(el) => { if (el) questionRefs.current.set(qNum, el); }}
-                  className={`flex items-center justify-between p-3 md:p-4 bg-white rounded-xl border shadow-sm transition-colors ${isAnswered ? (isCorrect ? 'border-emerald-200' : 'border-rose-200') : 'border-slate-100 hover:border-indigo-200'}`}
+                  className={`flex items-center justify-between p-3 md:p-4 bg-slate-900/40 backdrop-blur-xl rounded-xl border transition-all ${isAnswered ? (isCorrect ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-rose-500/30 bg-rose-500/5') : 'border-white/10 hover:border-primary/40 shadow-sm'}`}
                 >
                   <div className="flex items-center gap-3 md:gap-4">
-                    <span className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center font-bold text-xs md:text-sm">{qNum}</span>
+                    <span className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-white/5 text-slate-500 flex items-center justify-center font-bold text-xs md:text-sm border border-white/5">{qNum}</span>
                     <div className="flex flex-wrap gap-1.5 md:gap-2">
                       {OPTIONS.map(opt => (
                         <button
                           key={opt}
                           onClick={() => handleAnswerSelect(qNum, opt)}
-                          className={`w-9 h-9 md:w-10 md:h-10 rounded-lg border-2 font-bold text-xs md:text-sm transition-all ${
+                          className={`w-9 h-9 md:w-10 md:h-10 rounded-lg border font-bold text-xs md:text-sm transition-all ${
                             studentAns === opt
-                              ? (isCorrect ? 'bg-emerald-500 border-emerald-500 text-white scale-110' : 'bg-rose-500 border-rose-500 text-white scale-110')
-                              : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-400 hover:text-indigo-600'
+                              ? (isCorrect ? 'bg-emerald-500 border-emerald-500 text-white scale-110 shadow-lg shadow-emerald-500/20' : 'bg-rose-500 border-rose-500 text-white scale-110 shadow-lg shadow-rose-500/20')
+                              : 'bg-white/5 border-white/10 text-slate-400 hover:border-primary hover:text-primary'
                           }`}
                         >
                           {opt}
@@ -406,8 +406,8 @@ export default function GradingLayer(props: GradingLayerProps) {
                   {isAnswered && (
                     <div className="ml-2">
                       {isCorrect
-                        ? <CheckCircle2 size={18} className="text-emerald-500" />
-                        : <XCircle size={18} className="text-rose-500" />
+                        ? <CheckCircle2 size={18} className="text-emerald-400" />
+                        : <XCircle size={18} className="text-rose-400" />
                       }
                     </div>
                   )}
@@ -418,33 +418,33 @@ export default function GradingLayer(props: GradingLayerProps) {
         </div>
 
         {/* Score Sidebar */}
-        <aside className="lg:col-span-4 lg:sticky lg:top-20 space-y-4 md:space-y-6">
-          <div className="bg-white rounded-2xl p-5 md:p-8 border border-indigo-100 shadow-sm overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 bg-indigo-500/10 rounded-bl-full -z-10"></div>
+        <aside className="lg:col-span-4 lg:sticky lg:top-24 space-y-4 md:space-y-6 pb-24">
+          <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl p-5 md:p-8 border border-white/10 shadow-2xl overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 bg-primary/10 rounded-bl-full -z-10"></div>
 
-            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Skor Akhir</p>
+            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Skor Akhir</p>
             <div className="flex items-end gap-2 mb-1">
-              <span className="text-5xl md:text-7xl font-black text-slate-900 leading-none">{result.finalScore}</span>
-              <span className="text-slate-300 font-bold mb-1">/ 100</span>
+              <span className="text-5xl md:text-7xl font-black text-white leading-none">{result.finalScore}</span>
+              <span className="text-slate-600 font-bold mb-1">/ 100</span>
             </div>
-            <p className="text-xs font-bold text-indigo-600 mb-4">{getScoreLabel(result.finalScore)}</p>
+            <p className="text-xs font-bold text-primary mb-4">{getScoreLabel(result.finalScore)}</p>
 
             {studentName.trim() && studentClass.trim() && (
-              <div className="mb-4 p-3 rounded-xl bg-indigo-50/50 border border-indigo-100/50">
-                <p className="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-1">Format Nama</p>
-                <p className="text-xs font-bold text-indigo-700 break-all select-all">
+              <div className="mb-4 p-3 rounded-xl bg-primary/10 border border-primary/20">
+                <p className="text-[9px] font-black uppercase tracking-widest text-primary/60 mb-1">Format Nama</p>
+                <p className="text-xs font-bold text-primary break-all select-all">
                   {`${studentName}_${studentClass}_${schoolLevel}`.replace(/\s+/g, '_')}
                 </p>
               </div>
             )}
 
-            <div className="mb-6 p-4 bg-slate-900 rounded-2xl text-white">
+            <div className="mb-6 p-4 bg-white/5 rounded-2xl text-white border border-white/10">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Persentase</span>
                 <span className="text-xl font-black">{result.percentage}%</span>
               </div>
-              <div className="h-3 bg-slate-800 rounded-full overflow-hidden p-0.5">
-                <div className="h-full bg-gradient-to-r from-indigo-500 to-sky-400 rounded-full transition-all duration-500" style={{ width: `${result.percentage}%` }}></div>
+              <div className="h-3 bg-white/5 rounded-full overflow-hidden p-0.5">
+                <div className="h-full bg-gradient-to-r from-primary to-sky-400 rounded-full transition-all duration-500" style={{ width: `${result.percentage}%` }}></div>
               </div>
             </div>
 
@@ -454,39 +454,39 @@ export default function GradingLayer(props: GradingLayerProps) {
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
-              <div className="p-3 bg-sky-50 rounded-xl text-center">
-                <p className="text-[8px] font-black uppercase tracking-widest text-sky-400 mb-0.5">CSI</p>
-                <p className="text-lg font-black text-sky-600">{result.csi}</p>
+              <div className="p-3 bg-sky-500/10 rounded-xl text-center border border-sky-500/20">
+                <p className="text-[8px] font-black uppercase tracking-widest text-sky-500/60 mb-0.5">CSI</p>
+                <p className="text-lg font-black text-sky-400">{result.csi}</p>
               </div>
-              <div className="p-3 bg-purple-50 rounded-xl text-center">
-                <p className="text-[8px] font-black uppercase tracking-widest text-purple-400 mb-0.5">LPS</p>
-                <p className="text-lg font-black text-purple-600">{result.lps}</p>
+              <div className="p-3 bg-purple-500/10 rounded-xl text-center border border-purple-500/20">
+                <p className="text-[8px] font-black uppercase tracking-widest text-purple-500/60 mb-0.5">LPS</p>
+                <p className="text-lg font-black text-purple-400">{result.lps}</p>
               </div>
             </div>
 
             {/* Essay Section */}
-            <div className="mt-6 pt-4 border-t border-slate-100">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Skor Essay (maks 4/soal)</h4>
+            <div className="mt-6 pt-4 border-t border-white/10">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Skor Essay (maks 4/soal)</h4>
               <div className="grid grid-cols-5 gap-2">
                 {essayScores.map((score, idx) => (
                   <div key={idx}>
-                    <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1 text-center">#{idx + 1}</label>
+                    <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1 text-center">#{idx + 1}</label>
                     <input
                       type="number" min="0" max="4" value={score}
                       onChange={(e) => handleEssayChange(idx, e.target.value)}
-                      className="w-full bg-slate-50 rounded-xl border-2 border-slate-100 p-2 text-center font-black text-lg text-indigo-700 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full bg-white/5 rounded-xl border border-white/10 p-2 text-center font-black text-lg text-primary focus:border-primary outline-none transition-all"
                     />
                   </div>
                 ))}
               </div>
-              <div className="mt-3 flex justify-between items-center text-xs font-bold text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+              <div className="mt-3 flex justify-between items-center text-xs font-bold text-slate-400 bg-white/5 p-2.5 rounded-xl border border-white/10">
                 <span className="uppercase tracking-widest text-[10px]">Total Essay</span>
-                <span className="text-indigo-600">{totalEssay} / {scoringConfig.essayMaxScore}</span>
+                <span className="text-primary">{totalEssay} / {scoringConfig.essayMaxScore}</span>
               </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-slate-100">
-              <button onClick={handleSave} className="w-full py-3.5 bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+            <div className="mt-6 pt-4 border-t border-white/10">
+              <button onClick={handleSave} className="w-full py-4 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2">
                 <Save size={16} /> Simpan Nilai
               </button>
             </div>
@@ -498,12 +498,13 @@ export default function GradingLayer(props: GradingLayerProps) {
 }
 
 function MiniStat({ label, value, icon, color }: { label: string; value: number; icon: React.ReactNode; color: string }) {
-  const bg = color === 'emerald' ? 'bg-emerald-50' : 'bg-rose-50';
-  const text = color === 'emerald' ? 'text-emerald-600' : 'text-rose-600';
+  const bg = color === 'emerald' ? 'bg-emerald-500/10' : 'bg-rose-500/10';
+  const text = color === 'emerald' ? 'text-emerald-400' : 'text-rose-400';
+  const border = color === 'emerald' ? 'border-emerald-500/20' : 'border-rose-500/20';
   return (
-    <div className={`p-3 ${bg} rounded-xl flex flex-col items-center`}>
+    <div className={`p-3 ${bg} rounded-xl flex flex-col items-center border ${border}`}>
       <div className={`mb-1 ${text}`}>{icon}</div>
-      <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+      <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">{label}</p>
       <span className={`text-xl font-black ${text}`}>{value}</span>
     </div>
   );
