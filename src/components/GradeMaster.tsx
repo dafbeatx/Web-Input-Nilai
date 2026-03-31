@@ -27,6 +27,7 @@ import Modals from "./grademaster/Modals";
 import StudentRemedialLayer from "./grademaster/StudentRemedialLayer";
 import BehaviorLayer from "./grademaster/BehaviorLayer";
 import RemedialDashboardLayer from "./grademaster/RemedialDashboardLayer";
+import AttendanceLayer from "./grademaster/AttendanceLayer";
 import Navbar from "./grademaster/Navbar";
 
 const ESSAY_COUNT = 5;
@@ -108,7 +109,7 @@ export default function GradeMaster() {
     const savedIsPublicView = localStorage.getItem("gm_isPublicView") === "true";
 
     const hash = window.location.hash.replace('#', '');
-    const validLayers = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard'];
+    const validLayers = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'attendance'];
     
     // Restore admin session
     const adminSession = getAdminSession();
@@ -207,7 +208,7 @@ export default function GradeMaster() {
 
     const handlePopState = (e: PopStateEvent) => {
       const hash = window.location.hash.replace('#', '');
-      const validLayers = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login'];
+      const validLayers = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login', 'attendance'];
       
       setInternalLayer((prev) => {
         let dest = hash as Layer;
@@ -855,6 +856,7 @@ export default function GradeMaster() {
           sessionId={sessionId}
           academicYear={academicYear}
           semester={semester}
+          isAdmin={isAdmin}
           onGradeStudent={() => {
             resetGrading();
             setLayer("grading");
@@ -944,6 +946,16 @@ export default function GradeMaster() {
           onUpdateRemedial={handleUpdateRemedialQuestions}
           onRemedialInputChange={handleRemedialInputChange}
           isSaving={isUpdatingQuestions}
+        />
+      )}
+
+      {layer === "attendance" && (
+        <AttendanceLayer
+          onBack={() => setLayer("home")}
+          setToast={setToast}
+          isAdmin={isAdmin}
+          activeClass={studentClass}
+          activeYear={academicYear}
         />
       )}
 

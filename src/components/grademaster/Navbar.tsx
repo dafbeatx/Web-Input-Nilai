@@ -13,6 +13,7 @@ import {
   Settings,
   LogIn,
   RefreshCcw,
+  Calendar,
 } from 'lucide-react';
 import { Layer } from '@/lib/grademaster/types';
 
@@ -40,6 +41,7 @@ export default function Navbar({
   const isActive = (target: string) => {
     if (target === 'exam') return ['home', 'setup', 'dashboard', 'grading'].includes(layer);
     if (target === 'behavior') return layer === 'behavior';
+    if (target === 'attendance') return layer === 'attendance';
     if (target === 'remedial') return layer === 'remedial_dashboard';
     return false;
   };
@@ -74,7 +76,15 @@ export default function Navbar({
                   isActive('behavior') ? 'bg-primary/20 text-primary border border-primary/20' : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
                 }`}
               >
-                <ShieldCheck size={14} /> Rapor Perilaku
+                <ShieldCheck size={14} /> Sikap
+              </button>
+              <button
+                onClick={() => onNavigate('attendance')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
+                  isActive('attendance') ? 'bg-primary/20 text-primary border border-primary/20' : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
+                }`}
+              >
+                <Calendar size={14} /> Kehadiran
               </button>
               {isAdmin && (
                 <button
@@ -144,6 +154,14 @@ export default function Navbar({
           >
             <ShieldCheck size={22} className={isActive('behavior') ? 'animate-pulse' : ''} />
             {isActive('behavior') && <span className="text-[8px] font-black uppercase tracking-widest mt-1">Sikap</span>}
+          </button>
+
+          <button 
+            onClick={() => onNavigate('attendance')}
+            className={`flex-1 flex flex-col items-center justify-center py-3 rounded-2xl transition-all ${isActive('attendance') ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500'}`}
+          >
+            <Calendar size={22} className={isActive('attendance') ? 'animate-pulse' : ''} />
+            {isActive('attendance') && <span className="text-[8px] font-black uppercase tracking-widest mt-1">Absen</span>}
           </button>
 
           {isAdmin && (

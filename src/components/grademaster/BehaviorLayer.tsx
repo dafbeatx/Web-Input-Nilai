@@ -41,6 +41,13 @@ export default function BehaviorLayer({
 
   // Modal State
   const [selectedStudent, setSelectedStudent] = useState<BehaviorStudent | null>(null);
+  const [isManagingReasons, setIsManagingReasons] = useState(false);
+  const [behaviorReasons, setBehaviorReasons] = useState<{ good: string[], bad: string[] }>({
+    good: ["Membantu Teman", "Aktif Berdiskusi", "Piket Mandiri", "Jujur/Integritas", "Ketua Kelas Aktif"],
+    bad: ["Bolos PBM", "Berbicara Kasar", "Merokok/Vaping", "Membantah Guru", "Terlambat Parah"]
+  });
+  const [newReasonInput, setNewReasonInput] = useState('');
+  const [newReasonType, setNewReasonType] = useState<'good' | 'bad'>('good');
 
   // Individual Edit
   const [newStudentName, setNewStudentName] = useState('');
@@ -57,7 +64,35 @@ export default function BehaviorLayer({
     } else {
       fetchAvailableClasses();
     }
-  }, [activeClass, activeYear, academicYear]);
+    if (className) fetchBehaviorSettings();
+  }, [activeClass, activeYear, academicYear, className]);
+
+  const fetchBehaviorSettings = async () => {
+    try {
+      const res = await fetch(`/api/grademaster/behaviors/settings?class=${encodeURIComponent(className)}&year=${encodeURIComponent(academicYear)}`);
+      const data = await res.json();
+      if (res.ok && data.settings) {
+        setBehaviorReasons(data.settings.reasons);
+      }
+    } catch (err) {
+      console.error("Failed to load behavior settings", err);
+    }
+  };
+
+  const saveBehaviorSettings = async (updatedReasons: { good: string[], bad: string[] }) => {
+    try {
+      const res = await fetch('/api/grademaster/behaviors/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ className, academicYear, reasons: updatedReasons })
+      });
+      if (!res.ok) throw new Error("Gagal menyimpan pengaturan");
+      setBehaviorReasons(updatedReasons);
+      setToast({ message: "Kategori poin berhasil diperbarui", type: "success" });
+    } catch (err: any) {
+      setToast({ message: err.message, type: "error" });
+    }
+  };
 
   const fetchAvailableClasses = async () => {
     setIsLoadingClasses(true);
@@ -132,19 +167,27 @@ export default function BehaviorLayer({
         </div>
 
         {isAdmin && isLoaded && (
-          <div className="bg-slate-900/40 p-1.5 rounded-2xl border border-white/10 flex gap-1">
+          <div className="flex items-center gap-2">
             <button 
-              onClick={() => setViewMode('REPORT')}
-              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'REPORT' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
+              onClick={() => setIsManagingReasons(true)}
+              className="px-4 py-2 bg-white/5 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:border-primary/30 hover:text-primary transition-all flex items-center gap-2"
             >
-              Mode Rapor
+              <Pencil size={12} /> Kelola Kategori
             </button>
-            <button 
-              onClick={() => setViewMode('MANAGEMENT')}
-              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'MANAGEMENT' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              Mode Kelola
-            </button>
+            <div className="bg-slate-900/40 p-1.5 rounded-2xl border border-white/10 flex gap-1">
+              <button 
+                onClick={() => setViewMode('REPORT')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'REPORT' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
+              >
+                Mode Rapor
+              </button>
+              <button 
+                onClick={() => setViewMode('MANAGEMENT')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'MANAGEMENT' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
+              >
+                Mode Kelola
+              </button>
+            </div>
           </div>
         )}
       </header>
@@ -318,7 +361,7 @@ export default function BehaviorLayer({
                   <h3 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
                     <ThumbsDown size={14} /> Tindakan Buruk (-10)
                   </h3>
-                  {["Bolos PBM", "Berbicara Kasar", "Merokok/Vaping", "Membantah Guru", "Terlambat Parah"].map(r => (
+                  {behaviorReasons.bad.map(r => (
                     <button key={r} onClick={() => updatePoints('BAD', 10, r)} className="w-full p-4 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 hover:border-rose-500/30 rounded-2xl text-left text-xs font-black text-rose-400 uppercase tracking-widest transition-all">
                       {r}
                     </button>
@@ -328,7 +371,7 @@ export default function BehaviorLayer({
                   <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
                     <ThumbsUp size={14} /> Tindakan Terpuji (+10)
                   </h3>
-                  {["Membantu Teman", "Aktif Berdiskusi", "Piket Mandiri", "Jujur/Integritas", "Ketua Kelas Aktif"].map(r => (
+                  {behaviorReasons.good.map(r => (
                     <button key={r} onClick={() => updatePoints('GOOD', 10, r)} className="w-full p-4 bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/10 hover:border-emerald-500/30 rounded-2xl text-left text-xs font-black text-emerald-400 uppercase tracking-widest transition-all">
                       {r}
                     </button>
@@ -338,6 +381,100 @@ export default function BehaviorLayer({
 
              <div className="p-8 bg-slate-950/50 border-t border-white/10 flex justify-end">
                 <button onClick={() => setSelectedStudent(null)} className="px-10 py-4 bg-white/5 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border border-white/10 hover:text-white transition-all">Tutup</button>
+             </div>
+          </div>
+        </div>
+      )}
+      {/* REASONS MANAGEMENT MODAL */}
+      {isManagingReasons && (
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[1000] flex items-center justify-center p-4">
+          <div className="bg-slate-900/50 border border-white/10 max-w-2xl w-full rounded-[3rem] overflow-hidden shadow-2xl">
+             <div className="p-8 border-b border-white/10 bg-white/5">
+                <h2 className="text-xl font-black text-white uppercase font-outfit">Kelola Kategori Poin</h2>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Atur daftar tindakan terpuji & pelanggaran untuk Kelas {className}</p>
+             </div>
+             
+             <div className="p-8 space-y-8">
+                <div className="flex gap-3">
+                   <select 
+                    value={newReasonType} 
+                    onChange={(e: any) => setNewReasonType(e.target.value)}
+                    className="bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-xs font-black text-white outline-none focus:border-primary transition-all"
+                   >
+                     <option value="good">TERPUJI (+)</option>
+                     <option value="bad">PELANGGARAN (-)</option>
+                   </select>
+                   <input 
+                    type="text" 
+                    placeholder="Tambah kategori baru..." 
+                    value={newReasonInput}
+                    onChange={(e) => setNewReasonInput(e.target.value)}
+                    className="flex-1 bg-slate-950/50 border border-white/10 rounded-xl px-5 py-3 text-sm font-black text-white outline-none focus:border-primary transition-all"
+                   />
+                   <button 
+                    onClick={() => {
+                      if (!newReasonInput.trim()) return;
+                      const updated = { ...behaviorReasons };
+                      updated[newReasonType].push(newReasonInput.trim());
+                      saveBehaviorSettings(updated);
+                      setNewReasonInput('');
+                    }}
+                    className="p-3 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+                   >
+                     <PlusCircle size={20} />
+                   </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                   <div className="space-y-3">
+                      <h4 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                        <ThumbsUp size={12} /> Terpuji
+                      </h4>
+                      <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                         {behaviorReasons.good.map((r, i) => (
+                           <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 group">
+                              <span className="text-[10px] font-bold text-slate-300">{r}</span>
+                              <button 
+                                onClick={() => {
+                                  const updated = { ...behaviorReasons };
+                                  updated.good = updated.good.filter((_, idx) => idx !== i);
+                                  saveBehaviorSettings(updated);
+                                }}
+                                className="text-slate-600 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                           </div>
+                         ))}
+                      </div>
+                   </div>
+                   <div className="space-y-3">
+                      <h4 className="text-[10px] font-black text-rose-400 uppercase tracking-widest flex items-center gap-2">
+                        <ThumbsDown size={12} /> Pelanggaran
+                      </h4>
+                      <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                         {behaviorReasons.bad.map((r, i) => (
+                           <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 group">
+                              <span className="text-[10px] font-bold text-slate-300">{r}</span>
+                              <button 
+                                onClick={() => {
+                                  const updated = { ...behaviorReasons };
+                                  updated.bad = updated.bad.filter((_, idx) => idx !== i);
+                                  saveBehaviorSettings(updated);
+                                }}
+                                className="text-slate-600 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                           </div>
+                         ))}
+                      </div>
+                   </div>
+                </div>
+             </div>
+
+             <div className="p-8 bg-slate-950/50 border-t border-white/10 flex justify-end">
+                <button onClick={() => setIsManagingReasons(false)} className="px-10 py-4 bg-white/5 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border border-white/10 hover:text-white transition-all">Selesai</button>
              </div>
           </div>
         </div>

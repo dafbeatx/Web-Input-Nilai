@@ -20,7 +20,8 @@ import {
   Send,
   MonitorOff,
   Cpu,
-  Edit2
+  Edit2,
+  Loader2
 } from 'lucide-react';
 import { GradedStudent, AnalyticsResult } from '@/lib/grademaster/types';
 import { getCsiLabel, getLpsLabel } from '@/lib/grademaster/scoring';
@@ -54,6 +55,7 @@ interface DashboardLayerProps {
   examType?: string;
   isDemo?: boolean;
   sessionId?: string;
+  isAdmin?: boolean;
 }
 
 const CHART_COLORS = ['#e2e8f0', '#94a3b8', '#6366f1', '#818cf8', '#4f46e5'];
@@ -82,12 +84,14 @@ export default function DashboardLayer({
   examType,
   isDemo,
   sessionId,
+  isAdmin = false
 }: DashboardLayerProps) {
   const [behaviorMap, setBehaviorMap] = useState<Record<string, BehaviorRecord>>({});
   const [isCheckingSimilarity, setIsCheckingSimilarity] = useState(false);
   const [similarityReports, setSimilarityReports] = useState<any[] | null>(null);
   const [similarityMetadata, setSimilarityMetadata] = useState<{ totalStudents: number, totalPairs: number } | null>(null);
   const [showDeadlineModal, setShowDeadlineModal] = useState(false);
+  const [isResettingRemedial, setIsResettingRemedial] = useState(false);
 
   const handleStartRemedial = (name: string, currentScore: number) => {
     const isPastDeadline = Date.now() > REMEDIAL_DEADLINE;
@@ -378,6 +382,31 @@ export default function DashboardLayer({
     }
   };
 
+  const handleResetRemedial = async () => {
+    if (!window.confirm(`PERHATIAN: Tindakan ini akan mengubah semua nilai siswa yang di bawah KKM (${kkm}) menjadi 0.\n\nSiswa yang sudah lulus tidak akan terpengaruh.\n\nLanjutkan?`)) return;
+    
+    setIsResettingRemedial(true);
+    try {
+      const res = await fetch('/api/grademaster/students/reset-remedial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, kkm })
+      });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error);
+      }
+      
+      alert("Skor remedial berhasil direset ke 0. Halaman akan dimuat ulang.");
+      window.location.reload();
+    } catch (err: any) {
+      alert(err.message || "Gagal mereset skor");
+    } finally {
+      setIsResettingRemedial(false);
+    }
+  };
+
   const RemedialCountdown = ({ targetDate }: { targetDate: string }) => {
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
     useEffect(() => {
@@ -434,9 +463,9 @@ export default function DashboardLayer({
         {!isPublicView && (
            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Pusat Data: {teacherName}</p>
         )}
-        {!isPublicView && isDemo && (
+        {!isPublicView && (
           <div className="mt-4 flex flex-wrap justify-center gap-3">
-             {(gradedStudents.length === 0 || analytics.avgScore === 0) && (
+             {isDemo && (gradedStudents.length === 0 || analytics.avgScore === 0) && (
                <button 
                  onClick={handleSeedDemo}
                  disabled={isSeeding}
@@ -446,14 +475,15 @@ export default function DashboardLayer({
                  {isSeeding ? "Menanam..." : "Tanam Data Demo"}
                </button>
              )}
-             <button 
-               onClick={handleResetDemo}
-               disabled={isResettingDemo}
-               className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl text-xs font-black uppercase tracking-widest transition-colors disabled:opacity-50"
-             >
-               <RefreshCcw size={14} className={isResettingDemo ? "animate-spin" : ""} />
-               {isResettingDemo ? "Mereset..." : "Reset Data Demo"}
-             </button>
+             {!isPublicView && isAdmin && (
+               <button 
+                onClick={handleResetRemedial}
+                disabled={isResettingRemedial}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-xl text-xs font-black uppercase tracking-widest transition-colors border border-rose-500/20 disabled:opacity-50"
+               >
+                 {isResettingRemedial ? <Loader2 size={14} className="animate-spin" /> : <RefreshCcw size={14} />} Reset Remedial ke 0
+               </button>
+             )}
           </div>
         )}
       </header>
