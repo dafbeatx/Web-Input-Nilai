@@ -91,6 +91,7 @@ export default function Navbar({
                       : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'
                   }`}
                 >
+                  <RefreshCcw size={14} /> Remedial
                 </button>
                 <button
                   onClick={() => onNavigate('analysis')}
