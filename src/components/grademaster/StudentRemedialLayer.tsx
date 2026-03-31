@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ToastType } from '@/lib/grademaster/types';
-import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin, User, Star, ShieldCheck, ArrowRight, Cpu, MonitorOff, Play } from 'lucide-react';
+import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin, User, Star, ShieldCheck, ArrowRight, Cpu, MonitorOff, Play, Monitor } from 'lucide-react';
 import ProctoringCamera from './ProctoringCamera';
 import { saveRemedialSession, loadRemedialSession, clearRemedialSession } from '@/lib/grademaster/session';
 import { assessClientRisk } from '@/lib/grademaster/services/risk-engine.service';
@@ -135,6 +135,10 @@ export default function StudentRemedialLayer({
   const [isConnectionLocked, setIsConnectionLocked] = useState(false);
   const [consecutiveHeartbeatFailures, setConsecutiveHeartbeatFailures] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Split Screen Detection
+  const [splitScreenViolationCount, setSplitScreenViolationCount] = useState(0);
+  const [isSplitLocked, setIsSplitLocked] = useState(false);
 
   const syncWithServer = async () => {
     if (!attemptId || step !== 'EXAM') return;
@@ -1632,10 +1636,40 @@ export default function StudentRemedialLayer({
       e.returnValue = '';
     };
 
+    // 5. Split-Screen / Resize Detector (Multi-window)
+    const handleResize = () => {
+      if (step !== 'EXAM') return;
+      
+      const vh = window.innerHeight;
+      const vw = window.innerWidth;
+      const sh = window.screen.height;
+      
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      if (!isMobile) return;
+
+      const isInputActive = document.activeElement?.tagName === 'TEXTAREA' || document.activeElement?.tagName === 'INPUT';
+      
+      // Heuristic: Split-screen typically takes 50-70% of the screen. 
+      // Virtual keyboard also shrinks vh, but only when input is active.
+      const heightRatio = vh / sh;
+      
+      if (heightRatio < 0.7 && !isInputActive) {
+        // High probability of split screen
+        setIsSplitLocked(true);
+        trackEvent('SECURITY_SPLIT_SCREEN', 'MEDIUM', 10, { vh, vw, sh, ratio: heightRatio });
+      } else {
+        // Auto-unlock if restored to near full-screen
+        if (heightRatio > 0.8) {
+          setIsSplitLocked(false);
+        }
+      }
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('resize', handleResize);
 
     return () => {
       if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
@@ -1643,6 +1677,7 @@ export default function StudentRemedialLayer({
       window.removeEventListener('offline', handleOffline);
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('resize', handleResize);
     };
   }, [step, attemptId]);
 
@@ -3144,6 +3179,23 @@ export default function StudentRemedialLayer({
        )}
      </div>
    )}
+    {/* ── SPLIT SCREEN LOCK OVERLAY ── */}
+    {isSplitLocked && step === 'EXAM' && !isConnectionLocked && (
+      <div className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
+        <div className="w-20 h-20 bg-amber-50 text-amber-600 rounded-3xl flex items-center justify-center mb-6 animate-bounce">
+          <Monitor size={40} />
+        </div>
+        <h2 className="text-2xl font-black text-slate-800 mb-2 font-outfit uppercase tracking-tight">Layar Terbagi Terdeteksi</h2>
+        <p className="text-sm text-slate-500 font-bold max-w-xs mb-8 leading-relaxed">
+          Sistem mendeteksi Anda menggunakan fitur **Split Screen** atau **Multi-Window**. <br /><br />
+          Gunakan **Full Screen (Layar Penuh)** untuk melanjutkan ujian.
+        </p>
+        
+        <div className="px-6 py-3 bg-slate-100 rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest">
+          Menunggu Layar Penuh...
+        </div>
+      </div>
+    )}
   </div>
   );
 }
