@@ -54,7 +54,14 @@ module.exports = {
         "surface-container-low": "#f2f4f6",
         "tertiary": "#006242",
         "secondary": "#545f73",
-        "outline": "#747688"
+        "outline": "#747688",
+        "analysis-primary": "#0040e0",
+        "analysis-surface": "#0f172a",
+        "analysis-on-surface": "#f8fafc",
+        "analysis-on-surface-variant": "#94a3b8",
+        "analysis-surface-container-low": "#1e293b",
+        "analysis-surface-container-highest": "#e0e3e5",
+        "analysis-outline-variant": "rgba(148, 163, 184, 0.15)"
       },
       fontFamily: {
         sans: ["var(--font-inter)", "sans-serif"],
