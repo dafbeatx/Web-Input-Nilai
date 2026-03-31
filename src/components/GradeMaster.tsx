@@ -27,7 +27,6 @@ import Modals from "./grademaster/Modals";
 import StudentRemedialLayer from "./grademaster/StudentRemedialLayer";
 import BehaviorLayer from "./grademaster/BehaviorLayer";
 import RemedialDashboardLayer from "./grademaster/RemedialDashboardLayer";
-import AnalysisLayer from "./grademaster/AnalysisLayer";
 import Navbar from "./grademaster/Navbar";
 
 const ESSAY_COUNT = 5;
@@ -109,7 +108,7 @@ export default function GradeMaster() {
     const savedIsPublicView = localStorage.getItem("gm_isPublicView") === "true";
 
     const hash = window.location.hash.replace('#', '');
-    const validLayers = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'analysis'];
+    const validLayers = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard'];
     
     // Restore admin session
     const adminSession = getAdminSession();
@@ -208,7 +207,7 @@ export default function GradeMaster() {
 
     const handlePopState = (e: PopStateEvent) => {
       const hash = window.location.hash.replace('#', '');
-      const validLayers = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login', 'analysis'];
+      const validLayers = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login'];
       
       setInternalLayer((prev) => {
         let dest = hash as Layer;
@@ -941,18 +940,6 @@ export default function GradeMaster() {
           onUpdateRemedial={handleUpdateRemedialQuestions}
           onRemedialInputChange={handleRemedialInputChange}
           isSaving={isUpdatingQuestions}
-        />
-      )}
-
-      {layer === "analysis" && (
-        <AnalysisLayer
-          teacherName={teacherName}
-          subject={subject}
-          studentClass={studentClass}
-          analytics={analytics}
-          gradedStudents={gradedStudents}
-          activeLayer={layer}
-          onNavigate={(l) => setLayer(l)}
         />
       )}
 

@@ -494,8 +494,68 @@ export default function DashboardLayer({
         <DarkProgressCard label="Konsistensi Nilai" value={Math.max(0, 100 - (analytics.standardDeviation * 2))} max={100} isConsistency={true} realValue={analytics.standardDeviation} />
       </div>
 
-      {/* Insights */}
-      {analytics.insights.length > 0 && (
+      {/* Question Difficulty Heatmap (Public/Student View) */}
+      {isPublicView && analytics.questionDifficulties.length > 0 && (
+        <section className="mb-6 md:mb-10">
+          <div className="flex justify-between items-end mb-4 px-1">
+            <h2 className="text-lg font-black font-headline leading-tight tracking-tight">Peta Kesulitan<br/><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Grid Soal 1-{Math.min(analytics.questionDifficulties.length, 40)}</span></h2>
+            <div className="flex gap-1 items-center">
+              <span className="text-[8px] text-slate-500 mr-1">Mudah</span>
+              <div className="w-3 h-3 rounded-sm bg-white/5 border border-white/10"></div>
+              <div className="w-3 h-3 rounded-sm bg-primary/30"></div>
+              <div className="w-3 h-3 rounded-sm bg-primary/60"></div>
+              <div className="w-3 h-3 rounded-sm bg-primary"></div>
+              <span className="text-[8px] text-slate-500 ml-1">Sulit</span>
+            </div>
+          </div>
+          <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-4">
+            <div className="grid grid-cols-8 gap-2">
+              {analytics.questionDifficulties.slice(0, 40).map((q, i) => {
+                let intensity = 'bg-white/5';
+                if (q.difficultyPercent >= 75) intensity = 'bg-primary ring-1 ring-white/20 shadow-lg shadow-primary/20';
+                else if (q.difficultyPercent >= 50) intensity = 'bg-primary/80';
+                else if (q.difficultyPercent >= 25) intensity = 'bg-primary/40';
+                else if (q.difficultyPercent > 0) intensity = 'bg-primary/20';
+                return (
+                  <div key={i} className={`aspect-square rounded-lg ${intensity} flex items-center justify-center text-[8px] font-black tracking-tight ${q.difficultyPercent >= 25 ? 'text-white' : 'text-slate-500'}`}
+                    title={`Soal ${q.questionNumber}: ${q.difficultyPercent}% Salah - ${q.label}`}>
+                    {q.questionNumber}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* AI Auto-Insights (Public/Student View) */}
+      {isPublicView && analytics.insights.length > 0 && (
+        <section className="mb-6 md:mb-10">
+          <h2 className="text-lg font-black font-headline mb-4 px-1 flex items-center gap-2 tracking-tight">
+            <span className="material-symbols-outlined text-primary">auto_awesome</span>
+            AI Auto-Insights
+          </h2>
+          <div className="space-y-3">
+            {analytics.insights.map((insight, idx) => {
+              const border = insight.type === 'warning' ? 'border-l-amber-500' : insight.type === 'success' ? 'border-l-emerald-500' : 'border-l-primary';
+              const icon = insight.type === 'warning' ? 'warning' : insight.type === 'success' ? 'check_circle' : 'info';
+              const iconColor = insight.type === 'warning' ? 'text-amber-500' : insight.type === 'success' ? 'text-emerald-500' : 'text-primary';
+              return (
+                <div key={idx} className={`bg-slate-900/40 backdrop-blur-xl border border-white/10 border-l-4 ${border} p-4 rounded-2xl flex gap-3 items-start`}>
+                  <span className={`material-symbols-outlined ${iconColor} text-xl mt-0.5`}>{icon}</span>
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-widest mb-1 text-white">{insight.title}</h4>
+                    <p className="text-[11px] text-slate-400 leading-relaxed font-medium">{insight.description}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Insights (Admin View) */}
+      {!isPublicView && analytics.insights.length > 0 && (
         <InsightPanel insights={analytics.insights} />
       )}
 
