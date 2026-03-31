@@ -404,9 +404,9 @@ export default function DashboardLayer({
           { label: 'Menit', val: timeLeft.minutes },
           { label: 'Detik', val: timeLeft.seconds }
         ].map((item, i) => (
-          <div key={i} className="flex flex-col items-center bg-white/80 backdrop-blur-sm px-3 py-2 rounded-xl border border-indigo-100 shadow-sm">
-            <span className="text-lg font-black text-indigo-900">{item.val.toString().padStart(2, '0')}</span>
-            <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">{item.label}</span>
+          <div key={i} className="flex flex-col items-center bg-slate-900/60 backdrop-blur-sm px-3 py-2 rounded-xl border border-white/10">
+            <span className="text-lg font-black text-white">{item.val.toString().padStart(2, '0')}</span>
+            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{item.label}</span>
           </div>
         ))}
       </div>
@@ -414,22 +414,22 @@ export default function DashboardLayer({
   };
 
   return (
-    <div className="p-3 sm:p-5 lg:p-8 w-full max-w-5xl mx-auto px-4 md:px-6 animate-in">
-      <header className="mb-8 md:mb-10 text-center">
-        <div className="inline-flex items-center gap-1.5 md:gap-2 px-3 py-1 md:px-4 md:py-1.5 bg-indigo-100 text-indigo-600 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-3 md:mb-4 border border-indigo-200">
+    <div className="bg-slate-950 text-white p-3 sm:p-5 lg:p-8 w-full max-w-5xl mx-auto px-4 md:px-6 animate-in fade-in min-h-screen pb-20">
+      <header className="mb-8 md:mb-10 text-center pt-4">
+        <div className="inline-flex items-center gap-1.5 md:gap-2 px-3 py-1 md:px-4 md:py-1.5 bg-primary/10 text-primary rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-3 md:mb-4 border border-primary/20">
           <LayoutGrid size={12} className="md:w-3.5 md:h-3.5" /> Dashboard Analitik
         </div>
-        <h1 className="text-2xl md:text-4xl font-black text-slate-800 tracking-tight font-outfit mb-2 md:mb-3">
+        <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight font-headline mb-2 md:mb-3">
           {isPublicView ? 'Hasil Evaluasi Siswa' : 'Ikhtisar Kelas'}
         </h1>
         <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
            {isDemo && (
-             <Badge color="amber"><span className="flex items-center gap-1">🧪 DEMO MODE</span></Badge>
+             <DarkBadge color="amber"><span className="flex items-center gap-1">🧪 DEMO MODE</span></DarkBadge>
            )}
-           <Badge color="emerald">Kelas {studentClass} ({schoolLevel})</Badge>
-           <Badge color="amber">{academicYear || '2025/2026'}</Badge>
-           <Badge color="indigo">Semester {semester || getSemester(sessionName || '')}</Badge>
-           <Badge color="slate">{subject}</Badge>
+           <DarkBadge color="emerald">Kelas {studentClass} ({schoolLevel})</DarkBadge>
+           <DarkBadge color="amber">{academicYear || '2025/2026'}</DarkBadge>
+           <DarkBadge color="indigo">Semester {semester || getSemester(sessionName || '')}</DarkBadge>
+           <DarkBadge color="slate">{subject}</DarkBadge>
         </div>
         {!isPublicView && (
            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Pusat Data: {teacherName}</p>
@@ -440,7 +440,7 @@ export default function DashboardLayer({
                <button 
                  onClick={handleSeedDemo}
                  disabled={isSeeding}
-                 className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl text-xs font-black uppercase tracking-widest transition-colors disabled:opacity-50"
+                 className="inline-flex items-center gap-2 px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-xl text-xs font-black uppercase tracking-widest transition-colors disabled:opacity-50"
                >
                  <Plus size={14} className={isSeeding ? "animate-spin" : ""} />
                  {isSeeding ? "Menanam..." : "Tanam Data Demo"}
@@ -449,7 +449,7 @@ export default function DashboardLayer({
              <button 
                onClick={handleResetDemo}
                disabled={isResettingDemo}
-               className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl text-xs font-black uppercase tracking-widest transition-colors disabled:opacity-50"
+               className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl text-xs font-black uppercase tracking-widest transition-colors disabled:opacity-50"
              >
                <RefreshCcw size={14} className={isResettingDemo ? "animate-spin" : ""} />
                {isResettingDemo ? "Mereset..." : "Reset Data Demo"}
@@ -461,26 +461,26 @@ export default function DashboardLayer({
       {/* Top 3 Siswa */}
       {gradedStudents.length >= 3 && analytics.ranking.length >= 3 && (
         <div className="mb-6 md:mb-10 animate-in slide-in-from-bottom-4 fade-in">
-          <h3 className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-400 mb-4 text-center">🏆 Bintang Kelas (Top 3)</h3>
+          <h3 className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-500 mb-4 text-center">🏆 Bintang Kelas (Top 3)</h3>
           <div className="flex flex-col md:flex-row items-end justify-center gap-4 max-w-3xl mx-auto">
             {/* Juara 2 */}
-            <div className="order-2 md:order-1 flex-1 bg-slate-50 border border-slate-200 rounded-3xl p-5 text-center transform md:-translate-y-4 hover:-translate-y-6 transition-transform shadow-sm relative w-full min-w-0">
-              <div className="w-12 h-12 md:w-14 md:h-14 mx-auto bg-slate-200 rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner">🥈</div>
-              <h4 className="font-bold text-slate-700 text-sm md:text-base truncate px-2">{analytics.ranking.length > 1 ? analytics.ranking[1].name : '-'}</h4>
-              <p className="text-slate-500 font-black text-xl mt-1">{analytics.ranking.length > 1 ? analytics.ranking[1].finalScore : 0}</p>
+            <div className="order-2 md:order-1 flex-1 bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-5 text-center transform md:-translate-y-4 hover:-translate-y-6 transition-transform relative w-full min-w-0">
+              <div className="w-12 h-12 md:w-14 md:h-14 mx-auto bg-slate-800 rounded-full flex items-center justify-center text-2xl mb-3">🥈</div>
+              <h4 className="font-bold text-slate-300 text-sm md:text-base truncate px-2">{analytics.ranking.length > 1 ? analytics.ranking[1].name : '-'}</h4>
+              <p className="text-white font-black text-xl mt-1">{analytics.ranking.length > 1 ? analytics.ranking[1].finalScore : 0}</p>
             </div>
             {/* Juara 1 */}
-            <div className="order-1 md:order-2 flex-1 bg-gradient-to-b from-amber-50 to-amber-100 border border-amber-200 rounded-3xl p-6 text-center transform md:-translate-y-8 hover:-translate-y-10 transition-transform shadow-md relative z-10 w-full mb-4 md:mb-0 min-w-0">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-sm flex items-center gap-1"><Trophy size={12}/> Juara 1</div>
-              <div className="w-14 h-14 md:w-16 md:h-16 mx-auto bg-amber-200 rounded-full flex items-center justify-center text-3xl mb-3 shadow-inner">🥇</div>
-              <h4 className="font-black text-amber-900 text-base md:text-lg truncate px-2">{analytics.ranking.length > 0 ? analytics.ranking[0].name : '-'}</h4>
-              <p className="text-amber-600 font-black text-2xl mt-1">{analytics.ranking.length > 0 ? analytics.ranking[0].finalScore : 0}</p>
+            <div className="order-1 md:order-2 flex-1 bg-gradient-to-b from-amber-500/20 to-amber-600/10 border border-amber-500/20 rounded-3xl p-6 text-center transform md:-translate-y-8 hover:-translate-y-10 transition-transform relative z-10 w-full mb-4 md:mb-0 min-w-0">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-amber-500/20 flex items-center gap-1"><Trophy size={12}/> Juara 1</div>
+              <div className="w-14 h-14 md:w-16 md:h-16 mx-auto bg-amber-500/20 rounded-full flex items-center justify-center text-3xl mb-3">🥇</div>
+              <h4 className="font-black text-amber-300 text-base md:text-lg truncate px-2">{analytics.ranking.length > 0 ? analytics.ranking[0].name : '-'}</h4>
+              <p className="text-amber-400 font-black text-2xl mt-1">{analytics.ranking.length > 0 ? analytics.ranking[0].finalScore : 0}</p>
             </div>
             {/* Juara 3 */}
-            <div className="order-3 md:order-3 flex-1 bg-orange-50 border border-orange-200 rounded-3xl p-5 text-center transform hover:-translate-y-2 transition-transform shadow-sm relative w-full min-w-0">
-              <div className="w-12 h-12 md:w-14 md:h-14 mx-auto bg-orange-200 rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner">🥉</div>
-              <h4 className="font-bold text-orange-900 text-sm md:text-base truncate px-2">{analytics.ranking.length > 2 ? analytics.ranking[2].name : '-'}</h4>
-              <p className="text-orange-600 font-black text-xl mt-1">{analytics.ranking.length > 2 ? analytics.ranking[2].finalScore : 0}</p>
+            <div className="order-3 md:order-3 flex-1 bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-5 text-center transform hover:-translate-y-2 transition-transform relative w-full min-w-0">
+              <div className="w-12 h-12 md:w-14 md:h-14 mx-auto bg-orange-500/20 rounded-full flex items-center justify-center text-2xl mb-3">🥉</div>
+              <h4 className="font-bold text-orange-300 text-sm md:text-base truncate px-2">{analytics.ranking.length > 2 ? analytics.ranking[2].name : '-'}</h4>
+              <p className="text-orange-400 font-black text-xl mt-1">{analytics.ranking.length > 2 ? analytics.ranking[2].finalScore : 0}</p>
             </div>
           </div>
         </div>
@@ -488,10 +488,10 @@ export default function DashboardLayer({
 
       {/* Progress Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-10">
-        <ProgressCard label="Nilai Rata-rata Kelas" value={analytics.avgScore} max={100} />
-        <ProgressCard label="Kemampuan Belajar" value={analytics.avgCsi} max={100} />
-        <ProgressCard label="Tingkat Pemahaman" value={analytics.avgLps} max={100} />
-        <ProgressCard label="Konsistensi Nilai" value={Math.max(0, 100 - (analytics.standardDeviation * 2))} max={100} isConsistency={true} realValue={analytics.standardDeviation} />
+        <DarkProgressCard label="Nilai Rata-rata Kelas" value={analytics.avgScore} max={100} />
+        <DarkProgressCard label="Kemampuan Belajar" value={analytics.avgCsi} max={100} />
+        <DarkProgressCard label="Tingkat Pemahaman" value={analytics.avgLps} max={100} />
+        <DarkProgressCard label="Konsistensi Nilai" value={Math.max(0, 100 - (analytics.standardDeviation * 2))} max={100} isConsistency={true} realValue={analytics.standardDeviation} />
       </div>
 
       {/* Insights */}
@@ -503,8 +503,8 @@ export default function DashboardLayer({
       {gradedStudents.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-10">
           {/* Distribution Histogram */}
-          <div className="bg-white rounded-3xl p-5 md:p-6 border border-slate-100 shadow-sm col-span-1">
-            <h4 className="text-sm font-black text-slate-800 mb-1">Distribusi Nilai Siswa</h4>
+          <div className="bg-slate-900/40 backdrop-blur-xl rounded-3xl p-5 md:p-6 border border-white/10 col-span-1">
+            <h4 className="text-sm font-black text-white mb-1">Distribusi Nilai Siswa</h4>
             <p className="text-[10px] md:text-xs font-bold text-slate-400 mb-6 leading-relaxed">Kelompok jumlah siswa berdasarkan rentang nilai akhir yang diperoleh.</p>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={analytics.distribution} margin={{ left: -25, right: 0, top: 0, bottom: 0 }}>
@@ -521,8 +521,8 @@ export default function DashboardLayer({
           </div>
 
           {/* Question Difficulty / Analisis Per Soal */}
-          <div className="bg-white rounded-3xl p-5 md:p-6 border border-slate-100 shadow-sm col-span-1 lg:col-span-2">
-            <h4 className="text-sm font-black text-slate-800 mb-1">Analisis Tingkat Kesulitan Soal</h4>
+          <div className="bg-slate-900/40 backdrop-blur-xl rounded-3xl p-5 md:p-6 border border-white/10 col-span-1 lg:col-span-2">
+            <h4 className="text-sm font-black text-white mb-1">Analisis Tingkat Kesulitan Soal</h4>
             <p className="text-[10px] md:text-xs font-bold text-slate-400 mb-6 leading-relaxed">Persentase tingkat kesulitan. Semakin tinggi persentase, semakin banyak siswa yang salah menjawab soal tersebut.</p>
             
             <div className="flex flex-col md:flex-row gap-6 items-start">
@@ -554,25 +554,25 @@ export default function DashboardLayer({
                   const hardest = [...analytics.questionDifficulties].sort((a,b) => b.difficultyPercent - a.difficultyPercent)[0];
                   if (hardest && hardest.difficultyPercent > 0) {
                     return (
-                      <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100 shadow-sm">
-                        <div className="w-10 h-10 rounded-full bg-rose-200 flex items-center justify-center shrink-0 mb-3 text-rose-600">
+                      <div className="p-4 bg-rose-500/10 rounded-2xl border border-rose-500/20">
+                        <div className="w-10 h-10 rounded-full bg-rose-500/20 flex items-center justify-center shrink-0 mb-3 text-rose-400">
                           <Star size={20} fill="currentColor" />
                         </div>
-                        <h5 className="font-black text-rose-900 text-sm mb-1">Fokus Perbaikan</h5>
-                        <p className="text-xs font-bold text-rose-800 leading-relaxed">
+                        <h5 className="font-black text-rose-300 text-sm mb-1">Fokus Perbaikan</h5>
+                        <p className="text-xs font-bold text-rose-200 leading-relaxed">
                           Soal <b>Nomor {hardest.questionNumber}</b> paling banyak dijawab salah ({hardest.difficultyPercent}% siswa).
                         </p>
-                        <p className="text-[10px] text-rose-600 font-bold mt-2 leading-relaxed opacity-80">Rekomendasi: Bahas ulang materi terkait soal ini di pertemuan berikutnya agar siswa lebih paham.</p>
+                        <p className="text-[10px] text-rose-400 font-bold mt-2 leading-relaxed opacity-80">Rekomendasi: Bahas ulang materi terkait soal ini di pertemuan berikutnya agar siswa lebih paham.</p>
                       </div>
                     );
                   }
                   return (
-                    <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 shadow-sm">
-                      <div className="w-10 h-10 rounded-full bg-emerald-200 flex items-center justify-center shrink-0 mb-3 text-emerald-600">
+                    <div className="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
+                      <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mb-3 text-emerald-400">
                         <ThumbsUp size={20} />
                       </div>
-                      <h5 className="font-black text-emerald-900 text-sm mb-1">Semua Terkendali</h5>
-                      <p className="text-xs font-bold text-emerald-800 leading-relaxed">
+                      <h5 className="font-black text-emerald-300 text-sm mb-1">Semua Terkendali</h5>
+                      <p className="text-xs font-bold text-emerald-200 leading-relaxed">
                         Siswa dapat menjawab seluruh soal dengan sangat baik. Pertahankan!
                       </p>
                     </div>
@@ -585,10 +585,10 @@ export default function DashboardLayer({
       )}
 
       {/* Ranking Table */}
-      <div className="bg-white rounded-3xl p-5 md:p-6 border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-slate-900/40 backdrop-blur-xl rounded-3xl p-5 md:p-6 border border-white/10 overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
           <div>
-            <h3 className="text-base md:text-lg font-black text-slate-800 font-outfit">Daftar Lengkap Nilai Siswa</h3>
+            <h3 className="text-base md:text-lg font-black text-white font-headline">Daftar Lengkap Nilai Siswa</h3>
             <p className="text-[10px] md:text-xs font-bold text-slate-400">
               Total: {gradedStudents.length} siswa terdaftar
             </p>
@@ -596,7 +596,7 @@ export default function DashboardLayer({
           <div className="flex flex-wrap items-center gap-2 justify-start sm:justify-end">
             <button
               onClick={handleExportXML}
-              className="px-3 md:px-4 py-2 bg-slate-50 text-slate-600 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-colors flex items-center justify-center gap-1.5 md:gap-2"
+              className="px-3 md:px-4 py-2 bg-white/5 text-slate-300 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5 md:gap-2 border border-white/10"
             >
               <Download size={14} /> Ekspor Data
             </button>
@@ -604,7 +604,7 @@ export default function DashboardLayer({
               <>
                 <button
                   onClick={onReSync}
-                  className="px-3 md:px-4 py-2 bg-amber-50 text-amber-600 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-amber-100 transition-colors flex items-center justify-center gap-1.5 md:gap-2"
+                  className="px-3 md:px-4 py-2 bg-amber-500/10 text-amber-400 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-amber-500/20 transition-colors flex items-center justify-center gap-1.5 md:gap-2 border border-amber-500/20"
                   title="Hitung ulang semua nilai berdasarkan kunci jawaban terbaru"
                 >
                   <RefreshCcw size={14} /> Sinkron Nilai
@@ -612,7 +612,7 @@ export default function DashboardLayer({
                 <button
                   onClick={handleCheckSimilarity}
                   disabled={isCheckingSimilarity}
-                  className="px-3 md:px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-rose-100 transition-colors flex items-center justify-center gap-1.5 md:gap-2 disabled:opacity-50"
+                  className="px-3 md:px-4 py-2 bg-rose-500/10 text-rose-400 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-rose-500/20 transition-colors flex items-center justify-center gap-1.5 md:gap-2 disabled:opacity-50 border border-rose-500/20"
                   title="Deteksi Kecurangan Berjamaah (Kemiripan Jawaban)"
                 >
                   {isCheckingSimilarity ? <div className="w-3.5 h-3.5 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" /> : <Eye size={14} />} 
@@ -621,7 +621,7 @@ export default function DashboardLayer({
                 <button
                   onClick={handleReportToTelegram}
                   disabled={isReporting}
-                  className="px-3 md:px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-emerald-100 transition-colors flex items-center justify-center gap-1.5 md:gap-2 disabled:opacity-50"
+                  className="px-3 md:px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-colors flex items-center justify-center gap-1.5 md:gap-2 disabled:opacity-50 border border-emerald-500/20"
                   title="Kirim daftar siswa belum remed ke Telegram Admin"
                 >
                   {isReporting ? <div className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" /> : <Send size={14} />} 
@@ -629,7 +629,7 @@ export default function DashboardLayer({
                 </button>
                 <button
                   onClick={onGradeStudent}
-                  className="px-3 md:px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors flex items-center justify-center gap-1.5 md:gap-2"
+                  className="px-3 md:px-4 py-2 bg-primary/10 text-primary rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-primary/20 transition-colors flex items-center justify-center gap-1.5 md:gap-2 border border-primary/20"
                 >
                   <Plus size={14} /> Koreksi Manual
                 </button>
@@ -639,35 +639,35 @@ export default function DashboardLayer({
         </div>
 
         {/* Remedial Announcement Banner */}
-        <div className="mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex flex-col md:flex-row items-center md:items-start gap-4 shadow-sm animate-in zoom-in-95 overflow-hidden group">
-          <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xl shadow-indigo-200 group-hover:rotate-12 transition-transform">
+        <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-2xl flex flex-col md:flex-row items-center md:items-start gap-4 animate-in zoom-in-95 overflow-hidden group">
+          <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-primary text-white flex items-center justify-center shrink-0 shadow-xl shadow-primary/20 group-hover:rotate-12 transition-transform">
             <Bell size={24} className="animate-bounce" />
           </div>
           <div className="flex-1 text-center md:text-left">
              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-2">
-                <h4 className="text-sm font-black text-indigo-900 uppercase tracking-widest flex items-center justify-center md:justify-start gap-2">
+                <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center justify-center md:justify-start gap-2">
                   🚀 Pengumuman Remedial Penting!
                 </h4>
                 <div className="flex items-center justify-center gap-2">
                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                   <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter">Live Countdown</span>
+                   <span className="text-[10px] font-black text-emerald-400 uppercase tracking-tighter">Live Countdown</span>
                 </div>
              </div>
              
-             <p className="text-xs font-bold text-indigo-700 leading-relaxed mb-4">
+             <p className="text-xs font-bold text-slate-300 leading-relaxed mb-4">
                 Batas waktu pengerjaan remedial telah ditetapkan. Pastikan seluruh siswa menyelesaikan tugas sebelum waktu habis.
-                Sistem akan menutup akses secara <b className="text-rose-600">permanen</b> tepat pada waktunya.
+                Sistem akan menutup akses secara <b className="text-rose-400">permanen</b> tepat pada waktunya.
              </p>
 
              <div className="flex flex-wrap justify-center md:justify-start items-center gap-2 md:gap-3 mb-5">
                 <RemedialCountdown targetDate="2026-03-30T07:00:00+07:00" />
              </div>
 
-             <div className="flex flex-col sm:flex-row items-center gap-3 p-3 bg-white/60 backdrop-blur-md rounded-xl border border-rose-200">
-                <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 animate-pulse">
+             <div className="flex flex-col sm:flex-row items-center gap-3 p-3 bg-rose-500/10 backdrop-blur-md rounded-xl border border-rose-500/20">
+                <div className="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 animate-pulse">
                    <AlertCircle size={18} />
                 </div>
-                <div className="flex-1 text-xs font-black text-rose-600 uppercase tracking-tight text-center sm:text-left">
+                <div className="flex-1 text-xs font-black text-rose-400 uppercase tracking-tight text-center sm:text-left">
                    KONSEKUENSI: NILAI AKAN <span className="underline decoration-2 underline-offset-4 decoration-rose-400">0 (NOL)</span> & <span className="underline decoration-2 underline-offset-4 decoration-rose-400">-10 POIN PERILAKU</span> TANPA TOLERANSI!
                 </div>
              </div>
@@ -675,11 +675,11 @@ export default function DashboardLayer({
         </div>
 
         {gradedStudents.length === 0 ? (
-          <div className="text-center py-8 md:py-12 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-            <User size={32} className="mx-auto text-slate-300 mb-3" />
-            <p className="text-slate-500 font-bold text-sm">Belum ada nilai yang dimasukkan.</p>
+          <div className="text-center py-8 md:py-12 bg-white/5 rounded-2xl border border-dashed border-white/10">
+            <User size={32} className="mx-auto text-slate-600 mb-3" />
+            <p className="text-slate-400 font-bold text-sm">Belum ada nilai yang dimasukkan.</p>
             {!isPublicView && (
-              <p className="text-slate-400 text-[10px] mt-1.5">Mulai koreksi siswa untuk melihat rekapan nilai di sini.</p>
+              <p className="text-slate-500 text-[10px] mt-1.5">Mulai koreksi siswa untuk melihat rekapan nilai di sini.</p>
             )}
           </div>
         ) : (
@@ -687,13 +687,13 @@ export default function DashboardLayer({
             {/* Mobile View (Card List) */}
             <div className="md:hidden space-y-3">
               {analytics.ranking.map(r => (
-                <div key={r.rank} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                <div key={r.rank} className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black ${r.rank <= 3 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>
                         {r.rank}
                       </span>
-                      <span className="text-xs font-black text-slate-700 truncate max-w-[140px] uppercase tracking-tight">{r.name}</span>
+                      <span className="text-xs font-black text-slate-200 truncate max-w-[140px] uppercase tracking-tight">{r.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className={`px-2.5 py-1 rounded-lg text-xs font-black ${r.finalScore >= kkm ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
@@ -711,7 +711,7 @@ export default function DashboardLayer({
                     </div>
                   </div>
                   
-                  <div className="pt-3 border-t border-slate-50 flex items-center justify-between">
+                  <div className="pt-3 border-t border-white/5 flex items-center justify-between">
                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Opsi / Status</span>
                     {isPublicView ? (
                       r.finalScore < kkm ? (
@@ -781,20 +781,20 @@ export default function DashboardLayer({
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b-2 border-slate-100">
-                    <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Rank</th>
-                    <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Nama Siswa</th>
-                    <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Nilai Akhir</th>
-                    <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">{isPublicView ? "Status Tuntas" : "Keterangan"}</th>
+                  <tr className="border-b-2 border-white/10">
+                    <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-500 pl-2">Rank</th>
+                    <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Nama Siswa</th>
+                    <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Nilai Akhir</th>
+                    <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-500">{isPublicView ? "Status Tuntas" : "Keterangan"}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {analytics.ranking.map(r => (
-                    <tr key={r.rank} className={`border-b border-slate-50 hover:bg-slate-50/80 transition-colors`}>
+                    <tr key={r.rank} className={`border-b border-white/5 hover:bg-white/5 transition-colors`}>
                       <td className="py-3.5 text-xs font-black text-slate-400 pl-2">
                         <span className={`w-6 h-6 rounded-full flex items-center justify-center ${r.rank <= 3 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>{r.rank}</span>
                       </td>
-                      <td className="py-3.5 text-xs font-bold text-slate-700">{r.name}</td>
+                      <td className="py-3.5 text-xs font-bold text-slate-300">{r.name}</td>
                       <td className="py-3.5">
                         <div className="flex items-center gap-2">
                           <span className={`px-2.5 py-1 rounded-lg text-xs font-black ${r.finalScore >= kkm ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
@@ -882,13 +882,13 @@ export default function DashboardLayer({
 
       {/* Behavior Section (Public View Only) */}
       {isPublicView && Object.keys(behaviorMap).length > 0 && (
-        <div className="mt-6 md:mt-10 bg-white rounded-3xl p-5 md:p-6 border border-slate-100 shadow-sm">
+        <div className="mt-6 md:mt-10 bg-slate-900/40 backdrop-blur-xl rounded-3xl p-5 md:p-6 border border-white/10">
           <div className="flex items-center gap-2 mb-4 md:mb-6">
-            <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
               <ShieldCheck size={20} />
             </div>
             <div>
-              <h3 className="text-base md:text-lg font-black text-slate-800 font-outfit">Rapor Kedisiplinan & Perilaku</h3>
+              <h3 className="text-base md:text-lg font-black text-white font-headline">Rapor Kedisiplinan & Perilaku</h3>
               <p className="text-[10px] md:text-xs font-bold text-slate-400">Catatan sikap siswa selama proses pembelajaran</p>
             </div>
           </div>
@@ -899,10 +899,10 @@ export default function DashboardLayer({
               const summary = getBehaviorSummary(b.behavior_logs || []);
               const label = getBehaviorLabel(b.total_points);
               return (
-                <div key={r.name} className="border border-slate-100 bg-slate-50/50 rounded-2xl p-4 md:p-5 hover:bg-white hover:shadow-md transition-all">
-                  <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
-                    <h4 className="font-black text-sm text-slate-700 truncate mr-3">{r.name}</h4>
-                    <div className="flex items-center gap-1.5 shrink-0 bg-white px-2 py-1 rounded-lg border border-slate-100 shadow-sm">
+                <div key={r.name} className="border border-white/10 bg-slate-900/60 rounded-2xl p-4 md:p-5 hover:bg-slate-800/60 transition-all">
+                  <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-3">
+                    <h4 className="font-black text-sm text-slate-200 truncate mr-3">{r.name}</h4>
+                    <div className="flex items-center gap-1.5 shrink-0 bg-white/5 px-2 py-1 rounded-lg border border-white/10">
                       <span className={`text-sm font-black ${
                         b.total_points >= 80 ? 'text-emerald-500' :
                         b.total_points >= 60 ? 'text-amber-500' :
@@ -1048,7 +1048,7 @@ export default function DashboardLayer({
       )}
 
       <div className="mt-8 flex justify-center pb-8">
-        <button onClick={onBack} className="py-3 px-6 text-slate-400 bg-slate-50 rounded-xl font-bold hover:bg-slate-100 hover:text-indigo-600 transition-all uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-2 border border-slate-200">
+        <button onClick={onBack} className="py-3 px-6 text-slate-400 bg-white/5 rounded-xl font-bold hover:bg-white/10 hover:text-primary transition-all uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-2 border border-white/10">
           <ArrowLeft size={16} /> Kembali ke Menu Sebelumnya
         </button>
       </div>
@@ -1057,39 +1057,43 @@ export default function DashboardLayer({
 }
 
 function ProgressCard({ label, value, max = 100, isConsistency = false, realValue = 0 }: { label: string; value: number; max?: number; isConsistency?: boolean; realValue?: number }) {
+  return <DarkProgressCard label={label} value={value} max={max} isConsistency={isConsistency} realValue={realValue} />;
+}
+
+function DarkProgressCard({ label, value, max = 100, isConsistency = false, realValue = 0 }: { label: string; value: number; max?: number; isConsistency?: boolean; realValue?: number }) {
   const percentage = Math.min(100, Math.max(0, (value / max) * 100));
   
   let colorClass = 'bg-rose-500';
-  let bgLight = 'bg-rose-50';
-  let textClass = 'text-rose-600';
+  let textClass = 'text-rose-400';
   let statusText = 'Perlu Bimbingan';
+  let glowClass = 'shadow-rose-500/20';
 
   if (percentage >= 80) {
     colorClass = 'bg-emerald-500';
-    bgLight = 'bg-emerald-50';
-    textClass = 'text-emerald-600';
+    textClass = 'text-emerald-400';
     statusText = 'Sangat Baik';
+    glowClass = 'shadow-emerald-500/20';
   } else if (percentage >= 60) {
     colorClass = 'bg-amber-500';
-    bgLight = 'bg-amber-50';
-    textClass = 'text-amber-600';
+    textClass = 'text-amber-400';
     statusText = 'Cukup Baik';
+    glowClass = 'shadow-amber-500/20';
   }
 
   const displayValue = isConsistency ? realValue : value;
 
   return (
-    <div className={`rounded-3xl p-5 border shadow-sm ${bgLight} border-white relative overflow-hidden transition-all hover:shadow-md hover:-translate-y-1`}>
+    <div className={`bg-slate-900/40 backdrop-blur-xl rounded-3xl p-5 border border-white/10 relative overflow-hidden transition-all hover:-translate-y-1`}>
       <div className="relative z-10">
-        <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">{label}</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">{label}</p>
         <div className="flex items-end justify-between mb-4">
           <p className={`text-3xl font-black ${textClass}`}>{displayValue}{!isConsistency && '%'}</p>
-          <span className={`text-[9px] font-black px-2.5 py-1 rounded-lg bg-white shadow-sm uppercase tracking-widest ${textClass}`}>
+          <span className={`text-[9px] font-black px-2.5 py-1 rounded-lg bg-white/5 uppercase tracking-widest ${textClass} border border-white/10`}>
             {statusText}
           </span>
         </div>
-        <div className="h-2 w-full bg-black/5 rounded-full overflow-hidden">
-          <div className={`h-full ${colorClass} rounded-full transition-all duration-1000`} style={{ width: `${percentage}%` }} />
+        <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+          <div className={`h-full ${colorClass} rounded-full transition-all duration-1000 shadow-lg ${glowClass}`} style={{ width: `${percentage}%` }} />
         </div>
       </div>
     </div>
@@ -1097,16 +1101,21 @@ function ProgressCard({ label, value, max = 100, isConsistency = false, realValu
 }
 
 function Badge({ children, color = 'indigo' }: { children: React.ReactNode; color?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'rose' }) {
+  return <DarkBadge color={color}>{children}</DarkBadge>;
+}
+
+function DarkBadge({ children, color = 'indigo' }: { children: React.ReactNode; color?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'rose' }) {
   const colors = {
-    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    amber: 'bg-amber-50 text-amber-600 border-amber-100',
-    slate: 'bg-slate-50 text-slate-600 border-slate-100',
-    rose: 'bg-rose-50 text-rose-600 border-rose-100',
+    indigo: 'bg-primary/10 text-primary border-primary/20',
+    emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    slate: 'bg-white/5 text-slate-300 border-white/10',
+    rose: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
   };
   return (
-    <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-tight border shadow-sm ${colors[color]}`}>
+    <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-tight border ${colors[color]}`}>
       {children}
     </span>
   );
 }
+
