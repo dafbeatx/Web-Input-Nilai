@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { calculateStudentResult } from '@/lib/grademaster/scoring';
 import { ScoringConfig, DEFAULT_SCORING_CONFIG } from '@/lib/grademaster/types';
+import { getAdminSession } from '@/lib/grademaster/admin';
 
 const MOCK_NAMES = [
   "Budi Santoso", "Siti Aminah", "Joko Widodo", "Rina Susanti", "Aditya Wijaya",
@@ -14,6 +15,11 @@ const OPTIONS = ['A', 'B', 'C', 'D'];
 
 export async function POST(req: NextRequest) {
   try {
+    const adminSession = await getAdminSession();
+    if (!adminSession) {
+      return NextResponse.json({ error: 'Akses ditolak: Admin session required' }, { status: 403 });
+    }
+
     const body = await req.json();
     const { sessionId } = body;
 
@@ -21,7 +27,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Session ID wajib diisi' }, { status: 400 });
     }
 
-    // Fetch session details
     const { data: session, error: sessError } = await supabase
       .from('gm_sessions')
       .select('answer_key, scoring_config, is_demo, remedial_essay_count')
@@ -29,6 +34,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (sessError || !session) {
+      console.error('[POST Seed] Session not found:', sessError);
       return NextResponse.json({ error: 'Sesi tidak ditemukan' }, { status: 404 });
     }
 
@@ -39,7 +45,6 @@ export async function POST(req: NextRequest) {
     const answerKey = session.answer_key as string[] || [];
     const scoringConfig = (session.scoring_config as any) || DEFAULT_SCORING_CONFIG;
     
-    // Choose 12-18 random names
     const count = Math.floor(Math.random() * 7) + 12;
     const shuffled = [...MOCK_NAMES].sort(() => 0.5 - Math.random());
     const selectedNames = shuffled.slice(0, count);
@@ -50,26 +55,22 @@ export async function POST(req: NextRequest) {
     for (const name of selectedNames) {
       const studentId = crypto.randomUUID();
       const studentAnswers: Record<number, string> = {};
-      
-      // Generate random MCQ answers (80% chance of being correct-ish for some, pure random for others)
-      const performanceFactor = Math.random(); // Higher = better student
+      const performanceFactor = Math.random(); 
       
       answerKey.forEach((ans, idx) => {
         const qNum = idx + 1;
         if (Math.random() < (0.3 + performanceFactor * 0.6)) {
-          studentAnswers[qNum] = ans; // Correct
+          studentAnswers[qNum] = ans; 
         } else {
           studentAnswers[qNum] = OPTIONS[Math.floor(Math.random() * OPTIONS.length)];
         }
       });
 
-      // Generate random essay scores based on config
       const essayCount = session.remedial_essay_count || scoringConfig.essayCount || 5;
       const totalPotentialRaw = scoringConfig.essayMaxScore || 20;
       const pointsPerQuestion = totalPotentialRaw / essayCount;
       
       const essayScores = Array.from({ length: essayCount }, () => {
-        // Points per question scaled by performance
         const base = performanceFactor * pointsPerQuestion;
         const randomVariation = (Math.random() * 0.4 - 0.2) * pointsPerQuestion;
         return Math.max(0, Math.min(pointsPerQuestion, Math.round((base + randomVariation) * 10) / 10));
@@ -93,7 +94,6 @@ export async function POST(req: NextRequest) {
         original_score: result.finalScore,
       });
 
-      // Prepare answer rows for analytics
       Object.entries(studentAnswers).forEach(([qNum, selected]) => {
         allAnswers.push({
           student_id: studentId,
@@ -104,19 +104,20 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Bulk insert students
     const { error: insError } = await supabase.from('gm_students').insert(studentsToInsert);
-    if (insError) throw insError;
+    if (insError) {
+      console.error('[POST Seed] Insert students error:', insError);
+      throw insError;
+    }
 
-    // Bulk insert answers
     if (allAnswers.length > 0) {
       const { error: ansError } = await supabase.from('gm_answers').insert(allAnswers);
-      if (ansError) console.error('Seeding answers error:', ansError);
+      if (ansError) console.error('[POST Seed] Insert answers error:', ansError);
     }
 
     return NextResponse.json({ message: `Berhasil menanam ${selectedNames.length} data siswa!` });
   } catch (err: any) {
-    console.error('Seeding error:', err);
+    console.error('Seeding critical failure:', err);
     return NextResponse.json({ error: err.message || 'Gagal menanam data' }, { status: 500 });
   }
 }

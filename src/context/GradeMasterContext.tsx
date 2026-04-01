@@ -80,11 +80,15 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     // 3. Auth Guards
     const adminOnlyLayers = ['setup', 'grading', 'remedial_dashboard', 'attendance', 'student_accounts'];
     const protectedLayers = ['dashboard', 'remedial', 'behavior'];
+    const authLayers = ['login', 'student_login'];
     
     if (adminOnlyLayers.includes(initialLayer) && !savedAdmin) {
       initialLayer = 'login';
     } else if (protectedLayers.includes(initialLayer) && !savedAdmin && !savedStudent) {
       initialLayer = 'student_login';
+    } else if (authLayers.includes(initialLayer) && (savedAdmin || savedStudent)) {
+      // If already logged in, don't show login page, go to appropriate dashboard/home
+      initialLayer = savedAdmin ? 'setup' : 'dashboard';
     }
 
     setLayer(initialLayer);
@@ -94,7 +98,16 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     const handlePopState = () => {
       const newHash = window.location.hash.replace('#', '') as Layer;
       if (validLayers.includes(newHash)) {
-        setLayer(newHash);
+        // Re-check auth on popstate
+        if (adminOnlyLayers.includes(newHash) && !localStorage.getItem('gm_isAdmin')) {
+          setLayer('login');
+          window.history.replaceState({ layer: 'login' }, '', '#login');
+        } else if (protectedLayers.includes(newHash) && !localStorage.getItem('gm_isAdmin') && !localStorage.getItem('gm_isStudent')) {
+          setLayer('student_login');
+          window.history.replaceState({ layer: 'student_login' }, '', '#student_login');
+        } else {
+          setLayer(newHash);
+        }
       }
     };
 
@@ -116,6 +129,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     const protectedLayers = ['dashboard', 'remedial', 'behavior'];
 
     if (adminOnlyLayers.includes(newLayer) && !isAdmin) {
+      console.warn(`[Guard] Admin access required for layer: ${newLayer}`);
       setLayer('login');
       window.history.pushState({ layer: 'login' }, '', '#login');
       localStorage.setItem("gm_layer", 'login');
@@ -123,6 +137,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     }
 
     if (protectedLayers.includes(newLayer) && !isAdmin && !isStudent) {
+      console.warn(`[Guard] Student access required for layer: ${newLayer}`);
       setLayer('student_login');
       window.history.pushState({ layer: 'student_login' }, '', '#student_login');
       localStorage.setItem("gm_layer", 'student_login');

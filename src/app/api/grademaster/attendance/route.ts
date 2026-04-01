@@ -2,9 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { checkRateLimit } from '@/lib/grademaster/security';
 import { getAdminSession } from '@/lib/grademaster/admin';
+import { getStudentSession } from '@/lib/grademaster/studentAuth';
 
 export async function GET(req: NextRequest) {
   try {
+    const adminSession = await getAdminSession();
+    const studentSession = await getStudentSession();
+
+    if (!adminSession && !studentSession) {
+      return NextResponse.json({ error: 'Akses ditolak: Silakan login terlebih dahulu' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
     const className = searchParams.get('class');
     const academicYear = searchParams.get('year');
@@ -13,6 +21,13 @@ export async function GET(req: NextRequest) {
 
     if (!className || !academicYear || !subject) {
       return NextResponse.json({ error: 'Data kelas, tahun ajaran, dan mata pelajaran wajib diisi' }, { status: 400 });
+    }
+
+    // Security: Students can only view attendance for their own class
+    if (studentSession && !adminSession) {
+      if (studentSession.student.class_name !== className) {
+        return NextResponse.json({ error: 'Akses ditolak: Anda hanya dapat melihat absensi kelas Anda sendiri' }, { status: 403 });
+      }
     }
 
     let query = supabase
@@ -28,11 +43,14 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await query.order('student_name', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error('[GET Attendance] DB Error:', error);
+      throw error;
+    }
     return NextResponse.json({ attendance: data || [] });
   } catch (err: any) {
-    console.error('Fetch attendance error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('Fetch attendance failure:', err);
+    return NextResponse.json({ error: err.message || 'Gagal memuat data absensi' }, { status: 500 });
   }
 }
 
@@ -49,7 +67,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { records } = body; // Array of { student_name, class_name, subject, academic_year, status, date }
+    const { records } = body; 
 
     if (!Array.isArray(records) || records.length === 0) {
       return NextResponse.json({ error: 'Data absensi wajib diisi' }, { status: 400 });
@@ -60,10 +78,13 @@ export async function POST(req: NextRequest) {
       .upsert(records, { onConflict: 'student_name, class_name, subject, date' })
       .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[POST Attendance] Upsert Error:', error);
+      throw error;
+    }
     return NextResponse.json({ message: 'Absensi berhasil disimpan', data });
   } catch (err: any) {
-    console.error('Save attendance error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('Save attendance failure:', err);
+    return NextResponse.json({ error: err.message || 'Gagal menyimpan absensi' }, { status: 500 });
   }
 }

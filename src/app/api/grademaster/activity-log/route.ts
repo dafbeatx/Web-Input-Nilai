@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { checkRateLimit } from '@/lib/grademaster/security';
+import { getStudentSession } from '@/lib/grademaster/studentAuth';
+import { getAdminSession } from '@/lib/grademaster/admin';
 
 export async function POST(req: NextRequest) {
   try {
+    const studentSession = await getStudentSession();
+    const adminSession = await getAdminSession();
+
+    if (!studentSession && !adminSession) {
+      return NextResponse.json({ error: 'Akses ditolak: Login diperlukan' }, { status: 403 });
+    }
+
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`activity-log:${ip}`)) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
@@ -20,7 +29,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'attemptId and events[] required' }, { status: 400 });
     }
 
-    // Cap batch size to prevent abuse
     const batch = events.slice(0, 50);
 
     const rows = batch.map((evt: { eventType: string; severity: string; riskPoints: number; metadata?: Record<string, unknown> }) => ({
@@ -36,11 +44,10 @@ export async function POST(req: NextRequest) {
       .insert(rows);
 
     if (insertErr) {
-      console.error('Activity log insert error:', insertErr);
+      console.error('[POST Activity Log] Insert Error:', insertErr);
       return NextResponse.json({ error: 'Failed to save logs' }, { status: 500 });
     }
 
-    // Accumulate risk score on the attempt
     const totalNewPoints = rows.reduce((sum: number, r: { risk_points: number }) => sum + r.risk_points, 0);
     if (totalNewPoints > 0) {
       const { data: attempt } = await supabase
@@ -64,8 +71,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ ok: true, logged: rows.length });
-  } catch (err) {
-    console.error('Activity log error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } catch (err: any) {
+    console.error('Activity log failure:', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
 }

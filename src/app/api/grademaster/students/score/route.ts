@@ -6,7 +6,7 @@ export async function PATCH(req: NextRequest) {
   try {
     const adminSession = await getAdminSession();
     if (!adminSession) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Akses ditolak: Admin session required' }, { status: 403 });
     }
 
     const body = await req.json();
@@ -20,7 +20,6 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Nilai harus antara 0 dan 100' }, { status: 400 });
     }
 
-    // Jika Admin mengganti skor secara manual, kita reset status remedialnya secara total (bersih)
     const { error } = await supabase
       .from('gm_students')
       .update({
@@ -39,12 +38,14 @@ export async function PATCH(req: NextRequest) {
       })
       .eq('id', studentId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('[PATCH Score] DB Error:', error);
+      throw error;
+    }
 
     return NextResponse.json({ message: 'Nilai berhasil diperbarui', newScore });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Gagal memperbarui nilai';
-    console.error('Score update error:', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (err: any) {
+    console.error('Score override failure:', err);
+    return NextResponse.json({ error: err.message || 'Gagal memperbarui nilai' }, { status: 500 });
   }
 }

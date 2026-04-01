@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
+import { getAdminSession } from '@/lib/grademaster/admin';
 import { checkRateLimit } from '@/lib/grademaster/security';
 
 export async function GET(req: NextRequest) {
@@ -8,6 +9,12 @@ export async function GET(req: NextRequest) {
     const className = searchParams.get('class');
     const academicYear = searchParams.get('year');
 
+    // Admin session check for security
+    const adminSession = await getAdminSession();
+    if (!adminSession) {
+      return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 });
+    }
+
     if (!className) {
       const year = academicYear || "2025/2026";
       const { data, error } = await supabase
@@ -15,7 +22,10 @@ export async function GET(req: NextRequest) {
         .select('class_name')
         .eq('academic_year', year);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[GET Behaviors - Classes] DB Error:', error);
+        throw error;
+      }
       const classes = Array.from(new Set(data?.map(d => d.class_name) || []));
       return NextResponse.json({ classes });
     }
@@ -31,17 +41,25 @@ export async function GET(req: NextRequest) {
       .eq('academic_year', academicYear)
       .order('student_name', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error('[GET Behaviors - Students] DB Error:', error);
+      throw error;
+    }
 
     return NextResponse.json({ students: data || [] });
   } catch (err: any) {
-    console.error('Fetch behaviors error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('Fetch behaviors global error:', err);
+    return NextResponse.json({ error: err.message || 'Gagal memuat data perilaku' }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const adminSession = await getAdminSession();
+    if (!adminSession) {
+      return NextResponse.json({ error: 'Unauthorized: Only admin can initialize student data' }, { status: 403 });
+    }
+
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`behaviors_post:${ip}`)) {
       return NextResponse.json({ error: 'Terlalu banyak permintaan' }, { status: 429 });
@@ -62,24 +80,16 @@ export async function POST(req: NextRequest) {
       behavior_logs: []
     }));
 
-    // Insert ignoring conflicts (due to UNIQUE constraint) to not overwrite existing students
-    const { error } = await supabase
-      .from('gm_behaviors')
-      .insert(insertPayload)
-      .select();
-
-    // Supabase will throw error if there's a conflict and we don't have ON CONFLICT DO NOTHING.
-    // Instead of raw raw query, let's upsert where we just ignore conflicts, or we can use upsert.
-    // Wait, upserting will reset points to 100 if we don't handle it. Let's do an onConflict do nothing.
-    // Supabase js `.upsert([], { ignoreDuplicates: true })`
     const { data: finalInsert, error: upsertError } = await supabase
       .from('gm_behaviors')
       .upsert(insertPayload, { onConflict: 'student_name, class_name, academic_year', ignoreDuplicates: true })
       .select();
 
-    if (upsertError) throw upsertError;
+    if (upsertError) {
+      console.error('[POST Behaviors] Upsert error:', upsertError);
+      throw upsertError;
+    }
 
-    // Fetch the updated list
     const { data: currentStudents, error: fetchErr } = await supabase
       .from('gm_behaviors')
       .select('*')
@@ -91,15 +101,20 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ students: currentStudents });
   } catch (err: any) {
-    console.error('Create behaviors error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('Create behaviors failure:', err);
+    return NextResponse.json({ error: err.message || 'Gagal menginisialisasi siswa' }, { status: 500 });
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
+    const adminSession = await getAdminSession();
+    if (!adminSession) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
-    if (!checkRateLimit(`behaviors_post:${ip}`)) {
+    if (!checkRateLimit(`behaviors_delete:${ip}`)) {
       return NextResponse.json({ error: 'Terlalu banyak permintaan' }, { status: 429 });
     }
     
@@ -108,28 +123,37 @@ export async function DELETE(req: NextRequest) {
     const cls = searchParams.get('class');
     const year = searchParams.get('year');
 
-    // Delete entire class
     if (cls && year) {
       const { error } = await supabase.from('gm_behaviors').delete().eq('class_name', cls).eq('academic_year', year);
-      if (error) throw error;
+      if (error) {
+        console.error('[DELETE Behaviors - Class] Error:', error);
+        throw error;
+      }
       return NextResponse.json({ message: `Kelas ${cls} berhasil dihapus` });
     }
 
-    // Delete single student
     if (!id) return NextResponse.json({ error: 'ID wajib diisi' }, { status: 400 });
     const { error } = await supabase.from('gm_behaviors').delete().eq('id', id);
-    if (error) throw error;
+    if (error) {
+      console.error('[DELETE Behaviors - Single] Error:', error);
+      throw error;
+    }
     return NextResponse.json({ message: 'Siswa berhasil dihapus' });
   } catch (err: any) {
-    console.error('Delete behaviors error:', err);
+    console.error('Delete behaviors failure:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
+    const adminSession = await getAdminSession();
+    if (!adminSession) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
-    if (!checkRateLimit(`behaviors_post:${ip}`)) {
+    if (!checkRateLimit(`behaviors_patch:${ip}`)) {
       return NextResponse.json({ error: 'Terlalu banyak permintaan' }, { status: 429 });
     }
 
@@ -146,10 +170,13 @@ export async function PATCH(req: NextRequest) {
       .eq('class_name', oldClassName)
       .eq('academic_year', academicYear);
 
-    if (error) throw error;
+    if (error) {
+      console.error('[PATCH Behaviors] Class update error:', error);
+      throw error;
+    }
     return NextResponse.json({ message: `Kelas berhasil diubah dari ${oldClassName} ke ${newClassName}` });
   } catch (err: any) {
-    console.error('Patch behaviors error:', err);
+    console.error('Patch behaviors failure:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

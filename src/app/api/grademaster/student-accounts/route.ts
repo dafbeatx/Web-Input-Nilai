@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
     const academicYear = searchParams.get('year') || '2025/2026';
     const mode = searchParams.get('mode');
 
+    // Special mode for login check (does not require admin session)
     if (mode === 'login') {
       const username = searchParams.get('username');
       if (!username) {
@@ -42,20 +43,29 @@ export async function GET(req: NextRequest) {
 
       const { data, error } = await supabase
         .from('gm_student_accounts')
-        .select('id, student_name, class_name, academic_year, username, password_hash, profile_photo_url')
-        .eq('username', username)
+        .select(`
+          id, 
+          student_name, 
+          class_name, 
+          academic_year, 
+          username, 
+          password_hash, 
+          profile_photo_url
+        `)
+        .eq('username', username.trim().toLowerCase())
         .single();
 
       if (error || !data) {
-        return NextResponse.json({ error: 'Akun tidak ditemukan' }, { status: 404 });
+        return NextResponse.json({ error: 'Akun siswa tidak ditemukan' }, { status: 404 });
       }
 
       return NextResponse.json({ account: data });
     }
 
+    // All other modes require admin session
     const adminSession = await getAdminSession();
     if (!adminSession) {
-      return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
+      return NextResponse.json({ error: 'Akses ditolak: Sesi admin tidak valid' }, { status: 403 });
     }
 
     let query = supabase
@@ -70,12 +80,15 @@ export async function GET(req: NextRequest) {
     }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      console.error('[GET Student Accounts] Database error:', error);
+      throw error;
+    }
 
     return NextResponse.json({ accounts: data || [] });
   } catch (err: any) {
-    console.error('Fetch student accounts error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('Fetch student accounts critical error:', err);
+    return NextResponse.json({ error: err.message || 'Gagal memuat akun siswa' }, { status: 500 });
   }
 }
 
@@ -88,7 +101,7 @@ export async function POST(req: NextRequest) {
 
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`student_accounts_post:${ip}`)) {
-      return NextResponse.json({ error: 'Terlalu banyak permintaan' }, { status: 429 });
+      return NextResponse.json({ error: 'Terlalu banyak permintaan. Silakan coba lagi nanti.' }, { status: 429 });
     }
 
     const body = await req.json();
@@ -98,43 +111,51 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Nama kelas wajib diisi' }, { status: 400 });
     }
 
+    // Step 1: Fetch students from gm_behaviors (master registry for behavioral tracking)
     const { data: behaviorStudents, error: fetchError } = await supabase
       .from('gm_behaviors')
-      .select('name, class_name')
+      .select('student_name, class_name')
       .eq('class_name', className)
       .eq('academic_year', academicYear)
-      .order('name', { ascending: true });
+      .order('student_name', { ascending: true });
 
-    if (fetchError) throw fetchError;
-
-    if (!behaviorStudents || behaviorStudents.length === 0) {
-      return NextResponse.json({ error: 'Tidak ada siswa ditemukan di kelas ini' }, { status: 404 });
+    if (fetchError) {
+      console.error('[POST Student Accounts] Error fetching from gm_behaviors:', fetchError);
+      return NextResponse.json({ error: `Gagal mengambil data siswa: ${fetchError.message}` }, { status: 500 });
     }
 
-    const { data: existingAccounts } = await supabase
+    if (!behaviorStudents || behaviorStudents.length === 0) {
+      return NextResponse.json({ error: `Tidak ada siswa ditemukan di kelas ${className} (${academicYear})` }, { status: 404 });
+    }
+
+    // Step 2: Filter out students who already have an account
+    const { data: existingAccounts, error: existingError } = await supabase
       .from('gm_student_accounts')
       .select('student_name')
       .eq('class_name', className)
       .eq('academic_year', academicYear);
 
-    const existingNames = new Set((existingAccounts || []).map(a => a.student_name));
-
-    const newStudents = behaviorStudents.filter(s => !existingNames.has(s.name));
-
-    if (newStudents.length === 0) {
-      return NextResponse.json({ message: 'Semua siswa sudah memiliki akun', created: 0 });
+    if (existingError) {
+      console.error('[POST Student Accounts] Error checking existing accounts:', existingError);
     }
 
+    const existingNames = new Set((existingAccounts || []).map(a => a.student_name));
+    const newStudents = behaviorStudents.filter(s => !existingNames.has(s.student_name));
+
+    if (newStudents.length === 0) {
+      return NextResponse.json({ message: 'Semua siswa di kelas ini sudah memiliki akun', created: 0 });
+    }
+
+    // Step 3: Check all usernames to avoid collisions
     const { data: allUsernames } = await supabase
       .from('gm_student_accounts')
       .select('username');
 
     const usedUsernames = new Set((allUsernames || []).map(a => a.username));
-
     const accountRows = [];
 
     for (const student of newStudents) {
-      let baseUsername = generateUsername(student.name, student.class_name);
+      let baseUsername = generateUsername(student.student_name, student.class_name);
       let username = baseUsername;
       let counter = 1;
 
@@ -148,7 +169,7 @@ export async function POST(req: NextRequest) {
       const hashedPassword = await hashPassword(plainPassword);
 
       accountRows.push({
-        student_name: student.name,
+        student_name: student.student_name,
         class_name: student.class_name,
         academic_year: academicYear,
         username,
@@ -157,20 +178,24 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Step 4: Batch insert the new accounts
     const { data: inserted, error: insertError } = await supabase
       .from('gm_student_accounts')
       .insert(accountRows)
       .select();
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      console.error('[POST Student Accounts] Insert error:', insertError);
+      return NextResponse.json({ error: `Gagal menyimpan akun: ${insertError.message}` }, { status: 500 });
+    }
 
     return NextResponse.json({
       message: `${inserted?.length || 0} akun siswa berhasil dibuat untuk ${className}`,
       created: inserted?.length || 0,
     });
   } catch (err: any) {
-    console.error('Create student accounts error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('Create student accounts critical error:', err);
+    return NextResponse.json({ error: err.message || 'Gagal membuat akun siswa' }, { status: 500 });
   }
 }
 
@@ -193,11 +218,14 @@ export async function DELETE(req: NextRequest) {
       .delete()
       .eq('id', accountId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('[DELETE Student Account] Error:', error);
+      throw error;
+    }
 
     return NextResponse.json({ message: 'Akun siswa berhasil dihapus' });
   } catch (err: any) {
-    console.error('Delete student account error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('Delete student account critical error:', err);
+    return NextResponse.json({ error: err.message || 'Gagal menghapus akun siswa' }, { status: 500 });
   }
 }
