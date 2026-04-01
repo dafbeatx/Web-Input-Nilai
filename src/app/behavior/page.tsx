@@ -173,7 +173,7 @@ export default function BehaviorPage() {
   }, [students, searchQuery]);
 
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col min-h-full pt-[env(safe-area-inset-top)]">
       <TopAppBar 
         title="Disiplin & Perilaku" 
         actions={
@@ -187,24 +187,24 @@ export default function BehaviorPage() {
         {/* Search & Statistics */}
         <section className="space-y-4">
           <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors" size={18} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-[#00b4ff] transition-colors" size={18} />
             <input 
               type="text" 
               placeholder="Cari nama siswa..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-900/40 border border-white/5 focus:border-primary/50 rounded-2xl py-4 pl-12 pr-4 text-sm font-black text-white outline-none backdrop-blur-xl transition-all"
+              className="w-full bg-[#111113] border border-white/10 focus:border-[#00b4ff]/50 rounded-2xl py-4 pl-12 pr-4 text-[15px] font-sans font-medium text-white outline-none transition-all shadow-lg shadow-black/20"
             />
           </div>
           
-          <div className="flex items-center justify-between px-1">
+          <div className="flex items-center justify-between px-2">
             <div>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Menampilkan</p>
-              <h2 className="text-xl font-black text-white font-outfit uppercase tracking-tighter mt-1">{studentClass || 'Semua Kelas'}</h2>
+              <p className="text-[12px] font-sans font-medium text-slate-500 tracking-tight">Menampilkan</p>
+              <h2 className="text-xl font-sans font-bold text-white tracking-[-0.5px] mt-0.5">{studentClass || 'Semua Kelas'}</h2>
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Total Siswa</p>
-              <p className="text-xl font-black text-primary font-outfit mt-1">{filteredStudents.length}</p>
+              <p className="text-[12px] font-sans font-medium text-slate-500 tracking-tight">Total Siswa</p>
+              <p className="text-xl font-sans font-bold text-[#00b4ff] mt-0.5">{filteredStudents.length}</p>
             </div>
           </div>
         </section>
@@ -213,7 +213,15 @@ export default function BehaviorPage() {
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-12">
           {isLoading ? (
             Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-24 bg-slate-900/20 border border-white/5 rounded-[2rem] animate-pulse" />
+              <div key={i} className="bg-[#111113] border border-white/5 rounded-3xl p-5 shadow-xl animate-pulse flex flex-col gap-4">
+                <div className="flex gap-4 items-center">
+                  <div className="w-12 h-12 bg-white/5 rounded-2xl" />
+                  <div className="flex-1 space-y-3">
+                    <div className="h-4 bg-white/10 rounded-full w-3/4" />
+                    <div className="h-3 bg-white/5 rounded-full w-1/3" />
+                  </div>
+                </div>
+              </div>
             ))
           ) : filteredStudents.length > 0 ? (
             filteredStudents.map((student) => (
@@ -229,9 +237,9 @@ export default function BehaviorPage() {
               />
             ))
           ) : (
-            <div className="col-span-full py-20 text-center bg-slate-900/20 rounded-[3rem] border border-white/5 border-dashed">
-               <Users size={48} className="mx-auto text-slate-700 mb-4" />
-               <p className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Data Siswa Tidak Ditemukan</p>
+            <div className="col-span-full py-24 text-center">
+               <Users size={48} className="mx-auto text-slate-700 mb-4 stroke-1" />
+               <p className="text-[14px] font-sans font-medium text-slate-500">Data Siswa Tidak Ditemukan</p>
             </div>
           )}
         </section>
