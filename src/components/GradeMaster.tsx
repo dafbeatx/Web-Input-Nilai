@@ -42,14 +42,12 @@ export default function GradeMaster() {
   const [sessionPassword, setSessionPassword] = useState("");
   const [teacherName, setTeacherName] = useState("");
   const [subject, setSubject] = useState("");
-  const [studentClass, setStudentClass] = useState("");
   const [schoolLevel, setSchoolLevel] = useState("SMA");
   const [keyInput, setKeyInput] = useState("");
   const [answerKey, setAnswerKey] = useState<string[]>([]);
   const [studentList, setStudentList] = useState<string[]>([]);
   const [scoringConfig] = useState<ScoringConfig>(DEFAULT_SCORING_CONFIG);
   const [examType, setExamType] = useState("UTS");
-  const [academicYear, setAcademicYear] = useState("2025/2026");
   const [semester, setSemester] = useState("Ganjil");
   const [kkm, setKkm] = useState<number>(70);
   const [remedialEssayCount, setRemedialEssayCount] = useState<number>(5);
@@ -72,6 +70,8 @@ export default function GradeMaster() {
     adminUser, setAdminUser, 
     toast, setToast, 
     modal, setModal, 
+    studentClass, setStudentClass,
+    academicYear, setAcademicYear,
     logout 
   } = useGradeMaster();
 
@@ -161,10 +161,9 @@ export default function GradeMaster() {
       localStorage.setItem("gm_sessionPassword", sessionPassword);
       localStorage.setItem("gm_isPublicView", String(isPublicView));
       localStorage.setItem("gm_studentName", studentName || "");
-      localStorage.setItem("gm_studentClass", studentClass || "");
       localStorage.setItem("gm_subject", subject || "");
     }
-  }, [layer, sessionId, sessionName, sessionPassword, isPublicView, studentName, studentClass, subject]);
+  }, [layer, sessionId, sessionName, sessionPassword, isPublicView, studentName, subject]);
 
 
 

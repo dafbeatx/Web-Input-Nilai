@@ -14,6 +14,10 @@ interface GradeMasterContextType {
   setToast: (toast: ToastType | null) => void;
   modal: ModalType;
   setModal: (modal: ModalType) => void;
+  studentClass: string;
+  setStudentClass: (className: string) => void;
+  academicYear: string;
+  setAcademicYear: (year: string) => void;
   logout: () => void;
 }
 
@@ -25,6 +29,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   const [adminUser, setAdminUser] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastType | null>(null);
   const [modal, setModal] = useState<ModalType>(null);
+  const [studentClass, setStudentClass] = useState("");
+  const [academicYear, setAcademicYear] = useState("2025/2026");
 
   // Synchronization with URL Hash & LocalStorage
   useEffect(() => {
@@ -36,10 +42,15 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     // 1. Restore Admin State
     const savedAdmin = localStorage.getItem('gm_isAdmin') === 'true';
     const savedUser = localStorage.getItem('gm_adminUser');
+    const savedClass = localStorage.getItem('gm_studentClass');
+    const savedYear = localStorage.getItem('gm_academicYear') || "2025/2026";
+    
     if (savedAdmin) {
       setIsAdmin(true);
       setAdminUser(savedUser);
     }
+    if (savedClass) setStudentClass(savedClass);
+    setAcademicYear(savedYear);
 
     // 2. Determine Initial Layer
     let initialLayer: Layer = 'home';
@@ -71,6 +82,13 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  // Sync state to LocalStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("gm_studentClass", studentClass);
+    localStorage.setItem("gm_academicYear", academicYear);
+  }, [studentClass, academicYear]);
 
   // Update URL and LocalStorage on Layer change
   const navigate = (newLayer: Layer) => {
@@ -107,6 +125,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       adminUser, setAdminUser,
       toast, setToast,
       modal, setModal,
+      studentClass, setStudentClass,
+      academicYear, setAcademicYear,
       logout
     }}>
       {children}
