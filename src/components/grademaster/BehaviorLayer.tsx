@@ -293,7 +293,7 @@ export default function BehaviorLayer({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in pt-16 pb-24 md:pb-8">
+    <div className="min-h-screen bg-slate-950 p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in pt-[calc(5rem+env(safe-area-inset-top))] md:pt-16 pb-24 md:pb-8">
       <header className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <button type="button" onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-primary font-black text-[10px] uppercase tracking-widest transition-all mb-4 bg-white/5 px-4 py-2 rounded-xl border border-white/10 hover:border-primary/20">
@@ -516,7 +516,7 @@ export default function BehaviorLayer({
               {/* Content Area */}
               <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2">
                 {/* Left Column: History (Always visible on LG, conditional on mobile) */}
-                <div className={`flex flex-col bg-slate-950/20 ${activeModalTab === 'HISTORY' ? 'flex' : 'hidden lg:flex'}`}>
+                <div className={`flex-col bg-slate-950/20 lg:flex ${activeModalTab === 'HISTORY' ? 'flex' : 'hidden'}`}>
                     <div className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between hidden md:flex">
                       <h3 className="text-xs font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
                           <Clock size={14} className="text-primary" /> Riwayat Transparansi
@@ -615,7 +615,7 @@ export default function BehaviorLayer({
 
                 {/* Right Column: Management (LG: Always visible, SM: Conditional) */}
                 {isAdmin && (
-                  <div className={`flex flex-col p-4 md:p-10 space-y-6 md:space-y-10 overflow-y-auto custom-scrollbar border-l border-white/10 bg-slate-900/10 ${activeModalTab === 'MANAGE' ? 'flex' : 'hidden lg:flex'}`}>
+                  <div className={`flex-col p-4 md:p-10 space-y-6 md:space-y-10 overflow-y-auto custom-scrollbar border-l border-white/10 bg-slate-900/10 lg:flex ${activeModalTab === 'MANAGE' ? 'flex' : 'hidden'}`}>
                       <div>
                         <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-4 md:mb-8 flex items-center gap-2 hidden lg:flex">
                             <PlusCircle size={14} /> Kelola Poin Baru
