@@ -293,36 +293,54 @@ export default function AttendanceLayer({
 
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       {['Hadir', 'Izin', 'Sakit', 'Alpa'].map((status) => {
-                        const active = attendanceMap[name] === status;
+                        const currentStatus = attendanceMap[name] || 'Hadir';
+                        const active = currentStatus === status;
+                        
                         const colors = {
                           'Hadir': 'bg-emerald-500 border-emerald-500/20 text-white',
-                          'Izin': 'bg-sky-500 border-sky-500/20 text-white',
-                          'Sakit': 'bg-amber-500 border-amber-500/20 text-white',
+                          'Izin': 'bg-amber-500 border-amber-500/20 text-white',
+                          'Sakit': 'bg-sky-500 border-sky-500/20 text-white',
                           'Alpa': 'bg-rose-500 border-rose-500/20 text-white'
                         };
                         const inactiveColors = {
                           'Hadir': 'hover:text-emerald-500 hover:border-emerald-500/20',
-                          'Izin': 'hover:text-sky-500 hover:border-sky-500/20',
-                          'Sakit': 'hover:text-amber-500 hover:border-amber-500/20',
+                          'Izin': 'hover:text-amber-500 hover:border-amber-500/20',
+                          'Sakit': 'hover:text-sky-500 hover:border-sky-500/20',
                           'Alpa': 'hover:text-rose-500 hover:border-rose-500/20'
                         };
                         
-                        return (
-                          <button 
-                            key={status}
-                            disabled={!isAdmin}
-                            onClick={() => handleStatusChange(name, status)}
-                            className={`
-                              flex-1 sm:flex-none px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all border
-                              ${active 
-                                ? `${colors[status as keyof typeof colors]} shadow-lg shadow-black/20` 
-                                : `bg-slate-950/50 text-slate-500 border-white/5 ${inactiveColors[status as keyof typeof inactiveColors]}`}
-                              ${!isAdmin && 'cursor-default opacity-80'}
-                            `}
-                          >
-                            {status[0]}<span className="hidden sm:inline">{status.slice(1)}</span>
-                          </button>
-                        );
+                        if (isAdmin) {
+                          // Admin view: interactive buttons for changing status
+                          return (
+                            <button 
+                              key={status}
+                              onClick={() => handleStatusChange(name, status)}
+                              className={`
+                                flex-1 sm:flex-none px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all border
+                                ${active 
+                                  ? `${colors[status as keyof typeof colors]} shadow-lg shadow-black/20` 
+                                  : `bg-slate-950/50 text-slate-500 border-white/5 ${inactiveColors[status as keyof typeof inactiveColors]}`}
+                              `}
+                            >
+                              {status[0]}<span className="hidden sm:inline">{status.slice(1)}</span>
+                            </button>
+                          );
+                        } else if (active) {
+                          // Non-admin view: static, non-clickable pill indicator
+                          return (
+                            <div 
+                              key={status}
+                              className={`
+                                px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all cursor-default
+                                ${colors[status as keyof typeof colors]} shadow-lg shadow-black/20
+                              `}
+                            >
+                              {status}
+                            </div>
+                          );
+                        }
+                        
+                        return null; // Don't show inactive states to normal users
                       })}
                     </div>
                   </div>

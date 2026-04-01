@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { checkRateLimit } from '@/lib/grademaster/security';
+import { getAdminSession } from '@/lib/grademaster/admin';
 
 export async function GET(req: NextRequest) {
   try {
@@ -37,6 +38,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const adminSession = await getAdminSession();
+    if (!adminSession) {
+      return NextResponse.json({ error: 'Akses ditolak: Hanya admin yang dapat mengubah absensi' }, { status: 403 });
+    }
+
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`attendance_post:${ip}`)) {
       return NextResponse.json({ error: 'Terlalu banyak permintaan' }, { status: 429 });
