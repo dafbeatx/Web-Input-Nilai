@@ -591,3 +591,20 @@ CREATE POLICY "gm_exams_log_anon_access" ON public.gm_exams_log
 
 CREATE INDEX IF NOT EXISTS idx_gm_exams_log_session ON public.gm_exams_log(session_id);
 CREATE INDEX IF NOT EXISTS idx_gm_exams_log_student ON public.gm_exams_log(student_id);
+
+-- ============================================================
+-- STUDENT SESSIONS (Auth - separate from admin sessions)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.gm_student_sessions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    account_id UUID NOT NULL REFERENCES public.gm_student_accounts(id) ON DELETE CASCADE,
+    token TEXT NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.gm_student_sessions ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS idx_gm_student_sessions_token ON public.gm_student_sessions(token);
+CREATE INDEX IF NOT EXISTS idx_gm_student_sessions_account ON public.gm_student_sessions(account_id);
+

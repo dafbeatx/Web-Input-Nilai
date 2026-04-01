@@ -6,11 +6,12 @@ export async function GET() {
     const session = await getAdminSession();
 
     if (!session) {
-      return NextResponse.json({ authenticated: false });
+      return NextResponse.json({ authenticated: false, role: null });
     }
 
     return NextResponse.json({ 
       authenticated: true, 
+      role: 'admin',
       username: (session.admin_users as any).username 
     });
   } catch (err) {
