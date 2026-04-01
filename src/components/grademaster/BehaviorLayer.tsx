@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Users, Search, PlusCircle, MinusCircle, AlertCircle, Save, Loader2, UserPlus, FileText, LayoutGrid, Trash2, Pencil, ShieldCheck, ThumbsUp, ThumbsDown, X, Clock, Calendar, ChevronRight, BarChart3, Activity } from 'lucide-react';
+import { ArrowLeft, Users, Search, PlusCircle, MinusCircle, AlertCircle, Save, Loader2, UserPlus, FileText, LayoutGrid, Trash2, Pencil, ShieldCheck, ThumbsUp, ThumbsDown, X, Clock, Calendar, ChevronRight, BarChart3, Activity, ListChecks, History } from 'lucide-react';
 import { ToastType, GradedStudent } from '@/lib/grademaster/types';
 import { 
   addBehaviorAction, 
@@ -59,6 +59,7 @@ export default function BehaviorLayer({
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ reason: '', points: 0 });
+  const [activeModalTab, setActiveModalTab] = useState<'HISTORY' | 'MANAGE'>('HISTORY');
 
   // Settings State
   const [isManagingReasons, setIsManagingReasons] = useState(false);
@@ -87,6 +88,7 @@ export default function BehaviorLayer({
   useEffect(() => {
     if (selectedStudent) {
       fetchStudentLogs(selectedStudent.id);
+      setActiveModalTab('HISTORY'); // Default to history when opening modal
     } else {
       setStudentLogs([]);
       setEditingLogId(null);
@@ -214,6 +216,9 @@ export default function BehaviorLayer({
       setSelectedStudent(prev => prev ? { ...prev, total_points: result.data.new_total } : null);
       // Refresh logs
       fetchStudentLogs(selectedStudent.id);
+      
+      // On mobile, switch to history tab after adding to show the change
+      if (window.innerWidth < 1024) setActiveModalTab('HISTORY');
     } else {
       setToast({ message: result.error || "Gagal menambah catatan", type: "error" });
     }
@@ -459,25 +464,25 @@ export default function BehaviorLayer({
           </div>
       )}
 
-      {/* DETAIL MODAL (Admin & User View) */}
+      {/* COMPACT & TABBED DETAIL MODAL */}
       {selectedStudent && (
         <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl z-[1000] flex items-center justify-center p-0 md:p-10 animate-in fade-in duration-300">
           <div className="bg-slate-900/50 border border-white/10 w-full h-full md:h-auto max-w-6xl md:rounded-[3rem] overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col">
-              {/* Header */}
-              <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-6 md:p-10 border-b border-white/10 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-6">
-                    <div className={`w-16 h-16 md:w-24 md:h-24 rounded-[2rem] border flex flex-col items-center justify-center shadow-2xl shrink-0 ${
+              {/* Sticky Compact Header */}
+              <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-4 md:p-8 border-b border-white/10 flex items-center justify-between shrink-0 sticky top-0 z-20">
+                <div className="flex items-center gap-4 md:gap-6">
+                    <div className={`w-12 h-12 md:w-20 md:h-20 rounded-2xl md:rounded-[2rem] border flex flex-col items-center justify-center shadow-2xl shrink-0 ${
                        selectedStudent.total_points >= 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/20' : 'bg-primary/10 text-primary border-primary/20 shadow-primary/20'
                     }`}>
-                      <span className="text-xl md:text-3xl font-black">{selectedStudent.total_points}</span>
-                      <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest opacity-60">Total</span>
+                      <span className="text-lg md:text-3xl font-black">{selectedStudent.total_points}</span>
+                      <span className="text-[6px] md:text-[8px] font-black uppercase tracking-widest opacity-60 hidden md:inline">Total</span>
                     </div>
                     <div>
-                      <h2 className="text-xl md:text-4xl font-black text-white font-outfit uppercase tracking-tighter">{selectedStudent.student_name}</h2>
-                      <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-2">
-                          <span className="px-3 py-1 bg-white/5 rounded-full text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest border border-white/10">Kelas {className}</span>
-                          <span className="px-3 py-1 bg-primary/10 rounded-full text-[8px] md:text-[10px] font-black text-primary uppercase tracking-widest border border-primary/20 flex items-center gap-2">
-                             <Activity size={10} /> {academicYear}
+                      <h2 className="text-base md:text-3xl font-black text-white font-outfit uppercase tracking-tighter line-clamp-1">{selectedStudent.student_name}</h2>
+                      <div className="flex flex-wrap items-center gap-1.5 md:gap-3 mt-1 md:mt-2">
+                          <span className="px-2 py-0.5 bg-white/5 rounded-full text-[7px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest border border-white/10">{className}</span>
+                          <span className="px-2 py-0.5 bg-primary/10 rounded-full text-[7px] md:text-[9px] font-black text-primary uppercase tracking-widest border border-primary/20 flex items-center gap-1">
+                             <Activity size={8} className="md:w-3 md:h-3" /> {academicYear}
                           </span>
                       </div>
                     </div>
@@ -489,23 +494,41 @@ export default function BehaviorLayer({
                   <X size={20} />
                 </button>
               </div>
+
+              {/* Mobile Mobile Tabs Navigation */}
+              {isAdmin && (
+                <div className="flex lg:hidden bg-slate-900 border-b border-white/5 sticky top-[73px] z-20">
+                    <button 
+                      onClick={() => setActiveModalTab('HISTORY')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-4 text-[10px] font-black tracking-[0.2em] transition-all ${activeModalTab === 'HISTORY' ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-slate-500'}`}
+                    >
+                      <History size={14} /> RIWAYAT
+                    </button>
+                    <button 
+                      onClick={() => setActiveModalTab('MANAGE')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-4 text-[10px] font-black tracking-[0.2em] transition-all ${activeModalTab === 'MANAGE' ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-slate-500'}`}
+                    >
+                      <PlusCircle size={14} /> TAMBAH POIN
+                    </button>
+                </div>
+              )}
               
-              {/* Content */}
-              <div className={`flex-1 overflow-hidden grid grid-cols-1 ${isAdmin ? 'lg:grid-cols-2' : ''}`}>
-                {/* History List */}
-                <div className="flex flex-col bg-slate-950/20">
-                    <div className="p-6 border-b border-white/5 flex items-center justify-between">
+              {/* Content Area */}
+              <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2">
+                {/* Left Column: History (Always visible on LG, conditional on mobile) */}
+                <div className={`flex flex-col bg-slate-950/20 ${activeModalTab === 'HISTORY' ? 'flex' : 'hidden lg:flex'}`}>
+                    <div className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between hidden md:flex">
                       <h3 className="text-xs font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
                           <Clock size={14} className="text-primary" /> Riwayat Transparansi
                       </h3>
                       <span className="px-3 py-1 bg-white/5 rounded-lg text-[9px] font-bold text-slate-500 uppercase tracking-widest">{studentLogs.length} LOG</span>
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-3 custom-scrollbar">
                       {isLoadingLogs ? (
                           <div className="flex flex-col items-center justify-center py-20 opacity-40">
                             <Loader2 size={24} className="animate-spin mb-2" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Sinkronisasi Log...</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest">Sinkronisasi...</p>
                           </div>
                       ) : studentLogs.length > 0 ? (
                         studentLogs.map((log) => (
@@ -519,7 +542,7 @@ export default function BehaviorLayer({
                                             type="number" 
                                             value={editForm.points} 
                                             onChange={(e) => setEditForm(prev => ({ ...prev, points: parseInt(e.target.value) }))}
-                                            className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs font-black text-white outline-none focus:border-primary"
+                                            className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs font-black text-white outline-none"
                                           />
                                         </div>
                                         <div>
@@ -528,7 +551,7 @@ export default function BehaviorLayer({
                                             type="text" 
                                             value={editForm.reason} 
                                             onChange={(e) => setEditForm(prev => ({ ...prev, reason: e.target.value }))}
-                                            className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs font-black text-white outline-none focus:border-primary"
+                                            className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs font-black text-white outline-none"
                                           />
                                         </div>
                                     </div>
@@ -538,46 +561,42 @@ export default function BehaviorLayer({
                                     </div>
                                   </div>
                               ) : (
-                                <div className="flex items-start justify-between gap-4">
-                                    <div className="flex items-start gap-4">
-                                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-start gap-3">
+                                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
                                           log.points_delta > 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                                       }`}>
-                                          {log.points_delta > 0 ? <ThumbsUp size={16} /> : <ThumbsDown size={16} />}
+                                          {log.points_delta > 0 ? <ThumbsUp size={14} /> : <ThumbsDown size={14} />}
                                       </div>
                                       <div>
                                           <div className="flex items-center gap-2 mb-1">
-                                            <span className={`text-sm font-black ${log.points_delta > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                {log.points_delta > 0 ? '+' : ''}{log.points_delta} Poin
+                                            <span className={`text-xs md:text-sm font-black ${log.points_delta > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                {log.points_delta > 0 ? '+' : ''}{log.points_delta}
                                             </span>
-                                            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest flex items-center gap-1.5">
+                                            <span className="text-[8px] md:text-[10px] font-bold text-slate-600 uppercase tracking-widest flex items-center gap-1">
                                                 <Calendar size={10} /> {formatDate(log.created_at)}
                                             </span>
                                           </div>
-                                          <h4 className="text-white font-black text-sm uppercase tracking-tight">{log.reason}</h4>
-                                          <div className="flex items-center gap-2 mt-1">
-                                             <div className={`w-1 h-1 rounded-full ${log.points_delta > 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                                             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{log.points_delta > 0 ? 'Tindakan Terpuji' : 'Pelanggaran'}</p>
-                                          </div>
+                                          <h4 className="text-white font-black text-[11px] md:text-sm uppercase tracking-tight line-clamp-2 leading-tight">{log.reason}</h4>
                                       </div>
                                     </div>
                                     
                                     {isAdmin && (
-                                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                         <button 
                                           onClick={() => {
                                             setEditingLogId(log.id);
                                             setEditForm({ reason: log.reason, points: log.points_delta });
                                           }}
-                                          className="p-2 bg-white/5 text-slate-500 hover:text-primary rounded-lg border border-white/10 transition-colors"
+                                          className="p-1.5 bg-white/5 text-slate-500 hover:text-primary rounded-lg border border-white/10"
                                         >
-                                            <Pencil size={14} />
+                                            <Pencil size={12} />
                                         </button>
                                         <button 
                                           onClick={() => handleDeleteLog(log.id)}
-                                          className="p-2 bg-white/5 text-slate-500 hover:text-rose-500 rounded-lg border border-white/10 transition-colors"
+                                          className="p-1.5 bg-white/5 text-slate-500 hover:text-rose-500 rounded-lg border border-white/10"
                                         >
-                                            <Trash2 size={14} />
+                                            <Trash2 size={12} />
                                         </button>
                                       </div>
                                     )}
@@ -586,34 +605,35 @@ export default function BehaviorLayer({
                             </div>
                         ))
                       ) : (
-                          <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
-                            <FileText size={32} className="mx-auto text-slate-700 mb-4" />
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Belum ada riwayat tercatat</p>
+                          <div className="text-center py-10 opacity-50">
+                            <FileText size={24} className="mx-auto text-slate-700 mb-2" />
+                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Belum ada riwayat</p>
                           </div>
                       )}
                     </div>
                 </div>
 
-                {/* Admin-only Forms */}
+                {/* Right Column: Management (LG: Always visible, SM: Conditional) */}
                 {isAdmin && (
-                  <div className="flex flex-col p-6 md:p-10 space-y-10 overflow-y-auto custom-scrollbar border-l border-white/10">
+                  <div className={`flex flex-col p-4 md:p-10 space-y-6 md:space-y-10 overflow-y-auto custom-scrollbar border-l border-white/10 bg-slate-900/10 ${activeModalTab === 'MANAGE' ? 'flex' : 'hidden lg:flex'}`}>
                       <div>
-                        <h3 className="text-xs font-black text-primary uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
+                        <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-4 md:mb-8 flex items-center gap-2 hidden lg:flex">
                             <PlusCircle size={14} /> Kelola Poin Baru
                         </h3>
                         
-                        <div className="grid grid-cols-1 gap-8">
+                        <div className="space-y-8">
+                            {/* Pelanggaran Section */}
                             <div className="space-y-4">
-                              <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-2 mb-4">
-                                  <MinusCircle size={14} /> Pelanggaran Siswa
+                              <h4 className="text-[9px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
+                                  <MinusCircle size={14} className="text-rose-500/50" /> Pelanggaran
                               </h4>
-                              <div className="grid grid-cols-2 gap-3">
+                              <div className="grid grid-cols-2 gap-2 md:gap-3">
                                   {behaviorReasons.bad.map(r => (
                                     <button 
                                       key={r} 
                                       disabled={isUpdatingPoints}
                                       onClick={() => handleAddBehavior('BAD', 10, r)} 
-                                      className="p-4 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 hover:border-rose-500/30 rounded-2xl text-left text-[10px] font-black text-rose-400 uppercase tracking-widest transition-all"
+                                      className="p-3 md:p-4 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 hover:border-rose-500/30 rounded-xl md:rounded-2xl text-left text-[9px] font-black text-rose-300 uppercase tracking-widest transition-all active:scale-95 leading-tight"
                                     >
                                       {r}
                                     </button>
@@ -621,17 +641,18 @@ export default function BehaviorLayer({
                               </div>
                             </div>
                             
+                            {/* Terpuji Section */}
                             <div className="space-y-4">
-                              <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2 mb-4">
-                                  <PlusCircle size={14} /> Tindakan Terpuji
+                              <h4 className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
+                                  <PlusCircle size={14} className="text-emerald-500/50" /> Tindakan Terpuji
                               </h4>
-                              <div className="grid grid-cols-2 gap-3">
+                              <div className="grid grid-cols-2 gap-2 md:gap-3">
                                   {behaviorReasons.good.map(r => (
                                     <button 
                                       key={r} 
                                       disabled={isUpdatingPoints}
                                       onClick={() => handleAddBehavior('GOOD', 10, r)} 
-                                      className="p-4 bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/10 hover:border-emerald-500/30 rounded-2xl text-left text-[10px] font-black text-emerald-400 uppercase tracking-widest transition-all"
+                                      className="p-3 md:p-4 bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/10 hover:border-emerald-500/30 rounded-xl md:rounded-2xl text-left text-[9px] font-black text-emerald-300 uppercase tracking-widest transition-all active:scale-95 leading-tight"
                                     >
                                       {r}
                                     </button>
@@ -639,6 +660,15 @@ export default function BehaviorLayer({
                               </div>
                             </div>
                         </div>
+                      </div>
+
+                      {/* Integrity box - Always at bottom */}
+                      <div className="p-5 md:p-8 bg-slate-950/40 rounded-3xl border border-white/5 relative overflow-hidden group mt-auto">
+                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <ShieldCheck size={64} className="text-primary" />
+                        </div>
+                        <h4 className="text-[12px] font-black text-white uppercase tracking-tight mb-1">Integritas Data</h4>
+                        <p className="text-[9px] text-slate-500 font-bold leading-relaxed uppercase tracking-wider">Sinkronisasi otomatis via RPC GradeMaster OS.</p>
                       </div>
                   </div>
                 )}
