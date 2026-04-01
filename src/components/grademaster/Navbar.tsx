@@ -16,8 +16,12 @@ import {
   Calendar,
 } from 'lucide-react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
+import { usePathname, useRouter } from 'next/navigation';
 
 export default function Navbar() {
+  const pathname = usePathname();
+  const router = useRouter();
+
   const { 
     isAdmin, 
     adminUser, 
@@ -29,7 +33,8 @@ export default function Navbar() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Hidden in exam and login
+  // Hidden in behavior page (uses its own nav), exam and login
+  if (pathname?.startsWith('/behavior')) return null;
   if (['login', 'remedial'].includes(layer)) return null;
 
   const onOpenSettings = () => setModal("adminSettings");
