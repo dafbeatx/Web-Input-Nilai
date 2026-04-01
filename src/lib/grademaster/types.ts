@@ -129,6 +129,30 @@ export interface AnalyticsResult {
   correctVsWrong: { correct: number; wrong: number };
 }
 
+export interface StudentAccount {
+  id: string;
+  student_name: string;
+  class_name: string;
+  academic_year: string;
+  username: string;
+  password_hash?: string;
+  password_plain?: string | null;
+  profile_photo_url?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExamsLog {
+  id: string;
+  session_id: string;
+  student_id: string;
+  event_type: string;
+  severity: string;
+  description?: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+}
+
 export type ModalType = 'save' | 'load' | 'delete' | 'about' | 'error' | 'adminSettings' | null;
 export type ToastType = { message: string; type: 'success' | 'error' } | null;
-export type Layer = 'home' | 'setup' | 'dashboard' | 'grading' | 'login' | 'remedial' | 'behavior' | 'remedial_dashboard' | 'attendance';
+export type Layer = 'home' | 'setup' | 'dashboard' | 'grading' | 'login' | 'remedial' | 'behavior' | 'remedial_dashboard' | 'attendance' | 'student_accounts';

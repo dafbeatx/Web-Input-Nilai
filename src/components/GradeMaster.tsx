@@ -28,6 +28,7 @@ import StudentRemedialLayer from "./grademaster/StudentRemedialLayer";
 import BehaviorLayer from "./grademaster/BehaviorLayer";
 import RemedialDashboardLayer from "./grademaster/RemedialDashboardLayer";
 import AttendanceLayer from "./grademaster/AttendanceLayer";
+import StudentAccountsLayer from "./grademaster/StudentAccountsLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 
 const ESSAY_COUNT = 5;
@@ -856,6 +857,15 @@ export default function GradeMaster() {
           onBack={() => setLayer("home")}
           setToast={setToast}
           isAdmin={isAdmin}
+          activeClass={studentClass}
+          activeYear={academicYear}
+        />
+      )}
+
+      {layer === "student_accounts" && (
+        <StudentAccountsLayer
+          onBack={() => setLayer("home")}
+          setToast={setToast}
           activeClass={studentClass}
           activeYear={academicYear}
         />

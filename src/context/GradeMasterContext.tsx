@@ -37,7 +37,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return;
 
     const hash = window.location.hash.replace('#', '');
-    const validLayers: Layer[] = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login', 'attendance'];
+    const validLayers: Layer[] = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login', 'attendance', 'student_accounts'];
     
     // 1. Restore Admin State
     const savedAdmin = localStorage.getItem('gm_isAdmin') === 'true';

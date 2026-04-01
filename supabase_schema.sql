@@ -517,3 +517,77 @@ BEGIN
   RETURN jsonb_build_object('log_id', v_log_id, 'new_total', v_new_points);
 END;
 $$;
+
+-- ============================================================
+-- MASTER STUDENT ACCOUNTS
+-- Separate from gm_students (which is exam-scoped).
+-- This is the login/identity registry for each student.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.gm_student_accounts (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    student_name TEXT NOT NULL,
+    class_name TEXT NOT NULL,
+    academic_year TEXT NOT NULL DEFAULT '2025/2026',
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    password_plain TEXT,
+    profile_photo_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    UNIQUE(student_name, class_name, academic_year)
+);
+
+ALTER TABLE public.gm_student_accounts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "gm_student_accounts_read" ON public.gm_student_accounts;
+CREATE POLICY "gm_student_accounts_read" ON public.gm_student_accounts
+    FOR SELECT TO anon USING (true);
+
+CREATE INDEX IF NOT EXISTS idx_gm_student_accounts_class
+    ON public.gm_student_accounts(class_name, academic_year);
+CREATE INDEX IF NOT EXISTS idx_gm_student_accounts_username
+    ON public.gm_student_accounts(username);
+
+-- ============================================================
+-- ATTENDANCE (Formalized DDL)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.gm_attendance (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    student_name TEXT NOT NULL,
+    class_name TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    academic_year TEXT NOT NULL DEFAULT '2025/2026',
+    status TEXT NOT NULL DEFAULT 'Hadir',
+    date DATE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    UNIQUE(student_name, class_name, subject, date)
+);
+
+ALTER TABLE public.gm_attendance ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "gm_attendance_anon_access" ON public.gm_attendance;
+CREATE POLICY "gm_attendance_anon_access" ON public.gm_attendance
+    FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- ============================================================
+-- EXAMS LOG (Proctoring event tracking)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.gm_exams_log (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    session_id UUID REFERENCES public.gm_sessions(id) ON DELETE CASCADE,
+    student_id UUID REFERENCES public.gm_students(id) ON DELETE CASCADE,
+    event_type TEXT NOT NULL,
+    severity TEXT DEFAULT 'LOW',
+    description TEXT,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.gm_exams_log ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "gm_exams_log_anon_access" ON public.gm_exams_log;
+CREATE POLICY "gm_exams_log_anon_access" ON public.gm_exams_log
+    FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_gm_exams_log_session ON public.gm_exams_log(session_id);
+CREATE INDEX IF NOT EXISTS idx_gm_exams_log_student ON public.gm_exams_log(student_id);
