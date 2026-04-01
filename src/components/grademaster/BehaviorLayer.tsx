@@ -293,7 +293,7 @@ export default function BehaviorLayer({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in pt-[calc(5rem+env(safe-area-inset-top))] md:pt-16 pb-24 md:pb-8">
+    <div className="min-h-screen bg-slate-950 p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in page-pt md:pt-16 pb-24 md:pb-8">
       <header className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <button type="button" onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-primary font-black text-[10px] uppercase tracking-widest transition-all mb-4 bg-white/5 px-4 py-2 rounded-xl border border-white/10 hover:border-primary/20">
@@ -467,9 +467,12 @@ export default function BehaviorLayer({
       {/* COMPACT & TABBED DETAIL MODAL */}
       {selectedStudent && (
         <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl z-[1000] flex items-center justify-center p-0 md:p-10 animate-in fade-in duration-300">
-          <div className="bg-slate-900/50 border border-white/10 w-full h-full md:h-auto max-w-6xl md:rounded-[3rem] overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col">
-              {/* Sticky Compact Header */}
-              <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-4 md:p-8 border-b border-white/10 flex items-center justify-between shrink-0 sticky top-0 z-20">
+          <div className="bg-slate-900/50 border border-white/10 w-full h-full md:h-auto max-w-6xl md:rounded-[4rem] overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col">
+              {/* Top Notch Buffer (Mobile Only) */}
+              <div className="md:hidden h-[var(--safe-top)] bg-slate-950 shrink-0" />
+              
+              {/* Sticky Compact Header - Safe for Mobile */}
+              <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-5 md:p-10 border-b border-white/10 flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-xl">
                 <div className="flex items-center gap-4 md:gap-6">
                     <div className={`w-12 h-12 md:w-20 md:h-20 rounded-2xl md:rounded-[2rem] border flex flex-col items-center justify-center shadow-2xl shrink-0 ${
                        selectedStudent.total_points >= 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/20' : 'bg-primary/10 text-primary border-primary/20 shadow-primary/20'
@@ -495,9 +498,9 @@ export default function BehaviorLayer({
                 </button>
               </div>
 
-              {/* Mobile Mobile Tabs Navigation */}
+              {/* Mobile Tabs Navigation - Notch Aware */}
               {isAdmin && (
-                <div className="flex lg:hidden bg-slate-900 border-b border-white/5 sticky top-[73px] z-20">
+                <div className="flex lg:hidden bg-slate-950/50 backdrop-blur-xl border-b border-white/5 sticky top-[73px] md:top-[85px] z-20 h-16">
                     <button 
                       onClick={() => setActiveModalTab('HISTORY')}
                       className={`flex-1 flex items-center justify-center gap-2 py-4 text-[10px] font-black tracking-[0.2em] transition-all ${activeModalTab === 'HISTORY' ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-slate-500'}`}
@@ -605,9 +608,9 @@ export default function BehaviorLayer({
                             </div>
                         ))
                       ) : (
-                          <div className="text-center py-10 opacity-50">
-                            <FileText size={24} className="mx-auto text-slate-700 mb-2" />
-                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Belum ada riwayat</p>
+                          <div className="text-center py-20 opacity-40 animate-pulse">
+                            <Activity size={32} className="mx-auto text-primary mb-4" />
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-10">Menunggu Sinkronisasi Riwayat...</p>
                           </div>
                       )}
                     </div>
