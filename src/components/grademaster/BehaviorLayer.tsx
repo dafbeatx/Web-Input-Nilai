@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Users, Search, PlusCircle, MinusCircle, AlertCircle, Save, Loader2, UserPlus, FileText, LayoutGrid, Trash2, Pencil, ShieldCheck, ThumbsUp, ThumbsDown, X, Clock, Calendar, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Users, Search, PlusCircle, MinusCircle, AlertCircle, Save, Loader2, UserPlus, FileText, LayoutGrid, Trash2, Pencil, ShieldCheck, ThumbsUp, ThumbsDown, X, Clock, Calendar, ChevronRight, BarChart3, Activity } from 'lucide-react';
 import { ToastType, GradedStudent } from '@/lib/grademaster/types';
 import { 
   addBehaviorAction, 
@@ -7,6 +7,7 @@ import {
   deleteBehaviorAction, 
   getBehaviorLogsAction 
 } from '@/lib/actions/behavior';
+import { supabase } from '@/lib/supabase/client';
 
 interface BehaviorLog {
   id: string;
@@ -92,6 +93,38 @@ export default function BehaviorLayer({
     }
   }, [selectedStudent]);
 
+  // --- REAL-TIME SUBSCRIPTION ---
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const channel = supabase
+      .channel('behavior_realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'gm_behavior_logs'
+        },
+        async (payload) => {
+          // If a modal is open for the changed student, refresh their logs
+          const changedStudentId = (payload.new as any)?.student_id || (payload.old as any)?.student_id;
+          
+          if (selectedStudent && selectedStudent.id === changedStudentId) {
+            fetchStudentLogs(changedStudentId);
+          }
+          
+          // Always refresh students to update total points across cards
+          fetchStudentsQuietly();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isLoaded, selectedStudent, className, academicYear]);
+
   const fetchBehaviorSettings = async () => {
     try {
       const res = await fetch(`/api/grademaster/behaviors/settings?year=${encodeURIComponent(academicYear)}`);
@@ -146,6 +179,17 @@ export default function BehaviorLayer({
   };
 
   const fetchStudents = () => loadClassDirectly(className, academicYear);
+
+  // Silent refresh for real-time
+  const fetchStudentsQuietly = async () => {
+    try {
+      const res = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(className)}&year=${encodeURIComponent(academicYear)}`);
+      const data = await res.json();
+      if (res.ok) setStudents(data.students || []);
+    } catch (err) {
+       // Silent fail
+    }
+  };
 
   // --- CRUD ACTIONS ---
 
@@ -256,27 +300,31 @@ export default function BehaviorLayer({
           <p className="text-[10px] md:text-sm text-slate-500 font-bold mt-1 md:mt-2 uppercase tracking-widest">Transparansi Catatan Sikap & Poin Keseharian Siswa</p>
         </div>
 
-        {isAdmin && isLoaded && (
+        {isLoaded && (
           <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setIsManagingReasons(true)}
-              className="px-4 py-2 bg-white/5 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:border-primary/30 hover:text-primary transition-all flex items-center gap-2"
-            >
-              <Pencil size={12} /> Kelola Kategori
-            </button>
+            {isAdmin && (
+              <button 
+                onClick={() => setIsManagingReasons(true)}
+                className="px-4 py-2 bg-white/5 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:border-primary/30 hover:text-primary transition-all flex items-center gap-2"
+              >
+                <Pencil size={12} /> Kategori Poin
+              </button>
+            )}
             <div className="bg-slate-900/40 p-1.5 rounded-2xl border border-white/10 flex gap-1">
               <button 
                 onClick={() => setViewMode('REPORT')}
                 className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'REPORT' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
               >
-                Mode Rapor
+                Tabulasi Rapor
               </button>
-              <button 
-                onClick={() => setViewMode('MANAGEMENT')}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'MANAGEMENT' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
-              >
-                Mode Kelola
-              </button>
+              {isAdmin && (
+                <button 
+                  onClick={() => setViewMode('MANAGEMENT')}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'MANAGEMENT' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                  Mode Kelola
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -308,8 +356,15 @@ export default function BehaviorLayer({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500 pb-10">
             {students.length > 0 ? (
               students.map((s: BehaviorStudent) => (
-                <div key={s.id} className="bg-slate-900/40 backdrop-blur-2xl rounded-3xl md:rounded-[2.5rem] p-5 md:p-8 border border-white/10 shadow-2xl relative overflow-hidden group hover:border-primary/30 transition-all">
+                <div 
+                  key={s.id} 
+                  onClick={() => setSelectedStudent(s)}
+                  className="bg-slate-900/40 backdrop-blur-2xl rounded-3xl md:rounded-[2.5rem] p-5 md:p-8 border border-white/10 shadow-2xl relative overflow-hidden group hover:border-primary/30 transition-all cursor-pointer"
+                >
                   <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary transition-all duration-500" />
+                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all">
+                      <ChevronRight size={16} className="text-primary" />
+                  </div>
                   
                   <div className="flex items-center justify-between mb-4 md:mb-8 border-b border-white/5 pb-4 md:pb-6">
                     <div>
@@ -333,17 +388,12 @@ export default function BehaviorLayer({
                         </div>
                         <span className="text-xs font-black text-emerald-400">AKTIF</span>
                       </div>
-                      <p className="text-[10px] font-bold text-slate-400 leading-relaxed italic opacity-60">Sistem atomik GradeMaster menjamin sinkronisasi poin secara real-time di rapor siswa.</p>
+                      <div className="py-2 px-1">
+                          <button className="w-full py-3 bg-white/5 border border-white/5 rounded-xl text-[9px] font-black text-slate-500 uppercase tracking-widest group-hover:border-primary/20 group-hover:text-primary transition-all flex items-center justify-center gap-2">
+                             <BarChart3 size={12} /> LIHAT RIWAYAT POIN
+                          </button>
+                      </div>
                   </div>
-                  
-                  {isAdmin && (
-                      <button 
-                      onClick={() => setSelectedStudent(s)}
-                      className="w-full mt-6 md:mt-8 py-3 md:py-4 bg-primary/10 text-[9px] md:text-[10px] font-black text-primary uppercase tracking-[0.2em] rounded-xl border border-primary/20 hover:bg-primary hover:text-white transition-all shadow-lg hover:shadow-primary/20"
-                      >
-                        KELOLA POIN & RIWAYAT
-                      </button>
-                  )}
                 </div>
               ))
             ) : (
@@ -409,22 +459,26 @@ export default function BehaviorLayer({
           </div>
       )}
 
-      {/* DETAILED MANAGEMENT PANEL (Full-Screen Style Modal) */}
+      {/* DETAIL MODAL (Admin & User View) */}
       {selectedStudent && (
         <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl z-[1000] flex items-center justify-center p-0 md:p-10 animate-in fade-in duration-300">
           <div className="bg-slate-900/50 border border-white/10 w-full h-full md:h-auto max-w-6xl md:rounded-[3rem] overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col">
               {/* Header */}
               <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-6 md:p-10 border-b border-white/10 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-6">
-                    <div className="w-16 h-16 md:w-24 md:h-24 bg-primary/10 text-primary rounded-[2rem] border border-primary/20 flex flex-col items-center justify-center shadow-2xl shadow-primary/20 shrink-0">
+                    <div className={`w-16 h-16 md:w-24 md:h-24 rounded-[2rem] border flex flex-col items-center justify-center shadow-2xl shrink-0 ${
+                       selectedStudent.total_points >= 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/20' : 'bg-primary/10 text-primary border-primary/20 shadow-primary/20'
+                    }`}>
                       <span className="text-xl md:text-3xl font-black">{selectedStudent.total_points}</span>
-                      <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest opacity-60">Poin</span>
+                      <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest opacity-60">Total</span>
                     </div>
                     <div>
                       <h2 className="text-xl md:text-4xl font-black text-white font-outfit uppercase tracking-tighter">{selectedStudent.student_name}</h2>
                       <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-2">
                           <span className="px-3 py-1 bg-white/5 rounded-full text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest border border-white/10">Kelas {className}</span>
-                          <span className="px-3 py-1 bg-primary/10 rounded-full text-[8px] md:text-[10px] font-black text-primary uppercase tracking-widest border border-primary/20">{academicYear}</span>
+                          <span className="px-3 py-1 bg-primary/10 rounded-full text-[8px] md:text-[10px] font-black text-primary uppercase tracking-widest border border-primary/20 flex items-center gap-2">
+                             <Activity size={10} /> {academicYear}
+                          </span>
                       </div>
                     </div>
                 </div>
@@ -436,27 +490,27 @@ export default function BehaviorLayer({
                 </button>
               </div>
               
-              {/* Main Content Area */}
-              <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2">
-                {/* Left: History List */}
-                <div className="border-r border-white/10 flex flex-col bg-slate-950/20">
+              {/* Content */}
+              <div className={`flex-1 overflow-hidden grid grid-cols-1 ${isAdmin ? 'lg:grid-cols-2' : ''}`}>
+                {/* History List */}
+                <div className="flex flex-col bg-slate-950/20">
                     <div className="p-6 border-b border-white/5 flex items-center justify-between">
                       <h3 className="text-xs font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
-                          <Clock size={14} className="text-primary" /> Riwayat Kedisiplinan
+                          <Clock size={14} className="text-primary" /> Riwayat Transparansi
                       </h3>
-                      <span className="px-3 py-1 bg-white/5 rounded-lg text-[9px] font-bold text-slate-500 uppercase">{studentLogs.length} Catatan</span>
+                      <span className="px-3 py-1 bg-white/5 rounded-lg text-[9px] font-bold text-slate-500 uppercase tracking-widest">{studentLogs.length} LOG</span>
                     </div>
                     
                     <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 custom-scrollbar">
                       {isLoadingLogs ? (
                           <div className="flex flex-col items-center justify-center py-20 opacity-40">
                             <Loader2 size={24} className="animate-spin mb-2" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Memuat database...</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest">Sinkronisasi Log...</p>
                           </div>
                       ) : studentLogs.length > 0 ? (
                         studentLogs.map((log) => (
-                            <div key={log.id} className="bg-slate-900/40 border border-white/10 rounded-2xl p-4 md:p-6 hover:border-primary/30 transition-all group relative overflow-hidden">
-                              {editingLogId === log.id ? (
+                            <div key={log.id} className="bg-slate-900/50 border border-white/5 rounded-2xl p-4 md:p-6 hover:border-primary/20 transition-all group relative overflow-hidden">
+                              {editingLogId === log.id && isAdmin ? (
                                   <div className="space-y-4 animate-in slide-in-from-top-2">
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
@@ -469,7 +523,7 @@ export default function BehaviorLayer({
                                           />
                                         </div>
                                         <div>
-                                          <label className="text-[8px] font-black text-slate-500 uppercase mb-1 block">Kategori/Alasan</label>
+                                          <label className="text-[8px] font-black text-slate-500 uppercase mb-1 block">Alasan</label>
                                           <input 
                                             type="text" 
                                             value={editForm.reason} 
@@ -479,7 +533,7 @@ export default function BehaviorLayer({
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button onClick={() => handleUpdateLog(log.id)} className="flex-1 py-2 bg-primary text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">Simpan</button>
+                                        <button onClick={() => handleUpdateLog(log.id)} className="flex-1 py-2 bg-primary text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Simpan</button>
                                         <button onClick={() => setEditingLogId(null)} className="px-4 py-2 bg-white/5 text-slate-500 rounded-lg text-[10px] font-black uppercase tracking-widest">Batal</button>
                                     </div>
                                   </div>
@@ -501,27 +555,32 @@ export default function BehaviorLayer({
                                             </span>
                                           </div>
                                           <h4 className="text-white font-black text-sm uppercase tracking-tight">{log.reason}</h4>
-                                          {log.notes && <p className="text-[10px] text-slate-500 mt-1 italic">{log.notes}</p>}
+                                          <div className="flex items-center gap-2 mt-1">
+                                             <div className={`w-1 h-1 rounded-full ${log.points_delta > 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                                             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{log.points_delta > 0 ? 'Tindakan Terpuji' : 'Pelanggaran'}</p>
+                                          </div>
                                       </div>
                                     </div>
                                     
-                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <button 
-                                        onClick={() => {
-                                          setEditingLogId(log.id);
-                                          setEditForm({ reason: log.reason, points: log.points_delta });
-                                        }}
-                                        className="p-2 bg-white/5 text-slate-500 hover:text-primary rounded-lg border border-white/10 transition-colors"
-                                      >
-                                          <Pencil size={14} />
-                                      </button>
-                                      <button 
-                                        onClick={() => handleDeleteLog(log.id)}
-                                        className="p-2 bg-white/5 text-slate-500 hover:text-rose-500 rounded-lg border border-white/10 transition-colors"
-                                      >
-                                          <Trash2 size={14} />
-                                      </button>
-                                    </div>
+                                    {isAdmin && (
+                                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button 
+                                          onClick={() => {
+                                            setEditingLogId(log.id);
+                                            setEditForm({ reason: log.reason, points: log.points_delta });
+                                          }}
+                                          className="p-2 bg-white/5 text-slate-500 hover:text-primary rounded-lg border border-white/10 transition-colors"
+                                        >
+                                            <Pencil size={14} />
+                                        </button>
+                                        <button 
+                                          onClick={() => handleDeleteLog(log.id)}
+                                          className="p-2 bg-white/5 text-slate-500 hover:text-rose-500 rounded-lg border border-white/10 transition-colors"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                      </div>
+                                    )}
                                 </div>
                               )}
                             </div>
@@ -535,60 +594,54 @@ export default function BehaviorLayer({
                     </div>
                 </div>
 
-                {/* Right: Add Form & Templates */}
-                <div className="flex flex-col p-6 md:p-10 space-y-10 overflow-y-auto custom-scrollbar">
-                    <div>
-                      <h3 className="text-xs font-black text-primary uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
-                          <PlusCircle size={14} /> Tambah Catatan Baru
-                      </h3>
-                      
-                      <div className="grid grid-cols-1 gap-8">
-                          <div className="space-y-4">
-                            <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-2 mb-4">
-                                <MinusCircle size={14} /> Pelanggaran (Otomatis Negatif)
-                            </h4>
-                            <div className="grid grid-cols-2 gap-3">
-                                {behaviorReasons.bad.map(r => (
-                                  <button 
-                                    key={r} 
-                                    disabled={isUpdatingPoints}
-                                    onClick={() => handleAddBehavior('BAD', 10, r)} 
-                                    className="p-4 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 hover:border-rose-500/30 rounded-2xl text-left text-[10px] font-black text-rose-400 uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                                  >
-                                    {r}
-                                  </button>
-                                ))}
+                {/* Admin-only Forms */}
+                {isAdmin && (
+                  <div className="flex flex-col p-6 md:p-10 space-y-10 overflow-y-auto custom-scrollbar border-l border-white/10">
+                      <div>
+                        <h3 className="text-xs font-black text-primary uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
+                            <PlusCircle size={14} /> Kelola Poin Baru
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 gap-8">
+                            <div className="space-y-4">
+                              <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-2 mb-4">
+                                  <MinusCircle size={14} /> Pelanggaran Siswa
+                              </h4>
+                              <div className="grid grid-cols-2 gap-3">
+                                  {behaviorReasons.bad.map(r => (
+                                    <button 
+                                      key={r} 
+                                      disabled={isUpdatingPoints}
+                                      onClick={() => handleAddBehavior('BAD', 10, r)} 
+                                      className="p-4 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 hover:border-rose-500/30 rounded-2xl text-left text-[10px] font-black text-rose-400 uppercase tracking-widest transition-all"
+                                    >
+                                      {r}
+                                    </button>
+                                  ))}
+                              </div>
                             </div>
-                          </div>
-                          
-                          <div className="space-y-4">
-                            <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2 mb-4">
-                                <PlusCircle size={14} /> Tindakan Terpuji
-                            </h4>
-                            <div className="grid grid-cols-2 gap-3">
-                                {behaviorReasons.good.map(r => (
-                                  <button 
-                                    key={r} 
-                                    disabled={isUpdatingPoints}
-                                    onClick={() => handleAddBehavior('GOOD', 10, r)} 
-                                    className="p-4 bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/10 hover:border-emerald-500/30 rounded-2xl text-left text-[10px] font-black text-emerald-400 uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                                  >
-                                    {r}
-                                  </button>
-                                ))}
+                            
+                            <div className="space-y-4">
+                              <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2 mb-4">
+                                  <PlusCircle size={14} /> Tindakan Terpuji
+                              </h4>
+                              <div className="grid grid-cols-2 gap-3">
+                                  {behaviorReasons.good.map(r => (
+                                    <button 
+                                      key={r} 
+                                      disabled={isUpdatingPoints}
+                                      onClick={() => handleAddBehavior('GOOD', 10, r)} 
+                                      className="p-4 bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/10 hover:border-emerald-500/30 rounded-2xl text-left text-[10px] font-black text-emerald-400 uppercase tracking-widest transition-all"
+                                    >
+                                      {r}
+                                    </button>
+                                  ))}
+                              </div>
                             </div>
-                          </div>
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="p-8 bg-primary/5 rounded-[2.5rem] border border-primary/20 relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
-                          <ShieldCheck size={120} className="text-primary" />
-                      </div>
-                      <h4 className="text-xl font-black text-white font-outfit uppercase tracking-tight mb-2">Integritas Data</h4>
-                      <p className="text-[11px] text-slate-400 leading-relaxed font-bold max-w-xs">Seluruh perubahan log akan secara otomatis mensinkronkan total poin siswa di database master GradeMaster melalui sistem RPC transaksional.</p>
-                    </div>
-                </div>
+                  </div>
+                )}
               </div>
           </div>
         </div>
@@ -599,8 +652,8 @@ export default function BehaviorLayer({
         <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[2000] flex items-center justify-center p-4">
           <div className="bg-slate-900/50 border border-white/10 max-w-2xl w-full rounded-[3rem] overflow-hidden shadow-2xl">
               <div className="p-8 border-b border-white/10 bg-white/5">
-                <h2 className="text-xl font-black text-white uppercase font-outfit">Kelola Kategori GLOBAL</h2>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Atur daftar tindakan terpuji & pelanggaran untuk SELURUH KELAS</p>
+                <h2 className="text-xl font-black text-white uppercase font-outfit">Setelan Poin Global</h2>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Kustomisasi alasan poin untuk seluruh kelas</p>
               </div>
               
               <div className="p-8 space-y-8">
@@ -615,7 +668,7 @@ export default function BehaviorLayer({
                     </select>
                     <input 
                     type="text" 
-                    placeholder="Tambah kategori baru..." 
+                    placeholder="Tambah kategori..." 
                     value={newReasonInput}
                     onChange={(e) => setNewReasonInput(e.target.value)}
                     className="flex-1 bg-slate-950/50 border border-white/10 rounded-xl px-5 py-3 text-sm font-black text-white outline-none focus:border-primary transition-all"
@@ -628,7 +681,7 @@ export default function BehaviorLayer({
                       saveBehaviorSettings(updated);
                       setNewReasonInput('');
                     }}
-                    className="p-3 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+                    className="p-3 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all outline-none"
                     >
                       <PlusCircle size={20} />
                     </button>
