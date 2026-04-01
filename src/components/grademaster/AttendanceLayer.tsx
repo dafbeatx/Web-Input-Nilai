@@ -44,10 +44,18 @@ export default function AttendanceLayer({
   
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('Semua');
 
   useEffect(() => {
     fetchAvailableClasses();
   }, [academicYear]);
+
+  // Automatic loading when filters change
+  useEffect(() => {
+    if (className && subject && selectedDate) {
+      loadAttendance(className, subject, selectedDate);
+    }
+  }, [className, subject, selectedDate]);
 
   const fetchAvailableClasses = async () => {
     setIsLoadingClasses(true);
@@ -137,6 +145,19 @@ export default function AttendanceLayer({
 
   const subjects = ["Informatika", "Matematika", "IPA", "IPS", "Bahasa Indonesia", "Bahasa Inggris", "PAI", "PJOK", "Seni Budaya", "PKn"];
 
+  const stats = {
+    total: students.length,
+    hadir: Object.values(attendanceMap).filter(s => s === 'Hadir').length,
+    izin: Object.values(attendanceMap).filter(s => s === 'Izin').length,
+    sakit: Object.values(attendanceMap).filter(s => s === 'Sakit').length,
+    alpa: Object.values(attendanceMap).filter(s => s === 'Alpa').length,
+  };
+
+  const filteredStudents = students.filter(name => {
+    if (filterStatus === 'Semua') return true;
+    return attendanceMap[name] === filterStatus;
+  });
+
   return (
     <div className="min-h-screen bg-slate-950 p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in pt-16 pb-24 md:pb-8">
       <header className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -152,29 +173,49 @@ export default function AttendanceLayer({
       </header>
 
       {/* FILTER BOX */}
-      <div className="bg-slate-900/40 backdrop-blur-xl rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 shadow-2xl border border-white/10 grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-6 md:mb-8 relative z-10">
+      <div className="bg-slate-900/40 backdrop-blur-xl rounded-3xl p-4 md:p-6 shadow-2xl border border-white/10 grid grid-cols-1 md:grid-cols-2 gap-4 items-end mb-6 relative z-10">
         <div>
-          <label className="block text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2">Kelas</label>
-          <select value={className} onChange={(e) => setClassName(e.target.value)} className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 md:p-4 text-xs md:text-sm font-black text-white outline-none focus:border-primary transition-all">
+          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Kelas</label>
+          <select 
+            value={className} 
+            onChange={(e) => setClassName(e.target.value)} 
+            className="w-full bg-slate-950/50 border border-white/10 rounded-2xl p-4 text-sm font-black text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all appearance-none cursor-pointer"
+          >
             <option value="">-- Pilih Kelas --</option>
             {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 md:mb-2">Mata Pelajaran</label>
-          <select value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 md:p-4 text-xs md:text-sm font-black text-white outline-none focus:border-primary transition-all">
-            {subjects.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="flex items-center gap-2 text-[8px] md:text-[10px] font-black text-primary uppercase tracking-widest mb-1.5 md:mb-2">
+          <label className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest mb-2 px-1">
             <Clock size={12} /> Tanggal
           </label>
-          <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 md:p-4 text-xs md:text-sm font-black text-white outline-none focus:border-primary transition-all" />
+          <input 
+            type="date" 
+            value={selectedDate} 
+            onChange={(e) => setSelectedDate(e.target.value)} 
+            className="w-full bg-slate-950/50 border border-white/10 rounded-2xl p-4 text-sm font-black text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all cursor-pointer" 
+          />
         </div>
-        <button onClick={() => loadAttendance(className, subject, selectedDate)} disabled={isLoading || !className} className="w-full px-8 md:px-10 py-3 md:py-4 bg-primary text-white rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 md:gap-3">
-          {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />} Lihat Kehadiran
-        </button>
+      </div>
+
+      {/* SUBJECT SELECTOR (Chips instead of Dropdown) */}
+      <div className="mb-8 overflow-hidden">
+        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 px-1">Pilih Mata Pelajaran</label>
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 mask-linear-right">
+          {subjects.map((s) => (
+            <button
+              key={s}
+              onClick={() => setSubject(s)}
+              className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all whitespace-nowrap ${
+                subject === s 
+                ? 'bg-primary border-primary text-white shadow-xl shadow-primary/20 scale-105' 
+                : 'bg-slate-900/40 border-white/10 text-slate-400 hover:border-primary/50'
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
       </div>
 
       {isLoading ? (
@@ -183,67 +224,117 @@ export default function AttendanceLayer({
           <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Memproses Data Presensi...</p>
         </div>
       ) : isLoaded ? (
-        <div className="animate-in fade-in duration-500">
-          <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2rem] border border-white/10 shadow-2xl overflow-hidden">
-            <div className="p-6 md:p-8 border-b border-white/10 bg-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h3 className="font-black text-white text-lg md:text-xl uppercase font-outfit">{subject} - {className}</h3>
-                <p className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest">Sesi Tanggal: {new Date(selectedDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+          {/* STATS SUMMARY */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: 'Hadir', count: stats.hadir, color: 'emerald', icon: <CheckCircle2 size={16} /> },
+              { label: 'Izin', count: stats.izin, color: 'sky', icon: <Clock size={16} /> },
+              { label: 'Sakit', count: stats.sakit, color: 'amber', icon: <AlertCircle size={16} /> },
+              { label: 'Alpa', count: stats.alpa, color: 'rose', icon: <XCircle size={16} /> },
+            ].map((s) => (
+              <div key={s.label} className={`bg-slate-900/40 border border-${s.color}-500/20 rounded-2xl p-4 flex flex-col items-center justify-center gap-1 shadow-lg shadow-black/20`}>
+                <div className={`p-2 rounded-xl bg-${s.color}-500/10 text-${s.color}-500 mb-1`}>
+                  {s.icon}
+                </div>
+                <span className="text-2xl font-black text-white">{s.count}</span>
+                <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">{s.label}</span>
               </div>
+            ))}
+          </div>
+
+          <div className="bg-slate-900/40 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-5 border-b border-white/10 bg-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-primary/10 rounded-xl border border-primary/20">
+                  <Users className="text-primary" size={18} />
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-base md:text-lg uppercase font-outfit truncate">{subject} - {className}</h3>
+                  <p className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest">{filteredStudents.length} Siswa Terdaftar</p>
+                </div>
+              </div>
+              
               {isAdmin && (
-                <button onClick={saveAttendance} disabled={isSaving} className="px-6 py-3 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
-                  {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Simpan Absensi
+                <button onClick={saveAttendance} disabled={isSaving} className="w-full sm:w-auto px-6 py-3 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+                  {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Simpan Absensi
                 </button>
               )}
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-white/5 border-b border-white/10">
-                    <th className="p-4 md:p-6 text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest w-16 text-center">No</th>
-                    <th className="p-4 md:p-6 text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest">Nama Siswa</th>
-                    <th className="p-4 md:p-6 text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="text-xs md:text-sm font-bold text-white">
-                  {students.map((name, idx) => (
-                    <tr key={name} className="border-b border-white/5 hover:bg-white/5 transition-all">
-                      <td className="p-4 md:p-6 text-center text-slate-500 font-mono text-[10px] md:text-xs">{idx + 1}</td>
-                      <td className="p-4 md:p-6 font-outfit uppercase tracking-tight text-xs md:text-sm">{name}</td>
-                      <td className="p-4 md:p-6">
-                        <div className="flex justify-center items-center gap-1.5 md:gap-3">
-                          {['Hadir', 'Izin', 'Sakit', 'Alpa'].map((status) => {
-                            const active = attendanceMap[name] === status;
-                            const colors = {
-                              'Hadir': 'bg-emerald-500',
-                              'Izin': 'bg-sky-500',
-                              'Sakit': 'bg-amber-500',
-                              'Alpa': 'bg-rose-500'
-                            };
-                            return (
-                              <button 
-                                key={status}
-                                disabled={!isAdmin}
-                                onClick={() => handleStatusChange(name, status)}
-                                className={`
-                                  px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all
-                                  ${active 
-                                    ? `${colors[status as keyof typeof colors]} text-white shadow-lg` 
-                                    : 'bg-white/5 text-slate-500 border border-white/5 hover:border-white/20'}
-                                  ${!isAdmin && 'cursor-default opacity-80'}
-                                `}
-                              >
-                                {status[0]} <span className="hidden md:inline">{status.slice(1)}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* STATUS SELECTOR / FILTER */}
+            <div className="px-5 py-3 border-b border-white/5 bg-white/2 flex items-center gap-2 overflow-x-auto no-scrollbar">
+              <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mr-2 whitespace-nowrap">Filter:</span>
+              {['Semua', 'Hadir', 'Izin', 'Sakit', 'Alpa'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilterStatus(status)}
+                  className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all whitespace-nowrap ${
+                    filterStatus === status 
+                    ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' 
+                    : 'bg-white/5 border-white/5 text-slate-400 hover:border-white/20'
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+
+            <div className="p-4 md:p-6 space-y-3 max-h-[60vh] overflow-y-auto no-scrollbar pb-10">
+              {filteredStudents.length > 0 ? (
+                filteredStudents.map((name, idx) => (
+                  <div key={name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:border-white/10 transition-all group">
+                    <div className="flex items-center gap-4 mb-4 sm:mb-0">
+                      <div className="w-10 h-10 rounded-xl bg-slate-950/50 flex items-center justify-center text-xs font-black text-slate-500 border border-white/5 group-hover:border-primary/20 group-hover:text-primary transition-all">
+                        {idx + 1}
+                      </div>
+                      <h4 className="text-xs md:text-sm font-black text-white uppercase tracking-tight font-outfit">{name}</h4>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      {['Hadir', 'Izin', 'Sakit', 'Alpa'].map((status) => {
+                        const active = attendanceMap[name] === status;
+                        const colors = {
+                          'Hadir': 'bg-emerald-500 border-emerald-500/20 text-white',
+                          'Izin': 'bg-sky-500 border-sky-500/20 text-white',
+                          'Sakit': 'bg-amber-500 border-amber-500/20 text-white',
+                          'Alpa': 'bg-rose-500 border-rose-500/20 text-white'
+                        };
+                        const inactiveColors = {
+                          'Hadir': 'hover:text-emerald-500 hover:border-emerald-500/20',
+                          'Izin': 'hover:text-sky-500 hover:border-sky-500/20',
+                          'Sakit': 'hover:text-amber-500 hover:border-amber-500/20',
+                          'Alpa': 'hover:text-rose-500 hover:border-rose-500/20'
+                        };
+                        
+                        return (
+                          <button 
+                            key={status}
+                            disabled={!isAdmin}
+                            onClick={() => handleStatusChange(name, status)}
+                            className={`
+                              flex-1 sm:flex-none px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all border
+                              ${active 
+                                ? `${colors[status as keyof typeof colors]} shadow-lg shadow-black/20` 
+                                : `bg-slate-950/50 text-slate-500 border-white/5 ${inactiveColors[status as keyof typeof inactiveColors]}`}
+                              ${!isAdmin && 'cursor-default opacity-80'}
+                            `}
+                          >
+                            {status[0]}<span className="hidden sm:inline">{status.slice(1)}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-10 text-center">
+                  <div className="w-16 h-16 bg-slate-900 border border-white/5 border-dashed rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="text-slate-700" size={24} />
+                  </div>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tidak ada data untuk filter ini</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
