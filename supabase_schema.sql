@@ -428,55 +428,92 @@ ADD COLUMN IF NOT EXISTS last_heartbeat_at TIMESTAMPTZ DEFAULT now(),
 ADD COLUMN IF NOT EXISTS last_network_status TEXT DEFAULT 'ONLINE',
 ADD COLUMN IF NOT EXISTS last_latency_ms INTEGER DEFAULT 0;
 -- ============================================================
--- Behavior RPC
+-- Normalized Behavior Schema
 -- ============================================================
-CREATE OR REPLACE FUNCTION public.log_behavior_points(
+
+-- 1. Behavior Categories (Templates)
+CREATE TABLE IF NOT EXISTS public.gm_behavior_categories (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('GOOD', 'BAD')),
+    points INTEGER NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.gm_behavior_categories ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "gm_behavior_categories_anon_access" ON public.gm_behavior_categories;
+CREATE POLICY "gm_behavior_categories_anon_access" ON public.gm_behavior_categories
+    FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- 2. Behavior Logs (Event History)
+CREATE TABLE IF NOT EXISTS public.gm_behavior_logs (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    student_id UUID NOT NULL REFERENCES public.gm_behaviors(id) ON DELETE CASCADE,
+    category_id UUID REFERENCES public.gm_behavior_categories(id) ON DELETE SET NULL,
+    points_delta INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    teacher_id TEXT,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.gm_behavior_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "gm_behavior_logs_anon_access" ON public.gm_behavior_logs;
+CREATE POLICY "gm_behavior_logs_anon_access" ON public.gm_behavior_logs
+    FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_gm_behavior_logs_student ON public.gm_behavior_logs(student_id);
+
+-- ============================================================
+-- Behavior RPCs (Calculations)
+-- ============================================================
+
+-- Function to recalculate total points for a student
+CREATE OR REPLACE FUNCTION public.recompute_student_behavior_points(p_student_id UUID)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_total INTEGER;
+BEGIN
+  -- We start from 100 base points
+  SELECT 100 + COALESCE(SUM(points_delta), 0) INTO v_total
+  FROM public.gm_behavior_logs
+  WHERE student_id = p_student_id;
+
+  UPDATE public.gm_behaviors
+  SET total_points = v_total, updated_at = now()
+  WHERE id = p_student_id;
+
+  RETURN v_total;
+END;
+$$;
+
+-- Enhanced version of logging that uses the new normalized structure
+CREATE OR REPLACE FUNCTION public.add_behavior_log_entry(
   p_student_id UUID,
-  p_type TEXT,
-  p_points INTEGER,
-  p_reason TEXT
+  p_category_id UUID,
+  p_points_delta INTEGER,
+  p_reason TEXT,
+  p_teacher_id TEXT DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  v_points_delta INTEGER;
-  v_updated_record JSONB;
-  v_new_log JSONB;
+  v_new_points INTEGER;
+  v_log_id UUID;
 BEGIN
-  -- 1. Determine points delta based on type
-  v_points_delta := CASE 
-    WHEN p_type = 'BAD' THEN -ABS(p_points)
-    ELSE ABS(p_points)
-  END;
+  -- 1. Insert into logs
+  INSERT INTO public.gm_behavior_logs (student_id, category_id, points_delta, reason, teacher_id)
+  VALUES (p_student_id, p_category_id, p_points_delta, p_reason, p_teacher_id)
+  RETURNING id INTO v_log_id;
 
-  -- 2. Construct log entry
-  v_new_log := jsonb_build_object(
-    'type', p_type,
-    'points', v_points_delta,
-    'reason', p_reason,
-    'timestamp', now()
-  );
+  -- 2. Recompute total
+  v_new_points := public.recompute_student_behavior_points(p_student_id);
 
-  -- 3. Update student points and logs atomatically
-  UPDATE public.gm_behaviors
-  SET 
-    total_points = total_points + v_points_delta,
-    behavior_logs = v_new_log || behavior_logs,
-    updated_at = now()
-  WHERE id = p_student_id
-  RETURNING jsonb_build_object(
-    'id', id,
-    'student_name', student_name,
-    'class_name', class_name,
-    'academic_year', academic_year,
-    'total_points', total_points,
-    'behavior_logs', behavior_logs,
-    'created_at', created_at,
-    'updated_at', updated_at
-  ) INTO v_updated_record;
-
-  RETURN v_updated_record;
+  RETURN jsonb_build_object('log_id', v_log_id, 'new_total', v_new_points);
 END;
 $$;
