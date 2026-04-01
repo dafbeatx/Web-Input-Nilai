@@ -1,6 +1,10 @@
-import { Composer, Markup } from 'telegraf';
+import { Composer, Markup, Context } from 'telegraf';
 import { supabase } from './bot';
 import { compressUUID, decompressUUID } from './menu-builder';
+
+interface MatchContext extends Context {
+  match: RegExpExecArray;
+}
 
 /**
  * Behavior Handler for GradeMaster Admin Bot (Hierarchical Version).
@@ -15,7 +19,7 @@ const PAGE_SIZE = 8;
 /**
  * Step 1: Select Class
  */
-async function renderClassSelection(ctx: any) {
+async function renderClassSelection(ctx: Context) {
   // Fetch unique class names from gm_behaviors
   const { data, error } = await supabase
     .from('gm_behaviors')
@@ -55,7 +59,7 @@ async function renderClassSelection(ctx: any) {
 /**
  * Step 2: Select Student in Class
  */
-async function renderStudentSelection(ctx: any, className: string, page: number = 1) {
+async function renderStudentSelection(ctx: Context, className: string, page: number = 1) {
   const { data: students, error } = await supabase
     .from('gm_behaviors')
     .select('id, student_name, total_points')
@@ -106,7 +110,7 @@ async function renderStudentSelection(ctx: any, className: string, page: number 
 /**
  * Step 3: Student Details Dashboard
  */
-async function renderStudentDashboard(ctx: any, className: string, page: string, studentId: string) {
+async function renderStudentDashboard(ctx: Context, className: string, page: string, studentId: string) {
   const { data: student } = await supabase
     .from('gm_behaviors')
     .select('*')
@@ -162,20 +166,20 @@ async function renderStudentDashboard(ctx: any, className: string, page: string,
 // --- Interaction Dispatchers ---
 
 // Callback entries for the behavior system
-behaviorHandler.action('stubeh:start', async (ctx) => renderClassSelection(ctx));
+behaviorHandler.action('stubeh:start', async (ctx: Context) => renderClassSelection(ctx));
 
-behaviorHandler.action(/^stubeh:cls:(.+)$/, async (ctx: any) => {
+behaviorHandler.action(/^stubeh:cls:(.+)$/, async (ctx: MatchContext) => {
   const className = ctx.match[1];
   return renderStudentSelection(ctx, className, 1);
 });
 
-behaviorHandler.action(/^stubeh:page:(.+):(\d+)$/, async (ctx: any) => {
+behaviorHandler.action(/^stubeh:page:(.+):(\d+)$/, async (ctx: MatchContext) => {
   const className = ctx.match[1];
   const page = parseInt(ctx.match[2]);
   return renderStudentSelection(ctx, className, page);
 });
 
-behaviorHandler.action(/^stubeh:view:(.+):(\d+):(.+)$/, async (ctx: any) => {
+behaviorHandler.action(/^stubeh:view:(.+):(\d+):(.+)$/, async (ctx: MatchContext) => {
   const className = ctx.match[1];
   const page = ctx.match[2];
   const studentId = decompressUUID(ctx.match[3]);
@@ -183,7 +187,7 @@ behaviorHandler.action(/^stubeh:view:(.+):(\d+):(.+)$/, async (ctx: any) => {
 });
 
 // Quick action shortcuts
-behaviorHandler.action(/^stubeh:action:(.+):(\d+):(.+):add:(pos|neg)$/, async (ctx: any) => {
+behaviorHandler.action(/^stubeh:action:(.+):(\d+):(.+):add:(pos|neg)$/, async (ctx: MatchContext) => {
   const className = ctx.match[1];
   const page = ctx.match[2];
   const studentId = decompressUUID(ctx.match[3]);
@@ -205,7 +209,7 @@ behaviorHandler.action(/^stubeh:action:(.+):(\d+):(.+):add:(pos|neg)$/, async (c
   });
 });
 
-behaviorHandler.action(/^stubeh:save:(.+):(\d+):(.+):(-?\d+):(.+)$/, async (ctx: any) => {
+behaviorHandler.action(/^stubeh:save:(.+):(\d+):(.+):(-?\d+):(.+)$/, async (ctx: MatchContext) => {
   const className = ctx.match[1];
   const page = ctx.match[2];
   const studentId = decompressUUID(ctx.match[3]);
@@ -234,7 +238,7 @@ behaviorHandler.action(/^stubeh:save:(.+):(\d+):(.+):(-?\d+):(.+)$/, async (ctx:
 /**
  * Management: Log List for Edit/Delete
  */
-behaviorHandler.action(/^stubeh:logs:(.+)$/, async (ctx: any) => {
+behaviorHandler.action(/^stubeh:logs:(.+)$/, async (ctx: MatchContext) => {
   const studentId = decompressUUID(ctx.match[1]);
   
   const { data: logs, error } = await supabase
@@ -265,7 +269,7 @@ behaviorHandler.action(/^stubeh:logs:(.+)$/, async (ctx: any) => {
 /**
  * Log Detail View & Delete
  */
-behaviorHandler.action(/^stubeh:log_detail:(.+):(.+)$/, async (ctx: any) => {
+behaviorHandler.action(/^stubeh:log_detail:(.+):(.+)$/, async (ctx: MatchContext) => {
   const studentId = decompressUUID(ctx.match[1]);
   const logId = decompressUUID(ctx.match[2]);
 
@@ -290,7 +294,7 @@ behaviorHandler.action(/^stubeh:log_detail:(.+):(.+)$/, async (ctx: any) => {
 /**
  * Delete Log Action
  */
-behaviorHandler.action(/^stubeh:delete_log:(.+):(.+)$/, async (ctx: any) => {
+behaviorHandler.action(/^stubeh:delete_log:(.+):(.+)$/, async (ctx: MatchContext) => {
   const studentId = decompressUUID(ctx.match[1]);
   const logId = decompressUUID(ctx.match[2]);
 
@@ -314,7 +318,7 @@ behaviorHandler.action(/^stubeh:delete_log:(.+):(.+)$/, async (ctx: any) => {
 /**
  * Helper to return to dashboard without knowing class context
  */
-behaviorHandler.action(/^stubeh:view_back:(.+)$/, async (ctx: any) => {
+behaviorHandler.action(/^stubeh:view_back:(.+)$/, async (ctx: MatchContext) => {
     const studentId = decompressUUID(ctx.match[1]);
     const { data: student } = await supabase.from('gm_behaviors').select('class_name').eq('id', studentId).single();
     if (!student) return ctx.answerCbQuery('❌ Error.');

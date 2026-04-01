@@ -519,8 +519,8 @@ export default function BehaviorLayer({
               {/* Content Area */}
               <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2">
                 {/* Left Column: History (Always visible on LG, conditional on mobile) */}
-                <div className={`flex-col bg-slate-950/20 lg:flex ${activeModalTab === 'HISTORY' ? 'flex' : 'hidden'}`}>
-                    <div className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between hidden md:flex">
+                <div className={`bg-slate-950/20 lg:flex lg:flex-col ${activeModalTab === 'HISTORY' ? 'flex flex-col' : 'hidden'}`}>
+                    <div className="p-4 md:p-6 border-b border-white/5 hidden md:flex items-center justify-between">
                       <h3 className="text-xs font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
                           <Clock size={14} className="text-primary" /> Riwayat Transparansi
                       </h3>
@@ -618,9 +618,9 @@ export default function BehaviorLayer({
 
                 {/* Right Column: Management (LG: Always visible, SM: Conditional) */}
                 {isAdmin && (
-                  <div className={`flex-col p-4 md:p-10 space-y-6 md:space-y-10 overflow-y-auto custom-scrollbar border-l border-white/10 bg-slate-900/10 lg:flex ${activeModalTab === 'MANAGE' ? 'flex' : 'hidden'}`}>
+                  <div className={`p-4 md:p-10 space-y-6 md:space-y-10 overflow-y-auto custom-scrollbar border-l border-white/10 bg-slate-900/10 lg:flex lg:flex-col ${activeModalTab === 'MANAGE' ? 'flex flex-col' : 'hidden'}`}>
                       <div>
-                        <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-4 md:mb-8 flex items-center gap-2 hidden lg:flex">
+                        <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-4 md:mb-8 hidden lg:flex items-center gap-2">
                             <PlusCircle size={14} /> Kelola Poin Baru
                         </h3>
                         
