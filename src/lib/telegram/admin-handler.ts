@@ -404,8 +404,7 @@ async function handleCategorySelection(chatId: number, messageId: number | undef
   }
 
   if (category === 'behaviour') {
-    // Initial call to behavior handler (using nav prefix for compatibility)
-    // Actually, we'll manually trigger it here if it's the first time
+    // Start with Class Selection
     const { bot } = await import('./telegraf');
     await bot.handleUpdate({
       update_id: 0,
@@ -413,7 +412,7 @@ async function handleCategorySelection(chatId: number, messageId: number | undef
         id: 'start',
         from: { id: chatId, first_name: 'Admin' },
         message: { message_id: messageId || 0, chat: { id: chatId } },
-        data: 'stubeh:page:1'
+        data: 'stubeh:start'
       }
     } as any);
     return;
