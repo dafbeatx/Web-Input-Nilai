@@ -48,7 +48,7 @@ export default function StudentLoginLayer({ onBack, onSuccess, setToast, onSwitc
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-transparent flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-white/10 shadow-2xl p-8 md:p-10 animate-in fade-in slide-in-from-bottom-5 duration-500">
         <button 
           onClick={onBack}

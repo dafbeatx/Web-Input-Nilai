@@ -22,6 +22,7 @@ export const metadata: Metadata = {
 
 import { GradeMasterProvider } from '@/context/GradeMasterContext';
 import Navbar from '@/components/grademaster/Navbar';
+import StarBackground from '@/components/grademaster/ui/StarBackground';
 
 export default function RootLayout({
   children,
@@ -29,12 +30,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className="dark h-full bg-slate-950">
+    <html lang="id" className="dark h-full">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
       </head>
-      <body className={`${inter.variable} ${outfit.variable} ${amiri.variable} ${manrope.variable} font-sans bg-slate-950 text-slate-50 antialiased min-h-full selection:bg-primary/30`}>
+      <body className={`${inter.variable} ${outfit.variable} ${amiri.variable} ${manrope.variable} font-sans text-slate-50 antialiased min-h-full selection:bg-primary/30`}>
+        <StarBackground />
         <GradeMasterProvider>
           <Navbar />
           <main className="relative min-h-screen">

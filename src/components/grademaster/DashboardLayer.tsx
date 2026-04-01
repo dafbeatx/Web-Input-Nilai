@@ -443,7 +443,7 @@ export default function DashboardLayer({
   };
 
   return (
-    <div className="bg-slate-950 text-white p-3 sm:p-5 lg:p-8 w-full max-w-5xl mx-auto px-4 md:px-6 animate-in fade-in min-h-screen pb-20">
+    <div className="bg-transparent text-white p-3 sm:p-5 lg:p-8 w-full max-w-5xl mx-auto px-4 md:px-6 animate-in fade-in min-h-screen pb-20">
       <header className="mb-8 md:mb-10 text-center pt-4">
         <div className="inline-flex items-center gap-1.5 md:gap-2 px-3 py-1 md:px-4 md:py-1.5 bg-primary/10 text-primary rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-3 md:mb-4 border border-primary/20">
           <LayoutGrid size={12} className="md:w-3.5 md:h-3.5" /> Dashboard Analitik

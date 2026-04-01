@@ -650,7 +650,7 @@ export default function GradeMaster() {
   // ── Render ──
 
   return (
-    <div className="relative flex flex-col bg-slate-950 min-h-screen pb-24 md:pb-8 transition-colors duration-500">
+    <div className="relative flex flex-col min-h-screen pb-24 md:pb-8 transition-colors duration-500">
       <div className="w-full">
         {layer === "home" && (
         <HomeLayer

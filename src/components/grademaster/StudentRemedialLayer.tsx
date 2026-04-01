@@ -1970,7 +1970,7 @@ export default function StudentRemedialLayer({
   // RENDER: RULES SCREEN (Pre-exam instruction popup)
   if (step === 'RULES') {
     return (
-      <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-4 overflow-y-auto">
+      <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4 overflow-y-auto">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#3b82f615,transparent)]"></div>
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-30"></div>
         
@@ -2033,7 +2033,7 @@ export default function StudentRemedialLayer({
     const allPermsOk = examMode === 'LIMITED' || cameraOk;
 
     return (
-      <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-4">
+      <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#3b82f610,transparent)]"></div>
         <div className="w-full max-w-lg relative bg-slate-900/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl p-6 md:p-10 animate-in zoom-in duration-500">
            <button onClick={() => setStep('RULES')} className="flex items-center gap-2 text-slate-500 hover:text-white font-black text-[10px] uppercase tracking-widest transition-all mb-8 group">
@@ -2110,7 +2110,7 @@ export default function StudentRemedialLayer({
   // RENDER: GUIDE SCREEN (Educational instructions for proctoring camera)
   if (step === 'GUIDE') {
     return (
-      <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-4">
+      <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,#3b82f610,transparent)]"></div>
         <div className="w-full max-w-xl relative bg-slate-900/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl p-6 md:p-10 animate-in slide-in-from-bottom-8 duration-700">
           <button onClick={() => setStep('INFO')} className="flex items-center gap-2 text-slate-500 hover:text-white font-black text-[10px] uppercase tracking-widest transition-all mb-8 group">
@@ -2233,7 +2233,7 @@ export default function StudentRemedialLayer({
     };
 
     return (
-      <div className="fixed inset-0 z-[1000] bg-slate-950 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[1000] bg-transparent flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#f59e0b10,transparent)]"></div>
         <div className="bg-slate-900/40 backdrop-blur-2xl border border-amber-500/20 max-w-lg w-full rounded-[2.5rem] p-8 md:p-10 shadow-2xl text-center relative">
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
@@ -2302,7 +2302,7 @@ export default function StudentRemedialLayer({
     };
 
     return (
-      <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-4 overflow-y-auto custom-scrollbar">
+      <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4 overflow-y-auto custom-scrollbar">
         <div className={`absolute inset-0 opacity-20 ${isCheat ? 'bg-rose-500/10' : isTimeout ? 'bg-amber-500/10' : 'bg-emerald-500/10'}`}></div>
         
         <div className={`w-full max-w-xl relative bg-slate-900/40 backdrop-blur-2xl border rounded-[2.5rem] shadow-2xl p-8 md:p-12 text-center animate-in zoom-in-95 duration-700 ${isCheat ? 'border-rose-500/20' : isTimeout ? 'border-amber-500/20' : 'border-emerald-500/20'}`}>
@@ -2395,7 +2395,7 @@ export default function StudentRemedialLayer({
   };
 
   return (
-    <div className="relative min-h-screen bg-slate-950 font-inter text-slate-200 selection:bg-primary/30 selection:text-white overflow-x-hidden">
+    <div className="relative min-h-screen bg-transparent font-inter text-slate-200 selection:bg-primary/30 selection:text-white overflow-x-hidden">
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,#3b82f605,transparent)] pointer-events-none"></div>
       
       {/* ── TOP APP BAR (GradeMaster OS Header) ── */}
@@ -2746,7 +2746,7 @@ export default function StudentRemedialLayer({
       )}
 
       {(isConnectionLocked || isSplitLocked) && step === 'EXAM' && (
-        <div className="fixed inset-0 z-[1002] bg-slate-950 flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
+        <div className="fixed inset-0 z-[1002] bg-transparent flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#f43f5e10,transparent)]"></div>
            <div className="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-[2.5rem] border border-rose-500/20 flex items-center justify-center mb-8 animate-bounce shadow-2xl shadow-rose-500/20">
             {isConnectionLocked ? <MonitorOff size={48} /> : <Monitor size={48} />}

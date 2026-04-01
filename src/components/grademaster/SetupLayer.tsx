@@ -125,7 +125,7 @@ export default function SetupLayer(props: SetupLayerProps) {
   const cardClass = "bg-slate-900/40 backdrop-blur-xl rounded-2xl p-6 shadow-2xl border border-white/10";
 
   return (
-    <div className="min-h-screen flex items-start justify-center p-4 py-8 lg:py-12 animate-in bg-slate-950">
+    <div className="min-h-screen flex items-start justify-center p-4 py-8 lg:py-12 animate-in bg-transparent">
       <div className="w-full max-w-6xl space-y-8">
         
         {/* Header */}

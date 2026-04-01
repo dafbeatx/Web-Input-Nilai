@@ -230,7 +230,7 @@ export default function GradingLayer(props: GradingLayerProps) {
   const answeredCount = Object.keys(userAnswers).length;
 
   return (
-    <div className="min-h-screen bg-slate-950 p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in pt-16">
+    <div className="min-h-screen bg-transparent p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in pt-16">
       <header className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
         <div>
           <button onClick={onBack} className="flex items-center gap-1.5 md:gap-2 text-slate-500 hover:text-primary font-bold text-[10px] md:text-xs uppercase tracking-widest transition-colors mb-2 md:mb-3 border border-transparent hover:border-primary/20 px-3 py-1.5 rounded-xl hover:bg-primary/10 w-fit">

@@ -293,7 +293,7 @@ export default function BehaviorLayer({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in page-pt md:pt-16 pb-24 md:pb-8">
+    <div className="min-h-screen bg-transparent p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in page-pt md:pt-16 pb-24 md:pb-8">
       <header className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <button type="button" onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-primary font-black text-[10px] uppercase tracking-widest transition-all mb-4 bg-white/5 px-4 py-2 rounded-xl border border-white/10 hover:border-primary/20">
@@ -469,7 +469,7 @@ export default function BehaviorLayer({
         <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl z-[1000] flex items-center justify-center p-0 md:p-10 animate-in fade-in duration-300">
           <div className="bg-slate-900/50 border border-white/10 w-full h-full md:h-auto max-w-6xl md:rounded-[4rem] overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col">
               {/* Top Notch Buffer (Mobile Only) */}
-              <div className="md:hidden h-[var(--safe-top)] bg-slate-950 shrink-0" />
+              <div className="md:hidden h-[var(--safe-top)] bg-transparent shrink-0" />
               
               {/* Sticky Compact Header - Safe for Mobile */}
               <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-5 md:p-10 border-b border-white/10 flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-xl">
@@ -545,7 +545,7 @@ export default function BehaviorLayer({
                                             type="number" 
                                             value={editForm.points} 
                                             onChange={(e) => setEditForm(prev => ({ ...prev, points: parseInt(e.target.value) }))}
-                                            className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs font-black text-white outline-none"
+                                            className="w-full bg-transparent border border-white/10 rounded-lg p-2 text-xs font-black text-white outline-none"
                                           />
                                         </div>
                                         <div>
@@ -554,7 +554,7 @@ export default function BehaviorLayer({
                                             type="text" 
                                             value={editForm.reason} 
                                             onChange={(e) => setEditForm(prev => ({ ...prev, reason: e.target.value }))}
-                                            className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs font-black text-white outline-none"
+                                            className="w-full bg-transparent border border-white/10 rounded-lg p-2 text-xs font-black text-white outline-none"
                                           />
                                         </div>
                                     </div>

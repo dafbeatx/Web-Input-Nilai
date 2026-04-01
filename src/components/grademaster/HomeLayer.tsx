@@ -103,7 +103,7 @@ export default function HomeLayer({
   const expandedGroup = expandedClass ? classGroups.find(g => `${g.className}__${g.academicYear}` === expandedClass) : null;
 
   return (
-    <div className="min-h-screen bg-slate-950 p-3 sm:p-5 lg:p-8 pb-safe-bottom max-w-7xl mx-auto animate-in mb-20 md:mb-0 pt-16">
+    <div className="min-h-screen bg-transparent p-3 sm:p-5 lg:p-8 pb-safe-bottom max-w-7xl mx-auto animate-in mb-20 md:mb-0 pt-16">
       <header className="mb-8 md:mb-12 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
         <div>
           <div className="flex items-center gap-2 md:gap-3 text-primary mb-1 md:mb-2">
