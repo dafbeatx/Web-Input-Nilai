@@ -48,12 +48,20 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     // 1. Restore Admin State
     const savedAdmin = localStorage.getItem('gm_isAdmin') === 'true';
     const savedUser = localStorage.getItem('gm_adminUser');
+    const savedStudent = localStorage.getItem('gm_isStudent') === 'true';
+    const savedStudentData = localStorage.getItem('gm_studentData');
     const savedClass = localStorage.getItem('gm_studentClass');
     const savedYear = localStorage.getItem('gm_academicYear') || "2025/2026";
     
     if (savedAdmin) {
       setIsAdmin(true);
       setAdminUser(savedUser);
+    }
+    if (savedStudent) {
+      setIsStudent(true);
+      if (savedStudentData) {
+        try { setStudentData(JSON.parse(savedStudentData)); } catch(e) {}
+      }
     }
     if (savedClass) setStudentClass(savedClass);
     setAcademicYear(savedYear);
@@ -69,9 +77,14 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 3. Admin Guard
-    if (initialLayer === 'setup' && !savedAdmin) {
+    // 3. Auth Guards
+    const adminOnlyLayers = ['setup', 'grading', 'remedial_dashboard', 'attendance', 'student_accounts'];
+    const protectedLayers = ['dashboard', 'remedial', 'behavior'];
+    
+    if (adminOnlyLayers.includes(initialLayer) && !savedAdmin) {
       initialLayer = 'login';
+    } else if (protectedLayers.includes(initialLayer) && !savedAdmin && !savedStudent) {
+      initialLayer = 'student_login';
     }
 
     setLayer(initialLayer);
@@ -98,11 +111,21 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
 
   // Update URL and LocalStorage on Layer change
   const navigate = (newLayer: Layer) => {
-    // Admin Guard
-    if (newLayer === 'setup' && !isAdmin) {
+    // Auth Guards
+    const adminOnlyLayers = ['setup', 'grading', 'remedial_dashboard', 'attendance', 'student_accounts'];
+    const protectedLayers = ['dashboard', 'remedial', 'behavior'];
+
+    if (adminOnlyLayers.includes(newLayer) && !isAdmin) {
       setLayer('login');
       window.history.pushState({ layer: 'login' }, '', '#login');
       localStorage.setItem("gm_layer", 'login');
+      return;
+    }
+
+    if (protectedLayers.includes(newLayer) && !isAdmin && !isStudent) {
+      setLayer('student_login');
+      window.history.pushState({ layer: 'student_login' }, '', '#student_login');
+      localStorage.setItem("gm_layer", 'student_login');
       return;
     }
 

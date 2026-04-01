@@ -41,8 +41,8 @@ export async function GET(req: NextRequest) {
       }
 
       const { data, error } = await supabase
-        .from('gm_student_accounts')
-        .select('id, student_name, class_name, academic_year, username, password_hash, profile_photo_url')
+        .from('gm_students')
+        .select('id, name, class_name, academic_year, username, password_hash, photo_url')
         .eq('username', username)
         .single();
 
@@ -59,11 +59,11 @@ export async function GET(req: NextRequest) {
     }
 
     let query = supabase
-      .from('gm_student_accounts')
+      .from('gm_students')
       .select('*')
       .eq('academic_year', academicYear)
       .order('class_name', { ascending: true })
-      .order('student_name', { ascending: true });
+      .order('name', { ascending: true });
 
     if (className) {
       query = query.eq('class_name', className);
@@ -100,10 +100,10 @@ export async function POST(req: NextRequest) {
 
     const { data: behaviorStudents, error: fetchError } = await supabase
       .from('gm_behaviors')
-      .select('student_name, class_name')
+      .select('name, class_name')
       .eq('class_name', className)
       .eq('academic_year', academicYear)
-      .order('student_name', { ascending: true });
+      .order('name', { ascending: true });
 
     if (fetchError) throw fetchError;
 
@@ -112,21 +112,21 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: existingAccounts } = await supabase
-      .from('gm_student_accounts')
-      .select('student_name')
+      .from('gm_students')
+      .select('name')
       .eq('class_name', className)
       .eq('academic_year', academicYear);
 
-    const existingNames = new Set((existingAccounts || []).map(a => a.student_name));
+    const existingNames = new Set((existingAccounts || []).map(a => a.name));
 
-    const newStudents = behaviorStudents.filter(s => !existingNames.has(s.student_name));
+    const newStudents = behaviorStudents.filter(s => !existingNames.has(s.name));
 
     if (newStudents.length === 0) {
       return NextResponse.json({ message: 'Semua siswa sudah memiliki akun', created: 0 });
     }
 
     const { data: allUsernames } = await supabase
-      .from('gm_student_accounts')
+      .from('gm_students')
       .select('username');
 
     const usedUsernames = new Set((allUsernames || []).map(a => a.username));
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
     const accountRows = [];
 
     for (const student of newStudents) {
-      let baseUsername = generateUsername(student.student_name, student.class_name);
+      let baseUsername = generateUsername(student.name, student.class_name);
       let username = baseUsername;
       let counter = 1;
 
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
       const hashedPassword = await hashPassword(plainPassword);
 
       accountRows.push({
-        student_name: student.student_name,
+        name: student.name,
         class_name: student.class_name,
         academic_year: academicYear,
         username,
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: inserted, error: insertError } = await supabase
-      .from('gm_student_accounts')
+      .from('gm_students')
       .insert(accountRows)
       .select();
 
@@ -189,7 +189,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const { error } = await supabase
-      .from('gm_student_accounts')
+      .from('gm_students')
       .delete()
       .eq('id', accountId);
 

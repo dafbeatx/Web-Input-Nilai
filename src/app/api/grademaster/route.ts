@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { hashPassword, verifyPassword, validateSessionInput, checkRateLimit } from '@/lib/grademaster/security';
 import { getAdminSession } from '@/lib/grademaster/admin';
+import { getStudentSession } from '@/lib/grademaster/studentAuth';
 import { generateQuestionDifficulties } from '@/lib/grademaster/analytics';
 import { GradedStudent } from '@/lib/grademaster/types';
 import { calculateStudentResult } from '@/lib/grademaster/scoring';
@@ -190,6 +191,7 @@ export async function POST(req: NextRequest) {
   export async function GET(req: NextRequest) {
     try {
       const adminSession = await getAdminSession();
+      const studentSession = await getStudentSession();
       const { searchParams } = new URL(req.url);
       const name = searchParams.get('name');
       const password = searchParams.get('password');
@@ -250,19 +252,21 @@ export async function POST(req: NextRequest) {
     // Check access:
     // 1. If Admin Session exists -> Full Access
     // 2. If password provided -> Validate. If correct, Full Access (Teacher).
-    // 3. Fallback to Read-only.
+    // 3. If Student Session exists -> Read-only.
+    // 4. Fallback -> Access Denied.
     if (adminSession) {
       isReadOnly = false;
-    } else if (!password) {
-      isReadOnly = true;
-    } else {
+    } else if (password) {
       const isMatch = await verifyPassword(password.trim(), session.password_hash);
       if (isMatch) {
         isReadOnly = false;
       } else {
-        // Fallback to read-only even on wrong password if user just wants to view
-        isReadOnly = true; 
+        return NextResponse.json({ error: 'Password salah' }, { status: 403 });
       }
+    } else if (studentSession) {
+      isReadOnly = true;
+    } else {
+      return NextResponse.json({ error: 'Akses ditolak: Anda harus login' }, { status: 403 });
     }
 
     const { data: students } = await supabase

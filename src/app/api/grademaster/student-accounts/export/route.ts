@@ -14,11 +14,11 @@ export async function GET(req: NextRequest) {
     const targetClass = searchParams.get('class');
 
     let query = supabase
-      .from('gm_student_accounts')
-      .select('student_name, class_name, username, password_plain')
+      .from('gm_students')
+      .select('name, class_name, username, password_plain')
       .eq('academic_year', academicYear)
       .order('class_name', { ascending: true })
-      .order('student_name', { ascending: true });
+      .order('name', { ascending: true });
 
     if (targetClass) {
       query = query.eq('class_name', targetClass);
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
     for (const [cls, students] of Object.entries(classesByName)) {
       const sheetData = students.map((s, idx) => ({
         'No': idx + 1,
-        'Nama Siswa': s.student_name,
+        'Nama Siswa': s.name,
         'Kelas': s.class_name,
         'Username': s.username,
         'Password': s.password_plain || '(sudah dihapus)',

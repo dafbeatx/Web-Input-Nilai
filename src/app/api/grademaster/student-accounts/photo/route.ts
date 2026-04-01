@@ -54,9 +54,9 @@ export async function POST(req: NextRequest) {
     const publicUrl = publicUrlData.publicUrl;
 
     const { error: updateError } = await supabase
-      .from('gm_student_accounts')
+      .from('gm_students')
       .update({
-        profile_photo_url: publicUrl,
+        photo_url: publicUrl,
         updated_at: new Date().toISOString(),
       })
       .eq('id', accountId);

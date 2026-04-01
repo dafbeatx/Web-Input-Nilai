@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { checkRateLimit } from '@/lib/grademaster/security';
+import { getAdminSession } from '@/lib/grademaster/admin';
+import { getStudentSession } from '@/lib/grademaster/studentAuth';
 
 export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`student:${ip}`)) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan' }, { status: 429 });
+    }
+
+    const adminSession = await getAdminSession();
+    if (!adminSession) {
+      return NextResponse.json({ error: 'Akses ditolak: Hanya admin yang dapat menambahkan/mengubah data siswa' }, { status: 403 });
     }
 
     const body = await req.json();
@@ -111,6 +118,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Session ID wajib diisi' }, { status: 400 });
     }
 
+    const adminSession = await getAdminSession();
+    const studentSession = await getStudentSession();
+
+    if (!adminSession && !studentSession) {
+      return NextResponse.json({ error: 'Akses ditolak: Anda harus login untuk melihat data ini' }, { status: 403 });
+    }
+
     const { data, error } = await supabase
       .from('gm_students')
       .select('*')
@@ -164,6 +178,11 @@ export async function DELETE(req: NextRequest) {
 
     if (!studentId) {
       return NextResponse.json({ error: 'Student ID wajib diisi' }, { status: 400 });
+    }
+
+    const adminSession = await getAdminSession();
+    if (!adminSession) {
+      return NextResponse.json({ error: 'Akses ditolak: Hanya admin yang dapat menghapus siswa' }, { status: 403 });
     }
 
     const { error } = await supabase
