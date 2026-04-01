@@ -20,45 +20,20 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 });
     }
 
-    // Step 1: Get existing record to append to log array
-    const { data: record, error: fetchErr } = await supabase
-      .from('gm_behaviors')
-      .select('total_points, behavior_logs')
-      .eq('id', id)
-      .single();
+    // Call the new RPC for atomic and consistent updates
+    const { data, error: rpcError } = await supabase.rpc('log_behavior_points', {
+      p_student_id: id,
+      p_type: type,
+      p_points: pointsDelta,
+      p_reason: reason
+    });
 
-    if (fetchErr || !record) {
-      return NextResponse.json({ error: 'Data siswa tidak ditemukan' }, { status: 404 });
+    if (rpcError) {
+      console.error('RPC Error:', rpcError);
+      throw new Error(rpcError.message);
     }
 
-    const currentPoints = Number(record.total_points);
-    const newPoints = currentPoints + pointsDelta;
-    const currentLogs = Array.isArray(record.behavior_logs) ? record.behavior_logs : [];
-
-    const newLogEntry = {
-      type,
-      points: pointsDelta,
-      reason,
-      timestamp: new Date().toISOString()
-    };
-
-    const newLogs = [newLogEntry, ...currentLogs];
-
-    // Step 2: Update record
-    const { data: updatedRecord, error: updateErr } = await supabase
-      .from('gm_behaviors')
-      .update({
-        total_points: newPoints,
-        behavior_logs: newLogs,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select('*')
-      .single();
-
-    if (updateErr) throw updateErr;
-
-    return NextResponse.json({ student: updatedRecord, message: 'Poin berhasil diperbarui' });
+    return NextResponse.json({ student: data, message: 'Poin berhasil diperbarui' });
 
   } catch (err: any) {
     console.error('Update points error:', err);

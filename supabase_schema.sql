@@ -427,3 +427,56 @@ ALTER TABLE public.gm_remedial_attempts
 ADD COLUMN IF NOT EXISTS last_heartbeat_at TIMESTAMPTZ DEFAULT now(),
 ADD COLUMN IF NOT EXISTS last_network_status TEXT DEFAULT 'ONLINE',
 ADD COLUMN IF NOT EXISTS last_latency_ms INTEGER DEFAULT 0;
+-- ============================================================
+-- Behavior RPC
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.log_behavior_points(
+  p_student_id UUID,
+  p_type TEXT,
+  p_points INTEGER,
+  p_reason TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_points_delta INTEGER;
+  v_updated_record JSONB;
+  v_new_log JSONB;
+BEGIN
+  -- 1. Determine points delta based on type
+  v_points_delta := CASE 
+    WHEN p_type = 'BAD' THEN -ABS(p_points)
+    ELSE ABS(p_points)
+  END;
+
+  -- 2. Construct log entry
+  v_new_log := jsonb_build_object(
+    'type', p_type,
+    'points', v_points_delta,
+    'reason', p_reason,
+    'timestamp', now()
+  );
+
+  -- 3. Update student points and logs atomatically
+  UPDATE public.gm_behaviors
+  SET 
+    total_points = total_points + v_points_delta,
+    behavior_logs = v_new_log || behavior_logs,
+    updated_at = now()
+  WHERE id = p_student_id
+  RETURNING jsonb_build_object(
+    'id', id,
+    'student_name', student_name,
+    'class_name', class_name,
+    'academic_year', academic_year,
+    'total_points', total_points,
+    'behavior_logs', behavior_logs,
+    'created_at', created_at,
+    'updated_at', updated_at
+  ) INTO v_updated_record;
+
+  RETURN v_updated_record;
+END;
+$$;

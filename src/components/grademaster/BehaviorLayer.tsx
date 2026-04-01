@@ -362,7 +362,7 @@ export default function BehaviorLayer({
                     <ThumbsDown size={14} /> Tindakan Buruk (-10)
                   </h3>
                   {behaviorReasons.bad.map(r => (
-                    <button key={r} onClick={() => updatePoints('BAD', 10, r)} className="w-full p-4 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 hover:border-rose-500/30 rounded-2xl text-left text-xs font-black text-rose-400 uppercase tracking-widest transition-all">
+                    <button key={r} onClick={() => updatePoints('BAD', -10, r)} className="w-full p-4 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 hover:border-rose-500/30 rounded-2xl text-left text-xs font-black text-rose-400 uppercase tracking-widest transition-all">
                       {r}
                     </button>
                   ))}
