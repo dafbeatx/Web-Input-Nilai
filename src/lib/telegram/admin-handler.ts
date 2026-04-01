@@ -8,11 +8,16 @@ const adminConversations = new Map<number, { step: string; data: Record<string, 
 
 const MAIN_MENU = `🎓 <b>GradeMaster Admin Panel</b>\n\nPilih aksi:`;
 const MAIN_KEYBOARD = [
-  [{ text: '📊 Lihat Sesi', callback_data: 'nav:cat:sessions' }],
-  [{ text: '👥 Kelola Siswa', callback_data: 'nav:cat:students' }],
-  [{ text: '🚨 Pelanggaran', callback_data: 'nav:cat:violations' }],
-  [{ text: '📈 Nilai (Statistik)', callback_data: 'nav:cat:grades' }],
-  [{ text: '⚙️ Sistem', callback_data: 'nav:cat:system' }]
+  [{ text: '📊 ✨ KELOLA PERILAKU SISWA', callback_data: 'nav:cat:behaviour' }],
+  [
+    { text: '📁 LIHAT SESI', callback_data: 'nav:cat:sessions' },
+    { text: '👥 KELOLA SISWA', callback_data: 'nav:cat:students' }
+  ],
+  [
+    { text: '🚨 PELANGGARAN', callback_data: 'nav:cat:violations' },
+    { text: '📈 STATISTIK NILAI', callback_data: 'nav:cat:grades' }
+  ],
+  [{ text: '⚙️ PENGATURAN SISTEM', callback_data: 'nav:cat:system' }]
 ];
 
 export async function handleAdminCommand(chatId: number, text: string, messageId?: number) {
@@ -395,6 +400,22 @@ async function handleCategorySelection(chatId: number, messageId: number | undef
       [{ text: '🏠 Menu Utama', callback_data: 'nav:main' }]
     ];
     await editOrSend(chatId, messageId, '⚙️ <b>Sistem & Pengaturan</b>\nPilih aksi:', sysKeyboard);
+    return;
+  }
+
+  if (category === 'behaviour') {
+    // Initial call to behavior handler (using nav prefix for compatibility)
+    // Actually, we'll manually trigger it here if it's the first time
+    const { bot } = await import('./telegraf');
+    await bot.handleUpdate({
+      update_id: 0,
+      callback_query: {
+        id: 'start',
+        from: { id: chatId, first_name: 'Admin' },
+        message: { message_id: messageId || 0, chat: { id: chatId } },
+        data: 'stubeh:page:1'
+      }
+    } as any);
     return;
   }
 
