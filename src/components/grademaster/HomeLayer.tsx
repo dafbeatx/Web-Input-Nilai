@@ -143,6 +143,14 @@ export default function HomeLayer({
         <div className="flex items-center gap-3">
           {isAdmin && (
             <button
+              onClick={() => (window as any).setLayer('student_accounts')}
+              className="px-4 py-3 md:px-6 md:py-4 bg-white/5 text-slate-300 rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+            >
+              <Users size={16} className="md:w-[18px] md:h-[18px]" /> Akun Siswa
+            </button>
+          )}
+          {isAdmin && (
+            <button
               onClick={onCreateNew}
               className="px-4 py-3 md:px-6 md:py-4 bg-primary text-white rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
             >

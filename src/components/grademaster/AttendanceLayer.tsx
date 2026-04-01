@@ -88,10 +88,6 @@ export default function AttendanceLayer({
       const dataAttendance = await resAttendance.json();
       
       const map: Record<string, string> = {};
-      // Default to "Hadir" for all if admin
-      if (isAdmin) {
-        studentNames.forEach((n: string) => map[n] = 'Hadir');
-      }
       
       dataAttendance.attendance?.forEach((rec: AttendanceRecord) => {
         map[rec.student_name] = rec.status;
@@ -111,14 +107,22 @@ export default function AttendanceLayer({
     setIsSaving(true);
     
     try {
-      const records = students.map(name => ({
-        student_name: name,
-        class_name: className,
-        subject,
-        academic_year: academicYear,
-        status: attendanceMap[name] || 'Hadir',
-        date: selectedDate
-      }));
+      const records = students
+        .filter(name => attendanceMap[name])
+        .map(name => ({
+          student_name: name,
+          class_name: className,
+          subject,
+          academic_year: academicYear,
+          status: attendanceMap[name],
+          date: selectedDate
+        }));
+        
+      if (records.length === 0) {
+        setToast({ message: "Pilih setidaknya satu absensi sebelum menyimpan", type: "error" });
+        setIsSaving(false);
+        return;
+      }
       
       const res = await fetch('/api/grademaster/attendance', {
         method: 'POST',
@@ -147,6 +151,7 @@ export default function AttendanceLayer({
 
   const stats = {
     total: students.length,
+    belum_ada: students.filter(s => !attendanceMap[s]).length,
     hadir: Object.values(attendanceMap).filter(s => s === 'Hadir').length,
     izin: Object.values(attendanceMap).filter(s => s === 'Izin').length,
     sakit: Object.values(attendanceMap).filter(s => s === 'Sakit').length,
@@ -155,6 +160,7 @@ export default function AttendanceLayer({
 
   const filteredStudents = students.filter(name => {
     if (filterStatus === 'Semua') return true;
+    if (filterStatus === 'Belum Diset') return !attendanceMap[name];
     return attendanceMap[name] === filterStatus;
   });
 
@@ -256,16 +262,25 @@ export default function AttendanceLayer({
               </div>
               
               {isAdmin && (
-                <button onClick={saveAttendance} disabled={isSaving} className="w-full sm:w-auto px-6 py-3 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
-                  {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Simpan Absensi
-                </button>
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  <button onClick={() => {
+                    const map = { ...attendanceMap };
+                    students.forEach(s => { if (!map[s]) map[s] = 'Hadir'; });
+                    setAttendanceMap(map);
+                  }} className="w-full sm:w-auto px-6 py-3 bg-sky-500/10 text-sky-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-sky-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <CheckCircle2 size={12} /> Tandai Semua Hadir
+                  </button>
+                  <button onClick={saveAttendance} disabled={isSaving} className="w-full sm:w-auto px-6 py-3 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Simpan Absensi
+                  </button>
+                </div>
               )}
             </div>
 
             {/* STATUS SELECTOR / FILTER */}
             <div className="px-5 py-3 border-b border-white/5 bg-white/2 flex items-center gap-2 overflow-x-auto no-scrollbar">
               <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mr-2 whitespace-nowrap">Filter:</span>
-              {['Semua', 'Hadir', 'Izin', 'Sakit', 'Alpa'].map((status) => (
+              {['Semua', 'Hadir', 'Izin', 'Sakit', 'Alpa', 'Belum Diset'].map((status) => (
                 <button
                   key={status}
                   onClick={() => setFilterStatus(status)}
@@ -291,26 +306,25 @@ export default function AttendanceLayer({
                       <h4 className="text-xs md:text-sm font-black text-white uppercase tracking-tight font-outfit">{name}</h4>
                     </div>
 
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      {['Hadir', 'Izin', 'Sakit', 'Alpa'].map((status) => {
-                        const currentStatus = attendanceMap[name] || 'Hadir';
-                        const active = currentStatus === status;
-                        
-                        const colors = {
-                          'Hadir': 'bg-emerald-500 border-emerald-500/20 text-white',
-                          'Izin': 'bg-amber-500 border-amber-500/20 text-white',
-                          'Sakit': 'bg-sky-500 border-sky-500/20 text-white',
-                          'Alpa': 'bg-rose-500 border-rose-500/20 text-white'
-                        };
-                        const inactiveColors = {
-                          'Hadir': 'hover:text-emerald-500 hover:border-emerald-500/20',
-                          'Izin': 'hover:text-amber-500 hover:border-amber-500/20',
-                          'Sakit': 'hover:text-sky-500 hover:border-sky-500/20',
-                          'Alpa': 'hover:text-rose-500 hover:border-rose-500/20'
-                        };
-                        
-                        if (isAdmin) {
-                          // Admin view: interactive buttons for changing status
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 justify-end mt-3 sm:mt-0">
+                      {isAdmin ? (
+                        ['Hadir', 'Izin', 'Sakit', 'Alpa'].map((status) => {
+                          const currentStatus = attendanceMap[name];
+                          const active = currentStatus === status;
+                          
+                          const colors = {
+                            'Hadir': 'bg-emerald-500 border-emerald-500/20 text-white',
+                            'Izin': 'bg-amber-500 border-amber-500/20 text-white',
+                            'Sakit': 'bg-sky-500 border-sky-500/20 text-white',
+                            'Alpa': 'bg-rose-500 border-rose-500/20 text-white'
+                          };
+                          const inactiveColors = {
+                            'Hadir': 'hover:text-emerald-500 hover:border-emerald-500/20',
+                            'Izin': 'hover:text-amber-500 hover:border-amber-500/20',
+                            'Sakit': 'hover:text-sky-500 hover:border-sky-500/20',
+                            'Alpa': 'hover:text-rose-500 hover:border-rose-500/20'
+                          };
+
                           return (
                             <button 
                               key={status}
@@ -318,30 +332,33 @@ export default function AttendanceLayer({
                               className={`
                                 flex-1 sm:flex-none px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all border
                                 ${active 
-                                  ? `${colors[status as keyof typeof colors]} shadow-lg shadow-black/20` 
+                                  ? `${colors[status as keyof typeof colors]} shadow-lg shadow-black/20 text-white` 
                                   : `bg-slate-950/50 text-slate-500 border-white/5 ${inactiveColors[status as keyof typeof inactiveColors]}`}
                               `}
                             >
                               {status[0]}<span className="hidden sm:inline">{status.slice(1)}</span>
                             </button>
                           );
-                        } else if (active) {
-                          // Non-admin view: static, non-clickable pill indicator
-                          return (
-                            <div 
-                              key={status}
-                              className={`
-                                px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all cursor-default
-                                ${colors[status as keyof typeof colors]} shadow-lg shadow-black/20
-                              `}
-                            >
-                              {status}
-                            </div>
-                          );
-                        }
-                        
-                        return null; // Don't show inactive states to normal users
-                      })}
+                        })
+                      ) : (
+                        attendanceMap[name] ? (
+                          <div 
+                            className={`
+                              px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all cursor-default shadow-lg shadow-black/20
+                              ${attendanceMap[name] === 'Hadir' ? 'bg-emerald-500 border-emerald-500/20 text-white' : ''}
+                              ${attendanceMap[name] === 'Izin' ? 'bg-amber-500 border-amber-500/20 text-white' : ''}
+                              ${attendanceMap[name] === 'Sakit' ? 'bg-sky-500 border-sky-500/20 text-white' : ''}
+                              ${attendanceMap[name] === 'Alpa' ? 'bg-rose-500 border-rose-500/20 text-white' : ''}
+                            `}
+                          >
+                            {attendanceMap[name]}
+                          </div>
+                        ) : (
+                          <div className="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/5 bg-slate-900 text-slate-500 cursor-default">
+                            Belum Ada Data
+                          </div>
+                        )
+                      )}
                     </div>
                   </div>
                 ))

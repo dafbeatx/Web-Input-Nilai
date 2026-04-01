@@ -98,6 +98,16 @@ export default function Navbar() {
                   <RefreshCcw size={14} /> Remedial
                 </button>
               )}
+              {isAdmin && (
+                <button
+                  onClick={() => onNavigate('student_accounts')}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
+                    layer === 'student_accounts' ? 'bg-primary/20 text-primary border border-primary/20' : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
+                  }`}
+                >
+                  <Users size={14} /> Akun Siswa
+                </button>
+              )}
             </div>
 
             {/* Right: User/Auth */}
@@ -208,6 +218,12 @@ export default function Navbar() {
                   </button>
                   <button onClick={() => { onLogout(); setIsMobileMenuOpen(false); }} className="w-full p-4 bg-rose-500/10 text-rose-400 rounded-2xl text-xs font-black uppercase tracking-widest text-left flex items-center gap-3">
                     <LogOut size={16} /> Logout Sistem
+                  </button>
+                  <button 
+                    onClick={() => { onNavigate('student_accounts'); setIsMobileMenuOpen(false); }} 
+                    className="w-full p-4 bg-primary/10 text-primary rounded-2xl text-xs font-black uppercase tracking-widest text-left flex items-center gap-3 border border-primary/20"
+                  >
+                    <Users size={16} /> Manajemen Akun Siswa
                   </button>
                 </>
               ) : (

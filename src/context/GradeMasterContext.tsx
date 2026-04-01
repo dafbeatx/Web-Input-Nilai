@@ -10,6 +10,10 @@ interface GradeMasterContextType {
   setIsAdmin: (isAdmin: boolean) => void;
   adminUser: string | null;
   setAdminUser: (name: string | null) => void;
+  isStudent: boolean;
+  setIsStudent: (isStudent: boolean) => void;
+  studentData: any | null;
+  setStudentData: (data: any | null) => void;
   toast: ToastType | null;
   setToast: (toast: ToastType | null) => void;
   modal: ModalType;
@@ -27,6 +31,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   const [layer, setLayer] = useState<Layer>("home");
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminUser, setAdminUser] = useState<string | null>(null);
+  const [isStudent, setIsStudent] = useState(false);
+  const [studentData, setStudentData] = useState<any | null>(null);
   const [toast, setToast] = useState<ToastType | null>(null);
   const [modal, setModal] = useState<ModalType>(null);
   const [studentClass, setStudentClass] = useState("");
@@ -37,7 +43,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return;
 
     const hash = window.location.hash.replace('#', '');
-    const validLayers: Layer[] = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login', 'attendance', 'student_accounts'];
+    const validLayers: Layer[] = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login', 'attendance', 'student_accounts', 'student_login'];
     
     // 1. Restore Admin State
     const savedAdmin = localStorage.getItem('gm_isAdmin') === 'true';
@@ -108,12 +114,22 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    setIsAdmin(false);
-    setAdminUser(null);
+  const logout = async () => {
+    if (isAdmin) {
+      await fetch('/api/admin/logout', { method: 'POST' }).catch(() => {});
+      setIsAdmin(false);
+      setAdminUser(null);
+      localStorage.removeItem('gm_isAdmin');
+      localStorage.removeItem('gm_adminUser');
+    } else if (isStudent) {
+      await fetch('/api/student/logout', { method: 'POST' }).catch(() => {});
+      setIsStudent(false);
+      setStudentData(null);
+      localStorage.removeItem('gm_isStudent');
+      localStorage.removeItem('gm_studentData');
+    }
+
     setLayer("home");
-    localStorage.removeItem('gm_isAdmin');
-    localStorage.removeItem('gm_adminUser');
     localStorage.setItem("gm_layer", "home");
     window.history.pushState({ layer: 'home' }, '', '#home');
   };
@@ -123,6 +139,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       layer, setLayer: navigate,
       isAdmin, setIsAdmin,
       adminUser, setAdminUser,
+      isStudent, setIsStudent,
+      studentData, setStudentData,
       toast, setToast,
       modal, setModal,
       studentClass, setStudentClass,
