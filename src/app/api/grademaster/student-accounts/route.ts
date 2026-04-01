@@ -41,8 +41,8 @@ export async function GET(req: NextRequest) {
       }
 
       const { data, error } = await supabase
-        .from('gm_students')
-        .select('id, name, class_name, academic_year, username, password_hash, photo_url')
+        .from('gm_student_accounts')
+        .select('id, student_name, class_name, academic_year, username, password_hash, profile_photo_url')
         .eq('username', username)
         .single();
 
@@ -59,11 +59,11 @@ export async function GET(req: NextRequest) {
     }
 
     let query = supabase
-      .from('gm_students')
+      .from('gm_student_accounts')
       .select('*')
       .eq('academic_year', academicYear)
       .order('class_name', { ascending: true })
-      .order('name', { ascending: true });
+      .order('student_name', { ascending: true });
 
     if (className) {
       query = query.eq('class_name', className);
@@ -112,12 +112,12 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: existingAccounts } = await supabase
-      .from('gm_students')
-      .select('name')
+      .from('gm_student_accounts')
+      .select('student_name')
       .eq('class_name', className)
       .eq('academic_year', academicYear);
 
-    const existingNames = new Set((existingAccounts || []).map(a => a.name));
+    const existingNames = new Set((existingAccounts || []).map(a => a.student_name));
 
     const newStudents = behaviorStudents.filter(s => !existingNames.has(s.name));
 
@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: allUsernames } = await supabase
-      .from('gm_students')
+      .from('gm_student_accounts')
       .select('username');
 
     const usedUsernames = new Set((allUsernames || []).map(a => a.username));
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
       const hashedPassword = await hashPassword(plainPassword);
 
       accountRows.push({
-        name: student.name,
+        student_name: student.name,
         class_name: student.class_name,
         academic_year: academicYear,
         username,
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: inserted, error: insertError } = await supabase
-      .from('gm_students')
+      .from('gm_student_accounts')
       .insert(accountRows)
       .select();
 
@@ -189,7 +189,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const { error } = await supabase
-      .from('gm_students')
+      .from('gm_student_accounts')
       .delete()
       .eq('id', accountId);
 

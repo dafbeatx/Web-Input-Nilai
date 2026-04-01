@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     const { className, academicYear = '2025/2026' } = body;
 
     let query = supabase
-      .from('gm_students')
+      .from('gm_student_accounts')
       .update({ password_plain: null, updated_at: new Date().toISOString() })
       .eq('academic_year', academicYear);
 

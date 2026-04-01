@@ -131,13 +131,13 @@ export interface AnalyticsResult {
 
 export interface StudentAccount {
   id: string;
-  name: string;
+  student_name: string;
   class_name: string;
   academic_year: string;
   username: string;
   password_hash?: string;
   password_plain?: string | null;
-  photo_url?: string | null;
+  profile_photo_url?: string | null;
   created_at: string;
   updated_at: string;
 }

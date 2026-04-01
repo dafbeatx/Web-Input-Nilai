@@ -41,13 +41,13 @@ export async function getStudentSession() {
     .from('gm_student_sessions')
     .select(`
       account_id,
-      gm_students!inner (
+      gm_student_accounts!inner (
         id,
-        name,
+        student_name,
         class_name,
         academic_year,
         username,
-        photo_url
+        profile_photo_url
       )
     `)
     .eq('token', token)
@@ -56,18 +56,18 @@ export async function getStudentSession() {
 
   if (error || !data) return null;
 
-  const account = data.gm_students as any;
+  const accountData = data.gm_student_accounts as any;
 
   return {
     account_id: data.account_id,
     role: 'student' as const,
     student: {
-      id: account.id,
-      name: account.name,
-      class_name: account.class_name,
-      academic_year: account.academic_year,
-      username: account.username,
-      photo_url: account.photo_url,
+      id: accountData.id,
+      name: accountData.student_name,
+      class_name: accountData.class_name,
+      academic_year: accountData.academic_year,
+      username: accountData.username,
+      photo_url: accountData.profile_photo_url,
     },
   };
 }

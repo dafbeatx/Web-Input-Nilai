@@ -175,7 +175,7 @@ export default function StudentAccountsLayer({
       if (res.ok) {
         setToast({ message: `Foto berhasil diupload (${Math.round(data.compressedSize / 1024)}KB WebP)`, type: 'success' });
         setAccounts(prev => prev.map(a =>
-          a.id === accountId ? { ...a, photo_url: data.url } : a
+          a.id === accountId ? { ...a, profile_photo_url: data.url } : a
         ));
       } else {
         setToast({ message: data.error, type: 'error' });
@@ -264,15 +264,15 @@ export default function StudentAccountsLayer({
                 {/* Photo / Avatar */}
                 <div className="relative group shrink-0">
                   <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center">
-                    {account.photo_url ? (
+                    {account.profile_photo_url ? (
                       <img
-                        src={account.photo_url}
-                        alt={account.name}
+                        src={account.profile_photo_url}
+                        alt={account.student_name}
                         className="w-full h-full object-cover"
                         loading="lazy"
                       />
                     ) : (
-                      <span className="text-lg font-bold text-slate-600">{account.name.charAt(0)}</span>
+                      <span className="text-lg font-bold text-slate-600">{(account.student_name || 'S').charAt(0)}</span>
                     )}
                   </div>
                   <label className="absolute inset-0 cursor-pointer opacity-0 group-hover:opacity-100 bg-black/60 rounded-2xl flex items-center justify-center transition-opacity">
@@ -292,7 +292,7 @@ export default function StudentAccountsLayer({
                 {/* Info */}
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-[15px] font-sans font-semibold text-white truncate">{account.name}</h3>
+                    <h3 className="text-[15px] font-sans font-semibold text-white truncate">{account.student_name}</h3>
                     <span className="text-[11px] font-sans text-slate-500">#{idx + 1}</span>
                   </div>
                   <div className="flex items-center gap-3 mt-1">

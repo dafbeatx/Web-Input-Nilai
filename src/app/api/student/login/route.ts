@@ -18,8 +18,8 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: account, error } = await supabase
-      .from('gm_students')
-      .select('id, name, class_name, academic_year, username, password_hash, photo_url')
+      .from('gm_student_accounts')
+      .select('id, student_name, class_name, academic_year, username, password_hash, profile_photo_url')
       .eq('username', username.trim().toLowerCase())
       .single();
 
@@ -38,11 +38,11 @@ export async function POST(req: NextRequest) {
       message: 'Login berhasil',
       student: {
         id: account.id,
-        name: account.name,
+        name: account.student_name,
         class_name: account.class_name,
         academic_year: account.academic_year,
         username: account.username,
-        photo_url: account.photo_url,
+        photo_url: account.profile_photo_url,
       },
     });
   } catch (err) {
