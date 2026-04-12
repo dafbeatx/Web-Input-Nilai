@@ -498,12 +498,12 @@ export default function DashboardLayer({
       {/* Top 3 Siswa */}
       {gradedStudents.length >= 3 && analytics.ranking.length >= 3 && (
         <div className="mb-6 md:mb-10 animate-in slide-in-from-bottom-4 fade-in">
-          <h3 className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-500 mb-4 text-center">🏆 Bintang Kelas (Top 3)</h3>
-          <div className="flex flex-col md:flex-row items-end justify-center gap-4 max-w-3xl mx-auto">
+          <h3 className="text-xs md:text-sm font-black uppercase tracking-widest text-slate-500 mb-6 text-center">🏆 Bintang Kelas (Top 3)</h3>
+          <div className="flex flex-col md:flex-row items-end justify-center gap-6 max-w-3xl mx-auto">
             {/* Juara 2 */}
-            <div className="order-2 md:order-1 flex-1 bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-5 text-center transform md:-translate-y-4 hover:-translate-y-6 transition-transform relative w-full min-w-0 shadow-2xl">
-              <div className="w-12 h-12 md:w-14 md:h-14 mx-auto bg-slate-800/50 border border-white/10 rounded-full flex items-center justify-center text-2xl mb-3">🥈</div>
-              <h4 className="font-bold text-slate-300 text-sm md:text-base truncate px-2">{analytics.ranking.length > 1 ? analytics.ranking[1].name : '-'}</h4>
+            <div className="order-2 md:order-1 flex-1 bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 text-center transform md:-translate-y-4 hover:-translate-y-6 transition-transform relative w-full min-w-0 shadow-2xl">
+              <div className="w-14 h-14 md:w-16 md:h-16 mx-auto bg-slate-800/50 border border-white/10 rounded-full flex items-center justify-center text-3xl mb-4">🥈</div>
+              <h4 className="font-bold text-slate-300 text-base md:text-lg truncate px-2">{analytics.ranking.length > 1 ? analytics.ranking[1].name : '-'}</h4>
               <p className="text-white font-black text-xl mt-1">{analytics.ranking.length > 1 ? analytics.ranking[1].finalScore : 0}</p>
             </div>
             {/* Juara 1 */}
@@ -514,10 +514,10 @@ export default function DashboardLayer({
               <p className="text-amber-400 font-black text-2xl mt-1">{analytics.ranking.length > 0 ? analytics.ranking[0].finalScore : 0}</p>
             </div>
             {/* Juara 3 */}
-            <div className="order-3 md:order-3 flex-1 bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-5 text-center transform hover:-translate-y-2 transition-transform relative w-full min-w-0 shadow-2xl">
-              <div className="w-12 h-12 md:w-14 md:h-14 mx-auto bg-orange-500/10 border border-orange-500/20 rounded-full flex items-center justify-center text-2xl mb-3">🥉</div>
-              <h4 className="font-bold text-orange-300 text-sm md:text-base truncate px-2">{analytics.ranking.length > 2 ? analytics.ranking[2].name : '-'}</h4>
-              <p className="text-orange-400 font-black text-xl mt-1">{analytics.ranking.length > 2 ? analytics.ranking[2].finalScore : 0}</p>
+            <div className="order-3 md:order-3 flex-1 bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 text-center transform hover:-translate-y-2 transition-transform relative w-full min-w-0 shadow-2xl">
+              <div className="w-14 h-14 md:w-16 md:h-16 mx-auto bg-orange-500/10 border border-orange-500/20 rounded-full flex items-center justify-center text-3xl mb-4">🥉</div>
+              <h4 className="font-bold text-orange-300 text-base md:text-lg truncate px-2">{analytics.ranking.length > 2 ? analytics.ranking[2].name : '-'}</h4>
+              <p className="text-orange-400 font-black text-2xl mt-1">{analytics.ranking.length > 2 ? analytics.ranking[2].finalScore : 0}</p>
             </div>
           </div>
         </div>
@@ -601,13 +601,13 @@ export default function DashboardLayer({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-10">
           {/* Distribution Histogram */}
           <div className="bg-slate-900/40 backdrop-blur-xl rounded-3xl p-5 md:p-6 border border-white/10 col-span-1">
-            <h4 className="text-sm font-black text-white mb-1">Distribusi Nilai Siswa</h4>
-            <p className="text-[10px] md:text-xs font-bold text-slate-400 mb-6 leading-relaxed">Kelompok jumlah siswa berdasarkan rentang nilai akhir yang diperoleh.</p>
+            <h4 className="text-base md:text-lg font-black text-white mb-2">Persebaran Nilai Kelas</h4>
+            <p className="text-sm text-slate-400 mb-6 leading-relaxed">Jumlah siswa yang mendapatkan nilai pada rentang tertentu.</p>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={analytics.distribution} margin={{ left: -25, right: 0, top: 0, bottom: 0 }}>
-                <XAxis dataKey="range" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(val: string) => val.split(' ')[0]} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ fontSize: 12, borderRadius: 16, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                <XAxis dataKey="range" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(val: string) => val.split(' ')[0]} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <Tooltip cursor={{ fill: '#f8fafc', opacity: 0.1 }} contentStyle={{ fontSize: 14, borderRadius: 16, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', color: '#0f172a' }} />
                 <Bar dataKey="count" name="Siswa" radius={[6, 6, 6, 6]} barSize={36}>
                   {analytics.distribution.map((d, i) => (
                     <Cell key={i} fill={d.range.includes('Sangat Baik') ? '#10b981' : d.range.includes('Baik') ? '#3b82f6' : d.range.includes('Cukup') ? '#f59e0b' : '#f43f5e'} />
@@ -619,19 +619,19 @@ export default function DashboardLayer({
 
           {/* Question Difficulty / Analisis Per Soal */}
           <div className="bg-slate-900/40 backdrop-blur-xl rounded-3xl p-5 md:p-6 border border-white/10 col-span-1 lg:col-span-2">
-            <h4 className="text-sm font-black text-white mb-1">Analisis Tingkat Kesulitan Soal</h4>
-            <p className="text-[10px] md:text-xs font-bold text-slate-400 mb-6 leading-relaxed">Persentase tingkat kesulitan. Semakin tinggi persentase, semakin banyak siswa yang salah menjawab soal tersebut.</p>
+            <h4 className="text-base md:text-lg font-black text-white mb-2">Tingkat Kesulitan Tiap Soal</h4>
+            <p className="text-sm text-slate-400 mb-6 leading-relaxed">Grafik yang menunjukkan persentase siswa yang <b>salah menjawab</b> soal tertentu.</p>
             
             <div className="flex flex-col md:flex-row gap-6 items-start">
               <div className="w-full md:flex-1 overflow-x-auto pb-2 custom-scrollbar">
                 <div className="min-w-[400px] md:min-w-0">
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={analytics.questionDifficulties} margin={{ left: 0, right: 0, top: 0, bottom: 0 }}>
-                    <XAxis dataKey="questionNumber" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="questionNumber" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                     <Tooltip 
-                      cursor={{ fill: '#f8fafc' }}
-                      contentStyle={{ fontSize: 12, borderRadius: 16, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+                      cursor={{ fill: '#f8fafc', opacity: 0.1 }}
+                      contentStyle={{ fontSize: 14, borderRadius: 16, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', color: '#0f172a' }} 
                       formatter={(value: any) => [`${value}% salah`, 'Tingkat Kesulitan']}
                       labelFormatter={(label) => `Soal Nomor ${label}`}
                     />
@@ -782,18 +782,18 @@ export default function DashboardLayer({
         ) : (
           <>
             {/* Mobile View (Card List) */}
-            <div className="md:hidden space-y-3">
+            <div className="md:hidden space-y-4">
               {analytics.ranking.map(r => (
-                <div key={r.rank} className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border ${r.rank <= 3 ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-white/5 text-slate-500 border-white/10'}`}>
+                <div key={r.rank} className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black border ${r.rank <= 3 ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-white/5 text-slate-500 border-white/10'}`}>
                         {r.rank}
                       </span>
-                      <span className="text-xs font-black text-slate-200 truncate max-w-[140px] uppercase tracking-tight">{r.name}</span>
+                      <span className="text-base font-black text-slate-200 truncate max-w-[150px] uppercase tracking-tight">{r.name}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className={`px-2.5 py-1 rounded-lg text-xs font-black border ${r.finalScore >= kkm ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`px-4 py-2 rounded-xl text-sm font-black border ${r.finalScore >= kkm ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
                         {r.finalScore}
                       </div>
                       {!isPublicView && (
@@ -808,14 +808,14 @@ export default function DashboardLayer({
                     </div>
                   </div>
                   
-                  <div className="pt-3 border-t border-white/5 flex items-center justify-between">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Opsi / Status</span>
+                  <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                    <span className="text-xs font-black uppercase tracking-widest text-slate-400">Status</span>
                     {isPublicView ? (
                       r.finalScore < kkm ? (
                         ['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(r.remedialStatus || '') ? (
-                          <div className="flex flex-col items-end gap-1">
-                            <span className="text-rose-400 text-[7px] font-black uppercase tracking-widest line-through opacity-50">Perlu Bimbingan</span>
-                            <span className={`text-[10px] font-black uppercase tracking-widest ${
+                          <div className="flex flex-col items-end gap-1.5">
+                            <span className="text-rose-400 text-[10px] font-black uppercase tracking-widest line-through opacity-50">Perlu Bimbingan</span>
+                            <span className={`text-xs font-black uppercase tracking-widest ${
                               r.remedialStatus === 'COMPLETED' ? 'text-indigo-500' : 
                               r.remedialStatus === 'CHEATED' ? 'text-rose-500' : 'text-amber-500'
                             }`}>
@@ -824,18 +824,18 @@ export default function DashboardLayer({
                             </span>
                           </div>
                         ) : (
-                          <div className="flex flex-col items-end gap-2">
-                            <span className="text-rose-500 text-[9px] font-black uppercase tracking-widest">Perlu Bimbingan</span>
+                          <div className="flex flex-col items-end gap-2.5">
+                            <span className="text-rose-500 text-[10px] font-black uppercase tracking-widest">Perlu Bimbingan</span>
                             <button 
                               onClick={() => handleStartRemedial(r.name, r.finalScore)} 
-                              className="px-3 py-2 bg-rose-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm shadow-rose-200 active:scale-95 flex items-center gap-1.5"
+                              className="px-5 py-3 bg-rose-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-sm shadow-rose-200 active:scale-95 flex items-center gap-2 min-h-[44px]"
                             >
-                              <Plus size={10} /> Mulai Remedial
+                              <Plus size={14} /> Mulai Remedial
                             </button>
                           </div>
                         )
                       ) : (
-                        <span className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">Tuntas ✨</span>
+                        <span className="text-emerald-500 text-sm font-black uppercase tracking-widest">Tuntas ✨</span>
                       )
                     ) : (
                       <div className="flex items-center gap-2">
