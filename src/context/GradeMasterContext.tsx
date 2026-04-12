@@ -68,13 +68,12 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
 
     // 2. Determine Initial Layer
     let initialLayer: Layer = 'home';
-    if (validLayers.includes(hash as Layer)) {
+    
+    // We only respect specific hashes during refresh, preventing 'dashboard' 
+    // from automatically taking over the screen on reload or root access.
+    // Local storage fallback is removed so the app always lands cleanly on 'home'.
+    if (validLayers.includes(hash as Layer) && hash !== 'dashboard') {
       initialLayer = hash as Layer;
-    } else {
-      const persistedLayer = localStorage.getItem("gm_layer") as Layer;
-      if (validLayers.includes(persistedLayer)) {
-        initialLayer = persistedLayer;
-      }
     }
 
     // 3. Auth Guards
