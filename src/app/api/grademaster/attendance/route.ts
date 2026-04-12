@@ -2,17 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { checkRateLimit } from '@/lib/grademaster/security';
 import { getAdminSession } from '@/lib/grademaster/admin';
-import { getStudentSession } from '@/lib/grademaster/studentAuth';
 
 export async function GET(req: NextRequest) {
   try {
-    const adminSession = await getAdminSession();
-    const studentSession = await getStudentSession();
-
-    if (!adminSession && !studentSession) {
-      return NextResponse.json({ error: 'Akses ditolak: Silakan login terlebih dahulu' }, { status: 403 });
-    }
-
     const { searchParams } = new URL(req.url);
     const className = searchParams.get('class');
     const academicYear = searchParams.get('year');
@@ -21,13 +13,6 @@ export async function GET(req: NextRequest) {
 
     if (!className || !academicYear || !subject) {
       return NextResponse.json({ error: 'Data kelas, tahun ajaran, dan mata pelajaran wajib diisi' }, { status: 400 });
-    }
-
-    // Security: Students can only view attendance for their own class
-    if (studentSession && !adminSession) {
-      if (studentSession.student.class_name !== className) {
-        return NextResponse.json({ error: 'Akses ditolak: Anda hanya dapat melihat absensi kelas Anda sendiri' }, { status: 403 });
-      }
     }
 
     let query = supabase

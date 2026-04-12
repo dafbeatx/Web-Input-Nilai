@@ -9,12 +9,6 @@ export async function GET(req: NextRequest) {
     const className = searchParams.get('class');
     const academicYear = searchParams.get('year');
 
-    // Admin session check for security
-    const adminSession = await getAdminSession();
-    if (!adminSession) {
-      return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 });
-    }
-
     if (!className) {
       const year = academicYear || "2025/2026";
       const { data, error } = await supabase

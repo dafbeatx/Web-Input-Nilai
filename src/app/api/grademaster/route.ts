@@ -263,10 +263,12 @@ export async function POST(req: NextRequest) {
       } else {
         return NextResponse.json({ error: 'Password salah' }, { status: 403 });
       }
+    } else if (session.is_public) {
+      isReadOnly = true;
     } else if (studentSession) {
       isReadOnly = true;
     } else {
-      return NextResponse.json({ error: 'Akses ditolak: Anda harus login' }, { status: 403 });
+      return NextResponse.json({ error: 'Akses ditolak: Sesi ini bersifat privat' }, { status: 403 });
     }
 
     const { data: students } = await supabase
@@ -278,8 +280,8 @@ export async function POST(req: NextRequest) {
     const gradedStudents: GradedStudent[] = (students || []).map(s => ({
       id: s.id,
       name: s.name,
-      answers: s.mcq_answers,
-      essayScores: s.essay_scores,
+      answers: isReadOnly ? {} : s.mcq_answers,
+      essayScores: isReadOnly ? [] : s.essay_scores,
       correct: s.correct,
       wrong: s.wrong,
       mcqScore: Number(s.mcq_score),
@@ -289,21 +291,21 @@ export async function POST(req: NextRequest) {
       csi: s.csi,
       lps: s.lps,
       remedialStatus: s.remedial_status,
-      remedialLocation: s.remedial_location,
-      remedialPhoto: s.remedial_photo,
-      remedialAnswers: s.remedial_answers,
-      remedialNote: s.remedial_note,
+      remedialLocation: isReadOnly ? undefined : s.remedial_location,
+      remedialPhoto: isReadOnly ? undefined : s.remedial_photo,
+      remedialAnswers: isReadOnly ? undefined : s.remedial_answers,
+      remedialNote: isReadOnly ? undefined : s.remedial_note,
       originalScore: s.original_score ? Number(s.original_score) : undefined,
       remedialScore: s.remedial_score ? Number(s.remedial_score) : undefined,
       finalScoreLocked: s.final_score_locked ? Number(s.final_score_locked) : undefined,
-      isCheated: s.is_cheated,
-      teacherReviewed: s.teacher_reviewed,
-      cheatingFlags: s.cheating_flags,
+      isCheated: isReadOnly ? undefined : s.is_cheated,
+      teacherReviewed: isReadOnly ? undefined : s.teacher_reviewed,
+      cheatingFlags: isReadOnly ? undefined : s.cheating_flags,
       remedialAttempts: s.remedial_attempts,
       essayScoreAuto: s.essay_score_auto ? Number(s.essay_score_auto) : undefined,
       essayScoreManual: s.essay_score_manual ? Number(s.essay_score_manual) : undefined,
       essayScoreFinal: s.essay_score_final ? Number(s.essay_score_final) : undefined,
-      essayAutoDetails: s.essay_auto_details,
+      essayAutoDetails: isReadOnly ? undefined : s.essay_auto_details,
     }));
 
     // Calculate difficulties on server before hiding answerKey
