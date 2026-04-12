@@ -136,7 +136,8 @@ export default function Navbar() {
 
       {/* Mobile Top Header (Just Brand) - Robust Safe Area Solution */}
       <div 
-        className="md:hidden fixed top-0 left-0 right-0 z-[100] bg-slate-950/90 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-4"
+        id="mobile-navbar"
+        className="md:hidden fixed top-0 left-0 right-0 z-[100] bg-slate-950/90 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-4 transition-all duration-300"
         style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingBottom: '0.75rem' }}
       >
         <div className="flex items-center gap-2.5">

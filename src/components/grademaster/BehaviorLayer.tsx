@@ -89,10 +89,13 @@ export default function BehaviorLayer({
     if (selectedStudent) {
       fetchStudentLogs(selectedStudent.id);
       setActiveModalTab('HISTORY'); // Default to history when opening modal
+      document.body.classList.add('hide-mobile-header');
     } else {
       setStudentLogs([]);
       setEditingLogId(null);
+      document.body.classList.remove('hide-mobile-header');
     }
+    return () => document.body.classList.remove('hide-mobile-header');
   }, [selectedStudent]);
 
   // --- REAL-TIME SUBSCRIPTION ---

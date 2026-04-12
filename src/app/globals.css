@@ -538,3 +538,10 @@ body.day-mode .recharts-tooltip-item {
   0% { transform: translateX(0); }
   100% { transform: translateX(130vw); }
 }
+
+/* Modifiers */
+body.hide-mobile-header #mobile-navbar {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(-100%);
+}
