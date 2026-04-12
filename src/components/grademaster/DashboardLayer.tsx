@@ -498,26 +498,26 @@ export default function DashboardLayer({
       {/* Top 3 Siswa */}
       {gradedStudents.length >= 3 && analytics.ranking.length >= 3 && (
         <div className="mb-6 md:mb-10 animate-in slide-in-from-bottom-4 fade-in">
-          <h3 className="text-xs md:text-sm font-black uppercase tracking-widest text-slate-500 mb-6 text-center">🏆 Bintang Kelas (Top 3)</h3>
-          <div className="flex flex-col md:flex-row items-end justify-center gap-6 max-w-3xl mx-auto">
+          <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 md:mb-6 text-center">🏆 Bintang Kelas (Top 3)</h3>
+          <div className="flex flex-col md:flex-row items-end justify-center gap-3 md:gap-6 max-w-3xl mx-auto">
             {/* Juara 2 */}
-            <div className="order-2 md:order-1 flex-1 bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 text-center transform md:-translate-y-4 hover:-translate-y-6 transition-transform relative w-full min-w-0 shadow-2xl">
-              <div className="w-14 h-14 md:w-16 md:h-16 mx-auto bg-slate-800/50 border border-white/10 rounded-full flex items-center justify-center text-3xl mb-4">🥈</div>
-              <h4 className="font-bold text-slate-300 text-base md:text-lg truncate px-2">{analytics.ranking.length > 1 ? analytics.ranking[1].name : '-'}</h4>
-              <p className="text-white font-black text-xl mt-1">{analytics.ranking.length > 1 ? analytics.ranking[1].finalScore : 0}</p>
+            <div className="order-2 md:order-1 flex-1 bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-2xl md:rounded-3xl p-4 md:p-6 text-center transform md:-translate-y-4 hover:-translate-y-6 transition-transform relative w-full min-w-0 shadow-2xl">
+              <div className="w-10 h-10 md:w-16 md:h-16 mx-auto bg-slate-800/50 border border-white/10 rounded-full flex items-center justify-center text-2xl md:text-3xl mb-2 md:mb-4">🥈</div>
+              <h4 className="font-bold text-slate-300 text-sm md:text-lg truncate px-1">{analytics.ranking.length > 1 ? analytics.ranking[1].name : '-'}</h4>
+              <p className="text-white font-black text-lg md:text-xl mt-1">{analytics.ranking.length > 1 ? analytics.ranking[1].finalScore : 0}</p>
             </div>
             {/* Juara 1 */}
-            <div className="order-1 md:order-2 flex-1 bg-gradient-to-b from-amber-500/20 to-amber-600/10 border border-amber-500/20 rounded-3xl p-6 text-center transform md:-translate-y-8 hover:-translate-y-10 transition-transform relative z-10 w-full mb-4 md:mb-0 min-w-0">
+            <div className="order-1 md:order-2 flex-1 bg-gradient-to-b from-amber-500/20 to-amber-600/10 border border-amber-500/20 rounded-2xl md:rounded-3xl p-4 md:p-6 text-center transform md:-translate-y-8 hover:-translate-y-10 transition-transform relative z-10 w-full mb-2 md:mb-0 min-w-0">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-amber-500/20 flex items-center gap-1"><Trophy size={12}/> Juara 1</div>
-              <div className="w-14 h-14 md:w-16 md:h-16 mx-auto bg-amber-500/20 rounded-full flex items-center justify-center text-3xl mb-3">🥇</div>
-              <h4 className="font-black text-amber-300 text-base md:text-lg truncate px-2">{analytics.ranking.length > 0 ? analytics.ranking[0].name : '-'}</h4>
-              <p className="text-amber-400 font-black text-2xl mt-1">{analytics.ranking.length > 0 ? analytics.ranking[0].finalScore : 0}</p>
+              <div className="w-12 h-12 md:w-16 md:h-16 mx-auto bg-amber-500/20 rounded-full flex items-center justify-center text-2xl md:text-3xl mb-2 md:mb-3">🥇</div>
+              <h4 className="font-black text-amber-300 text-sm md:text-lg truncate px-1">{analytics.ranking.length > 0 ? analytics.ranking[0].name : '-'}</h4>
+              <p className="text-amber-400 font-black text-xl md:text-2xl mt-1">{analytics.ranking.length > 0 ? analytics.ranking[0].finalScore : 0}</p>
             </div>
             {/* Juara 3 */}
-            <div className="order-3 md:order-3 flex-1 bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 text-center transform hover:-translate-y-2 transition-transform relative w-full min-w-0 shadow-2xl">
-              <div className="w-14 h-14 md:w-16 md:h-16 mx-auto bg-orange-500/10 border border-orange-500/20 rounded-full flex items-center justify-center text-3xl mb-4">🥉</div>
-              <h4 className="font-bold text-orange-300 text-base md:text-lg truncate px-2">{analytics.ranking.length > 2 ? analytics.ranking[2].name : '-'}</h4>
-              <p className="text-orange-400 font-black text-2xl mt-1">{analytics.ranking.length > 2 ? analytics.ranking[2].finalScore : 0}</p>
+            <div className="order-3 md:order-3 flex-1 bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-2xl md:rounded-3xl p-4 md:p-6 text-center transform hover:-translate-y-2 transition-transform relative w-full min-w-0 shadow-2xl">
+              <div className="w-10 h-10 md:w-16 md:h-16 mx-auto bg-orange-500/10 border border-orange-500/20 rounded-full flex items-center justify-center text-2xl md:text-3xl mb-2 md:mb-4">🥉</div>
+              <h4 className="font-bold text-orange-300 text-sm md:text-lg truncate px-1">{analytics.ranking.length > 2 ? analytics.ranking[2].name : '-'}</h4>
+              <p className="text-orange-400 font-black text-lg md:text-2xl mt-1">{analytics.ranking.length > 2 ? analytics.ranking[2].finalScore : 0}</p>
             </div>
           </div>
         </div>
@@ -782,18 +782,18 @@ export default function DashboardLayer({
         ) : (
           <>
             {/* Mobile View (Card List) */}
-            <div className="md:hidden space-y-4">
+            <div className="md:hidden space-y-3">
               {analytics.ranking.map(r => (
-                <div key={r.rank} className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black border ${r.rank <= 3 ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-white/5 text-slate-500 border-white/10'}`}>
+                <div key={r.rank} className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-xl p-3.5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border ${r.rank <= 3 ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-white/5 text-slate-500 border-white/10'}`}>
                         {r.rank}
                       </span>
-                      <span className="text-base font-black text-slate-200 truncate max-w-[150px] uppercase tracking-tight">{r.name}</span>
+                      <span className="text-sm font-black text-slate-200 truncate max-w-[140px] uppercase tracking-tight">{r.name}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className={`px-4 py-2 rounded-xl text-sm font-black border ${r.finalScore >= kkm ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
+                    <div className="flex items-center gap-2">
+                      <div className={`px-2.5 py-1 rounded-lg text-xs font-black border ${r.finalScore >= kkm ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
                         {r.finalScore}
                       </div>
                       {!isPublicView && (
@@ -808,14 +808,14 @@ export default function DashboardLayer({
                     </div>
                   </div>
                   
-                  <div className="pt-4 border-t border-white/5 flex items-center justify-between">
-                    <span className="text-xs font-black uppercase tracking-widest text-slate-400">Status</span>
+                  <div className="pt-3 border-t border-white/5 flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Status</span>
                     {isPublicView ? (
                       r.finalScore < kkm ? (
                         ['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(r.remedialStatus || '') ? (
-                          <div className="flex flex-col items-end gap-1.5">
-                            <span className="text-rose-400 text-[10px] font-black uppercase tracking-widest line-through opacity-50">Perlu Bimbingan</span>
-                            <span className={`text-xs font-black uppercase tracking-widest ${
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="text-rose-400 text-[8px] font-black uppercase tracking-widest line-through opacity-50">Perlu Bimbingan</span>
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${
                               r.remedialStatus === 'COMPLETED' ? 'text-indigo-500' : 
                               r.remedialStatus === 'CHEATED' ? 'text-rose-500' : 'text-amber-500'
                             }`}>
@@ -824,18 +824,18 @@ export default function DashboardLayer({
                             </span>
                           </div>
                         ) : (
-                          <div className="flex flex-col items-end gap-2.5">
-                            <span className="text-rose-500 text-[10px] font-black uppercase tracking-widest">Perlu Bimbingan</span>
+                          <div className="flex flex-col items-end gap-1.5">
+                            <span className="text-rose-500 text-[9px] font-black uppercase tracking-widest">Perlu Bimbingan</span>
                             <button 
                               onClick={() => handleStartRemedial(r.name, r.finalScore)} 
-                              className="px-5 py-3 bg-rose-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-sm shadow-rose-200 active:scale-95 flex items-center gap-2 min-h-[44px]"
+                              className="px-3 py-2 bg-rose-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm shadow-rose-200 active:scale-95 flex items-center gap-1.5 min-h-[36px]"
                             >
-                              <Plus size={14} /> Mulai Remedial
+                              <Plus size={12} /> Mulai Remedial
                             </button>
                           </div>
                         )
                       ) : (
-                        <span className="text-emerald-500 text-sm font-black uppercase tracking-widest">Tuntas ✨</span>
+                        <span className="text-emerald-500 text-xs font-black uppercase tracking-widest">Tuntas ✨</span>
                       )
                     ) : (
                       <div className="flex items-center gap-2">
