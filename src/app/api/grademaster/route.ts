@@ -263,12 +263,8 @@ export async function POST(req: NextRequest) {
       } else {
         return NextResponse.json({ error: 'Password salah' }, { status: 403 });
       }
-    } else if (session.is_public) {
-      isReadOnly = true;
-    } else if (studentSession) {
-      isReadOnly = true;
     } else {
-      return NextResponse.json({ error: 'Akses ditolak: Sesi ini bersifat privat' }, { status: 403 });
+      isReadOnly = true;
     }
 
     const { data: students } = await supabase
