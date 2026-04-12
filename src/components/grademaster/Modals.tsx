@@ -58,7 +58,7 @@ export default function Modals(props: ModalsProps) {
 
   if (modal === 'about') {
     return (
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl" onClick={onClose}></div>
         <div className="relative w-full max-w-lg bg-slate-900/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl p-6 md:p-8 animate-in overflow-hidden">
           <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-br from-primary/20 to-purple-600/20 pointer-events-none border-b border-white/5"></div>
@@ -104,7 +104,7 @@ export default function Modals(props: ModalsProps) {
 
   if (modal === 'error') {
     return (
-      <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl" onClick={onClose}></div>
         <div className="relative w-full max-w-sm bg-slate-900/60 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl p-6 md:p-8 animate-in text-center">
           <div className="w-20 h-20 rounded-[2rem] bg-rose-500/20 text-rose-500 flex items-center justify-center mx-auto mb-6 border border-rose-500/20 shadow-xl shadow-rose-500/10">
@@ -143,7 +143,7 @@ export default function Modals(props: ModalsProps) {
     };
 
     return (
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl" onClick={onClose}></div>
         <div className="relative w-full max-w-sm bg-slate-900/60 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl p-6 md:p-8 animate-in zoom-in duration-300">
           <button onClick={onClose} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-500 hover:bg-rose-500/10 hover:text-rose-500 transition-all border border-white/10">
@@ -210,7 +210,7 @@ export default function Modals(props: ModalsProps) {
   const c = colors[modal as 'save' | 'load' | 'delete'];
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl" onClick={onClose}></div>
       <div className="relative w-full max-w-md bg-slate-900/60 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl p-6 md:p-8 animate-in duration-300">
         <button onClick={onClose} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-500 hover:bg-rose-500/10 hover:text-rose-500 transition-all border border-white/10 z-10">

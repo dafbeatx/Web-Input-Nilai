@@ -650,7 +650,7 @@ export default function GradeMaster() {
   // ── Render ──
 
   return (
-    <div className="relative flex flex-col min-h-screen pb-24 md:pb-8 transition-colors duration-500">
+    <div className="relative flex flex-col min-h-[100dvh] pb-safe transition-colors duration-500">
       <div className="w-full">
         {layer === "home" && (
         <HomeLayer
@@ -905,19 +905,21 @@ export default function GradeMaster() {
 
       {/* Toast */}
       {toast && (
-        <div
-          className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:top-auto md:bottom-8 md:translate-y-0 z-[300] px-6 py-4 md:px-6 md:py-3 rounded-2xl shadow-2xl text-base md:text-sm font-bold flex items-center gap-3 md:gap-2 animate-in fade-in zoom-in-95 duration-200 max-w-[340px] md:max-w-md text-center ${
-            toast.type === "success"
-              ? "bg-emerald-600 text-white shadow-emerald-600/30"
-              : "bg-rose-600 text-white shadow-rose-600/30"
-          }`}
-        >
-          {toast.type === "success" ? (
-            <CheckCircle2 size={20} className="shrink-0 md:w-4 md:h-4" />
-          ) : (
-            <AlertCircle size={20} className="shrink-0 md:w-4 md:h-4" />
-          )}
-          {toast.message}
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none p-4">
+          <div
+            className={`pointer-events-auto px-6 py-4 md:px-6 md:py-3 rounded-2xl shadow-2xl text-base md:text-sm font-bold flex items-center gap-3 md:gap-2 animate-in fade-in zoom-in-95 duration-200 w-full max-w-[340px] md:max-w-md text-center justify-center ${
+              toast.type === "success"
+                ? "bg-emerald-600 text-white shadow-emerald-600/30"
+                : "bg-rose-600 text-white shadow-rose-600/30"
+            }`}
+          >
+            {toast.type === "success" ? (
+              <CheckCircle2 size={20} className="shrink-0 md:w-4 md:h-4" />
+            ) : (
+              <AlertCircle size={20} className="shrink-0 md:w-4 md:h-4" />
+            )}
+            <span className="truncate">{toast.message}</span>
+          </div>
         </div>
       )}
       </div>

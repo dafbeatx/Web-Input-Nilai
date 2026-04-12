@@ -3,9 +3,14 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
   body {
-    @apply bg-slate-950 min-h-screen overflow-x-hidden text-slate-900;
+    @apply bg-slate-950 min-h-[100dvh] overflow-x-hidden text-slate-900;
     font-family: 'Inter', sans-serif;
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
   }
   
   h1, h2, h3, .font-outfit {

@@ -336,7 +336,7 @@ export default function AttendanceLayer({
                               key={status}
                               onClick={() => handleStatusChange(name, status)}
                               className={`
-                                flex-1 sm:flex-none px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border
+                                flex-1 sm:flex-none px-3 py-2 sm:px-4 sm:py-2.5 min-h-[44px] rounded-lg md:rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border
                                 ${active 
                                   ? `${colors[status as keyof typeof colors]} shadow-lg shadow-black/20 text-white` 
                                   : `bg-slate-950/50 text-slate-500 border-white/5 ${inactiveColors[status as keyof typeof inactiveColors]}`}

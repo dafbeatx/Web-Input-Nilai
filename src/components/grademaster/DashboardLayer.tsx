@@ -600,7 +600,7 @@ export default function DashboardLayer({
       {gradedStudents.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-10">
           {/* Distribution Histogram */}
-          <div className="bg-slate-900/40 backdrop-blur-xl rounded-3xl p-5 md:p-6 border border-white/10 col-span-1">
+          <div className="bg-slate-900/40 backdrop-blur-xl rounded-3xl p-4 md:p-6 border border-white/10 col-span-1 min-w-0">
             <h4 className="text-base md:text-lg font-black text-white mb-2">Persebaran Nilai Kelas</h4>
             <p className="text-sm text-slate-400 mb-6 leading-relaxed">Jumlah siswa yang mendapatkan nilai pada rentang tertentu.</p>
             <ResponsiveContainer width="100%" height={220}>
@@ -618,13 +618,13 @@ export default function DashboardLayer({
           </div>
 
           {/* Question Difficulty / Analisis Per Soal */}
-          <div className="bg-slate-900/40 backdrop-blur-xl rounded-3xl p-5 md:p-6 border border-white/10 col-span-1 lg:col-span-2">
+          <div className="bg-slate-900/40 backdrop-blur-xl rounded-3xl p-4 md:p-6 border border-white/10 col-span-1 lg:col-span-2 min-w-0">
             <h4 className="text-base md:text-lg font-black text-white mb-2">Tingkat Kesulitan Tiap Soal</h4>
             <p className="text-sm text-slate-400 mb-6 leading-relaxed">Grafik yang menunjukkan persentase siswa yang <b>salah menjawab</b> soal tertentu.</p>
             
-            <div className="flex flex-col md:flex-row gap-6 items-start">
-              <div className="w-full md:flex-1 overflow-x-auto pb-2 custom-scrollbar">
-                <div className="min-w-[400px] md:min-w-0">
+            <div className="flex flex-col md:flex-row gap-6 items-start w-full">
+              <div className="w-full md:flex-1 pb-2">
+                <div className="w-full min-w-0 h-[220px]">
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={analytics.questionDifficulties} margin={{ left: 0, right: 0, top: 0, bottom: 0 }}>
                     <XAxis dataKey="questionNumber" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
