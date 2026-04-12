@@ -85,6 +85,7 @@ export default function GradeMaster() {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState("");
   const [apiQuestionDifficulties, setApiQuestionDifficulties] = useState<any[]>([]);
+  const [showRemedialButton, setShowRemedialButton] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -145,6 +146,7 @@ export default function GradeMaster() {
               setApiQuestionDifficulties(data.questionDifficulties || []);
               setIsSessionPublic(data.isPublic);
               setIsDemo(data.isDemo === true);
+              setShowRemedialButton(!!data.showRemedialButton);
 
               const key = data.answerKey as string[];
               if (Array.isArray(key)) {
@@ -763,6 +765,7 @@ export default function GradeMaster() {
           academicYear={academicYear}
           semester={semester}
           isAdmin={isAdmin}
+          showRemedialButton={showRemedialButton}
           onGradeStudent={() => {
             resetGrading();
             setLayer("grading");

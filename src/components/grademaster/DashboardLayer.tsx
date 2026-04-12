@@ -57,6 +57,7 @@ interface DashboardLayerProps {
   isDemo?: boolean;
   sessionId?: string;
   isAdmin?: boolean;
+  showRemedialButton?: boolean;
 }
 
 const CHART_COLORS = ['#e2e8f0', '#94a3b8', '#6366f1', '#818cf8', '#4f46e5'];
@@ -85,7 +86,8 @@ export default function DashboardLayer({
   examType,
   isDemo,
   sessionId,
-  isAdmin = false
+  isAdmin = false,
+  showRemedialButton = false
 }: DashboardLayerProps) {
   const [behaviorMap, setBehaviorMap] = useState<Record<string, BehaviorRecord>>({});
   const [isCheckingSimilarity, setIsCheckingSimilarity] = useState(false);
@@ -95,9 +97,10 @@ export default function DashboardLayer({
   const [isResettingRemedial, setIsResettingRemedial] = useState(false);
 
   const handleStartRemedial = (name: string, currentScore: number) => {
+    // Client-side fallback check (the button shouldn't ordinarily be visible here anyway)
     const isPastDeadline = Date.now() > REMEDIAL_DEADLINE;
     
-    if (isPastDeadline) {
+    if (isPastDeadline && !showRemedialButton) {
       setShowDeadlineModal(true);
       return;
     }
@@ -823,9 +826,8 @@ export default function DashboardLayer({
                                r.remedialStatus === 'CHEATED' ? 'Diskualifikasi 🚫' : 'Waktu Habis ⏰'}
                             </span>
                           </div>
-                        ) : (
+                        ) : showRemedialButton && (
                           <div className="flex flex-col items-end gap-1.5">
-                            <span className="text-rose-500 text-[9px] font-black uppercase tracking-widest">Perlu Bimbingan</span>
                             <button 
                               onClick={() => handleStartRemedial(r.name, r.finalScore)} 
                               className="px-3 py-2 bg-rose-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm shadow-rose-200 active:scale-95 flex items-center gap-1.5 min-h-[36px]"
@@ -848,13 +850,15 @@ export default function DashboardLayer({
                               {r.remedialStatus === 'COMPLETED' ? 'Selesai ✨' : 
                                r.remedialStatus === 'CHEATED' ? 'Diskualifikasi 🚫' : 'Waktu Habis ⏰'}
                             </span>
-                          ) : (
+                          ) : showRemedialButton ? (
                             <button 
                               onClick={() => handleStartRemedial(r.name, r.finalScore)} 
                               className="px-3 py-1.5 bg-rose-500/10 text-rose-400 rounded-lg text-[9px] font-black uppercase tracking-widest border border-rose-500/20 active:scale-95 flex items-center gap-1.5 hover:bg-rose-500 hover:text-white transition-all"
                             >
                               <Plus size={10} /> Mulai Remedial
                             </button>
+                          ) : (
+                             <span className="text-rose-500 text-[9px] font-black uppercase tracking-widest">Perlu Bimbingan</span>
                           )
                         ) : (
                           <span className="text-emerald-500 font-black text-[10px] uppercase tracking-widest">Lulus KKM</span>
@@ -925,12 +929,14 @@ export default function DashboardLayer({
                                 <div className="flex items-center gap-1.5 text-rose-500">
                                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"/> Perlu Bimbingan
                                 </div>
-                                <button 
-                                  onClick={() => handleStartRemedial(r.name, r.finalScore)} 
-                                  className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-rose-600 transition-all shadow-xl shadow-rose-500/20 flex items-center justify-center gap-1.5 w-fit active:scale-95"
-                                >
-                                  <Plus size={12} /> Mulai Remedial
-                                </button>
+                                {showRemedialButton && (
+                                  <button 
+                                    onClick={() => handleStartRemedial(r.name, r.finalScore)} 
+                                    className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-rose-600 transition-all shadow-xl shadow-rose-500/20 flex items-center justify-center gap-1.5 w-fit active:scale-95"
+                                  >
+                                    <Plus size={12} /> Mulai Remedial
+                                  </button>
+                                )}
                               </div>
                             )
                           ) : (
@@ -949,10 +955,12 @@ export default function DashboardLayer({
                                   {r.remedialStatus === 'COMPLETED' ? 'Selesai ✨' : 
                                    r.remedialStatus === 'CHEATED' ? 'Diskualifikasi 🚫' : 'Waktu Habis ⏰'}
                                 </span>
-                              ) : (
+                              ) : showRemedialButton ? (
                                 <button onClick={() => handleStartRemedial(r.name, r.finalScore)} className="px-3 py-1.5 text-[10px] bg-rose-500/10 text-rose-400 rounded-lg font-black uppercase tracking-wider hover:bg-rose-500 hover:text-white transition-all border border-rose-500/20 active:scale-95 flex items-center gap-1.5">
                                   <Plus size={12} /> Mulai Remedial
                                 </button>
+                              ) : (
+                                <span className="text-rose-500 text-[11px] font-black uppercase tracking-widest">Perlu Bimbingan</span>
                               )
                             ) : (
                               <span className="text-emerald-500 font-bold text-[11px]">Memenuhi KKM ({kkm})</span>

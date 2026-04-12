@@ -307,6 +307,14 @@ export async function POST(req: NextRequest) {
     // Calculate difficulties on server before hiding answerKey
     const questionDifficulties = generateQuestionDifficulties(gradedStudents, session.answer_key);
 
+    // Calculate dynamic visibility of the remedial button based on "future session" logic.
+    // If the session was created AFTER the old hardcoded deadline, it qualifies as the "next exam session"
+    // Alternatively, if the exact current time hasn't passed the deadline yet, show the button.
+    const REMEDIAL_DEADLINE_DATE = new Date('2026-03-30T07:00:00+07:00').getTime();
+    const sessionDate = new Date(session.created_at).getTime();
+    const now = Date.now();
+    const showRemedialButton = (sessionDate > REMEDIAL_DEADLINE_DATE) || (now <= REMEDIAL_DEADLINE_DATE);
+
     return NextResponse.json({
       sessionId: session.id,
       sessionName: session.session_name,
@@ -326,6 +334,7 @@ export async function POST(req: NextRequest) {
       isPublic: session.is_public,
       isDemo: session.is_demo,
       isReadOnly,
+      showRemedialButton,
       questionDifficulties, // Pre-calculated for students
       gradedStudents,
     });
