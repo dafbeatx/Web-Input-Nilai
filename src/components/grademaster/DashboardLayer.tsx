@@ -989,7 +989,7 @@ export default function DashboardLayer({
 
       {/* Deadline Warning Modal */}
       {showDeadlineModal && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 pt-safe bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-300">
           <div className="bg-slate-900 max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 animate-in zoom-in-95">
              <div className="bg-rose-600/20 p-8 flex flex-col items-center text-white text-center border-b border-white/10">
                 <div className="w-20 h-20 bg-rose-500/20 rounded-full flex items-center justify-center mb-4 border border-rose-500/20">
@@ -1026,7 +1026,7 @@ export default function DashboardLayer({
 
       {/* Similarity Report Modal */}
       {similarityReports !== null && similarityReports.length > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pt-safe bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-200">
           <div className="bg-slate-900 rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] border border-white/10">
             <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/5">
               <div className="flex items-center gap-3">

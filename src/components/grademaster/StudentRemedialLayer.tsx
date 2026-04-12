@@ -2033,7 +2033,7 @@ export default function StudentRemedialLayer({
     const allPermsOk = examMode === 'LIMITED' || cameraOk;
 
     return (
-      <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4">
+      <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4 pt-safe">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#3b82f610,transparent)]"></div>
         <div className="w-full max-w-lg relative bg-slate-900/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl p-6 md:p-10 animate-in zoom-in duration-500">
            <button onClick={() => setStep('RULES')} className="flex items-center gap-2 text-slate-500 hover:text-white font-black text-[10px] uppercase tracking-widest transition-all mb-8 group">
@@ -2053,7 +2053,7 @@ export default function StudentRemedialLayer({
                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Identitas Peserta</span>
                <Badge color="emerald">{studentName}</Badge>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 pt-safe">
               <div>
                 <p className="text-[9px] text-slate-500 font-black uppercase tracking-tighter mb-1.5">Mata Pelajaran</p>
                 <div className="text-[11px] font-bold text-white uppercase truncate">{subject}</div>
@@ -2110,7 +2110,7 @@ export default function StudentRemedialLayer({
   // RENDER: GUIDE SCREEN (Educational instructions for proctoring camera)
   if (step === 'GUIDE') {
     return (
-      <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4">
+      <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4 pt-safe">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,#3b82f610,transparent)]"></div>
         <div className="w-full max-w-xl relative bg-slate-900/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl p-6 md:p-10 animate-in slide-in-from-bottom-8 duration-700">
           <button onClick={() => setStep('INFO')} className="flex items-center gap-2 text-slate-500 hover:text-white font-black text-[10px] uppercase tracking-widest transition-all mb-8 group">
@@ -2189,7 +2189,7 @@ export default function StudentRemedialLayer({
             </div>
           </div>
           
-          <div className="w-full flex flex-col gap-4">
+          <div className="w-full flex flex-col gap-4 pt-safe">
             <button
               onClick={() => {
                 setPointsToSpend(10);
@@ -2233,7 +2233,7 @@ export default function StudentRemedialLayer({
     };
 
     return (
-      <div className="fixed inset-0 z-[1000] bg-transparent flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[1000] bg-transparent flex items-center justify-center p-4 pt-safe">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#f59e0b10,transparent)]"></div>
         <div className="bg-slate-900/40 backdrop-blur-2xl border border-amber-500/20 max-w-lg w-full rounded-[2.5rem] p-8 md:p-10 shadow-2xl text-center relative">
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
@@ -2401,7 +2401,7 @@ export default function StudentRemedialLayer({
       {/* ── TOP APP BAR (GradeMaster OS Header) ── */}
       <header className="fixed top-0 w-full z-[80] bg-slate-900/40 backdrop-blur-2xl border-b border-white/5 px-6 py-4">
         <div className="flex justify-between items-center w-full max-w-7xl mx-auto">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 pt-safe">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/10">
               <span className="text-primary font-black text-lg">
                 {studentName.charAt(0).toUpperCase()}
@@ -2415,7 +2415,7 @@ export default function StudentRemedialLayer({
           
           <div className="flex items-center gap-8">
             {/* Timer Desktop */}
-            <div className="hidden md:flex items-center gap-6">
+            <div className="hidden md:flex items-center gap-6 pt-safe">
               <div className="flex flex-col items-center">
                 <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Durasi Tersisa</span>
                 <span className={`text-xl font-black font-outfit tabular-nums tracking-tighter ${timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-white'}`}>
@@ -2429,7 +2429,7 @@ export default function StudentRemedialLayer({
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 pt-safe">
               <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10">
                 <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'}`}></div>
                 <span className={`text-[10px] font-black uppercase tracking-widest ${isOffline ? 'text-rose-400' : 'text-emerald-400'}`}>
@@ -2697,7 +2697,7 @@ export default function StudentRemedialLayer({
 
       {/* ── MODALS & OVERLAYS ── */}
       {activeWarning && step === 'EXAM' && (
-        <div className="fixed inset-0 z-[1000] bg-slate-950/90 backdrop-blur-xl flex justify-center items-center p-4">
+        <div className="fixed inset-0 z-[1000] bg-slate-950/90 backdrop-blur-xl flex justify-center items-center p-4 pt-safe">
           <div className="bg-slate-900/40 border border-white/10 max-w-sm w-full rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95">
             <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-8 flex flex-col items-center">
               <div className="w-16 h-16 rounded-[1.5rem] bg-white/20 flex items-center justify-center border border-white/30 mb-4">
@@ -2705,7 +2705,7 @@ export default function StudentRemedialLayer({
               </div>
               <h2 className="text-xl font-black text-white uppercase tracking-tight font-outfit">Sistem Peringatan</h2>
             </div>
-            <div className="p-8 text-center">
+            <div className="p-8 pt-safe text-center">
               <div className="bg-rose-500/10 border border-rose-500/20 px-5 py-2 rounded-full text-xs font-black text-rose-400 mb-6 inline-block uppercase tracking-widest">
                 Pelanggaran {activeWarning.count}/{activeWarning.limit}
               </div>

@@ -908,7 +908,7 @@ export default function GradeMaster() {
 
       {/* Toast */}
       {toast && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none p-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none p-4 pt-safe">
           <div
             className={`pointer-events-auto px-6 py-4 md:px-6 md:py-3 rounded-2xl shadow-2xl text-base md:text-sm font-bold flex items-center gap-3 md:gap-2 animate-in fade-in zoom-in-95 duration-200 w-full max-w-[340px] md:max-w-md text-center justify-center ${
               toast.type === "success"

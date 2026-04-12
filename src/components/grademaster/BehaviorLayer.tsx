@@ -474,11 +474,8 @@ export default function BehaviorLayer({
       {selectedStudent && (
         <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl z-[1000] flex items-center justify-center p-0 md:p-10 animate-in fade-in duration-300">
           <div className="bg-slate-900/50 border border-white/10 w-full h-full md:h-auto max-w-6xl md:rounded-[4rem] overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col">
-              {/* Top Notch Buffer (Mobile Only) */}
-              <div className="md:hidden h-[var(--safe-top)] bg-transparent shrink-0" />
-              
               {/* Sticky Compact Header - Safe for Mobile */}
-              <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-5 md:p-10 border-b border-white/10 flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-xl">
+              <div className="bg-gradient-to-br from-slate-900 to-slate-950 px-5 pb-5 pt-[max(1.5rem,env(safe-area-inset-top))] md:p-10 border-b border-white/10 flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-xl">
                 <div className="flex items-center gap-4 md:gap-6">
                     <div className={`w-12 h-12 md:w-20 md:h-20 rounded-2xl md:rounded-[2rem] border flex flex-col items-center justify-center shadow-2xl shrink-0 ${
                        selectedStudent.total_points >= 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/20' : 'bg-primary/10 text-primary border-primary/20 shadow-primary/20'
@@ -688,11 +685,14 @@ export default function BehaviorLayer({
 
       {/* REASONS MANAGEMENT MODAL */}
       {isManagingReasons && (
-        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[2000] flex items-center justify-center p-4">
-          <div className="bg-slate-900/50 border border-white/10 max-w-2xl w-full rounded-[3rem] overflow-hidden shadow-2xl">
-              <div className="p-8 border-b border-white/10 bg-white/5">
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[2000] flex items-center justify-center p-0 md:p-4">
+          <div className="bg-slate-900/50 border border-white/10 max-w-2xl w-full h-full md:h-auto md:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col">
+              <div className="p-8 pt-[max(2rem,env(safe-area-inset-top))] md:pt-8 border-b border-white/10 bg-white/5 shrink-0 relative">
+                <button onClick={() => setIsManagingReasons(false)} className="absolute top-[max(1.5rem,env(safe-area-inset-top))] right-6 md:top-6 w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-slate-500 border border-white/10 hover:bg-rose-500 hover:text-white transition-all">
+                  <X size={20} />
+                </button>
                 <h2 className="text-xl font-black text-white uppercase font-outfit">Setelan Poin Global</h2>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Kustomisasi alasan poin untuk seluruh kelas</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Kustomisasi alasan poin untuk seluruh kelas</p>
               </div>
               
               <div className="p-8 space-y-8">
