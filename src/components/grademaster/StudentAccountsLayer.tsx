@@ -188,7 +188,7 @@ export default function StudentAccountsLayer({
   const hasPasswords = accounts.some(a => a.password_plain);
 
   return (
-    <div className="min-h-screen bg-transparent p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto pt-16 pb-24 md:pb-8">
+    <div className="min-h-dvh bg-transparent p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto page-pt md:pt-16 pb-24 md:pb-8">
       <header className="mb-6 md:mb-10">
         <button type="button" onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-[#00b4ff] font-sans text-[13px] font-medium transition-all mb-4 bg-white/5 px-4 py-2 rounded-xl border border-white/10 hover:border-[#00b4ff]/20">
           <ArrowLeft size={14} /> Beranda

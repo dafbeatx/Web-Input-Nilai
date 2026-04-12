@@ -31,17 +31,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className="dark h-full">
+    <html lang="id" className="dark">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
       </head>
-      <body className={`${inter.variable} ${outfit.variable} ${amiri.variable} ${manrope.variable} font-sans text-slate-50 antialiased min-h-full selection:bg-primary/30`}>
+      <body className={`${inter.variable} ${outfit.variable} ${amiri.variable} ${manrope.variable} font-sans text-slate-50 antialiased selection:bg-primary/30 flex flex-col min-h-dvh`}>
         <StarBackground />
         <DynamicBackground />
         <GradeMasterProvider>
           <Navbar />
-          <main className="relative min-h-screen">
+          <main className="relative flex-1">
             {children}
           </main>
         </GradeMasterProvider>

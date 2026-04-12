@@ -173,7 +173,7 @@ export default function BehaviorPage() {
   }, [students, searchQuery]);
 
   return (
-    <div className="flex flex-col min-h-full pt-[env(safe-area-inset-top)]">
+    <div className="flex flex-col min-h-full">
       <TopAppBar 
         title="Disiplin & Perilaku" 
         actions={

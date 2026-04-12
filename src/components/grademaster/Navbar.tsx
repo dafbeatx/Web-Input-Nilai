@@ -136,22 +136,20 @@ export default function Navbar() {
 
       {/* Mobile Top Header (Just Brand) - Robust Safe Area Solution */}
       <div 
-        className="md:hidden fixed top-0 left-0 right-0 z-[100] bg-slate-950/80 backdrop-blur-xl border-b border-white/10 flex flex-col pt-[var(--safe-top)]"
-        style={{ height: 'calc(var(--nav-height) + var(--safe-top))' }}
+        className="md:hidden fixed top-0 left-0 right-0 z-[100] bg-slate-950/90 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-4"
+        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingBottom: '0.75rem' }}
       >
-        <div className="flex-1 flex items-center justify-between px-4">
-          <div className="flex items-center gap-2.5">
-             <div className="w-8 h-8 md:w-7 md:h-7 bg-primary text-white rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
-               <GraduationCap size={18} />
-             </div>
-             <span className="text-base md:text-sm font-black text-white font-outfit uppercase tracking-tight">GradeMaster OS</span>
-          </div>
-          {isAdmin && (
-             <button onClick={onOpenSettings} className="w-9 h-9 rounded-lg bg-white/5 text-slate-400 flex items-center justify-center border border-white/10 hover:text-primary hover:bg-white/10 transition-colors">
-               <Settings size={16} />
-             </button>
-          )}
+        <div className="flex items-center gap-2.5">
+           <div className="w-8 h-8 md:w-7 md:h-7 bg-primary text-white rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
+             <GraduationCap size={18} />
+           </div>
+           <span className="text-base md:text-sm font-black text-white font-outfit uppercase tracking-tight">GradeMaster OS</span>
         </div>
+        {isAdmin && (
+           <button onClick={onOpenSettings} className="w-9 h-9 rounded-lg bg-white/5 text-slate-400 flex items-center justify-center border border-white/10 hover:text-primary hover:bg-white/10 transition-colors">
+             <Settings size={16} />
+           </button>
+        )}
       </div>
 
       {/* Mobile Bottom Navigation (Pinned to Bottom) */}

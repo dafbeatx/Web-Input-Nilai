@@ -16,7 +16,10 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-[100] h-16 md:h-20 bg-[#111113]/90 backdrop-blur-2xl border-t border-white/5 pb-[env(safe-area-inset-bottom)] flex items-center justify-around px-2">
+    <nav 
+      className="fixed bottom-0 left-0 right-0 z-[100] h-16 md:h-20 bg-[#111113]/95 backdrop-blur-2xl border-t border-white/5 flex items-center justify-around px-2"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
       {tabs.map((tab) => {
         const isActive = pathname === tab.path;
         const Icon = tab.icon;

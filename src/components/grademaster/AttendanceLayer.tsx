@@ -165,7 +165,7 @@ export default function AttendanceLayer({
   });
 
   return (
-    <div className="min-h-screen bg-transparent p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in pt-16 pb-24 md:pb-8">
+    <div className="min-h-dvh bg-transparent p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in page-pt md:pt-16 pb-24 md:pb-8">
       {!isAdmin && isLoaded && (
         <div className="mb-4 flex items-center gap-2.5 px-4 py-2.5 bg-emerald-500/5 border border-emerald-500/15 rounded-2xl animate-in fade-in duration-500">
           <Calendar size={14} className="text-emerald-400 shrink-0" />

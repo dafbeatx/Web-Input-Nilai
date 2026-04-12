@@ -293,7 +293,7 @@ export default function BehaviorLayer({
   };
 
   return (
-    <div className="min-h-screen bg-transparent p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in page-pt md:pt-16 pb-24 md:pb-8">
+    <div className="min-h-dvh bg-transparent p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in page-pt md:pt-16 pb-24 md:pb-8">
       {!isAdmin && isLoaded && (
         <div className="mb-4 flex items-center gap-2.5 px-4 py-2.5 bg-emerald-500/5 border border-emerald-500/15 rounded-2xl animate-in fade-in duration-500">
           <ShieldCheck size={14} className="text-emerald-400 shrink-0" />
@@ -475,7 +475,10 @@ export default function BehaviorLayer({
         <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl z-[1000] flex items-center justify-center p-0 md:p-10 animate-in fade-in duration-300">
           <div className="bg-slate-900/50 border border-white/10 w-full h-full md:h-auto max-w-6xl md:rounded-[4rem] overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col">
               {/* Sticky Compact Header - Safe for Mobile */}
-              <div className="bg-gradient-to-br from-slate-900 to-slate-950 px-5 pb-5 pt-[max(1.5rem,env(safe-area-inset-top))] md:p-10 border-b border-white/10 flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-xl">
+              <div 
+                className="bg-gradient-to-br from-slate-900 to-slate-950 px-5 pb-5 md:p-10 border-b border-white/10 flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-xl"
+                style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}
+              >
                 <div className="flex items-center gap-4 md:gap-6">
                     <div className={`w-12 h-12 md:w-20 md:h-20 rounded-2xl md:rounded-[2rem] border flex flex-col items-center justify-center shadow-2xl shrink-0 ${
                        selectedStudent.total_points >= 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/20' : 'bg-primary/10 text-primary border-primary/20 shadow-primary/20'
@@ -520,7 +523,7 @@ export default function BehaviorLayer({
               )}
               
               {/* Content Area */}
-              <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2">
+              <div className="flex-1 overflow-auto grid grid-cols-1 lg:grid-cols-2">
                 {/* Left Column: History (Always visible on LG, conditional on mobile) */}
                 <div className={`bg-slate-950/20 lg:flex lg:flex-col ${activeModalTab === 'HISTORY' ? 'flex flex-col' : 'hidden'}`}>
                     <div className="p-4 md:p-6 border-b border-white/5 hidden md:flex items-center justify-between">
@@ -687,7 +690,10 @@ export default function BehaviorLayer({
       {isManagingReasons && (
         <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[2000] flex items-center justify-center p-0 md:p-4">
           <div className="bg-slate-900/50 border border-white/10 max-w-2xl w-full h-full md:h-auto md:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col">
-              <div className="p-8 pt-[max(2rem,env(safe-area-inset-top))] md:pt-8 border-b border-white/10 bg-white/5 shrink-0 relative">
+              <div 
+                className="p-8 md:pt-8 border-b border-white/10 bg-white/5 shrink-0 relative"
+                style={{ paddingTop: 'max(2rem, env(safe-area-inset-top))' }}
+              >
                 <button onClick={() => setIsManagingReasons(false)} className="absolute top-[max(1.5rem,env(safe-area-inset-top))] right-6 md:top-6 w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-slate-500 border border-white/10 hover:bg-rose-500 hover:text-white transition-all">
                   <X size={20} />
                 </button>

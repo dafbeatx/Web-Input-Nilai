@@ -540,8 +540,8 @@ CREATE TABLE IF NOT EXISTS public.gm_student_accounts (
 ALTER TABLE public.gm_student_accounts ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "gm_student_accounts_read" ON public.gm_student_accounts;
-CREATE POLICY "gm_student_accounts_read" ON public.gm_student_accounts
-    FOR SELECT TO anon USING (true);
+CREATE POLICY "gm_student_accounts_anon_access" ON public.gm_student_accounts
+    FOR ALL TO anon USING (true) WITH CHECK (true);
 
 CREATE INDEX IF NOT EXISTS idx_gm_student_accounts_class
     ON public.gm_student_accounts(class_name, academic_year);
@@ -604,6 +604,9 @@ CREATE TABLE IF NOT EXISTS public.gm_student_sessions (
 );
 
 ALTER TABLE public.gm_student_sessions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "gm_student_sessions_anon_access" ON public.gm_student_sessions;
+CREATE POLICY "gm_student_sessions_anon_access" ON public.gm_student_sessions
+    FOR ALL TO anon USING (true) WITH CHECK (true);
 
 CREATE INDEX IF NOT EXISTS idx_gm_student_sessions_token ON public.gm_student_sessions(token);
 CREATE INDEX IF NOT EXISTS idx_gm_student_sessions_account ON public.gm_student_sessions(account_id);

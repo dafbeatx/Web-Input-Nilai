@@ -15,7 +15,10 @@ export default function TopAppBar({
   actions 
 }: TopAppBarProps) {
   return (
-    <header className="sticky top-0 z-[100] h-14 w-full bg-slate-950/80 backdrop-blur-md border-b border-white/5 px-4 flex items-center justify-between notch-safe">
+    <header 
+      className="sticky top-0 z-[100] w-full bg-slate-950/90 backdrop-blur-md border-b border-white/5 px-4 flex items-center justify-between"
+      style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingBottom: '0.75rem' }}
+    >
       <div className="flex items-center gap-3 overflow-hidden">
         {showBack ? (
           <button 
