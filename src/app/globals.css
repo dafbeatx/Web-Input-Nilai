@@ -404,4 +404,114 @@
   to { transform: translateY(-2000px); }
 }
 
+/* ── DAY MODE OVERRIDES ── */
+body.day-mode {
+  color: #0f172a;
+}
+body.day-mode .text-white,
+body.day-mode .text-slate-50,
+body.day-mode .text-slate-200,
+body.day-mode .text-slate-300 {
+  color: #0f172a !important;
+}
+body.day-mode .text-slate-400,
+body.day-mode .text-slate-500 {
+  color: #475569 !important;
+}
+/* Revert primary/success/danger button text */
+body.day-mode .bg-primary.text-white,
+body.day-mode .bg-rose-500.text-white,
+body.day-mode .bg-rose-600.text-white,
+body.day-mode .bg-emerald-500.text-white,
+body.day-mode .bg-emerald-600.text-white {
+  color: #ffffff !important;
+}
+/* Keep SVG icons consistent */
+body.day-mode svg.text-white {
+  color: #0f172a !important;
+}
+body.day-mode svg.text-slate-400 {
+  color: #475569 !important;
+}
 
+/* Glass cards in daytime */
+body.day-mode .bg-slate-900\/40,
+body.day-mode .bg-slate-900\/60,
+body.day-mode .bg-slate-950\/50,
+body.day-mode .bg-white\/5,
+body.day-mode .bg-white\/10 {
+  background-color: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(24px);
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05) !important;
+}
+body.day-mode .border-white\/10,
+body.day-mode .border-white\/5 {
+  border-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Recharts overrides for daytime */
+body.day-mode .recharts-text {
+  fill: #475569 !important;
+}
+body.day-mode .recharts-cartesian-grid-horizontal line,
+body.day-mode .recharts-cartesian-grid-vertical line {
+  stroke: rgba(0, 0, 0, 0.1) !important;
+}
+body.day-mode .recharts-tooltip-wrapper .bg-slate-900\/90 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+}
+body.day-mode .recharts-tooltip-item {
+  color: #0f172a !important;
+}
+
+/* ── DAY BACKGROUND CLOUDS ── */
+.day-cloud {
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+  filter: blur(12px);
+  opacity: 0.9;
+}
+
+.cloud-1 {
+  width: 400px;
+  height: 150px;
+  top: 15%;
+  left: -20%;
+  animation: floatCloud1 60s linear infinite;
+  box-shadow: 70px 30px 0 30px white, 140px -15px 0 45px white;
+}
+
+.cloud-2 {
+  width: 300px;
+  height: 100px;
+  top: 45%;
+  right: -20%;
+  animation: floatCloud2 50s linear infinite;
+  box-shadow: -50px 40px 0 15px white, -100px -10px 0 30px white;
+}
+
+.cloud-3 {
+  width: 500px;
+  height: 180px;
+  top: 75%;
+  left: -30%;
+  animation: floatCloud3 80s linear infinite;
+  box-shadow: 90px 60px 0 30px white, 180px -30px 0 60px white;
+}
+
+@keyframes floatCloud1 {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(130vw); }
+}
+@keyframes floatCloud2 {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-130vw); }
+}
+@keyframes floatCloud3 {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(130vw); }
+}

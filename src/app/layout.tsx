@@ -23,6 +23,7 @@ export const metadata: Metadata = {
 import { GradeMasterProvider } from '@/context/GradeMasterContext';
 import Navbar from '@/components/grademaster/Navbar';
 import StarBackground from '@/components/grademaster/ui/StarBackground';
+import DynamicBackground from '@/components/grademaster/ui/DynamicBackground';
 
 export default function RootLayout({
   children,
@@ -37,6 +38,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} ${outfit.variable} ${amiri.variable} ${manrope.variable} font-sans text-slate-50 antialiased min-h-full selection:bg-primary/30`}>
         <StarBackground />
+        <DynamicBackground />
         <GradeMasterProvider>
           <Navbar />
           <main className="relative min-h-screen">
