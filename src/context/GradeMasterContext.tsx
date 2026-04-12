@@ -78,8 +78,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     }
 
     // 3. Auth Guards
-    const adminOnlyLayers = ['setup', 'grading', 'remedial_dashboard', 'attendance', 'student_accounts'];
-    const protectedLayers = ['dashboard', 'remedial', 'behavior'];
+    const adminOnlyLayers = ['setup', 'grading', 'remedial_dashboard', 'student_accounts'];
+    const protectedLayers = ['remedial'];
     const authLayers = ['login', 'student_login'];
     
     if (adminOnlyLayers.includes(initialLayer) && !savedAdmin) {
@@ -87,7 +87,6 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     } else if (protectedLayers.includes(initialLayer) && !savedAdmin && !savedStudent) {
       initialLayer = 'student_login';
     } else if (authLayers.includes(initialLayer) && (savedAdmin || savedStudent)) {
-      // If already logged in, don't show login page, go to appropriate dashboard/home
       initialLayer = savedAdmin ? 'setup' : 'dashboard';
     }
 
@@ -98,7 +97,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     const handlePopState = () => {
       const newHash = window.location.hash.replace('#', '') as Layer;
       if (validLayers.includes(newHash)) {
-        // Re-check auth on popstate
+        const adminOnlyLayers = ['setup', 'grading', 'remedial_dashboard', 'student_accounts'];
+        const protectedLayers = ['remedial'];
         if (adminOnlyLayers.includes(newHash) && !localStorage.getItem('gm_isAdmin')) {
           setLayer('login');
           window.history.replaceState({ layer: 'login' }, '', '#login');
@@ -125,8 +125,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   // Update URL and LocalStorage on Layer change
   const navigate = (newLayer: Layer) => {
     // Auth Guards
-    const adminOnlyLayers = ['setup', 'grading', 'remedial_dashboard', 'attendance', 'student_accounts'];
-    const protectedLayers = ['dashboard', 'remedial', 'behavior'];
+    const adminOnlyLayers = ['setup', 'grading', 'remedial_dashboard', 'student_accounts'];
+    const protectedLayers = ['remedial'];
 
     if (adminOnlyLayers.includes(newLayer) && !isAdmin) {
       console.warn(`[Guard] Admin access required for layer: ${newLayer}`);

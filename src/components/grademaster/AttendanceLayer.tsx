@@ -166,6 +166,12 @@ export default function AttendanceLayer({
 
   return (
     <div className="min-h-screen bg-transparent p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in pt-16 pb-24 md:pb-8">
+      {!isAdmin && isLoaded && (
+        <div className="mb-4 flex items-center gap-2.5 px-4 py-2.5 bg-emerald-500/5 border border-emerald-500/15 rounded-2xl animate-in fade-in duration-500">
+          <Calendar size={14} className="text-emerald-400 shrink-0" />
+          <span className="text-[10px] font-bold text-emerald-400/80 uppercase tracking-widest">Data kehadiran ini dapat dilihat oleh umum</span>
+        </div>
+      )}
       <header className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <button type="button" onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-primary font-black text-[10px] uppercase tracking-widest transition-all mb-4 bg-white/5 px-4 py-2 rounded-xl border border-white/10 hover:border-primary/20">

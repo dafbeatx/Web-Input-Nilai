@@ -21,7 +21,8 @@ import {
   MonitorOff,
   Cpu,
   Edit2,
-  Loader2
+  Loader2,
+  Globe
 } from 'lucide-react';
 import { GradedStudent, AnalyticsResult } from '@/lib/grademaster/types';
 import { getCsiLabel, getLpsLabel } from '@/lib/grademaster/scoring';
@@ -444,6 +445,12 @@ export default function DashboardLayer({
 
   return (
     <div className="bg-transparent text-white p-3 sm:p-5 lg:p-8 w-full max-w-5xl mx-auto px-4 md:px-6 animate-in fade-in min-h-screen pb-20">
+      {isPublicView && (
+        <div className="mb-4 flex items-center gap-2.5 px-4 py-2.5 bg-emerald-500/5 border border-emerald-500/15 rounded-2xl animate-in fade-in duration-500">
+          <Globe size={14} className="text-emerald-400 shrink-0" />
+          <span className="text-[10px] font-bold text-emerald-400/80 uppercase tracking-widest">Nilai ini dapat dilihat oleh umum</span>
+        </div>
+      )}
       <header className="mb-8 md:mb-10 text-center pt-4">
         <div className="inline-flex items-center gap-1.5 md:gap-2 px-3 py-1 md:px-4 md:py-1.5 bg-primary/10 text-primary rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-3 md:mb-4 border border-primary/20">
           <LayoutGrid size={12} className="md:w-3.5 md:h-3.5" /> Dashboard Analitik
