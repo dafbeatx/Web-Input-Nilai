@@ -44,8 +44,6 @@ export default function StudentDetailSheet({
   reasons
 }: StudentDetailSheetProps) {
   const [activeTab, setActiveTab] = useState<'HISTORY' | 'MANAGE'>('HISTORY');
-  const [editingLogId, setEditingLogId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ reason: '', points: 0 });
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -55,22 +53,14 @@ export default function StudentDetailSheet({
     });
   };
 
-  const getStatusColor = (pts: number) => {
-    if (pts >= 100) return 'emerald';
-    if (pts >= 70) return '#00b4ff'; // neon blue
-    if (pts >= 40) return 'amber';
-    return 'rose';
+  const getStatusInfo = (pts: number) => {
+    if (pts >= 90) return { label: 'A', colorText: 'text-tertiary', bg: 'bg-tertiary/10' };
+    if (pts >= 70) return { label: 'B', colorText: 'text-primary', bg: 'bg-primary/10' };
+    if (pts >= 40) return { label: 'C', colorText: 'text-[#ffc107]', bg: 'bg-[#ffc107]/10' };
+    return { label: 'D', colorText: 'text-error', bg: 'bg-error/10' };
   };
 
-  const color = getStatusColor(student.total_points);
-  const isBlue = color === '#00b4ff';
-  const colorClassText = isBlue ? 'text-[#00b4ff]' : `text-${color}-500`;
-  const colorClassBg = isBlue ? 'bg-[#00b4ff]/10' : `bg-${color}-500/10`;
-  const colorClassBorder = isBlue ? 'border-[#00b4ff]/20' : `border-${color}-500/20`;
-
-  const glowStyle = isBlue 
-    ? { boxShadow: '0 0 20px rgba(0,180,255,0.4)' } 
-    : {};
+  const status = getStatusInfo(student.total_points);
 
   return (
     <div className="fixed inset-0 z-[2000] flex items-end justify-center animate-in fade-in duration-200">
@@ -83,29 +73,29 @@ export default function StudentDetailSheet({
       {/* Sheet / Modal */}
       <div className="
         relative w-full md:max-w-xl h-[85dvh] max-h-[85vh]
-        bg-[#111113] border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.8)]
+        bg-surface-container border-t border-outline-variant/20 shadow-[0_-10px_40px_rgba(0,0,0,0.8)]
         rounded-t-3xl overflow-hidden
         flex flex-col animate-in slide-in-from-bottom-full duration-300
       ">
         {/* Grab Handle */}
-        <div className="w-12 h-1.5 bg-slate-700/80 rounded-full mx-auto mt-4 mb-2 shrink-0" />
+        <div className="w-12 h-1.5 bg-outline-variant/50 rounded-full mx-auto mt-4 mb-2 shrink-0" />
         
         {/* Header */}
-        <header className="px-6 py-4 border-b border-white/5 flex items-center justify-between shrink-0">
+        <header className="px-6 py-4 border-b border-outline-variant/20 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <div className={`
-              w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 border
-              ${colorClassBg} ${colorClassText} ${colorClassBorder}
-            `} style={glowStyle}>
-              <span className="text-2xl font-bold font-sans tracking-tight">{student.total_points}</span>
+              w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 border border-outline-variant/10
+              ${status.bg} ${status.colorText}
+            `}>
+              <span className="text-2xl font-headline font-black tracking-tight">{status.label}</span>
             </div>
             <div className="overflow-hidden">
-              <h2 className="text-xl font-sans font-semibold text-white tracking-[-0.5px] truncate leading-tight">
+              <h2 className="text-xl font-headline font-bold text-primary tracking-tight truncate leading-tight">
                 {student.student_name}
               </h2>
               <div className="flex items-center mt-1">
-                <span className="text-[13px] font-sans text-slate-400">
-                  Kelas {student.class_name}
+                <span className="text-[13px] font-sans font-medium text-on-surface-variant">
+                  Kelas {student.class_name} • {student.total_points} Pts
                 </span>
               </div>
             </div>
@@ -113,14 +103,14 @@ export default function StudentDetailSheet({
           
           <button 
             onClick={onClose}
-            className="w-10 h-10 bg-white/5 text-slate-400 hover:text-white rounded-full flex items-center justify-center transition-colors active:bg-white/10 shrink-0"
+            className="w-10 h-10 bg-surface-bright text-on-surface-variant hover:text-primary rounded-full flex items-center justify-center transition-colors active:scale-95 shrink-0"
           >
             <X size={20} />
           </button>
         </header>
 
         {/* Tab Switcher */}
-        <div className="flex bg-[#111113] border-b border-white/5 h-14 shrink-0 relative z-10 px-4">
+        <div className="flex bg-surface-container border-b border-outline-variant/20 h-14 shrink-0 relative z-10 px-4">
           {[
             { id: 'HISTORY', label: 'Riwayat', icon: History },
             { id: 'MANAGE', label: 'Tambah Catatan', icon: PlusCircle, adminOnly: true }
@@ -134,57 +124,57 @@ export default function StudentDetailSheet({
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`
-                  flex-1 flex items-center justify-center gap-2 py-3 text-[14px] font-sans font-medium transition-colors relative
-                  ${IsActive ? 'text-[#00b4ff]' : 'text-slate-500'}
+                  flex-1 flex items-center justify-center gap-2 py-3 text-[14px] font-sans font-bold transition-colors relative
+                  ${IsActive ? 'text-tertiary' : 'text-on-surface-variant'}
                 `}
               >
                 <Icon size={16} /> {tab.label}
-                {IsActive && <div className="absolute bottom-0 left-8 right-8 h-0.5 bg-[#00b4ff] rounded-t-full" />}
+                {IsActive && <div className="absolute bottom-0 left-8 right-8 h-0.5 bg-tertiary rounded-t-full" />}
               </button>
             );
           })}
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-5 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
+        <div className="flex-1 overflow-y-auto p-5 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
           {activeTab === 'HISTORY' ? (
             <div className="space-y-3">
               {isLoadingLogs ? (
-                <div className="flex flex-col items-center justify-center py-20 opacity-40">
-                  <Loader2 size={32} className="animate-spin mb-3 text-[#00b4ff]" />
-                  <p className="text-[12px] font-sans font-medium">Sinkronisasi Riwayat...</p>
+                <div className="flex flex-col items-center justify-center py-20 opacity-60">
+                  <Loader2 size={32} className="animate-spin mb-3 text-tertiary" />
+                  <p className="text-[12px] font-sans font-medium text-on-surface-variant">Sinkronisasi Riwayat...</p>
                 </div>
               ) : logs.length > 0 ? (
                 logs.map((log) => (
-                  <div key={log.id} className="bg-white/5 border border-white/5 rounded-2xl p-4 transition-all group relative overflow-hidden active:scale-[0.98]">
+                  <div key={log.id} className="bg-surface-bright border border-outline-variant/10 rounded-2xl p-4 transition-all group relative overflow-hidden">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3 overflow-hidden">
                         <div className={`
                           w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border
-                          ${log.points_delta > 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}
+                          ${log.points_delta > 0 ? 'bg-tertiary/10 text-tertiary border-tertiary/20' : 'bg-error/10 text-error border-error/20'}
                         `}>
                           {log.points_delta > 0 ? <ThumbsUp size={16} /> : <ThumbsDown size={16} />}
                         </div>
                         <div className="overflow-hidden">
                           <div className="flex items-center gap-2 mb-0.5">
-                            <span className={`text-[15px] font-bold font-sans ${log.points_delta > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            <span className={`text-[15px] font-bold font-sans ${log.points_delta > 0 ? 'text-tertiary' : 'text-error'}`}>
                               {log.points_delta > 0 ? '+' : ''}{log.points_delta}
                             </span>
-                            <span className="text-[11px] font-sans text-slate-500 flex items-center gap-1">
+                            <span className="text-[11px] font-sans font-medium text-on-surface-variant flex items-center gap-1">
                               • {formatDate(log.created_at)}
                             </span>
                           </div>
-                          <h4 className="text-white font-sans text-[14px] leading-tight pr-2">
+                          <h4 className="text-primary font-sans font-medium text-[14px] leading-tight pr-2">
                             {log.reason}
                           </h4>
                         </div>
                       </div>
                       
                       {isAdmin && (
-                        <div className="flex items-center flex-col gap-2 opacity-100 transition-opacity shrink-0">
+                        <div className="flex items-center flex-col shrink-0">
                           <button 
                             onClick={() => onDeleteLog(log.id)}
-                            className="p-1.5 text-slate-500 hover:text-rose-500 rounded-lg active:bg-white/5"
+                            className="p-1.5 text-on-surface-variant hover:text-error rounded-lg transition-colors"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -194,9 +184,9 @@ export default function StudentDetailSheet({
                   </div>
                 ))
               ) : (
-                <div className="text-center py-20 opacity-40">
-                  <ShieldCheck size={48} className="mx-auto text-slate-500 mb-4 stroke-[1.5]" />
-                  <p className="text-[14px] font-sans text-slate-400">Belum ada riwayat poin.</p>
+                <div className="text-center py-20 opacity-60">
+                  <ShieldCheck size={48} className="mx-auto text-on-surface-variant mb-4 stroke-[1.5]" />
+                  <p className="text-[14px] font-sans font-medium text-on-surface-variant">Belum ada riwayat poin.</p>
                 </div>
               )}
             </div>
@@ -204,7 +194,7 @@ export default function StudentDetailSheet({
             <div className="space-y-6 animate-in slide-in-from-right-2">
               {/* Positive Behaviors */}
               <div className="space-y-3">
-                <h4 className="text-[14px] font-sans font-semibold text-emerald-400 flex items-center gap-2 px-1">
+                <h4 className="text-[14px] font-sans font-bold text-tertiary flex items-center gap-2 px-1">
                   <PlusCircle size={16} /> Tindakan Terpuji
                 </h4>
                 <div className="flex flex-col gap-2">
@@ -213,18 +203,18 @@ export default function StudentDetailSheet({
                       key={r} 
                       disabled={isUpdating}
                       onClick={() => onAddLog('GOOD', 10, r)} 
-                      className="px-4 h-14 bg-emerald-500/10 active:bg-emerald-500/20 border border-emerald-500/20 rounded-2xl flex items-center justify-between text-left transition-all active:scale-[0.98]"
+                      className="px-4 h-14 bg-tertiary/5 active:bg-tertiary/20 border border-tertiary/20 rounded-xl flex items-center justify-between text-left transition-colors"
                     >
-                      <span className="text-[14px] font-sans font-medium text-emerald-100 leading-tight">{r}</span>
-                      <span className="text-[14px] font-bold text-emerald-400 shrink-0">+10</span>
+                      <span className="text-[14px] font-sans font-semibold text-primary leading-tight">{r}</span>
+                      <span className="text-[14px] font-bold text-tertiary shrink-0">+10</span>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Negative Behaviors */}
-              <div className="space-y-3 pt-4 border-t border-white/5">
-                <h4 className="text-[14px] font-sans font-semibold text-rose-500 flex items-center gap-2 px-1">
+              <div className="space-y-3 pt-4 border-t border-outline-variant/10">
+                <h4 className="text-[14px] font-sans font-bold text-error flex items-center gap-2 px-1">
                   <AlertCircle size={16} /> Pelanggaran & Kedisiplinan
                 </h4>
                 <div className="flex flex-col gap-2">
@@ -233,10 +223,10 @@ export default function StudentDetailSheet({
                       key={r} 
                       disabled={isUpdating}
                       onClick={() => onAddLog('BAD', 10, r)} 
-                      className="px-4 h-14 bg-rose-500/10 active:bg-rose-500/20 border border-rose-500/20 rounded-2xl flex items-center justify-between text-left transition-all active:scale-[0.98]"
+                      className="px-4 h-14 bg-error/5 active:bg-error/20 border border-error/20 rounded-xl flex items-center justify-between text-left transition-colors"
                     >
-                      <span className="text-[14px] font-sans font-medium text-rose-100 leading-tight">{r}</span>
-                      <span className="text-[14px] font-bold text-rose-500 shrink-0">-10</span>
+                      <span className="text-[14px] font-sans font-semibold text-primary leading-tight">{r}</span>
+                      <span className="text-[14px] font-bold text-error shrink-0">-10</span>
                     </button>
                   ))}
                 </div>
