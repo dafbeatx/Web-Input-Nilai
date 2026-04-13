@@ -183,65 +183,79 @@ export default function BehaviorPage() {
         }
       />
       
-      <div className="p-4 md:p-8 space-y-6">
-        {/* Search & Statistics */}
-        <section className="space-y-4">
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-[#00b4ff] transition-colors" size={18} />
-            <input 
-              type="text" 
-              placeholder="Cari nama siswa..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#111113] border border-white/10 focus:border-[#00b4ff]/50 rounded-2xl py-4 pl-12 pr-4 text-[15px] font-sans font-medium text-white outline-none transition-all shadow-lg shadow-black/20"
-            />
-          </div>
+      <div className="p-4 md:px-6 md:py-8">
+        {/* Dashboard Header / Summary */}
+        <div className="py-8">
+          <p className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-2">Class Overview</p>
+          <h2 className="font-headline font-bold text-3xl tracking-tight text-primary">Behavior Performance</h2>
           
-          <div className="flex items-center justify-between px-2">
-            <div>
-              <p className="text-[12px] font-sans font-medium text-slate-500 tracking-tight">Menampilkan</p>
-              <h2 className="text-xl font-sans font-bold text-white tracking-[-0.5px] mt-0.5">{studentClass || 'Semua Kelas'}</h2>
+          <div className="mt-6 grid grid-cols-2 gap-4">
+            <div className="bg-surface-container p-5 rounded-xl border-l-4 border-tertiary">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Total Siswa</p>
+              <p className="text-3xl font-headline font-extrabold text-tertiary mt-1">{filteredStudents.length}</p>
             </div>
-            <div className="text-right">
-              <p className="text-[12px] font-sans font-medium text-slate-500 tracking-tight">Total Siswa</p>
-              <p className="text-xl font-sans font-bold text-[#00b4ff] mt-0.5">{filteredStudents.length}</p>
+            <div className="bg-surface-container p-5 rounded-xl border-l-4 border-error">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Perlu Perhatian</p>
+              <p className="text-3xl font-headline font-extrabold text-error mt-1">
+                {students.filter(s => s.total_points < 70).length} <span className="text-xs font-medium text-on-surface-variant">Siswa</span>
+              </p>
             </div>
           </div>
-        </section>
+        </div>
 
         {/* Student List */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-12">
-          {isLoading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-[#111113] border border-white/5 rounded-3xl p-5 shadow-xl animate-pulse flex flex-col gap-4">
-                <div className="flex gap-4 items-center">
-                  <div className="w-12 h-12 bg-white/5 rounded-2xl" />
-                  <div className="flex-1 space-y-3">
-                    <div className="h-4 bg-white/10 rounded-full w-3/4" />
-                    <div className="h-3 bg-white/5 rounded-full w-1/3" />
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : filteredStudents.length > 0 ? (
-            filteredStudents.map((student) => (
-              <StudentCard 
-                key={student.id}
-                name={student.student_name}
-                className={student.class_name}
-                points={student.total_points}
-                onClick={() => {
-                  setSelectedStudent(student);
-                  fetchLogs(student.id);
-                }}
-              />
-            ))
-          ) : (
-            <div className="col-span-full py-24 text-center">
-               <Users size={48} className="mx-auto text-slate-700 mb-4 stroke-1" />
-               <p className="text-[14px] font-sans font-medium text-slate-500">Data Siswa Tidak Ditemukan</p>
+        <section className="space-y-4 pb-28">
+          <div className="flex flex-col gap-4 mb-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-headline font-bold text-lg text-primary">Student Directory</h3>
+              <Filter className="text-on-surface-variant w-5 h-5" />
             </div>
-          )}
+            
+            <div className="relative group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
+              <input 
+                type="text" 
+                placeholder="Cari nama siswa..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-surface-container border border-outline-variant/20 focus:border-tertiary rounded-xl py-3 pl-11 pr-4 text-[14px] text-primary outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-surface-container rounded-xl p-4 animate-pulse flex items-center justify-between">
+                   <div className="flex items-center gap-4">
+                     <div className="w-12 h-12 bg-white/5 rounded-lg" />
+                     <div className="space-y-2">
+                       <div className="h-4 bg-white/10 rounded-full w-24" />
+                       <div className="h-3 bg-white/5 rounded-full w-16" />
+                     </div>
+                   </div>
+                </div>
+              ))
+            ) : filteredStudents.length > 0 ? (
+              filteredStudents.map((student) => (
+                <StudentCard 
+                  key={student.id}
+                  name={student.student_name}
+                  className={student.class_name}
+                  points={student.total_points}
+                  onClick={() => {
+                    setSelectedStudent(student);
+                    fetchLogs(student.id);
+                  }}
+                />
+              ))
+            ) : (
+              <div className="py-12 text-center">
+                 <Users size={32} className="mx-auto text-on-surface-variant mb-4 stroke-1" />
+                 <p className="text-[14px] font-sans font-medium text-on-surface-variant">Data Siswa Tidak Ditemukan</p>
+              </div>
+            )}
+          </div>
         </section>
       </div>
 

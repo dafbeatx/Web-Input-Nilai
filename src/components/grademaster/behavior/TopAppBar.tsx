@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, ArrowLeft, MoreVertical } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, MoreVertical, Search } from 'lucide-react';
 
 interface TopAppBarProps {
   title: string;
@@ -16,32 +16,32 @@ export default function TopAppBar({
 }: TopAppBarProps) {
   return (
     <header 
-      className="sticky top-0 z-[100] w-full bg-slate-950/90 backdrop-blur-md border-b border-white/5 px-4 flex items-center justify-between"
-      style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingBottom: '0.75rem' }}
+      className="sticky top-0 z-[100] w-full bg-[#0e0e10]/80 backdrop-blur-xl transition-colors flex items-center justify-between px-6 h-20 border-b border-white/5"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
-      <div className="flex items-center gap-3 overflow-hidden">
+      <div className="flex items-center gap-4 overflow-hidden">
         {showBack ? (
           <button 
             onClick={onBack}
-            className="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-slate-400 active:bg-white/10 active:scale-90 transition-all"
+            className="text-primary active:scale-95 transition-transform"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={24} />
           </button>
         ) : (
-          <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary shrink-0 border border-primary/20">
-            <ShieldCheck size={20} fill="currentColor" fillOpacity={0.2} />
-          </div>
+          <span className="text-primary active:scale-95 transition-transform">
+            <Search size={24} />
+          </span>
         )}
-        <h1 className="text-lg font-black text-white font-outfit uppercase tracking-tighter truncate">
+        <h1 className="font-headline font-black text-sm tracking-[0.15em] text-primary uppercase truncate">
           {title}
         </h1>
       </div>
       
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         {actions ? actions : (
-          <button className="w-10 h-10 -mr-2 rounded-full flex items-center justify-center text-slate-400 active:bg-white/10 active:scale-90 transition-all">
-            <MoreVertical size={20} />
-          </button>
+          <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30 cursor-pointer active:scale-95 duration-200">
+             <img alt="Educator Profile" className="w-full h-full object-cover" src="https://ui-avatars.com/api/?name=Educator&background=2c2c2f&color=f9f9f9&size=128&bold=true" />
+          </div>
         )}
       </div>
     </header>
