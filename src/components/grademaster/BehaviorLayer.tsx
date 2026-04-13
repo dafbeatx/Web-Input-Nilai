@@ -76,13 +76,13 @@ export default function BehaviorLayer({
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
 
   useEffect(() => {
-    if (activeClass && activeYear) {
-      loadClassDirectly(activeClass, activeYear);
-    } else {
-      fetchAvailableClasses();
-    }
     fetchBehaviorSettings();
-  }, [activeClass, activeYear, academicYear, className]);
+    fetchAvailableClasses().then((classes) => {
+      const initialClass = activeClass && activeClass !== "" ? activeClass : 'Semua Kelas';
+      setClassName(initialClass);
+      loadClassDirectly(initialClass, activeYear || '2025/2026');
+    });
+  }, [activeClass, activeYear]);
 
   // Load history when a student is selected
   useEffect(() => {
@@ -344,21 +344,45 @@ export default function BehaviorLayer({
         )}
       </header>
 
-      {(!isLoaded || isAdmin) && (
-        <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl md:rounded-[2rem] p-3 md:p-6 shadow-2xl border border-white/10 flex flex-col md:flex-row gap-3 md:gap-4 items-end mb-6 md:mb-8 relative z-10">
-          <div className="w-full md:w-1/3">
-            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">Pilih Kelas</label>
-            <input type="text" placeholder="Contoh: 12-IPA-1" value={className} onChange={(e: any) => setClassName(e.target.value.toUpperCase())} className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 md:p-4 text-sm font-black text-white outline-none focus:border-primary transition-all uppercase" />
+      {/* Dynamic Settings & Filter Header */}
+      <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl md:rounded-[2rem] p-4 md:p-6 shadow-2xl border border-white/10 mb-6 md:mb-8 relative z-10 flex flex-col gap-4">
+        {isAdmin && (
+          <div className="flex flex-col md:flex-row gap-3 md:gap-4 items-end mb-2">
+            <div className="w-full md:w-1/3">
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><Calendar size={12}/> Tahun Ajaran</label>
+              <input type="text" value={academicYear} onChange={(e: any) => setAcademicYear(e.target.value)} onBlur={() => loadClassDirectly(className, academicYear)} className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 text-sm font-black text-white outline-none focus:border-primary transition-all" />
+            </div>
+            <div className="w-full md:w-1/3">
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><Search size={12}/> Cari Spesifik</label>
+              <input type="text" placeholder="Nama siswa..." value={newStudentName} onChange={(e) => setNewStudentName(e.target.value)} className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 text-sm font-black text-white outline-none focus:border-primary transition-all" />
+            </div>
+            <button onClick={fetchStudents} disabled={isLoading} className="w-full md:w-auto px-6 py-3 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+               {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />} Refresh
+            </button>
           </div>
-          <div className="w-full md:w-1/3">
-            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">Tahun Ajaran</label>
-            <input type="text" value={academicYear} onChange={(e: any) => setAcademicYear(e.target.value)} className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 md:p-4 text-sm font-black text-white outline-none focus:border-primary transition-all" />
+        )}
+
+        {/* Floating Class Pills Filter */}
+        <div className="w-full">
+          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Filter Kelas</label>
+          <div className="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-hide">
+            {['Semua Kelas', ...availableClasses].map((cls) => (
+              <button
+                key={cls}
+                onClick={() => loadClassDirectly(cls, academicYear)}
+                disabled={isLoading}
+                className={`flex-shrink-0 px-5 py-2.5 rounded-full font-black text-xs transition-all duration-300 border ${
+                  className === cls 
+                    ? 'bg-primary text-white border-primary shadow-[0_0_20px_rgba(40,112,234,0.3)] shadow-primary/30 scale-105 z-10' 
+                    : 'bg-slate-950/50 text-slate-400 hover:bg-slate-800 border-white/5 hover:border-white/20'
+                }`}
+              >
+                {cls}
+              </button>
+            ))}
           </div>
-          <button onClick={fetchStudents} disabled={isLoading} className="w-full md:w-auto px-6 md:px-10 py-3 md:py-4 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
-             {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />} Muat Data
-          </button>
         </div>
-      )}
+      </div>
 
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20 animate-pulse">
@@ -368,8 +392,8 @@ export default function BehaviorLayer({
       ) : isLoaded ? (
         viewMode === 'REPORT' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500 pb-10">
-            {students.length > 0 ? (
-              students.map((s: BehaviorStudent) => (
+            {students.filter(s => s.student_name.toLowerCase().includes(newStudentName.toLowerCase())).length > 0 ? (
+              students.filter(s => s.student_name.toLowerCase().includes(newStudentName.toLowerCase())).map((s: BehaviorStudent) => (
                 <div 
                   key={s.id} 
                   onClick={() => setSelectedStudent(s)}
@@ -383,7 +407,7 @@ export default function BehaviorLayer({
                   <div className="flex items-center justify-between mb-3 md:mb-8 border-b border-white/5 pb-3 md:pb-6">
                     <div>
                       <h4 className="font-black text-sm md:text-xl text-white uppercase tracking-tight font-outfit mb-0.5">{s.student_name}</h4>
-                      <p className="text-[10px] md:text-sm font-bold text-slate-500 uppercase tracking-widest">Kelas {className}</p>
+                      <p className="text-[10px] md:text-sm font-bold text-slate-500 uppercase tracking-widest">Kelas {s.class_name}</p>
                     </div>
                     <div className={`w-10 h-10 md:w-16 md:h-16 rounded-lg md:rounded-2xl flex items-center justify-center text-base md:text-2xl font-black border shadow-lg ${
                       s.total_points >= 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/20' :
@@ -413,7 +437,7 @@ export default function BehaviorLayer({
             ) : (
                 <div className="col-span-full text-center py-20 bg-slate-900/40 rounded-[3rem] border border-white/10 border-dashed">
                   <Users size={48} className="text-slate-700 mx-auto mb-4" />
-                  <p className="text-slate-500 font-bold uppercase text-xs tracking-widest">Siswa tidak ditemukan</p>
+                  <p className="text-slate-500 font-bold uppercase text-xs tracking-widest">Siswa tidak ditemukan untuk {className}</p>
                 </div>
             )}
           </div>
@@ -422,10 +446,7 @@ export default function BehaviorLayer({
               <div className="p-8 border-b border-white/10 bg-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                   <h3 className="font-black text-white text-xl uppercase font-outfit">Manajemen Kedisiplinan</h3>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{students.length} Siswa di Kelas {className}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input type="text" placeholder="Cari nama siswa..." value={newStudentName} onChange={(e) => setNewStudentName(e.target.value)} className="bg-slate-950/50 border border-white/10 rounded-xl px-5 py-3 text-sm font-black text-white outline-none focus:border-primary transition-all w-full md:w-72" />
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{students.filter(s => s.student_name.toLowerCase().includes(newStudentName.toLowerCase())).length} Siswa tertampil di {className}</p>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -434,15 +455,17 @@ export default function BehaviorLayer({
                     <tr className="bg-white/5 border-b border-white/10">
                       <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] text-center w-20">No</th>
                       <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Nama Lengkap</th>
+                      <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] text-center">Kelas</th>
                       <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] text-center">Poin Saat Ini</th>
                       <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] text-center">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="text-sm font-bold text-white">
-                    {students.map((s: BehaviorStudent, idx: number) => (
+                    {students.filter(s => s.student_name.toLowerCase().includes(newStudentName.toLowerCase())).map((s: BehaviorStudent, idx: number) => (
                       <tr key={s.id} className="border-b border-white/5 hover:bg-white/5 transition-all group">
                           <td className="p-6 text-center text-slate-500 font-mono text-xs">{idx + 1}</td>
                           <td className="p-6 font-outfit uppercase tracking-tight">{s.student_name}</td>
+                          <td className="p-6 text-center text-slate-400 font-bold text-[10px] uppercase">{s.class_name}</td>
                           <td className="p-6 text-center">
                             <span className={`px-4 py-1.5 rounded-lg text-xs font-black border ${
                               s.total_points >= 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-primary/10 text-primary border-primary/20'
@@ -459,17 +482,9 @@ export default function BehaviorLayer({
           </div>
         )
       ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-10">
-            {availableClasses.map((cls: string) => (
-              <button key={cls} onClick={() => loadClassDirectly(cls, academicYear)} className="bg-slate-900/40 backdrop-blur-2xl border border-white/10 p-10 rounded-[3rem] hover:border-primary/50 hover:bg-primary/5 transition-all text-center relative group overflow-hidden shadow-2xl">
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-primary/20 group-hover:bg-primary transition-all" />
-                <div className="w-20 h-20 bg-primary/10 text-primary rounded-3xl flex items-center justify-center mb-6 mx-auto group-hover:scale-110 transition-transform">
-                  <ShieldCheck size={40} />
-                </div>
-                <h3 className="font-black text-white text-xl font-outfit uppercase tracking-tight">Kelas {cls}</h3>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2">{academicYear}</p>
-              </button>
-            ))}
+          <div className="col-span-full text-center py-20 bg-slate-900/40 rounded-[3rem] border border-white/10 border-dashed">
+            <Users size={48} className="text-slate-700 mx-auto mb-4" />
+            <p className="text-slate-500 font-bold uppercase text-xs tracking-widest">Tidak dapat memuat data siswa</p>
           </div>
       )}
 

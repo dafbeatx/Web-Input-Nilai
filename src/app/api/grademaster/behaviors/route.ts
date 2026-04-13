@@ -28,12 +28,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Tahun ajaran wajib diisi' }, { status: 400 });
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('gm_behaviors')
       .select('*')
-      .eq('class_name', className)
       .eq('academic_year', academicYear)
       .order('student_name', { ascending: true });
+
+    if (className !== 'Semua Kelas') {
+        query = query.eq('class_name', className);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('[GET Behaviors - Students] DB Error:', error);
