@@ -309,20 +309,89 @@ body.day-mode .text-slate-400,
 body.day-mode .text-slate-500 {
   color: #475569 !important;
 }
-/* Revert primary/success/danger button text */
+body.day-mode .text-slate-600 {
+  color: #64748b !important;
+}
+body.day-mode .text-slate-700 {
+  color: #334155 !important;
+}
+body.day-mode .text-slate-800 {
+  color: #1e293b !important;
+}
+
+/* ── REVERT: Keep text-white ON colored/solid backgrounds ── */
+body.day-mode .bg-primary .text-white,
 body.day-mode .bg-primary.text-white,
+body.day-mode .bg-primary > .text-white,
+body.day-mode .bg-primary svg,
+body.day-mode .bg-rose-500 .text-white,
 body.day-mode .bg-rose-500.text-white,
+body.day-mode .bg-rose-600 .text-white,
 body.day-mode .bg-rose-600.text-white,
+body.day-mode .bg-emerald-500 .text-white,
 body.day-mode .bg-emerald-500.text-white,
-body.day-mode .bg-emerald-600.text-white {
+body.day-mode .bg-emerald-600 .text-white,
+body.day-mode .bg-emerald-600.text-white,
+body.day-mode .bg-indigo-600 .text-white,
+body.day-mode .bg-indigo-600.text-white,
+body.day-mode .bg-sky-600 .text-white,
+body.day-mode .bg-sky-600.text-white,
+body.day-mode .bg-amber-500 .text-white,
+body.day-mode .bg-amber-500.text-white {
   color: #ffffff !important;
 }
-/* Keep SVG icons consistent */
+
+/* Revert text-white inside any solid-colored button/badge container */
+body.day-mode .bg-primary,
+body.day-mode .bg-rose-500,
+body.day-mode .bg-rose-600,
+body.day-mode .bg-emerald-500,
+body.day-mode .bg-emerald-600,
+body.day-mode .bg-indigo-600,
+body.day-mode .bg-sky-600,
+body.day-mode .bg-amber-500 {
+  color: #ffffff !important;
+}
+
+/* SVG icons: dark in general containers, white in colored buttons */
 body.day-mode svg.text-white {
   color: #0f172a !important;
 }
 body.day-mode svg.text-slate-400 {
   color: #475569 !important;
+}
+body.day-mode .bg-primary svg,
+body.day-mode .bg-rose-500 svg,
+body.day-mode .bg-rose-600 svg,
+body.day-mode .bg-emerald-500 svg,
+body.day-mode .bg-emerald-600 svg,
+body.day-mode .bg-indigo-600 svg,
+body.day-mode .bg-sky-600 svg {
+  color: #ffffff !important;
+}
+
+/* Input fields: keep dark text + proper background in day mode */
+body.day-mode input,
+body.day-mode textarea,
+body.day-mode select {
+  background-color: rgba(241, 245, 249, 0.9) !important;
+  color: #0f172a !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+body.day-mode input::placeholder,
+body.day-mode textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Mobile bottom nav active items: keep white text on primary bg */
+body.day-mode .bg-primary.text-white span,
+body.day-mode [class*="bg-primary"] span {
+  color: #ffffff !important;
+}
+
+/* Mobile drawer overlay */
+body.day-mode .bg-slate-950\/80 {
+  background-color: rgba(0, 0, 0, 0.5) !important;
 }
 
 /* Glass cards and Navbars in daytime */
@@ -357,6 +426,72 @@ body.day-mode .bg-primary\/20 {
 body.day-mode .shadow-2xl {
   box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.08) !important;
 }
+
+/* ── DAY MODE: Material Design 3 Token Overrides (Behavior Page) ── */
+body.day-mode .bg-surface-container,
+body.day-mode .bg-surface-bright,
+body.day-mode .bg-surface-variant,
+body.day-mode .bg-surface-container-high,
+body.day-mode .bg-surface-container-highest,
+body.day-mode .bg-surface-container-low,
+body.day-mode .bg-surface-container-lowest,
+body.day-mode .bg-surface-dim,
+body.day-mode .bg-surface,
+body.day-mode .bg-background {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Opacity-modified surface backgrounds */
+body.day-mode .bg-surface\/80,
+body.day-mode .bg-surface-container\/80 {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(24px) !important;
+}
+
+/* Material token text overrides for day mode */
+body.day-mode .text-primary {
+  color: #0f172a !important;
+}
+body.day-mode .text-on-surface {
+  color: #0f172a !important;
+}
+body.day-mode .text-on-surface-variant {
+  color: #64748b !important;
+}
+body.day-mode .text-on-background {
+  color: #0f172a !important;
+}
+
+/* Material token border overrides */
+body.day-mode .border-outline-variant\/20,
+body.day-mode .border-outline-variant\/30,
+body.day-mode .border-outline-variant\/10 {
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Ensure colored elements RETAIN their original color in day mode */
+body.day-mode .text-tertiary {
+  color: #059669 !important;
+}
+body.day-mode .text-error {
+  color: #e11d48 !important;
+}
+
+body.day-mode .border-tertiary {
+  border-color: #059669 !important;
+}
+body.day-mode .border-error {
+  border-color: #e11d48 !important;
+}
+
+/* ── CRITICAL FIX: Revert text-primary back to white on solid primary BGs ── */
+/* (primary in this theme = #f9f9f9, but in day mode we override it to dark. 
+   We must re-revert for elements where primary is used as background) */
+body.day-mode .bg-primary .text-primary,
+body.day-mode .bg-tertiary .text-primary {
+  color: #ffffff !important;
+}
+
 
 /* Recharts overrides for daytime */
 body.day-mode .recharts-text {
