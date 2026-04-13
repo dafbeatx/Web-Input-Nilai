@@ -104,57 +104,65 @@ export default function HomeLayer({
 
   return (
     <div className="min-h-dvh bg-transparent p-3 sm:p-5 lg:p-8 pb-safe-bottom max-w-7xl mx-auto animate-in mb-20 md:mb-0 page-pt md:pt-16">
-      <header className="mb-8 md:mb-12 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
-        <div>
-          <div className="flex items-center gap-2 md:gap-3 text-primary mb-1 md:mb-2">
-            <GraduationCap size={24} className="md:w-8 md:h-8" />
-            <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em] opacity-80">SMP Terpadu Al-Ittihadiyah</span>
-            <span className="text-[10px] md:text-xs font-black text-slate-700">•</span>
-            <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em] opacity-80">SMA Terpadu As Salaam</span>
+      <header className="mb-8 md:mb-12 flex flex-col md:flex-row md:items-end justify-between gap-5 md:gap-6">
+        <div className="space-y-2 md:space-y-3">
+          {/* School Names — clean, subtle, stacked on mobile */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.15em] text-primary/70">SMP Terpadu Al-Ittihadiyah</span>
+            <span className="text-[8px] md:text-[10px] text-slate-600 select-none">／</span>
+            <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.15em] text-primary/70">SMA Terpadu As Salaam</span>
           </div>
-          <h1 className="text-xl md:text-4xl font-black text-white tracking-tight flex items-center gap-2 md:gap-3">
-            {expandedGroup ? (
-              <>
-                <button onClick={() => setExpandedClass(null)} className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/5 text-slate-400 hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-colors border border-white/10 hover:border-primary/20">
-                  <ArrowLeft size={16} className="md:w-5 md:h-5" />
-                </button>
-                Kelas {expandedGroup.className}
-              </>
-            ) : (
-              <>
-                Daftar Kelas
-                <button
-                  onClick={onOpenAbout}
-                  className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/5 text-slate-400 hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-colors shadow-inner border border-white/10 hover:border-primary/20"
-                  title="Tentang Sistem"
-                >
-                  <HelpCircle size={16} className="md:w-5 md:h-5" />
-                </button>
-              </>
+
+          {/* Main Heading */}
+          <div className="flex items-center gap-3 md:gap-4">
+            <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight font-outfit">
+              {expandedGroup ? (
+                <span className="flex items-center gap-2.5 md:gap-3">
+                  <button onClick={() => setExpandedClass(null)} className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/5 text-slate-400 hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-all border border-white/10 hover:border-primary/20 shrink-0">
+                    <ArrowLeft size={16} className="md:w-5 md:h-5" />
+                  </button>
+                  <span>Kelas {expandedGroup.className}</span>
+                </span>
+              ) : (
+                'Daftar Kelas'
+              )}
+            </h1>
+            {!expandedGroup && (
+              <button
+                onClick={onOpenAbout}
+                className="w-7 h-7 md:w-9 md:h-9 rounded-full bg-white/5 text-slate-500 hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-all border border-white/5 hover:border-primary/20 shrink-0"
+                title="Tentang Sistem"
+              >
+                <HelpCircle size={14} className="md:w-4 md:h-4" />
+              </button>
             )}
-          </h1>
-          <p className="text-sm md:text-base text-slate-400 font-bold mt-1 md:mt-2">
+          </div>
+
+          {/* Subtitle */}
+          <p className="text-[13px] md:text-base text-slate-500 font-semibold leading-relaxed max-w-lg">
             {expandedGroup
-              ? `Tahun Ajaran ${expandedGroup.academicYear} • ${expandedGroup.schoolLevel}`
+              ? `Tahun Ajaran ${expandedGroup.academicYear} · ${expandedGroup.schoolLevel}`
               : 'Pilih kelas untuk melihat sesi ujian dan data kehadiran siswa.'
             }
           </p>
         </div>
-        <div className="flex items-center gap-3">
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2.5 md:gap-3">
           {isAdmin && (
             <button
               onClick={() => (window as any).setLayer('student_accounts')}
-              className="px-4 py-3 md:px-6 md:py-4 bg-white/5 text-slate-300 rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+              className="px-3.5 py-2.5 md:px-5 md:py-3.5 bg-white/5 text-slate-300 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all flex items-center justify-center gap-2"
             >
-              <Users size={16} className="md:w-[18px] md:h-[18px]" /> Akun Siswa
+              <Users size={14} className="md:w-4 md:h-4" /> Akun Siswa
             </button>
           )}
           {isAdmin && (
             <button
               onClick={onCreateNew}
-              className="px-4 py-3 md:px-6 md:py-4 bg-primary text-white rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+              className="px-3.5 py-2.5 md:px-5 md:py-3.5 bg-primary text-white rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
             >
-              <Plus size={16} className="md:w-[18px] md:h-[18px]" /> Buat Sesi Baru
+              <Plus size={14} className="md:w-4 md:h-4" /> Buat Sesi Baru
             </button>
           )}
         </div>
