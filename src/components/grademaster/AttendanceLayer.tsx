@@ -177,7 +177,7 @@ export default function AttendanceLayer({
           <button type="button" onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-primary font-black text-xs uppercase tracking-widest transition-all mb-4 bg-white/5 px-4 py-2 md:px-5 md:py-3 rounded-xl border border-white/10 hover:border-primary/20">
             <ArrowLeft size={14} /> Beranda
           </button>
-          <h1 className="text-xl md:text-4xl font-black text-white tracking-tight flex items-center gap-2 md:gap-3 font-outfit uppercase">
+          <h1 className="text-xl md:text-4xl font-black text-slate-100 tracking-tight flex items-center gap-2 md:gap-3 font-outfit uppercase">
             <Calendar className="text-primary" size={24} /> Kehadiran Siswa
           </h1>
           <p className="text-xs md:text-sm text-slate-500 font-bold mt-1 md:mt-2 uppercase tracking-widest">Manajemen & Monitoring Kehadiran Kelas Tingkat Lanjut</p>
@@ -191,7 +191,7 @@ export default function AttendanceLayer({
           <select 
             value={className} 
             onChange={(e) => setClassName(e.target.value)} 
-            className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 md:p-4 text-sm font-black text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all appearance-none cursor-pointer"
+            className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 md:p-4 text-sm font-black text-slate-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all appearance-none cursor-pointer"
           >
             <option value="">-- Pilih Kelas --</option>
             {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
@@ -205,7 +205,7 @@ export default function AttendanceLayer({
             type="date" 
             value={selectedDate} 
             onChange={(e) => setSelectedDate(e.target.value)} 
-            className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 md:p-4 text-sm font-black text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all cursor-pointer" 
+            className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 md:p-4 text-sm font-black text-slate-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all cursor-pointer" 
           />
         </div>
       </div>
@@ -220,7 +220,7 @@ export default function AttendanceLayer({
               onClick={() => setSubject(s)}
               className={`px-4 py-2.5 md:px-5 md:py-3 rounded-xl md:rounded-2xl text-xs font-black uppercase tracking-widest border transition-all whitespace-nowrap ${
                 subject === s 
-                ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20 scale-105' 
+                ? 'bg-primary border-primary text-slate-950 shadow-[0_0_15px_rgba(45,212,191,0.5)] scale-105' 
                 : 'bg-slate-900/40 border-white/10 text-slate-400 hover:border-primary/50'
               }`}
             >
@@ -249,7 +249,7 @@ export default function AttendanceLayer({
                 <div className={`p-3 rounded-xl bg-${s.color}-500/10 text-${s.color}-500 mb-2`}>
                   {s.icon}
                 </div>
-                <span className="text-3xl font-black text-white">{s.count}</span>
+                <span className="text-3xl font-black text-slate-100">{s.count}</span>
                 <span className="text-xs font-black uppercase tracking-widest text-slate-500">{s.label}</span>
               </div>
             ))}
@@ -262,7 +262,7 @@ export default function AttendanceLayer({
                   <Users className="text-primary" size={18} />
                 </div>
                 <div>
-                  <h3 className="font-black text-white text-lg md:text-xl uppercase font-outfit truncate">{subject} - {className}</h3>
+                  <h3 className="font-black text-slate-100 text-lg md:text-xl uppercase font-outfit truncate">{subject} - {className}</h3>
                   <p className="text-xs md:text-sm font-black text-slate-500 uppercase tracking-widest">{filteredStudents.length} Siswa Terdaftar</p>
                 </div>
               </div>
@@ -276,7 +276,7 @@ export default function AttendanceLayer({
                   }} className="w-full sm:w-auto px-6 py-3 bg-sky-500/10 text-sky-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-sky-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
                     <CheckCircle2 size={12} /> Tandai Semua Hadir
                   </button>
-                  <button onClick={saveAttendance} disabled={isSaving} className="w-full sm:w-auto px-6 py-3 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+                  <button onClick={saveAttendance} disabled={isSaving} className="w-full sm:w-auto px-6 py-3 bg-emerald-500 text-zinc-100 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
                     {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Simpan Absensi
                   </button>
                 </div>
@@ -292,7 +292,7 @@ export default function AttendanceLayer({
                   onClick={() => setFilterStatus(status)}
                   className={`px-3 py-1.5 md:px-4 md:py-2.5 rounded-full text-xs font-black uppercase tracking-widest border transition-all whitespace-nowrap ${
                     filterStatus === status 
-                    ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' 
+                    ? 'bg-primary border-primary text-slate-950 shadow-[0_0_15px_rgba(45,212,191,0.5)]' 
                     : 'bg-white/5 border-white/5 text-slate-400 hover:border-white/20'
                   }`}
                 >
@@ -309,7 +309,7 @@ export default function AttendanceLayer({
                       <div className="w-9 h-9 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-slate-950/50 flex items-center justify-center text-xs font-black text-slate-500 border border-white/5 group-hover:border-primary/20 group-hover:text-primary transition-all">
                         {idx + 1}
                       </div>
-                      <h4 className="text-sm md:text-base font-black text-white uppercase tracking-tight font-outfit">{name}</h4>
+                      <h4 className="text-sm md:text-base font-black text-slate-100 uppercase tracking-tight font-outfit">{name}</h4>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 justify-end mt-3 sm:mt-0">
@@ -319,10 +319,10 @@ export default function AttendanceLayer({
                           const active = currentStatus === status;
                           
                           const colors = {
-                            'Hadir': 'bg-emerald-500 border-emerald-500/20 text-white',
-                            'Izin': 'bg-amber-500 border-amber-500/20 text-white',
-                            'Sakit': 'bg-sky-500 border-sky-500/20 text-white',
-                            'Alpa': 'bg-rose-500 border-rose-500/20 text-white'
+                            'Hadir': 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.4)]',
+                            'Izin': 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)]',
+                            'Sakit': 'bg-sky-500/20 border-sky-400 text-sky-300 shadow-[0_0_12px_rgba(14,165,233,0.4)]',
+                            'Alpa': 'bg-rose-500/20 border-rose-400 text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.4)]'
                           };
                           const inactiveColors = {
                             'Hadir': 'hover:text-emerald-500 hover:border-emerald-500/20',
@@ -338,7 +338,7 @@ export default function AttendanceLayer({
                               className={`
                                 flex-1 sm:flex-none px-3 py-2 sm:px-4 sm:py-2.5 min-h-[44px] rounded-lg md:rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border
                                 ${active 
-                                  ? `${colors[status as keyof typeof colors]} shadow-lg shadow-black/20 text-white` 
+                                  ? `${colors[status as keyof typeof colors]} outline outline-1 outline-offset-1`
                                   : `bg-slate-950/50 text-slate-500 border-white/5 ${inactiveColors[status as keyof typeof inactiveColors]}`}
                               `}
                             >
@@ -351,10 +351,10 @@ export default function AttendanceLayer({
                           <div 
                             className={`
                               px-3 py-1.5 md:px-4 md:py-2 rounded-lg md:rounded-xl text-xs font-black uppercase tracking-widest border transition-all cursor-default shadow-lg shadow-black/20
-                              ${attendanceMap[name] === 'Hadir' ? 'bg-emerald-500 border-emerald-500/20 text-white' : ''}
-                              ${attendanceMap[name] === 'Izin' ? 'bg-amber-500 border-amber-500/20 text-white' : ''}
-                              ${attendanceMap[name] === 'Sakit' ? 'bg-sky-500 border-sky-500/20 text-white' : ''}
-                              ${attendanceMap[name] === 'Alpa' ? 'bg-rose-500 border-rose-500/20 text-white' : ''}
+                              ${attendanceMap[name] === 'Hadir' ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.4)]' : ''}
+                              ${attendanceMap[name] === 'Izin' ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)]' : ''}
+                              ${attendanceMap[name] === 'Sakit' ? 'bg-sky-500/20 border-sky-400 text-sky-300 shadow-[0_0_12px_rgba(14,165,233,0.4)]' : ''}
+                              ${attendanceMap[name] === 'Alpa' ? 'bg-rose-500/20 border-rose-400 text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.4)]' : ''}
                             `}
                           >
                             {attendanceMap[name]}
@@ -382,7 +382,7 @@ export default function AttendanceLayer({
       ) : (
         <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2rem] border border-white/10 border-dashed p-12 text-center">
           <Calendar size={48} className="text-slate-700 mx-auto mb-4" />
-          <h3 className="text-white font-black text-lg md:text-xl uppercase font-outfit">Pilih Parameter</h3>
+          <h3 className="text-slate-100 font-black text-lg md:text-xl uppercase font-outfit">Pilih Parameter</h3>
           <p className="text-slate-500 text-xs md:text-sm font-bold uppercase tracking-widest mt-2">Silakan pilih kelas dan mata pelajaran untuk memuat data absensi.</p>
         </div>
       )}

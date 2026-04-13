@@ -46,7 +46,7 @@ module.exports = {
         "on-secondary-fixed-variant": "#5c5b5e",
         "on-primary-fixed-variant": "#5f6161",
         "error": "#ff6e84",
-        "primary": "#f9f9f9",
+        "primary": "#2dd4bf",
         "secondary-fixed": "#e4e1e5",
         "on-secondary-fixed": "#3f3f42",
         "tertiary-fixed": "#69f6b8",
