@@ -349,11 +349,11 @@ export default function BehaviorLayer({
         {isAdmin && (
           <div className="flex flex-col md:flex-row gap-3 md:gap-4 items-end mb-2">
             <div className="w-full md:w-1/3">
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><Calendar size={12}/> Tahun Ajaran</label>
+              <label className="flex text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 items-center gap-1"><Calendar size={12}/> Tahun Ajaran</label>
               <input type="text" value={academicYear} onChange={(e: any) => setAcademicYear(e.target.value)} onBlur={() => loadClassDirectly(className, academicYear)} className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 text-sm font-black text-white outline-none focus:border-primary transition-all" />
             </div>
             <div className="w-full md:w-1/3">
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><Search size={12}/> Cari Spesifik</label>
+              <label className="flex text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 items-center gap-1"><Search size={12}/> Cari Spesifik</label>
               <input type="text" placeholder="Nama siswa..." value={newStudentName} onChange={(e) => setNewStudentName(e.target.value)} className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 text-sm font-black text-white outline-none focus:border-primary transition-all" />
             </div>
             <button onClick={fetchStudents} disabled={isLoading} className="w-full md:w-auto px-6 py-3 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
