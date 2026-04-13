@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import { usePathname, useRouter } from 'next/navigation';
+import NeonGraduationCap from '@/components/grademaster/ui/NeonGraduationCap';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -57,7 +58,7 @@ export default function Navbar() {
             {/* Left: Logo */}
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-primary text-white rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-                <GraduationCap size={20} />
+                <NeonGraduationCap size={20} />
               </div>
               <h1 className="text-base font-black text-white tracking-tight font-outfit uppercase">GradeMaster OS</h1>
             </div>
@@ -142,7 +143,7 @@ export default function Navbar() {
       >
         <div className="flex items-center gap-2.5">
            <div className="w-8 h-8 md:w-7 md:h-7 bg-primary text-white rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
-             <GraduationCap size={18} />
+             <NeonGraduationCap size={18} />
            </div>
            <span className="text-base md:text-sm font-black text-white font-outfit uppercase tracking-tight">GradeMaster OS</span>
         </div>

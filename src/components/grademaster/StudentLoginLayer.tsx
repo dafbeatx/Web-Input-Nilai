@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { User, ArrowLeft, Loader2, Key, GraduationCap } from 'lucide-react';
+import NeonGraduationCap from '@/components/grademaster/ui/NeonGraduationCap';
 import { ToastType } from '@/lib/grademaster/types';
 
 interface StudentLoginLayerProps {
@@ -59,7 +60,7 @@ export default function StudentLoginLayer({ onBack, onSuccess, setToast, onSwitc
 
         <div className="mb-10 text-center">
           <div className="w-20 h-20 bg-emerald-500/10 text-emerald-400 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-emerald-500/20 mx-auto border border-emerald-500/20">
-            <GraduationCap size={40} />
+            <NeonGraduationCap size={40} />
           </div>
           <h2 className="text-3xl font-black text-white tracking-tight leading-tight uppercase font-outfit">Student Login</h2>
           <p className="text-slate-400 font-bold mt-2 text-sm leading-relaxed px-4">Masuk untuk melihat nilai ujian dan riwayat kehadiran Anda.</p>
