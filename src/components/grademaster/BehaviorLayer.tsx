@@ -490,8 +490,8 @@ export default function BehaviorLayer({
 
       {/* COMPACT & TABBED DETAIL MODAL */}
       {selectedStudent && (
-        <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl z-[1000] flex items-center justify-center p-0 md:p-10 animate-in fade-in duration-300">
-          <div className="bg-slate-900/50 border border-white/10 w-full h-full md:h-auto max-w-6xl md:rounded-[4rem] overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col">
+        <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl z-[1000] flex flex-col justify-end md:justify-center p-0 md:p-10 animate-in fade-in duration-300">
+          <div className="bg-slate-900 border-t md:border border-white/10 w-full max-h-[90dvh] md:max-h-[85vh] md:h-auto max-w-6xl rounded-t-[2.5rem] md:rounded-[4rem] overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-full md:slide-in-from-bottom-0 md:zoom-in-95 flex flex-col">
               {/* Sticky Compact Header - Safe for Mobile */}
               <div 
                 className="bg-gradient-to-br from-slate-900 to-slate-950 px-5 pb-5 md:p-10 border-b border-white/10 flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-xl"
@@ -541,7 +541,7 @@ export default function BehaviorLayer({
               )}
               
               {/* Content Area */}
-              <div className="flex-1 overflow-auto grid grid-cols-1 lg:grid-cols-2">
+              <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2">
                 {/* Left Column: History (Always visible on LG, conditional on mobile) */}
                 <div className={`bg-slate-950/20 lg:flex lg:flex-col ${activeModalTab === 'HISTORY' ? 'flex flex-col' : 'hidden'}`}>
                     <div className="p-4 md:p-6 border-b border-white/5 hidden md:flex items-center justify-between">
