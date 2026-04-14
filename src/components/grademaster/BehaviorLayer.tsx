@@ -70,12 +70,15 @@ export default function BehaviorLayer({
 
   // Settings State
   const [isManagingReasons, setIsManagingReasons] = useState(false);
-  const [behaviorReasons, setBehaviorReasons] = useState<{ good: string[], bad: string[] }>({
-    good: ["Membantu Teman", "Aktif Berdiskusi", "Piket Mandiri", "Jujur/Integritas", "Ketua Kelas Aktif"],
-    bad: ["Bolos PBM", "Berbicara Kasar", "Merokok/Vaping", "Membantah Guru", "Terlambat Parah"]
-  });
+  const [behaviorReasons, setBehaviorReasons] = useState<{ text: string, weight: number }[]>([
+    { text: "Bolos PBM", weight: 20 },
+    { text: "Berbicara Kasar", weight: 15 },
+    { text: "Merokok/Vaping", weight: 50 },
+    { text: "Membantah Guru", weight: 25 },
+    { text: "Terlambat Parah", weight: 10 }
+  ]);
   const [newReasonInput, setNewReasonInput] = useState('');
-  const [newReasonType, setNewReasonType] = useState<'good' | 'bad'>('good');
+  const [newReasonWeight, setNewReasonWeight] = useState(10);
 
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [newStudentName, setNewStudentName] = useState('');
@@ -142,7 +145,13 @@ export default function BehaviorLayer({
       const res = await fetch(`/api/grademaster/behaviors/settings?year=${encodeURIComponent(academicYear)}`);
       const data = await res.json();
       if (res.ok && data.settings) {
-        setBehaviorReasons(data.settings.reasons);
+        // Handle migration gracefully if previous structure `{ good, bad }` or flat strings exist.
+        if (Array.isArray(data.settings.reasons) && typeof data.settings.reasons[0] === 'object') {
+           setBehaviorReasons(data.settings.reasons);
+        } else {
+           // Skip applying old schema, stick to new default.
+           console.log("Old behavior schema detected, using default until saved.");
+        }
       }
     } catch (err) {
       console.error("Failed to load behavior settings", err);
@@ -205,12 +214,12 @@ export default function BehaviorLayer({
 
   // --- CRUD ACTIONS ---
 
-  const handleAddBehavior = async (type: 'GOOD' | 'BAD', pointsDelta: number, reason: string) => {
+  const handleAddBehavior = async (pointsDelta: number, reason: string) => {
     if (!selectedStudent || isUpdatingPoints) return;
     setIsUpdatingPoints(true);
     
-    // Optimistic Update (Total Points on card)
-    const pointsToAdd = type === 'BAD' ? -Math.abs(pointsDelta) : Math.abs(pointsDelta);
+    // Optimistic Update (Total Points on card) -> Demerit system (Accumulate)
+    const pointsToAdd = Math.abs(pointsDelta);
     
     const result = await addBehaviorAction({
       studentId: selectedStudent.id,
@@ -275,7 +284,7 @@ export default function BehaviorLayer({
     setIsUpdatingPoints(false);
   };
 
-  const saveBehaviorSettings = async (updatedReasons: { good: string[], bad: string[] }) => {
+  const saveBehaviorSettings = async (updatedReasons: { text: string, weight: number }[]) => {
     try {
       const res = await fetch('/api/grademaster/behaviors/settings', {
         method: 'POST',
@@ -433,7 +442,7 @@ export default function BehaviorLayer({
           </div>
         ) : (
           students.filter(s => s.student_name.toLowerCase().includes(newStudentName.toLowerCase())).map((student) => {
-            const isLowScore = student.total_points < 70;
+            const hasViolations = student.total_points > 0;
             return (
               <div key={student.id} className="bg-surface-container p-5 rounded-[1.5rem] border border-white/5 relative overflow-hidden group hover:border-primary/20 transition-all shadow-md hover:shadow-xl">
                 <div className="flex justify-between items-start mb-6 z-10 relative">
@@ -477,7 +486,7 @@ export default function BehaviorLayer({
                     </div>
                   </div>
                   <div className="text-right shrink-0 bg-surface-container rounded-xl">
-                    <span className={`block font-headline text-3xl font-extrabold tracking-tight ${isLowScore ? 'text-error' : 'text-tertiary'}`}>
+                    <span className={`block font-headline text-3xl font-extrabold tracking-tight ${hasViolations ? 'text-error' : 'text-tertiary'}`}>
                       {student.total_points}
                     </span>
                     <span className="block font-label text-[10px] text-on-surface-variant font-bold uppercase tracking-tighter">Behavior Score</span>
@@ -486,10 +495,10 @@ export default function BehaviorLayer({
                 
                 <div className="flex items-center justify-between z-10 relative">
                   <div className="flex items-center gap-2">
-                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${isLowScore ? 'bg-error/10 border-error/20' : 'bg-tertiary/10 border-tertiary/20'}`}>
-                       <div className={`w-1.5 h-1.5 rounded-full ${isLowScore ? 'bg-error shadow-[0_0_8px_rgba(255,110,132,0.6)]' : 'bg-tertiary shadow-[0_0_8px_rgba(155,255,206,0.6)]'}`}></div>
-                       <span className={`text-[10px] font-bold tracking-widest uppercase ${isLowScore ? 'text-error' : 'text-tertiary'}`}>
-                          {isLowScore ? 'Peringatan' : 'Aktif'}
+                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${hasViolations ? 'bg-error/10 border-error/20' : 'bg-tertiary/10 border-tertiary/20'}`}>
+                       <div className={`w-1.5 h-1.5 rounded-full ${hasViolations ? 'bg-error shadow-[0_0_8px_rgba(255,110,132,0.6)]' : 'bg-tertiary shadow-[0_0_8px_rgba(155,255,206,0.6)]'}`}></div>
+                       <span className={`text-[10px] font-bold tracking-widest uppercase ${hasViolations ? 'text-error' : 'text-tertiary'}`}>
+                          {hasViolations ? 'Peringatan' : 'Bersih'}
                        </span>
                     </div>
                   </div>
@@ -503,17 +512,17 @@ export default function BehaviorLayer({
                 </div>
                 
                 {/* Efek Pendar Latar Belakang Eksklusif M3 */}
-                <div className={`absolute top-0 right-0 w-32 h-32 blur-[40px] rounded-full -mr-16 -mt-16 pointer-events-none transition-colors duration-500 ${isLowScore ? 'bg-error/5 group-hover:bg-error/15' : 'bg-tertiary/5 group-hover:bg-tertiary/15'}`}></div>
+                <div className={`absolute top-0 right-0 w-32 h-32 blur-[40px] rounded-full -mr-16 -mt-16 pointer-events-none transition-colors duration-500 ${hasViolations ? 'bg-error/5 group-hover:bg-error/15' : 'bg-tertiary/5 group-hover:bg-tertiary/15'}`}></div>
               </div>
             );
           })
         )}
       </div>
 
-      {/* COMPACT & TABBED DETAIL MODAL (Retained existing complex modal logic) */}
+      {/* COMPACT & TABBED DETAIL MODAL (CENTERED OPSI B) */}
       {selectedStudent && (
-        <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl z-[1000] flex flex-col justify-end md:justify-center p-0 md:p-10 animate-in fade-in duration-300">
-          <div className="bg-slate-900 border-t md:border border-white/10 w-full max-h-[90dvh] md:max-h-[85vh] md:h-auto max-w-6xl rounded-t-[2.5rem] md:rounded-[4rem] overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-full md:slide-in-from-bottom-0 md:zoom-in-95 flex flex-col">
+        <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl z-[1000] flex items-center justify-center p-4 md:p-10 animate-in fade-in duration-300">
+          <div className="bg-slate-900 border border-white/10 w-full max-h-[85vh] h-auto max-w-6xl rounded-[2.5rem] md:rounded-[4rem] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] animate-in zoom-in-95 flex flex-col">
               <div 
                 className="bg-gradient-to-br from-slate-900 to-slate-950 px-5 pb-5 md:p-10 border-b border-white/10 flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-xl"
                 style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}
@@ -521,9 +530,9 @@ export default function BehaviorLayer({
                 <div className="flex items-center gap-4 md:gap-6 flex-1 min-w-0 pr-4">
                    <div className="relative shrink-0">
                     <div className={`w-14 h-14 md:w-20 md:h-20 rounded-2xl md:rounded-[2rem] border flex flex-col items-center justify-center shadow-2xl relative overflow-hidden ${
-                       selectedStudent.total_points >= 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/20' : 
-                       selectedStudent.total_points >= 70 ? 'bg-primary/10 text-primary border-primary/20 shadow-primary/20' : 
-                       'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-rose-500/20'
+                       selectedStudent.total_points === 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/20' : 
+                       selectedStudent.total_points <= 30 ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 shadow-amber-500/20' : 
+                       'bg-rose-500/10 text-rose-500 border-rose-500/20 shadow-rose-500/20'
                     }`}>
                       {selectedStudent.avatar_url ? (
                          <Image src={selectedStudent.avatar_url} alt={selectedStudent.student_name} fill className="object-cover opacity-30 mix-blend-luminosity" />
@@ -561,7 +570,7 @@ export default function BehaviorLayer({
                       onClick={() => setActiveModalTab('MANAGE')}
                       className={`flex-1 flex items-center justify-center gap-2 py-4 text-[10px] font-black tracking-[0.2em] transition-all ${activeModalTab === 'MANAGE' ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-slate-500'}`}
                     >
-                      <PlusCircle size={14} /> TAMBAH POIN
+                      <PlusCircle size={14} /> PELANGGARAN
                     </button>
                 </div>
               )}
@@ -614,15 +623,13 @@ export default function BehaviorLayer({
                               ) : (
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-start gap-3">
-                                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
-                                          log.points_delta > 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-inner' : 'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-inner'
-                                      }`}>
-                                          {log.points_delta > 0 ? <ThumbsUp size={16} /> : <ThumbsDown size={16} />}
+                                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-inner`}>
+                                          <MinusCircle size={16} />
                                       </div>
                                       <div>
                                           <div className="flex items-center gap-2 mb-1">
-                                            <span className={`text-sm md:text-base font-black ${log.points_delta > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                {log.points_delta > 0 ? '+' : ''}{log.points_delta}
+                                            <span className={`text-sm md:text-base font-black text-rose-400`}>
+                                                +{log.points_delta} Poin
                                             </span>
                                             <span className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
                                                 <Calendar size={10} /> {formatDate(log.created_at)}
@@ -668,41 +675,26 @@ export default function BehaviorLayer({
                   <div className={`p-5 md:p-10 space-y-8 overflow-y-auto custom-scrollbar border-l border-white/10 bg-slate-900/10 lg:flex lg:flex-col ${activeModalTab === 'MANAGE' ? 'flex flex-col pb-24' : 'hidden'}`}>
                       <div>
                         <h3 className="text-xs font-black text-primary uppercase tracking-[0.3em] mb-6 hidden lg:flex items-center gap-2">
-                            <PlusCircle size={16} /> Kelola Poin Baru
+                            <AlertCircle size={16} /> Kelola Pelanggaran (Demerit)
                         </h3>
                         
                         <div className="space-y-8">
                             <div className="space-y-4">
                               <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
-                                  <MinusCircle size={14} className="text-rose-500/80" /> Pelanggaran
+                                  <MinusCircle size={14} className="text-rose-500/80" /> Pelanggaran Siswa
                               </h4>
                               <div className="grid grid-cols-2 gap-3">
-                                  {behaviorReasons.bad.map(r => (
+                                  {behaviorReasons.map(r => (
                                     <button 
-                                      key={r} 
+                                      key={r.text} 
                                       disabled={isUpdatingPoints}
-                                      onClick={() => handleAddBehavior('BAD', 10, r)} 
-                                      className="p-4 bg-rose-500/5 hover:bg-rose-500/20 border border-rose-500/10 hover:border-rose-500/40 rounded-2xl text-left text-[10px] font-black text-rose-300 uppercase tracking-widest transition-all active:scale-95 leading-tight shadow-sm"
+                                      onClick={() => handleAddBehavior(r.weight, r.text)} 
+                                      className="p-4 bg-rose-500/5 hover:bg-rose-500/20 border border-rose-500/10 hover:border-rose-500/40 rounded-2xl text-left text-[10px] font-black text-rose-300 uppercase tracking-widest transition-all active:scale-95 flex flex-col gap-1 shadow-sm group"
                                     >
-                                      {r}
-                                    </button>
-                                  ))}
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-4">
-                              <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
-                                  <PlusCircle size={14} className="text-emerald-500/80" /> TINDAKAN TERPUJI
-                              </h4>
-                              <div className="grid grid-cols-2 gap-3">
-                                  {behaviorReasons.good.map(r => (
-                                    <button 
-                                      key={r} 
-                                      disabled={isUpdatingPoints}
-                                      onClick={() => handleAddBehavior('GOOD', 10, r)} 
-                                      className="p-4 bg-emerald-500/5 hover:bg-emerald-500/20 border border-emerald-500/10 hover:border-emerald-500/40 rounded-2xl text-left text-[10px] font-black text-emerald-300 uppercase tracking-widest transition-all active:scale-95 leading-tight shadow-sm"
-                                    >
-                                      {r}
+                                      <span>{r.text}</span>
+                                      <span className="text-[9px] text-white bg-rose-500/20 group-hover:bg-rose-500/40 px-2 py-0.5 rounded-md inline-block w-max">
+                                         + {r.weight} Pts
+                                      </span>
                                     </button>
                                   ))}
                               </div>
@@ -740,73 +732,58 @@ export default function BehaviorLayer({
               
               <div className="p-6 md:p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1">
                 <div className="flex flex-col md:flex-row gap-3">
-                    <select 
-                      value={newReasonType} 
-                      onChange={(e: any) => setNewReasonType(e.target.value)}
-                      className="bg-slate-950/80 border border-white/10 rounded-xl px-4 py-3 text-xs font-black text-white outline-none focus:border-primary transition-all shadow-inner"
-                    >
-                      <option value="good">TERPUJI (+)</option>
-                      <option value="bad">PELANGGARAN (-)</option>
-                    </select>
-                    <div className="flex flex-1 gap-2">
+                    <div className="flex flex-1 gap-2 border border-white/10 rounded-xl bg-slate-950/80 shadow-inner overflow-hidden focus-within:border-primary transition-all">
                       <input 
                         type="text" 
-                        placeholder="Tambah kategori alasan..." 
+                        placeholder="Kategori pelanggaran baru..." 
                         value={newReasonInput}
                         onChange={(e) => setNewReasonInput(e.target.value)}
-                        className="flex-1 bg-slate-950/80 border border-white/10 rounded-xl px-5 py-3 text-sm font-bold text-white outline-none focus:border-primary transition-all shadow-inner placeholder:text-slate-600"
+                        className="flex-1 bg-transparent px-5 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600"
                       />
-                      <button 
-                        onClick={() => {
-                          if (!newReasonInput.trim()) return;
-                          const updated = { ...behaviorReasons };
-                          updated[newReasonType].push(newReasonInput.trim());
-                          saveBehaviorSettings(updated);
-                          setNewReasonInput('');
-                        }}
-                        className="px-6 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all outline-none font-bold text-xs uppercase"
-                      >
-                        SIMPAN
-                      </button>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <h4 className="text-xs font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2 pb-2 border-b border-white/5">
-                        <ThumbsUp size={14} /> Master Terpuji
-                      </h4>
-                      <div className="space-y-2">
-                          {behaviorReasons.good.map((r, i) => (
-                            <div key={i} className="flex items-center justify-between p-3.5 bg-white/5 rounded-xl border border-white/5 group hover:border-emerald-500/30 transition-colors shadow-sm">
-                              <span className="text-[11px] font-bold text-slate-300">{r}</span>
-                              <button 
-                                onClick={() => {
-                                  const updated = { ...behaviorReasons };
-                                  updated.good = updated.good.filter((_, idx) => idx !== i);
-                                  saveBehaviorSettings(updated);
-                                }}
-                                className="text-slate-600 hover:text-rose-500 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 p-1"
-                                title="Hapus kriteria ini"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          ))}
+                      <div className="flex items-center bg-white/5 border-l border-white/10 px-3">
+                        <span className="text-[10px] font-black text-rose-500 mr-2 uppercase">+ Poin</span>
+                        <input 
+                          type="number" 
+                          min="1"
+                          max="100"
+                          value={newReasonWeight}
+                          onChange={(e) => setNewReasonWeight(parseInt(e.target.value) || 0)}
+                          className="w-16 bg-transparent text-sm font-bold text-rose-400 outline-none placeholder:text-slate-600"
+                        />
                       </div>
                     </div>
+                    <button 
+                      onClick={() => {
+                        if (!newReasonInput.trim() || newReasonWeight <= 0) {
+                          setToast({ message: "Alasan wajib diisi & poin harus > 0", type: "error" });
+                          return;
+                        }
+                        const updated = [...behaviorReasons, { text: newReasonInput.trim(), weight: newReasonWeight }];
+                        saveBehaviorSettings(updated);
+                        setNewReasonInput('');
+                        setNewReasonWeight(10);
+                      }}
+                      className="px-6 py-3 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all outline-none font-bold text-xs uppercase"
+                    >
+                      TAMBAHKAN
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-8">
                     <div className="space-y-4">
                       <h4 className="text-xs font-black text-rose-400 uppercase tracking-widest flex items-center gap-2 pb-2 border-b border-white/5">
-                        <ThumbsDown size={14} /> Master Pelanggaran
+                        <AlertCircle size={14} /> Master Pelanggaran (Demerit Lists)
                       </h4>
-                      <div className="space-y-2">
-                          {behaviorReasons.bad.map((r, i) => (
+                      <div className="space-y-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {behaviorReasons.map((r, i) => (
                             <div key={i} className="flex items-center justify-between p-3.5 bg-white/5 rounded-xl border border-white/5 group hover:border-rose-500/30 transition-colors shadow-sm">
-                              <span className="text-[11px] font-bold text-slate-300">{r}</span>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[11px] font-bold text-slate-300">{r.text}</span>
+                                <span className="text-[9px] font-black text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md">+{r.weight} Pts</span>
+                              </div>
                               <button 
                                 onClick={() => {
-                                  const updated = { ...behaviorReasons };
-                                  updated.bad = updated.bad.filter((_, idx) => idx !== i);
+                                  const updated = behaviorReasons.filter((_, idx) => idx !== i);
                                   saveBehaviorSettings(updated);
                                 }}
                                 className="text-slate-600 hover:text-rose-500 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 p-1"
