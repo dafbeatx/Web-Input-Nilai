@@ -36,6 +36,7 @@ export async function addBehaviorAction(formData: {
   pointsDelta: number;
   reason: string;
   teacherId?: string;
+  violationDate?: string;
 }) {
   try {
     // Insert log directly (bypass RPC)
@@ -46,7 +47,8 @@ export async function addBehaviorAction(formData: {
         category_id: formData.categoryId || null,
         points_delta: formData.pointsDelta,
         reason: formData.reason,
-        teacher_id: formData.teacherId || null
+        teacher_id: formData.teacherId || null,
+        violation_date: formData.violationDate || new Date().toISOString()
       });
 
     if (insertError) throw insertError;
@@ -69,13 +71,15 @@ export async function updateBehaviorAction(logId: string, formData: {
   pointsDelta: number;
   reason: string;
   studentId: string;
+  violationDate?: string;
 }) {
   try {
     const { error: updateError } = await supabase
       .from('gm_behavior_logs')
       .update({
         points_delta: formData.pointsDelta,
-        reason: formData.reason
+        reason: formData.reason,
+        violation_date: formData.violationDate
       })
       .eq('id', logId);
 
@@ -122,7 +126,7 @@ export async function getBehaviorLogsAction(studentId: string) {
       .from('gm_behavior_logs')
       .select('*')
       .eq('student_id', studentId)
-      .order('created_at', { ascending: false });
+      .order('violation_date', { ascending: false });
 
     if (error) throw error;
     return { success: true, logs: data };

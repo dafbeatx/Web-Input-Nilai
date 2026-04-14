@@ -19,6 +19,7 @@ interface BehaviorLog {
   reason: string;
   teacher_id?: string;
   notes?: string;
+  violation_date: string;
   created_at: string;
 }
 
@@ -61,7 +62,8 @@ export default function BehaviorLayer({
   const [studentLogs, setStudentLogs] = useState<BehaviorLog[]>([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ reason: '', points: 0 });
+  const [editForm, setEditForm] = useState({ reason: '', points: 0, date: '' });
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [activeModalTab, setActiveModalTab] = useState<'HISTORY' | 'MANAGE'>('HISTORY');
 
   // Avatar Upload State
@@ -215,9 +217,12 @@ export default function BehaviorLayer({
 
   // --- CRUD ACTIONS ---
 
-  const handleAddBehavior = async (pointsDelta: number, reason: string) => {
+  const handleAddBehavior = async (pointsDelta: number, reason: string, date?: string) => {
     if (!selectedStudent || isUpdatingPoints) return;
     setIsUpdatingPoints(true);
+    
+    // Use provided date or fallback to selectedDate state
+    const violationDate = date || selectedDate;
     
     // Optimistic Update (Total Points on card) -> Demerit system (Accumulate)
     const pointsToAdd = Math.abs(pointsDelta);
@@ -225,7 +230,8 @@ export default function BehaviorLayer({
     const result = await addBehaviorAction({
       studentId: selectedStudent.id,
       pointsDelta: pointsToAdd,
-      reason
+      reason,
+      violationDate
     });
 
     if (result.success) {
@@ -253,7 +259,8 @@ export default function BehaviorLayer({
     const result = await updateBehaviorAction(logId, {
       pointsDelta: editForm.points,
       reason: editForm.reason,
-      studentId: selectedStudent.id
+      studentId: selectedStudent.id,
+      violationDate: editForm.date
     });
 
     if (result.success) {
@@ -609,6 +616,15 @@ export default function BehaviorLayer({
                               {editingLogId === log.id && isAdmin ? (
                                   <div className="space-y-4 animate-in slide-in-from-top-2">
                                     <div className="grid grid-cols-2 gap-3">
+                                        <div className="col-span-2">
+                                          <label className="text-[8px] font-black text-slate-500 uppercase mb-1 block">Tanggal Pelanggaran</label>
+                                          <input 
+                                            type="date" 
+                                            value={editForm.date} 
+                                            onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
+                                            className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs font-bold text-white outline-none focus:border-primary"
+                                          />
+                                        </div>
                                         <div>
                                           <label className="text-[8px] font-black text-slate-500 uppercase mb-1 block">Poin Delta</label>
                                           <input 
@@ -645,7 +661,7 @@ export default function BehaviorLayer({
                                                 +{log.points_delta} Poin
                                             </span>
                                             <span className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
-                                                <Calendar size={10} /> {formatDate(log.created_at)}
+                                                <Calendar size={10} /> {formatDate(log.violation_date || log.created_at)}
                                             </span>
                                           </div>
                                           <h4 className="text-white font-bold text-xs md:text-sm uppercase tracking-tight leading-relaxed">{log.reason}</h4>
@@ -657,7 +673,11 @@ export default function BehaviorLayer({
                                         <button 
                                           onClick={() => {
                                             setEditingLogId(log.id);
-                                            setEditForm({ reason: log.reason, points: log.points_delta });
+                                            setEditForm({ 
+                                              reason: log.reason, 
+                                              points: log.points_delta,
+                                              date: (log.violation_date || log.created_at).split('T')[0]
+                                            });
                                           }}
                                           className="p-2 bg-white/5 text-slate-500 hover:text-primary rounded-xl border border-white/10 hover:border-primary/30 transition-all outline-none"
                                         >
@@ -687,9 +707,21 @@ export default function BehaviorLayer({
                 {isAdmin && (
                   <div className={`p-5 md:p-10 space-y-8 overflow-y-auto custom-scrollbar border-l border-white/10 bg-slate-900/10 lg:flex lg:flex-col ${activeModalTab === 'MANAGE' ? 'flex flex-col pb-24' : 'hidden'}`}>
                       <div>
-                        <h3 className="text-xs font-black text-primary uppercase tracking-[0.3em] mb-6 hidden lg:flex items-center gap-2">
+                        <h3 className="text-xs font-black text-primary uppercase tracking-[0.3em] mb-4 hidden lg:flex items-center gap-2">
                             <AlertCircle size={16} /> Kelola Pelanggaran (Demerit)
                         </h3>
+                        
+                        <div className="mb-8 p-4 bg-slate-950/50 border border-white/5 rounded-2xl space-y-3">
+                            <label className="text-[10px] font-black text-slate-500 uppercase flex items-center gap-2 px-1">
+                                <Calendar size={12} className="text-primary" /> Tanggal Kejadian
+                            </label>
+                            <input 
+                              type="date" 
+                              value={selectedDate}
+                              onChange={(e) => setSelectedDate(e.target.value)}
+                              className="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-xs font-bold text-white outline-none focus:border-primary transition-all"
+                            />
+                        </div>
                         
                         <div className="space-y-8">
                             <div className="space-y-4">

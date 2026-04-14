@@ -23,6 +23,7 @@ interface BehaviorLog {
   student_id: string;
   points_delta: number;
   reason: string;
+  violation_date: string;
   created_at: string;
 }
 
@@ -138,7 +139,7 @@ export default function BehaviorPage() {
   };
 
   // Actions
-  const handleAddLog = async (type: 'GOOD' | 'BAD', points: number, reason: string) => {
+  const handleAddLog = async (type: 'GOOD' | 'BAD', points: number, reason: string, date: string) => {
     if (!selectedStudent || isUpdating) return;
     setIsUpdating(true);
     
@@ -146,7 +147,8 @@ export default function BehaviorPage() {
     const result = await addBehaviorAction({
       studentId: selectedStudent.id,
       pointsDelta: delta,
-      reason
+      reason,
+      violationDate: date
     });
 
     if (result.success) {
@@ -159,13 +161,14 @@ export default function BehaviorPage() {
     setIsUpdating(false);
   };
 
-  const handleUpdateLog = async (id: string, points: number, reason: string) => {
+  const handleUpdateLog = async (id: string, points: number, reason: string, date: string) => {
     if (!selectedStudent || isUpdating) return;
     setIsUpdating(true);
     const result = await updateBehaviorAction(id, {
       pointsDelta: points,
       reason,
-      studentId: selectedStudent.id
+      studentId: selectedStudent.id,
+      violationDate: date
     });
     if (result.success) {
       setToast({ message: "Catatan diedit", type: "success" });

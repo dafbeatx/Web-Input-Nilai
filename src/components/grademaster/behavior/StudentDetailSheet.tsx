@@ -10,6 +10,7 @@ interface BehaviorLog {
   student_id: string;
   points_delta: number;
   reason: string;
+  violation_date: string;
   created_at: string;
 }
 
@@ -23,8 +24,8 @@ interface StudentDetailSheetProps {
   logs: BehaviorLog[];
   isLoadingLogs: boolean;
   onClose: () => void;
-  onAddLog: (type: 'GOOD' | 'BAD', points: number, reason: string) => void;
-  onUpdateLog: (id: string, points: number, reason: string) => void;
+  onAddLog: (type: 'GOOD' | 'BAD', points: number, reason: string, date: string) => void;
+  onUpdateLog: (id: string, points: number, reason: string, date: string) => void;
   onDeleteLog: (id: string) => void;
   isUpdating: boolean;
   isAdmin?: boolean;
@@ -44,6 +45,9 @@ export default function StudentDetailSheet({
   reasons
 }: StudentDetailSheetProps) {
   const [activeTab, setActiveTab] = useState<'HISTORY' | 'MANAGE'>('HISTORY');
+  const [newLogDate, setNewLogDate] = useState(new Date().toISOString().split('T')[0]);
+  const [editingLogId, setEditingLogId] = useState<string | null>(null);
+  const [editLogState, setEditLogState] = useState({ points: 0, reason: '', date: '' });
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -158,7 +162,7 @@ export default function StudentDetailSheet({
                               {log.points_delta > 0 ? '+' : ''}{log.points_delta}
                             </span>
                             <span className="text-[11px] font-sans font-medium text-on-surface-variant flex items-center gap-1">
-                              • {formatDate(log.created_at)}
+                              • {formatDate(log.violation_date || log.created_at)}
                             </span>
                           </div>
                           <h4 className="text-primary font-sans font-medium text-[14px] leading-tight pr-2">
@@ -168,7 +172,20 @@ export default function StudentDetailSheet({
                       </div>
                       
                       {isAdmin && (
-                        <div className="flex items-center flex-col shrink-0">
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button 
+                            onClick={() => {
+                              setEditingLogId(log.id);
+                              setEditLogState({ 
+                                points: log.points_delta, 
+                                reason: log.reason, 
+                                date: (log.violation_date || log.created_at).split('T')[0] 
+                              });
+                            }}
+                            className="p-1.5 text-on-surface-variant hover:text-primary rounded-lg transition-colors"
+                          >
+                            <Pencil size={16} />
+                          </button>
                           <button 
                             onClick={() => onDeleteLog(log.id)}
                             className="p-1.5 text-on-surface-variant hover:text-error rounded-lg transition-colors"
@@ -178,6 +195,50 @@ export default function StudentDetailSheet({
                         </div>
                       )}
                     </div>
+                    
+                    {/* Inline Edit UI */}
+                    {isAdmin && editingLogId === log.id && (
+                      <div className="mt-4 pt-4 border-t border-outline-variant/10 space-y-4 animate-in slide-in-from-top-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-on-surface-variant uppercase ml-1">Tanggal Pelanggaran</label>
+                            <input 
+                              type="date"
+                              value={editLogState.date}
+                              onChange={(e) => setEditLogState(prev => ({ ...prev, date: e.target.value }))}
+                              className="w-full bg-surface-container border border-outline-variant/20 rounded-xl px-4 py-2 text-sm font-medium text-primary outline-none focus:border-primary/50"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-on-surface-variant uppercase ml-1">Keterangan / Alasan</label>
+                            <input 
+                              type="text"
+                              value={editLogState.reason}
+                              onChange={(e) => setEditLogState(prev => ({ ...prev, reason: e.target.value }))}
+                              className="w-full bg-surface-container border border-outline-variant/20 rounded-xl px-4 py-2 text-sm font-medium text-primary outline-none focus:border-primary/50"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => {
+                              onUpdateLog(log.id, editLogState.points, editLogState.reason, editLogState.date);
+                              setEditingLogId(null);
+                            }}
+                            disabled={isUpdating}
+                            className="flex-1 bg-primary text-on-primary py-2 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-md flex items-center justify-center gap-2"
+                          >
+                            {isUpdating ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} SIMPAN PERUBAHAN
+                          </button>
+                          <button 
+                            onClick={() => setEditingLogId(null)}
+                            className="px-4 bg-surface-bright text-on-surface-variant py-2 rounded-xl text-xs font-bold"
+                          >
+                            BATAL
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (
@@ -189,6 +250,22 @@ export default function StudentDetailSheet({
             </div>
           ) : (
             <div className="space-y-6 animate-in slide-in-from-right-2">
+              {/* Date Selector */}
+              <div className="bg-surface-bright border border-outline-variant/10 rounded-2xl p-4 space-y-2">
+                <label className="text-[11px] font-black text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
+                  <Calendar size={14} className="text-primary" /> Tanggal Kejadian
+                </label>
+                <input 
+                  type="date" 
+                  value={newLogDate}
+                  onChange={(e) => setNewLogDate(e.target.value)}
+                  className="w-full h-12 bg-surface-container border border-outline-variant/10 rounded-xl px-4 text-sm font-bold text-primary outline-none focus:border-primary/50 transition-all font-outfit"
+                />
+                <p className="text-[10px] text-on-surface-variant font-medium italic opacity-70">
+                  * Pilih tanggal saat peristiwa terjadi jika berbeda dengan hari ini.
+                </p>
+              </div>
+
               {/* Positive Behaviors */}
               <div className="space-y-3">
                 <h4 className="text-[14px] font-sans font-bold text-tertiary flex items-center gap-2 px-1">
@@ -199,7 +276,7 @@ export default function StudentDetailSheet({
                     <button 
                       key={r} 
                       disabled={isUpdating}
-                      onClick={() => onAddLog('GOOD', 10, r)} 
+                      onClick={() => onAddLog('GOOD', 10, r, newLogDate)} 
                       className="px-4 h-14 bg-tertiary/5 active:bg-tertiary/20 border border-tertiary/20 rounded-xl flex items-center justify-between text-left transition-colors"
                     >
                       <span className="text-[14px] font-sans font-semibold text-primary leading-tight">{r}</span>
@@ -219,7 +296,7 @@ export default function StudentDetailSheet({
                     <button 
                       key={r} 
                       disabled={isUpdating}
-                      onClick={() => onAddLog('BAD', 10, r)} 
+                      onClick={() => onAddLog('BAD', 10, r, newLogDate)} 
                       className="px-4 h-14 bg-error/5 active:bg-error/20 border border-error/20 rounded-xl flex items-center justify-between text-left transition-colors"
                     >
                       <span className="text-[14px] font-sans font-semibold text-primary leading-tight">{r}</span>
