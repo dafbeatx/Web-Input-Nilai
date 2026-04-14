@@ -584,7 +584,7 @@ export default function BehaviorLayer({
           <header className="fixed top-0 w-full z-50 bg-[#0e0e10]/80 backdrop-blur-xl flex items-center justify-between px-4 h-16 max-w-md mx-auto left-1/2 -translate-x-1/2 border-b border-white/5">
             <button 
               onClick={() => setSelectedStudent(null)}
-              className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[#19191c] transition-colors active:scale-95 transition-transform duration-200"
+              className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[#19191c] active:scale-95 transition-all duration-200"
             >
               <ArrowLeft className="text-primary" size={24} />
             </button>
