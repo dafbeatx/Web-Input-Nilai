@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary": "#006443",
+                    "secondary-fixed": "#e4e1e5",
+                    "error-container": "#a70138",
+                    "secondary": "#e4e1e5",
+                    "surface-variant": "#262528",
+                    "on-primary-container": "#212323",
+                    "inverse-primary": "#5e5f60",
+                    "surface": "#0e0e10",
+                    "primary-dim": "#ebebeb",
+                    "error-dim": "#d73357",
+                    "outline": "#767577",
+                    "on-secondary-fixed": "#3f3f42",
+                    "error": "#ff6e84",
+                    "on-secondary-container": "#d2cfd3",
+                    "inverse-on-surface": "#565457",
+                    "outline-variant": "#48474a",
+                    "surface-bright": "#2c2c2f",
+                    "on-error-container": "#ffb2b9",
+                    "tertiary": "#9bffce",
+                    "on-error": "#490013",
+                    "surface-container-low": "#131315",
+                    "tertiary-fixed-dim": "#58e7ab",
+                    "inverse-surface": "#fcf8fb",
+                    "on-primary-fixed-variant": "#5f6161",
+                    "surface-container-lowest": "#000000",
+                    "surface-container": "#19191c",
+                    "tertiary-fixed": "#69f6b8",
+                    "tertiary-container": "#69f6b8",
+                    "secondary-container": "#47464a",
+                    "on-tertiary-container": "#005a3c",
+                    "surface-tint": "#f9f9f9",
+                    "primary": "#f9f9f9",
+                    "on-secondary": "#525155",
+                    "surface-container-highest": "#262528",
+                    "primary-fixed-dim": "#dcdddd",
+                    "surface-container-high": "#1f1f22",
+                    "primary-container": "#a0a1a1",
+                    "surface-dim": "#0e0e10",
+                    "primary-fixed": "#ebebeb",
+                    "background": "#0e0e10",
+                    "on-background": "#f9f5f8",
+                    "on-surface": "#f9f5f8",
+                    "on-primary-fixed": "#434545",
+                    "secondary-dim": "#d6d3d7",
+                    "on-surface-variant": "#adaaad",
+                    "secondary-fixed-dim": "#d6d3d7",
+                    "on-secondary-fixed-variant": "#5c5b5e",
+                    "on-primary": "#5e5f60",
+                    "on-tertiary-fixed-variant": "#006544",
+                    "tertiary-dim": "#58e7ab",
+                    "on-tertiary-fixed": "#00452d"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { background-color: #0e0e10; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body text-on-surface min-h-dvh flex flex-col pb-24">
+<!-- Top Navigation Anchor -->
+<nav class="fixed top-0 w-full z-50 bg-[#0e0e10]/80 backdrop-blur-xl flex justify-between items-center px-6 h-16 w-full">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#f9f9f9]">menu_open</span>
+<span class="text-xl font-black text-[#f9f9f9] tracking-tighter font-headline">GradeMaster OS</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-high ring-1 ring-outline-variant/20">
+<img alt="Avatar" class="w-full h-full object-cover" data-alt="Close up portrait of a professional male teacher in a dark setting with dramatic rim lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAIZa4oLoX5Xaz2AqkcEcyWb9oDU9vlhM3usMn3Fxwh31IlNxynHorwX7BJzFuYnwGq2dyi3q2JBuigmVvR9MDxnVE8xr9fT_u2tIUCDk_NuxbubMOQD8BZaSRIx1NhgkHtzW2_W5cjfxgW1BtnbVPj_PCGUkCT9050NQepebZiUnOIIV5dX1rzY58P28_pKUcpVApqmfAZr2YHCpbMrR0x50ijPFU27J8vUN_1oi1JaBP2R5pQiaJBvu3fJqdAvoThQBqZuNeu9VM"/>
+</div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 mt-16 px-6 pt-6 pb-12 overflow-x-hidden">
+<!-- Header Section -->
+<header class="mb-8">
+<h1 class="font-headline font-extrabold text-3xl text-primary tracking-tight leading-none mb-2">KEHADIRAN SISWA</h1>
+<p class="text-on-surface-variant font-medium text-sm max-w-[80%]">Manajemen &amp; Monitoring Kehadiran Kelas Tingkat Lanjut</p>
+</header>
+<!-- Dynamic Controls Grid -->
+<section class="grid grid-cols-2 gap-3 mb-8">
+<div class="flex flex-col gap-2">
+<label class="font-label text-[10px] font-bold uppercase tracking-[0.08em] text-on-surface-variant pl-1">Pilih Kelas</label>
+<div class="relative bg-surface-container rounded-xl px-4 py-3.5 flex items-center justify-between group active:scale-95 transition-all">
+<span class="text-primary font-semibold">7A</span>
+<span class="material-symbols-outlined text-tertiary text-lg">expand_more</span>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-label text-[10px] font-bold uppercase tracking-[0.08em] text-on-surface-variant pl-1">Tanggal</label>
+<div class="relative bg-surface-container rounded-xl px-4 py-3.5 flex items-center justify-between active:scale-95 transition-all">
+<span class="text-primary font-semibold">04/14/2026</span>
+<span class="material-symbols-outlined text-tertiary text-lg">calendar_today</span>
+</div>
+</div>
+</section>
+<!-- Subject Tabs (Horizontal Carousel) -->
+<section class="mb-8 -mx-6">
+<div class="flex overflow-x-auto no-scrollbar px-6 gap-3">
+<button class="flex-none bg-tertiary text-on-tertiary px-6 py-2.5 rounded-full font-bold text-sm transition-all">Informatika</button>
+<button class="flex-none bg-surface-container text-on-surface-variant px-6 py-2.5 rounded-full font-semibold text-sm hover:text-primary transition-all">Matematika</button>
+<button class="flex-none bg-surface-container text-on-surface-variant px-6 py-2.5 rounded-full font-semibold text-sm hover:text-primary transition-all">IPA</button>
+<button class="flex-none bg-surface-container text-on-surface-variant px-6 py-2.5 rounded-full font-semibold text-sm hover:text-primary transition-all">Bahasa Inggris</button>
+</div>
+</section>
+<!-- Summary Statistics (Bento Style) -->
+<section class="grid grid-cols-4 gap-3 mb-10">
+<div class="bg-surface-container-high rounded-xl p-4 flex flex-col items-center justify-center gap-1">
+<span class="material-symbols-outlined text-tertiary text-xl">check_circle</span>
+<span class="font-headline font-extrabold text-lg text-primary">28</span>
+<span class="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">HADIR</span>
+</div>
+<div class="bg-surface-container-high rounded-xl p-4 flex flex-col items-center justify-center gap-1">
+<span class="material-symbols-outlined text-primary-container text-xl">assignment_turned_in</span>
+<span class="font-headline font-extrabold text-lg text-primary">2</span>
+<span class="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">IZIN</span>
+</div>
+<div class="bg-surface-container-high rounded-xl p-4 flex flex-col items-center justify-center gap-1">
+<span class="material-symbols-outlined text-outline text-xl">medical_services</span>
+<span class="font-headline font-extrabold text-lg text-primary">1</span>
+<span class="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">SAKIT</span>
+</div>
+<div class="bg-surface-container-high rounded-xl p-4 flex flex-col items-center justify-center gap-1">
+<span class="material-symbols-outlined text-error text-xl">cancel</span>
+<span class="font-headline font-extrabold text-lg text-primary">0</span>
+<span class="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">ALPA</span>
+</div>
+</section>
+<!-- Student List Shell -->
+<section class="space-y-3">
+<div class="flex justify-between items-end mb-4 px-1">
+<h3 class="font-headline font-bold text-lg text-primary">Daftar Siswa</h3>
+<span class="font-label text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">Total: 31 Siswa</span>
+</div>
+<!-- Student Card 1 -->
+<div class="bg-surface-container p-4 rounded-2xl flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<div class="relative">
+<div class="w-12 h-12 rounded-xl overflow-hidden bg-surface-container-highest">
+<img alt="Siswa" class="w-full h-full object-cover" data-alt="Portrait of a teenage Indonesian boy smiling gently, professional school profile style on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuANOKhgT6MvShLsvBmGjrBrp7N82ZnoBSlu0OTB8VKkNRUb_Sl84tKcqN4PaonW2atYzSqU_FkqLk0RVcWFIR6gpIteQPtP7UlLp-XR_vnGukmXZmYkBdAI7Dd6LzisEQn4knKj11Beuz9Pebn8mhvr2BBPLyb8WMJuY6c4v0QiOBhHFUzMn1m0_dDbb3eihRyY_VSGczk7zdlO8ZwqQr8HV_yYDV8anBioxQUm_-_jplNw1YUvYwHV86JSP0rTx1KTfMkze0S3UCcF"/>
+</div>
+<div class="absolute -bottom-1 -right-1 w-5 h-5 bg-tertiary rounded-full border-2 border-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[10px] text-on-tertiary font-bold">check</span>
+</div>
+</div>
+<div>
+<h4 class="font-headline font-bold text-primary">Aditya Pratama</h4>
+<p class="font-label text-[10px] font-bold text-tertiary uppercase tracking-wider">HADIR • 07:15 WIB</p>
+</div>
+</div>
+<button class="bg-surface-bright p-2 rounded-lg text-on-surface-variant group-active:scale-90 transition-transform">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Student Card 2 -->
+<div class="bg-surface-container p-4 rounded-2xl flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<div class="relative">
+<div class="w-12 h-12 rounded-xl overflow-hidden bg-surface-container-highest">
+<img alt="Siswa" class="w-full h-full object-cover" data-alt="Portrait of a teenage girl with glasses, soft cinematic lighting, dark academy aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHcQoQC8pEbmmBhLquFg2uXhNSA2A2fU3A4OFJqi1s4B5ciSRsCUEyqa5OcNJ5P8SYQfutgsUdQ-USsb9H5zZuFSxf0uj2-Hv0XyFvdv0MBb_8FCArcotm2snOrfoY5Edbu08K0K2jstvhmxFKKu_-GGHNXzuDA4BbshwvOyNW5ekDy6JL8xQPw-r_fPJN_iOBWIr-mr8T1UoVY5NtuSwoEgwJMVcCvUdLHAO3dN-M_K1KCMqUEk8em_SCUVL2Cgh7p4ZyIQ4YJbpd"/>
+</div>
+</div>
+<div>
+<h4 class="font-headline font-bold text-primary">Bunga Lestari</h4>
+<p class="font-label text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">BELUM ADA DATA</p>
+</div>
+</div>
+<div class="flex gap-1">
+<button class="bg-surface-container-high hover:bg-surface-bright px-3 py-1.5 rounded-lg text-xs font-bold text-tertiary transition-colors">SET</button>
+</div>
+</div>
+<!-- Student Card 3 -->
+<div class="bg-surface-container p-4 rounded-2xl flex items-center justify-between group opacity-80">
+<div class="flex items-center gap-4">
+<div class="relative">
+<div class="w-12 h-12 rounded-xl overflow-hidden bg-surface-container-highest grayscale">
+<img alt="Siswa" class="w-full h-full object-cover" data-alt="Portrait of a young boy looking contemplative, clean minimalist school photography" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDpTUcFLD-VnbuhlAq8ypVi0Sf3ImhBgFmZgm_giWcsMWoA7lbzFZmGr99T-jrZc9WyhVfEZLxI34lvpEa_l8Sg1swdZYWhw9J5dNtkPmZSLHbAtz13GmAQe9Z_6KKkQiPTOelMpT5NTiFOi3pgvWDNZBZ_-HgmUiPEJIq8bJym7v_7ddk8DNcrKIxlSx6b5J47rL3kwvoYeqG7m9VeEa0wN3DM-xXGyrFTlR9LKpgFWZBXAYF94FUxmb8Z2mgXPBPs-wwDZSbvVN6Q"/>
+</div>
+<div class="absolute -bottom-1 -right-1 w-5 h-5 bg-primary-container rounded-full border-2 border-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[10px] text-on-primary-container font-bold">assignment</span>
+</div>
+</div>
+<div>
+<h4 class="font-headline font-bold text-on-surface-variant">Citra Wijaya</h4>
+<p class="font-label text-[10px] font-bold text-primary-container uppercase tracking-wider">IZIN • SURAT DITERIMA</p>
+</div>
+</div>
+<button class="bg-surface-bright p-2 rounded-lg text-on-surface-variant">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</div>
+<!-- Student Card 4 -->
+<div class="bg-surface-container p-4 rounded-2xl flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<div class="relative">
+<div class="w-12 h-12 rounded-xl overflow-hidden bg-surface-container-highest">
+<img alt="Siswa" class="w-full h-full object-cover" data-alt="Close up student portrait, high contrast dark theme, neutral expression" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZdKzxBDRqZBq9bkST3kwRoozEBfXzD5kUwYxUy-p2k8vT2MwLRyoyZrldtnbRsdMa0f2ggZsKOQpYSss7ZI6X2cukrLT987XKUMtsZrMjcA3Krd-4SXtquMn46dVIa0cGJLo-qEyRvcmmP1odVuJj7ywN150BqE5ZCSQzh3ZyMm2i72nJpFGFfngYbE1WYDtgDzqyFmgiSzAHSPl3Zv0TZN4n2_paxVM9dXgMy0Z_Ai3EvtIznfiTJZQfW_jvCtI9BtsUoZYLZ6lF"/>
+</div>
+</div>
+<div>
+<h4 class="font-headline font-bold text-primary">Dimas Saputra</h4>
+<p class="font-label text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">BELUM ADA DATA</p>
+</div>
+</div>
+<button class="bg-surface-bright px-3 py-1.5 rounded-lg text-xs font-bold text-tertiary">SET</button>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Shell -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 bg-[#19191c]/80 backdrop-blur-xl z-50 pb-[env(safe-area-inset-bottom)]">
+<a class="flex flex-col items-center justify-center text-[#adaaad] px-4 py-1.5 hover:text-[#f9f9f9] active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-['Inter'] text-[10px] font-medium uppercase tracking-[0.05em] mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#adaaad] px-4 py-1.5 hover:text-[#f9f9f9] active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined">psychology</span>
+<span class="font-['Inter'] text-[10px] font-medium uppercase tracking-[0.05em] mt-1">Sikap</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-[#2c2c2f] text-[#f9f9f9] rounded-xl px-4 py-1.5 transition-all active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">how_to_reg</span>
+<span class="font-['Inter'] text-[10px] font-medium uppercase tracking-[0.05em] mt-1">Kehadiran</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#adaaad] px-4 py-1.5 hover:text-[#f9f9f9] active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined">grade</span>
+<span class="font-['Inter'] text-[10px] font-medium uppercase tracking-[0.05em] mt-1">Nilai</span>
+</a>
+</nav>
+<!-- Floating Action Button (FAB) -->
+<button class="fixed bottom-24 right-6 w-14 h-14 bg-tertiary text-on-tertiary rounded-2xl shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-3xl font-bold">qr_code_scanner</span>
+</button>
+</body></html>
