@@ -361,7 +361,7 @@ export default function BehaviorLayer({
         </div>
       )}
 
-      {/* Header Baru - Menyesuaikan UI Behavior */}
+      {/* Header Baru - Menyesuaikan UI Kedisiplinan */}
       <header className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <span className="w-8 h-[2px] bg-tertiary rounded-full"></span>
@@ -375,7 +375,7 @@ export default function BehaviorLayer({
               >
                 <span className="material-symbols-outlined shrink-0">arrow_back</span>
              </button>
-             <h2 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">Behavior</h2>
+             <h2 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">Kedisiplinan</h2>
           </div>
           {isAdmin && (
             <button 
@@ -491,7 +491,7 @@ export default function BehaviorLayer({
                     <span className={`block font-headline text-3xl font-extrabold tracking-tight ${hasViolations ? 'text-error' : 'text-tertiary'}`}>
                       {student.total_points}
                     </span>
-                    <span className="block font-label text-[10px] text-on-surface-variant font-bold uppercase tracking-tighter">Behavior Score</span>
+                    <span className="block font-label text-[10px] text-on-surface-variant font-bold uppercase tracking-tighter">Skor Perilaku</span>
                   </div>
                 </div>
                 

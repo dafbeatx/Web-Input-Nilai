@@ -62,7 +62,7 @@ export default function StudentCard({ name, className, points, onClick }: Studen
       
       <div className="flex items-center gap-3">
         <div className="text-right hidden sm:block">
-          <p className="text-[9px] uppercase font-bold tracking-tighter text-on-surface-variant">Behavior Score</p>
+          <p className="text-[9px] uppercase font-bold tracking-tighter text-on-surface-variant">Skor Perilaku</p>
           <p className={`text-xs ${colorClass} font-bold`}>{gradeLabel}</p>
         </div>
         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${bgClass} ${colorClass} font-headline font-black text-lg`}>
