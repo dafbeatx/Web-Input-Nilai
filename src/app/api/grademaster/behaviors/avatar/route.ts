@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
 
     // 3. Konversi Extrem via Sharp (Resizing + WebP + Compression 80%)
     const processedImageBuffer = await sharp(buffer)
+      .rotate() // Normalisasi orientasi EXIF (Penting untuk kamera HP)
       .resize(256, 256, { fit: 'cover', position: 'center' }) // Aman & asimetrikal
       .webp({ quality: 80 }) // Super hemat size, rata-rata hanya ~15KB
       .toBuffer();

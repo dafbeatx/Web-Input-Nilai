@@ -318,8 +318,8 @@ export default function BehaviorLayer({
     if (!file) return;
 
     // Local validation
-    if (file.size > 5 * 1024 * 1024) {
-      setToast({ message: "Ukuran foto terlalu besar (Max 5MB)", type: "error" });
+    if (file.size > 20 * 1024 * 1024) {
+      setToast({ message: "Ukuran foto terlalu besar (Max 20MB)", type: "error" });
       return;
     }
 
