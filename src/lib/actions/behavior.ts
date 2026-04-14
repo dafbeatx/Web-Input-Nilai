@@ -4,7 +4,31 @@ import { supabase } from '@/lib/supabase/client';
 import { revalidatePath } from 'next/cache';
 
 /**
+ * Internal helper: recalculates total_points from ALL logs (Demerit System: base 0, sum all deltas).
+ */
+async function recomputePoints(studentId: string): Promise<number> {
+  const { data: logs, error } = await supabase
+    .from('gm_behavior_logs')
+    .select('points_delta')
+    .eq('student_id', studentId);
+
+  if (error) throw error;
+
+  const total = (logs || []).reduce((sum, log) => sum + (log.points_delta || 0), 0);
+
+  const { error: updateError } = await supabase
+    .from('gm_behaviors')
+    .update({ total_points: total })
+    .eq('id', studentId);
+
+  if (updateError) throw updateError;
+
+  return total;
+}
+
+/**
  * Adds a new behavior log entry and updates the student's total points.
+ * Demerit System: bypasses legacy RPC, calculates directly.
  */
 export async function addBehaviorAction(formData: {
   studentId: string;
@@ -14,20 +38,24 @@ export async function addBehaviorAction(formData: {
   teacherId?: string;
 }) {
   try {
-    // Ensure negative behaviors subtract points even if positive value was passed
-    // (Though the RPC handles this too for safety)
-    const { data, error } = await supabase.rpc('add_behavior_log_entry', {
-      p_student_id: formData.studentId,
-      p_category_id: formData.categoryId || null,
-      p_points_delta: formData.pointsDelta,
-      p_reason: formData.reason,
-      p_teacher_id: formData.teacherId || null
-    });
+    // Insert log directly (bypass RPC)
+    const { error: insertError } = await supabase
+      .from('gm_behavior_logs')
+      .insert({
+        student_id: formData.studentId,
+        category_id: formData.categoryId || null,
+        points_delta: formData.pointsDelta,
+        reason: formData.reason,
+        teacher_id: formData.teacherId || null
+      });
 
-    if (error) throw error;
-    
+    if (insertError) throw insertError;
+
+    // Recompute from scratch (base 0 + sum all logs)
+    const newTotal = await recomputePoints(formData.studentId);
+
     revalidatePath('/behavior');
-    return { success: true, data };
+    return { success: true, data: { new_total: newTotal } };
   } catch (err: any) {
     console.error('Add behavior error:', err);
     return { success: false, error: err.message };
@@ -53,11 +81,7 @@ export async function updateBehaviorAction(logId: string, formData: {
 
     if (updateError) throw updateError;
 
-    const { data: newTotal, error: rpcError } = await supabase.rpc('recompute_student_behavior_points', {
-      p_student_id: formData.studentId
-    });
-
-    if (rpcError) throw rpcError;
+    const newTotal = await recomputePoints(formData.studentId);
 
     revalidatePath('/behavior');
     return { success: true, newTotal };
@@ -79,11 +103,7 @@ export async function deleteBehaviorAction(logId: string, studentId: string) {
 
     if (deleteError) throw deleteError;
 
-    const { data: newTotal, error: rpcError } = await supabase.rpc('recompute_student_behavior_points', {
-      p_student_id: studentId
-    });
-
-    if (rpcError) throw rpcError;
+    const newTotal = await recomputePoints(studentId);
 
     revalidatePath('/behavior');
     return { success: true, newTotal };

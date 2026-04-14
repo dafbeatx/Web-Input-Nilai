@@ -231,9 +231,10 @@ export default function BehaviorLayer({
     if (result.success) {
       setToast({ message: `Catatan "${reason}" ditambahkan`, type: "success" });
       // Update local state for total points in the list
-      setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, total_points: result.data.new_total } : s));
+      const newPts = result.data?.new_total ?? 0;
+      setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, total_points: newPts } : s));
       // Update the selected student's total point in the modal header
-      setSelectedStudent(prev => prev ? { ...prev, total_points: result.data.new_total } : null);
+      setSelectedStudent(prev => prev ? { ...prev, total_points: newPts } : null);
       // Refresh logs
       fetchStudentLogs(selectedStudent.id);
       
@@ -257,8 +258,8 @@ export default function BehaviorLayer({
 
     if (result.success) {
       setToast({ message: "Catatan berhasil diperbarui", type: "success" });
-      setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, total_points: result.newTotal } : s));
-      setSelectedStudent(prev => prev ? { ...prev, total_points: result.newTotal } : null);
+      setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, total_points: result.newTotal ?? 0 } : s));
+      setSelectedStudent(prev => prev ? { ...prev, total_points: result.newTotal ?? 0 } : null);
       setEditingLogId(null);
       fetchStudentLogs(selectedStudent.id);
     } else {
@@ -276,8 +277,8 @@ export default function BehaviorLayer({
 
     if (result.success) {
       setToast({ message: "Catatan dihapus", type: "success" });
-      setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, total_points: result.newTotal } : s));
-      setSelectedStudent(prev => prev ? { ...prev, total_points: result.newTotal } : null);
+      setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, total_points: result.newTotal ?? 0 } : s));
+      setSelectedStudent(prev => prev ? { ...prev, total_points: result.newTotal ?? 0 } : null);
       fetchStudentLogs(selectedStudent.id);
     } else {
       setToast({ message: result.error || "Gagal menghapus", type: "error" });

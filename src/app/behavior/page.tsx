@@ -151,7 +151,7 @@ export default function BehaviorPage() {
 
     if (result.success) {
       setToast({ message: `Catatan "${reason}" berhasil ditambahkan`, type: "success" });
-      setSelectedStudent(prev => prev ? { ...prev, total_points: result.data.new_total } : null);
+      setSelectedStudent(prev => prev ? { ...prev, total_points: result.data?.new_total ?? 0 } : null);
       fetchLogs(selectedStudent.id);
     } else {
       setToast({ message: "Gagal menyimpan", type: "error" });
@@ -169,7 +169,7 @@ export default function BehaviorPage() {
     });
     if (result.success) {
       setToast({ message: "Catatan diedit", type: "success" });
-      setSelectedStudent(prev => prev ? { ...prev, total_points: result.newTotal } : null);
+      setSelectedStudent(prev => prev ? { ...prev, total_points: result.newTotal ?? 0 } : null);
       fetchLogs(selectedStudent.id);
     }
     setIsUpdating(false);
@@ -182,7 +182,7 @@ export default function BehaviorPage() {
     const result = await deleteBehaviorAction(id, selectedStudent.id);
     if (result.success) {
       setToast({ message: "Catatan dihapus", type: "success" });
-      setSelectedStudent(prev => prev ? { ...prev, total_points: result.newTotal } : null);
+      setSelectedStudent(prev => prev ? { ...prev, total_points: result.newTotal ?? 0 } : null);
       fetchLogs(selectedStudent.id);
     }
     setIsUpdating(false);
@@ -215,7 +215,7 @@ export default function BehaviorPage() {
           
           <div className="relative z-10">
             <h2 className="font-headline font-extrabold text-3xl md:text-5xl tracking-tight text-white mb-2">
-              Behavior Overview
+              Ikhtisar Kedisiplinan
             </h2>
             <p className="text-on-surface-variant text-sm md:text-base font-medium max-w-xl">
               Memantau kedisiplinan dan integritas siswa melalui pencatatan perilaku komprehensif.
