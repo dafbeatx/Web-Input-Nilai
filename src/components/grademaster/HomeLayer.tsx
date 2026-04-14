@@ -298,10 +298,16 @@ export default function HomeLayer({
               <div className="w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center">
                 <span className="material-symbols-outlined text-primary text-lg">info</span>
               </div>
-              <h4 className="font-headline font-bold text-on-surface">Insight Sinkronisasi</h4>
+              <h4 className="font-headline font-bold text-on-surface">
+                {isAdmin ? 'Insight Sinkronisasi' : 'Informasi Akademik'}
+              </h4>
             </div>
             <p className="font-body text-xs text-on-surface-variant leading-relaxed">
-              Anda mengelola <span className="text-tertiary font-bold">{classGroups.length} Kelas Aktif</span> dengan total mencapai <span className="text-tertiary font-bold">{sessions.length} Sesi Evaluasi</span>. Pastikan perangkat Anda terhubung Internet secara reguler untuk menyinkronkan data ke panel pusat.
+              {isAdmin ? (
+                <>Anda mengelola <span className="text-tertiary font-bold">{classGroups.length} Kelas Aktif</span> dengan total mencapai <span className="text-tertiary font-bold">{sessions.length} Sesi Evaluasi</span>. Pastikan perangkat Anda terhubung Internet secara reguler untuk menyinkronkan data ke panel pusat.</>
+              ) : (
+                <>Saat ini terdapat <span className="text-tertiary font-bold">{classGroups.length} Kelas</span> yang terbuka dengan <span className="text-tertiary font-bold">{sessions.length} Sesi Ujian</span> aktif. Silakan masuk ke kelas Anda untuk melihat peringkat, hasil evaluasi, dan rekapitulasi kehadiran.</>
+              )}
             </p>
           </section>
         </>
