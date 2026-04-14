@@ -38,25 +38,36 @@ export default function StudentCard({ name, className, points, onClick }: Studen
   // Generate a professional initial avatar
   const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2c2c2f&color=f9f9f9&size=128&bold=true`;
 
+  const formatName = (name: string) => {
+    if (!name) return "";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length <= 2) return name;
+    const firstName = parts[0];
+    const initials = parts.slice(1).map(p => p[0].toUpperCase() + ".").join(" ");
+    return `${firstName} ${initials}`;
+  };
+
   return (
     <div 
       onClick={onClick}
-      className="bg-surface-container hover:bg-surface-bright transition-colors rounded-xl p-4 flex items-center justify-between group cursor-pointer active:scale-[0.98]"
+      className="bg-surface-container hover:bg-surface-bright transition-colors rounded-xl p-4 flex items-center justify-between group cursor-pointer active:scale-[0.98] min-w-0"
     >
-      <div className="flex items-center gap-4">
-        <div className="relative">
+      <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+        <div className="relative shrink-0">
           <img 
             src={avatarUrl} 
             alt={`${name} Portrait`} 
-            className="w-12 h-12 rounded-lg object-cover border border-outline-variant/30" 
+            className="w-10 h-10 md:w-12 md:h-12 rounded-lg object-cover border border-outline-variant/30" 
           />
           {grade !== 'B' && (
-            <div className={`absolute -bottom-1 -right-1 w-4 h-4 ${dotClass} rounded-full border-2 border-surface-container`}></div>
+            <div className={`absolute -bottom-1 -right-1 w-3 h-3 md:w-4 md:h-4 ${dotClass} rounded-full border-2 border-surface-container`}></div>
           )}
         </div>
-        <div>
-          <h4 className="font-headline font-bold text-sm text-primary tracking-tight">{name}</h4>
-          <p className="text-xs text-on-surface-variant font-medium">Class {className}</p>
+        <div className="min-w-0 flex-1">
+          <h4 className="font-headline font-bold text-[14px] md:text-base text-primary tracking-tight truncate w-full" title={name}>
+            {formatName(name)}
+          </h4>
+          <p className="text-[10px] md:text-xs text-on-surface-variant font-medium">Class {className}</p>
         </div>
       </div>
       

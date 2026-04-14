@@ -56,6 +56,15 @@ export default function StudentDetailSheet({
     });
   };
 
+  const formatStudentName = (name: string) => {
+    if (!name) return "";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length <= 2) return name;
+    const firstName = parts[0];
+    const initials = parts.slice(1).map(p => p[0].toUpperCase() + ".").join(" ");
+    return `${firstName} ${initials}`;
+  };
+
   const getStatusInfo = (pts: number) => {
     if (pts >= 90) return { label: 'A', colorText: 'text-tertiary', bg: 'bg-tertiary/10' };
     if (pts >= 70) return { label: 'B', colorText: 'text-primary', bg: 'bg-primary/10' };
@@ -90,9 +99,9 @@ export default function StudentDetailSheet({
             `}>
               <span className="text-2xl font-headline font-black tracking-tight">{status.label}</span>
             </div>
-            <div className="overflow-hidden">
-              <h2 className="text-xl font-headline font-bold text-primary tracking-tight truncate leading-tight">
-                {student.student_name}
+            <div className="overflow-hidden min-w-0 flex-1">
+              <h2 className="text-lg md:text-xl font-headline font-bold text-primary tracking-tight truncate leading-tight" title={student.student_name}>
+                {formatStudentName(student.student_name)}
               </h2>
               <div className="flex items-center mt-1">
                 <span className="text-[13px] font-sans font-medium text-on-surface-variant">

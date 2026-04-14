@@ -360,6 +360,18 @@ export default function BehaviorLayer({
     });
   };
 
+  const formatStudentName = (name: string) => {
+    if (!name) return "";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length <= 2) return name;
+    
+    // Always keep the first name full
+    const firstName = parts[0];
+    // Abbreviate the rest: "Aufar Danan Jaya" -> "Aufar D. J."
+    const initials = parts.slice(1).map(p => p[0].toUpperCase() + ".").join(" ");
+    return `${firstName} ${initials}`;
+  };
+
   return (
     <>
     <main className="min-h-screen pt-[env(safe-area-inset-top,20px)] mt-24 pb-32 px-5 flex flex-col gap-6 max-w-md md:max-w-3xl mx-auto animate-in fade-in transition-all duration-300 relative">
@@ -491,7 +503,9 @@ export default function BehaviorLayer({
                        )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h2 className="font-headline font-bold text-lg text-primary leading-tight mb-1 truncate w-full">{student.student_name}</h2>
+                      <h2 className="font-headline font-bold text-base md:text-lg text-primary leading-tight mb-1 truncate w-full" title={student.student_name}>
+                        {formatStudentName(student.student_name)}
+                      </h2>
                       <p className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant flex items-center gap-1">
                         <span className="material-symbols-outlined text-[12px]">badge</span>
                         Kelas {student.class_name}
