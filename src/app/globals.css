@@ -297,9 +297,15 @@
 
 
 
-/* Modifiers */
+/* Modifiers — hide BOTH top and bottom mobile navbars when fullscreen modal is active */
 body.hide-mobile-header #mobile-navbar {
   opacity: 0 !important;
   pointer-events: none !important;
   transform: translateY(-100%);
+}
+
+body.hide-mobile-header #mobile-bottom-nav {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(100%);
 }

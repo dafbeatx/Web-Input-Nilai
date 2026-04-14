@@ -155,7 +155,7 @@ export default function Navbar() {
       </div>
 
       {/* Mobile Bottom Navigation (Pinned to Bottom) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[1001] bg-slate-900/80 backdrop-blur-3xl border-t border-white/5 pb-[env(safe-area-inset-bottom)] px-4">
+      <nav id="mobile-bottom-nav" className="md:hidden fixed bottom-0 left-0 right-0 z-[1001] bg-slate-900/80 backdrop-blur-3xl border-t border-white/5 pb-[env(safe-area-inset-bottom)] px-4 transition-all duration-300">
         <div className="flex items-center justify-between h-16">
           <button 
             onClick={() => onNavigate('home')}
