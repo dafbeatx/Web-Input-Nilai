@@ -14,6 +14,7 @@ import {
   ScanSearch,
   Loader2,
   AlertCircle,
+  AlertOctagon,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { GradedStudent, ScoringConfig, DEFAULT_SCORING_CONFIG, ToastType } from '@/lib/grademaster/types';
@@ -41,6 +42,7 @@ interface GradingLayerProps {
   onBack: () => void;
   onReset: () => void;
   setToast: (t: ToastType) => void;
+  kkm?: number;
 }
 
 export default function GradingLayer(props: GradingLayerProps) {
@@ -50,7 +52,7 @@ export default function GradingLayer(props: GradingLayerProps) {
     studentClass, academicYear, schoolLevel, studentList,
     userAnswers, setUserAnswers,
     essayScores, setEssayScores,
-    scoringConfig, onSaveStudent, onBack, onReset, setToast,
+    scoringConfig, onSaveStudent, onBack, onReset, setToast, kkm = 70
   } = props;
 
   const totalQuestions = answerKey.length;
@@ -424,10 +426,18 @@ export default function GradingLayer(props: GradingLayerProps) {
 
             <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Skor Akhir</p>
             <div className="flex items-end gap-2 mb-1">
-              <span className="text-5xl md:text-7xl font-black text-white leading-none">{result.finalScore}</span>
+              <span className="text-5xl md:text-7xl font-black text-white leading-none">
+                {result.finalScore < kkm ? 0 : result.finalScore}
+              </span>
               <span className="text-slate-600 font-bold mb-1">/ 100</span>
             </div>
-            <p className="text-xs font-bold text-primary mb-4">{getScoreLabel(result.finalScore)}</p>
+            {result.finalScore < kkm ? (
+              <p className="text-[10px] font-black text-rose-500 mb-4 uppercase tracking-widest flex items-center gap-1.5 animate-pulse">
+                <AlertOctagon size={12} /> REMEDIAL (PENALTY: 0)
+              </p>
+            ) : (
+              <p className="text-xs font-bold text-primary mb-4">{getScoreLabel(result.finalScore)}</p>
+            )}
 
             {studentName.trim() && studentClass.trim() && (
               <div className="mb-4 p-3 rounded-xl bg-primary/10 border border-primary/20">

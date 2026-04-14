@@ -198,13 +198,20 @@ export default function GradeMaster() {
     checkAdmin();
   }, []);
 
+  const penalizedStudents = React.useMemo(() => {
+    return gradedStudents.map(s => ({
+      ...s,
+      finalScore: s.finalScore < kkm ? 0 : s.finalScore
+    }));
+  }, [gradedStudents, kkm]);
+
   const analytics = React.useMemo(() => {
-    const base = generateAnalytics(gradedStudents, answerKey);
+    const base = generateAnalytics(penalizedStudents, answerKey);
     // Student View: Answer key is hidden, so re-merge and re-calculate insights using pre-calculated API data
     if (answerKey.length === 0 && apiQuestionDifficulties.length > 0) {
       // Re-calculate insights specifically using the apiDifficulties
       const studentInsights = generateInsights(
-        gradedStudents, 
+        penalizedStudents, 
         apiQuestionDifficulties, 
         base.standardDeviation, 
         base.avgScore
@@ -216,7 +223,7 @@ export default function GradeMaster() {
       };
     }
     return base;
-  }, [gradedStudents, answerKey, apiQuestionDifficulties]);
+  }, [penalizedStudents, answerKey, apiQuestionDifficulties]);
 
   // ── API calls ──
 
@@ -544,6 +551,9 @@ export default function GradeMaster() {
   const handleSaveStudent = async (student: GradedStudent) => {
     setGradedStudents((prev) => [...prev, student]);
 
+    // ENFORCE POLICY: If score < KKM, set to 0
+    const finalScore = student.finalScore < kkm ? 0 : student.finalScore;
+
     // Persist to DB if we have a session ID
     if (sessionId) {
       try {
@@ -557,7 +567,7 @@ export default function GradeMaster() {
             essayScores: student.essayScores,
             mcqScore: student.mcqScore,
             essayScore: student.essayScore,
-            finalScore: student.finalScore,
+            finalScore: finalScore,
             csi: student.csi,
             lps: student.lps,
             correct: student.correct,
@@ -754,7 +764,7 @@ export default function GradeMaster() {
           subject={subject}
           studentClass={studentClass}
           schoolLevel={schoolLevel}
-          gradedStudents={gradedStudents}
+          gradedStudents={penalizedStudents}
           analytics={analytics}
           isPublicView={isPublicView}
           sessionName={sessionName}
@@ -802,6 +812,7 @@ export default function GradeMaster() {
           onBack={() => setLayer("dashboard")}
           onReset={resetGrading}
           setToast={setToast}
+          kkm={kkm}
         />
       )}
 
