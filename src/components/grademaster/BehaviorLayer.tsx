@@ -192,7 +192,7 @@ export default function BehaviorLayer({
       const data = await res.json();
       if (res.ok) setStudents(data.students || []);
     } catch (err) {
-       // Silent fail
+      // Silent fail
     }
   };
 
@@ -283,7 +283,6 @@ export default function BehaviorLayer({
     }
   };
 
-  // Helper to format date
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString('id-ID', { 
@@ -296,213 +295,161 @@ export default function BehaviorLayer({
   };
 
   return (
-    <div className="min-h-dvh bg-transparent p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in page-pt md:pt-16 pb-24 md:pb-8">
+    <main className="min-h-screen pt-[env(safe-area-inset-top,20px)] mt-24 pb-32 px-5 flex flex-col gap-6 max-w-md md:max-w-3xl mx-auto animate-in fade-in transition-all duration-300 relative">
       {!isAdmin && isLoaded && (
-        <div className="mb-4 flex items-center gap-2.5 px-4 py-2.5 bg-emerald-500/5 border border-emerald-500/15 rounded-2xl animate-in fade-in duration-500">
-          <ShieldCheck size={14} className="text-emerald-400 shrink-0" />
-          <span className="text-[10px] font-bold text-emerald-400/80 uppercase tracking-widest">Data perilaku ini dapat dilihat oleh umum</span>
+        <div className="flex items-center gap-2.5 px-4 py-3 bg-tertiary/10 border border-tertiary/20 rounded-2xl mb-2">
+          <ShieldCheck size={16} className="text-tertiary" />
+          <span className="text-[10px] font-bold text-tertiary uppercase tracking-widest leading-relaxed">
+            Transparansi: Laporan perilaku ini dapat dipantau oleh wali murid.
+          </span>
         </div>
       )}
-      <header className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <button type="button" onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-primary font-black text-xs uppercase tracking-widest transition-all mb-4 bg-white/5 px-4 py-2 md:px-5 md:py-3 rounded-xl border border-white/10 hover:border-primary/20">
-            <ArrowLeft size={14} /> Beranda
-          </button>
-          <h1 className="text-xl md:text-4xl font-black text-white tracking-tight flex items-center gap-2 md:gap-3 font-outfit uppercase">
-            Rapor Kedisiplinan & Perilaku
-          </h1>
-          <p className="text-xs md:text-sm text-slate-500 font-bold mt-1 md:mt-2 uppercase tracking-widest">Kumpulan Catatan Sikap & Poin Keseharian Siswa</p>
-        </div>
 
-        {isLoaded && (
-          <div className="flex items-center gap-2">
-            {isAdmin && (
-              <button 
-                onClick={() => setIsManagingReasons(true)}
-                className="px-4 py-2 bg-white/5 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:border-primary/30 hover:text-primary transition-all flex items-center gap-2"
+      {/* Header Baru - Menyesuaikan UI Behavior */}
+      <header className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <span className="w-8 h-[2px] bg-tertiary rounded-full"></span>
+          <span className="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-semibold">Tahun Ajaran {academicYear}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+             <button 
+                onClick={onBack} 
+                className="w-10 h-10 rounded-full bg-surface-container-high hover:bg-surface-bright flex items-center justify-center transition-colors border border-transparent shadow-lg text-primary active:scale-95"
               >
-                <Pencil size={12} /> Kategori Poin
-              </button>
-            )}
-            <div className="bg-slate-900/40 p-1.5 rounded-2xl border border-white/10 flex gap-1">
-              <button 
-                onClick={() => setViewMode('REPORT')}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'REPORT' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
-              >
-                Tabulasi Rapor
-              </button>
-              {isAdmin && (
-                <button 
-                  onClick={() => setViewMode('MANAGEMENT')}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'MANAGEMENT' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
-                >
-                  Mode Kelola
-                </button>
-              )}
-            </div>
+                <span className="material-symbols-outlined shrink-0">arrow_back</span>
+             </button>
+             <h2 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">Behavior</h2>
           </div>
-        )}
+          {isAdmin && (
+            <button 
+              onClick={() => setIsManagingReasons(true)}
+              className="px-4 py-2 shrink-0 bg-surface-container-high hover:bg-surface-bright text-primary rounded-xl text-xs font-bold transition-all border border-outline-variant/10 shadow-lg active:scale-95 flex items-center gap-2"
+            >
+              <Pencil size={14} /> Poin
+            </button>
+          )}
+        </div>
       </header>
 
-      {/* Dynamic Settings & Filter Header */}
-      <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl md:rounded-[2rem] p-4 md:p-6 shadow-2xl border border-white/10 mb-6 md:mb-8 relative z-10 flex flex-col gap-4">
-        {isAdmin && (
-          <div className="flex flex-col md:flex-row gap-3 md:gap-4 items-end mb-2">
-            <div className="w-full md:w-1/3">
-              <label className="flex text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 items-center gap-1"><Calendar size={12}/> Tahun Ajaran</label>
-              <input type="text" value={academicYear} onChange={(e: any) => setAcademicYear(e.target.value)} onBlur={() => loadClassDirectly(className, academicYear)} className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 text-sm font-black text-white outline-none focus:border-primary transition-all" />
-            </div>
-            <div className="w-full md:w-1/3">
-              <label className="flex text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 items-center gap-1"><Search size={12}/> Cari Spesifik</label>
-              <input type="text" placeholder="Nama siswa..." value={newStudentName} onChange={(e) => setNewStudentName(e.target.value)} className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 text-sm font-black text-white outline-none focus:border-primary transition-all" />
-            </div>
-            <button onClick={fetchStudents} disabled={isLoading} className="w-full md:w-auto px-6 py-3 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
-               {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />} Refresh
-            </button>
+      {/* Kontrol Pencarian Khusus Admin */}
+      {isAdmin && (
+        <div className="bg-surface-container-low p-4 rounded-3xl border border-outline-variant/10 shadow-inner mt-2">
+          <div className="flex items-center bg-surface-container border border-outline-variant/20 rounded-xl px-4 py-1 transition-colors focus-within:border-primary/50">
+            <Search size={16} className="text-on-surface-variant shrink-0" />
+            <input 
+              type="text" 
+              placeholder="Cari spesifik siswa..." 
+              value={newStudentName} 
+              onChange={(e) => setNewStudentName(e.target.value)} 
+              className="w-full bg-transparent p-2 text-sm font-bold text-white outline-none placeholder:text-on-surface-variant" 
+            />
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Floating Class Pills Filter */}
-        <div className="w-full">
-          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Filter Kelas</label>
-          <div className="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-hide">
-            {['Semua Kelas', ...availableClasses].map((cls) => (
+      {/* Filter Kelas (Scroll Horizontal) */}
+      <section className="overflow-x-auto no-scrollbar -mx-5 px-5">
+        <div className="flex gap-3 min-w-max pb-2 pt-1">
+          {['Semua Kelas', ...availableClasses].map((cls) => {
+            const isActive = className === cls;
+            return (
               <button
                 key={cls}
                 onClick={() => loadClassDirectly(cls, academicYear)}
                 disabled={isLoading}
-                className={`flex-shrink-0 px-5 py-2.5 rounded-full font-black text-xs transition-all duration-300 border ${
-                  className === cls 
-                    ? 'bg-primary text-white border-primary shadow-[0_0_20px_rgba(40,112,234,0.3)] shadow-primary/30 scale-105 z-10' 
-                    : 'bg-slate-950/50 text-slate-400 hover:bg-slate-800 border-white/5 hover:border-white/20'
-                }`}
+                className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all border border-transparent shadow-sm 
+                  ${isActive 
+                    ? 'bg-gradient-to-br from-[#f9f9f9] to-[#a0a1a1] text-[#0e0e10] scale-105 shadow-md' 
+                    : 'bg-surface-container text-on-surface-variant hover:text-primary active:scale-95 hover:border-outline-variant/20 hover:bg-surface-bright'
+                  }`}
               >
-                {cls}
+                 {cls}
               </button>
-            ))}
+            )
+          })}
+        </div>
+      </section>
+
+      {/* Daftar Siswa Penuh Kedisiplinan */}
+      <div className="space-y-4">
+        {isLoading ? (
+          <div className="flex justify-center items-center py-24 gap-4 flex-col">
+            <Loader2 size={40} className="animate-spin text-tertiary" />
+            <p className="font-label text-sm uppercase tracking-widest text-on-surface-variant animate-pulse">Menghitung Reputasi...</p>
           </div>
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-          <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
-          <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Menyinkronkan Data...</p>
-        </div>
-      ) : isLoaded ? (
-        viewMode === 'REPORT' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500 pb-10">
-            {students.filter(s => s.student_name.toLowerCase().includes(newStudentName.toLowerCase())).length > 0 ? (
-              students.filter(s => s.student_name.toLowerCase().includes(newStudentName.toLowerCase())).map((s: BehaviorStudent) => (
-                <div 
-                  key={s.id} 
-                  onClick={() => setSelectedStudent(s)}
-                  className="bg-slate-900/40 backdrop-blur-2xl rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 border border-white/10 shadow-2xl relative overflow-hidden group hover:border-primary/30 transition-all cursor-pointer"
-                >
-                  <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary transition-all duration-500" />
-                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all">
-                      <ChevronRight size={16} className="text-primary" />
-                  </div>
-                  
-                  <div className="flex items-center justify-between mb-3 md:mb-8 border-b border-white/5 pb-3 md:pb-6">
-                    <div>
-                      <h4 className="font-black text-sm md:text-xl text-white uppercase tracking-tight font-outfit mb-0.5">{s.student_name}</h4>
-                      <p className="text-[10px] md:text-sm font-bold text-slate-500 uppercase tracking-widest">Kelas {s.class_name}</p>
-                    </div>
-                    <div className={`w-10 h-10 md:w-16 md:h-16 rounded-lg md:rounded-2xl flex items-center justify-center text-base md:text-2xl font-black border shadow-lg ${
-                      s.total_points >= 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/20' :
-                      s.total_points >= 70 ? 'bg-primary/10 text-primary border-primary/20 shadow-primary/20' :
-                      'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-rose-500/20'
-                    }`}>
-                      {s.total_points}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                      <div className="flex items-center justify-between p-2.5 md:p-3 bg-white/5 rounded-xl md:rounded-2xl border border-white/10">
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-[10px] md:text-xs font-black text-slate-500 uppercase tracking-widest">Peringkat & Poin</span>
-                        </div>
-                        <span className="text-xs font-black text-emerald-400">AKTIF</span>
-                      </div>
-                      <div className="py-1 px-1">
-                          <button className="w-full py-2.5 md:py-4 bg-white/5 border border-white/5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black text-slate-500 uppercase tracking-widest group-hover:border-primary/20 group-hover:text-primary transition-all flex items-center justify-center gap-2">
-                             <BarChart3 size={12} /> LIHAT RIWAYAT POIN
-                          </button>
-                      </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-                <div className="col-span-full text-center py-20 bg-slate-900/40 rounded-[3rem] border border-white/10 border-dashed">
-                  <Users size={48} className="text-slate-700 mx-auto mb-4" />
-                  <p className="text-slate-500 font-bold uppercase text-xs tracking-widest">Siswa tidak ditemukan untuk {className}</p>
-                </div>
-            )}
+        ) : students.length === 0 ? (
+          <div className="text-center py-20 bg-surface-container rounded-3xl border border-dashed border-outline-variant/30 flex flex-col items-center justify-center px-6 shadow-xl">
+            <div className="w-16 h-16 rounded-3xl bg-surface-container-high text-on-surface-variant flex items-center justify-center mb-6 shadow-inner">
+              <span className="material-symbols-outlined text-4xl">group_off</span>
+            </div>
+            <h3 className="font-headline text-xl font-bold text-on-surface mb-2">Belum Memiliki Rekam Medis</h3>
+            <p className="font-body text-sm text-on-surface-variant leading-relaxed">Siswa tidak ditemukan di data observasi untuk filter terkait.</p>
           </div>
         ) : (
-          <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-white/10 overflow-hidden mb-10 animate-in slide-in-from-bottom-5">
-              <div className="p-8 border-b border-white/10 bg-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                  <h3 className="font-black text-white text-xl uppercase font-outfit">Manajemen Kedisiplinan</h3>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{students.filter(s => s.student_name.toLowerCase().includes(newStudentName.toLowerCase())).length} Siswa tertampil di {className}</p>
+          students.filter(s => s.student_name.toLowerCase().includes(newStudentName.toLowerCase())).map((student) => {
+            const isLowScore = student.total_points < 70;
+            return (
+              <div key={student.id} className="bg-surface-container p-5 rounded-[1.5rem] border border-white/5 relative overflow-hidden group hover:border-primary/20 transition-all shadow-md hover:shadow-xl">
+                <div className="flex justify-between items-start mb-6 z-10 relative">
+                  <div className="flex items-start gap-4">
+                    <div className="w-14 h-14 shrink-0 rounded-[14px] bg-surface-bright flex items-center justify-center overflow-hidden ring-1 ring-white/10 text-xl font-headline font-bold text-on-surface-variant uppercase shadow-inner">
+                       {student.student_name.slice(0, 2)}
+                    </div>
+                    <div>
+                      <h2 className="font-headline font-bold text-lg text-primary leading-tight mb-1 max-w-[190px] md:max-w-[400px] truncate">{student.student_name}</h2>
+                      <p className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Kelas {student.class_name}</p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0 bg-surface-container">
+                    <span className={`block font-headline text-3xl font-extrabold tracking-tight ${isLowScore ? 'text-error' : 'text-tertiary'}`}>
+                      {student.total_points}
+                    </span>
+                    <span className="block font-label text-[10px] text-on-surface-variant font-bold uppercase tracking-tighter">Behavior Score</span>
+                  </div>
                 </div>
+                
+                <div className="flex items-center justify-between z-10 relative">
+                  <div className="flex items-center gap-2">
+                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${isLowScore ? 'bg-error/10 border-error/20' : 'bg-tertiary/10 border-tertiary/20'}`}>
+                       <div className={`w-1.5 h-1.5 rounded-full ${isLowScore ? 'bg-error shadow-[0_0_8px_rgba(255,110,132,0.6)]' : 'bg-tertiary shadow-[0_0_8px_rgba(155,255,206,0.6)]'}`}></div>
+                       <span className={`text-[10px] font-bold tracking-widest uppercase ${isLowScore ? 'text-error' : 'text-tertiary'}`}>
+                          {isLowScore ? 'Peringatan' : 'Aktif'}
+                       </span>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedStudent(student)}
+                    className="flex items-center gap-1 text-primary text-xs font-bold px-3 py-1.5 bg-surface-bright rounded-lg active:scale-95 transition-all outline-none border border-transparent hover:border-primary/20 shadow-md"
+                  >
+                    {isAdmin ? 'Kelola Poin' : 'Riwayat Poin'}
+                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+                  </button>
+                </div>
+                
+                {/* Efek Pendar Latar Belakang Eksklusif M3 */}
+                <div className={`absolute top-0 right-0 w-32 h-32 blur-[40px] rounded-full -mr-16 -mt-16 pointer-events-none transition-colors duration-500 ${isLowScore ? 'bg-error/5 group-hover:bg-error/15' : 'bg-tertiary/5 group-hover:bg-tertiary/15'}`}></div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="bg-white/5 border-b border-white/10">
-                      <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] text-center w-20">No</th>
-                      <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Nama Lengkap</th>
-                      <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] text-center">Kelas</th>
-                      <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] text-center">Poin Saat Ini</th>
-                      <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] text-center">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-sm font-bold text-white">
-                    {students.filter(s => s.student_name.toLowerCase().includes(newStudentName.toLowerCase())).map((s: BehaviorStudent, idx: number) => (
-                      <tr key={s.id} className="border-b border-white/5 hover:bg-white/5 transition-all group">
-                          <td className="p-6 text-center text-slate-500 font-mono text-xs">{idx + 1}</td>
-                          <td className="p-6 font-outfit uppercase tracking-tight">{s.student_name}</td>
-                          <td className="p-6 text-center text-slate-400 font-bold text-[10px] uppercase">{s.class_name}</td>
-                          <td className="p-6 text-center">
-                            <span className={`px-4 py-1.5 rounded-lg text-xs font-black border ${
-                              s.total_points >= 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-primary/10 text-primary border-primary/20'
-                            }`}>{s.total_points}</span>
-                          </td>
-                          <td className="p-6 flex items-center justify-center gap-2">
-                            <button onClick={() => setSelectedStudent(s)} className="px-5 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20">Kelola</button>
-                          </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-          </div>
-        )
-      ) : (
-          <div className="col-span-full text-center py-20 bg-slate-900/40 rounded-[3rem] border border-white/10 border-dashed">
-            <Users size={48} className="text-slate-700 mx-auto mb-4" />
-            <p className="text-slate-500 font-bold uppercase text-xs tracking-widest">Tidak dapat memuat data siswa</p>
-          </div>
-      )}
+            );
+          })
+        )}
+      </div>
 
-      {/* COMPACT & TABBED DETAIL MODAL */}
+      {/* COMPACT & TABBED DETAIL MODAL (Retained existing complex modal logic) */}
       {selectedStudent && (
         <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl z-[1000] flex flex-col justify-end md:justify-center p-0 md:p-10 animate-in fade-in duration-300">
           <div className="bg-slate-900 border-t md:border border-white/10 w-full max-h-[90dvh] md:max-h-[85vh] md:h-auto max-w-6xl rounded-t-[2.5rem] md:rounded-[4rem] overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-full md:slide-in-from-bottom-0 md:zoom-in-95 flex flex-col">
-              {/* Sticky Compact Header - Safe for Mobile */}
               <div 
                 className="bg-gradient-to-br from-slate-900 to-slate-950 px-5 pb-5 md:p-10 border-b border-white/10 flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-xl"
                 style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}
               >
                 <div className="flex items-center gap-4 md:gap-6">
                     <div className={`w-12 h-12 md:w-20 md:h-20 rounded-2xl md:rounded-[2rem] border flex flex-col items-center justify-center shadow-2xl shrink-0 ${
-                       selectedStudent.total_points >= 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/20' : 'bg-primary/10 text-primary border-primary/20 shadow-primary/20'
+                       selectedStudent.total_points >= 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/20' : 
+                       selectedStudent.total_points >= 70 ? 'bg-primary/10 text-primary border-primary/20 shadow-primary/20' : 
+                       'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-rose-500/20'
                     }`}>
-                      <span className="text-lg md:text-3xl font-black">{selectedStudent.total_points}</span>
-                      <span className="text-[6px] md:text-[8px] font-black uppercase tracking-widest opacity-60 hidden md:inline">Total</span>
+                      <span className="text-lg md:text-4xl font-black">{selectedStudent.total_points}</span>
                     </div>
                     <div>
                       <h2 className="text-base md:text-3xl font-black text-white font-outfit uppercase tracking-tighter line-clamp-1">{selectedStudent.student_name}</h2>
@@ -516,13 +463,12 @@ export default function BehaviorLayer({
                 </div>
                 <button 
                   onClick={() => setSelectedStudent(null)} 
-                  className="w-10 h-10 md:w-12 md:h-12 bg-white/5 text-slate-500 rounded-full flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all border border-white/10 shadow-xl"
+                  className="w-10 h-10 md:w-12 md:h-12 bg-white/5 text-slate-500 rounded-full flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all border border-white/10 shadow-xl outline-none"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              {/* Mobile Tabs Navigation - Notch Aware */}
               {isAdmin && (
                 <div className="flex lg:hidden bg-slate-950/50 backdrop-blur-xl border-b border-white/5 sticky top-[73px] md:top-[85px] z-20 h-16">
                     <button 
@@ -540,9 +486,7 @@ export default function BehaviorLayer({
                 </div>
               )}
               
-              {/* Content Area */}
               <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2">
-                {/* Left Column: History (Always visible on LG, conditional on mobile) */}
                 <div className={`bg-slate-950/20 lg:flex lg:flex-col ${activeModalTab === 'HISTORY' ? 'flex flex-col' : 'hidden'}`}>
                     <div className="p-4 md:p-6 border-b border-white/5 hidden md:flex items-center justify-between">
                       <h3 className="text-xs font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
@@ -551,15 +495,15 @@ export default function BehaviorLayer({
                       <span className="px-3 py-1 bg-white/5 rounded-lg text-[9px] font-bold text-slate-500 uppercase tracking-widest">{studentLogs.length} LOG</span>
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-3 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-3 custom-scrollbar pb-24">
                       {isLoadingLogs ? (
                           <div className="flex flex-col items-center justify-center py-20 opacity-40">
-                            <Loader2 size={24} className="animate-spin mb-2" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Sinkronisasi...</p>
+                            <Loader2 size={24} className="animate-spin mb-2 text-primary" />
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Sinkronisasi...</p>
                           </div>
                       ) : studentLogs.length > 0 ? (
                         studentLogs.map((log) => (
-                            <div key={log.id} className="bg-slate-900/50 border border-white/5 rounded-2xl p-4 md:p-6 hover:border-primary/20 transition-all group relative overflow-hidden">
+                            <div key={log.id} className="bg-slate-900/50 border border-white/5 rounded-2xl p-4 md:p-6 hover:border-primary/20 transition-all group relative overflow-hidden shadow-sm">
                               {editingLogId === log.id && isAdmin ? (
                                   <div className="space-y-4 animate-in slide-in-from-top-2">
                                     <div className="grid grid-cols-2 gap-3">
@@ -569,7 +513,7 @@ export default function BehaviorLayer({
                                             type="number" 
                                             value={editForm.points} 
                                             onChange={(e) => setEditForm(prev => ({ ...prev, points: parseInt(e.target.value) }))}
-                                            className="w-full bg-transparent border border-white/10 rounded-lg p-2 text-xs font-black text-white outline-none"
+                                            className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs font-bold text-white outline-none focus:border-primary"
                                           />
                                         </div>
                                         <div>
@@ -578,33 +522,33 @@ export default function BehaviorLayer({
                                             type="text" 
                                             value={editForm.reason} 
                                             onChange={(e) => setEditForm(prev => ({ ...prev, reason: e.target.value }))}
-                                            className="w-full bg-transparent border border-white/10 rounded-lg p-2 text-xs font-black text-white outline-none"
+                                            className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs font-bold text-white outline-none focus:border-primary"
                                           />
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button onClick={() => handleUpdateLog(log.id)} className="flex-1 py-2 bg-primary text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Simpan</button>
-                                        <button onClick={() => setEditingLogId(null)} className="px-4 py-2 bg-white/5 text-slate-500 rounded-lg text-[10px] font-black uppercase tracking-widest">Batal</button>
+                                        <button onClick={() => handleUpdateLog(log.id)} className="flex-1 py-2 bg-primary text-white rounded-lg text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">Simpan</button>
+                                        <button onClick={() => setEditingLogId(null)} className="px-4 py-2 bg-white/5 text-slate-500 rounded-lg text-[10px] font-black uppercase tracking-widest hover:text-white transition-all">Batal</button>
                                     </div>
                                   </div>
                               ) : (
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-start gap-3">
-                                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
-                                          log.points_delta > 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                                          log.points_delta > 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-inner' : 'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-inner'
                                       }`}>
-                                          {log.points_delta > 0 ? <ThumbsUp size={14} /> : <ThumbsDown size={14} />}
+                                          {log.points_delta > 0 ? <ThumbsUp size={16} /> : <ThumbsDown size={16} />}
                                       </div>
                                       <div>
                                           <div className="flex items-center gap-2 mb-1">
-                                            <span className={`text-xs md:text-sm font-black ${log.points_delta > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                            <span className={`text-sm md:text-base font-black ${log.points_delta > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                                                 {log.points_delta > 0 ? '+' : ''}{log.points_delta}
                                             </span>
-                                            <span className="text-[8px] md:text-[10px] font-bold text-slate-600 uppercase tracking-widest flex items-center gap-1">
+                                            <span className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
                                                 <Calendar size={10} /> {formatDate(log.created_at)}
                                             </span>
                                           </div>
-                                          <h4 className="text-white font-black text-[11px] md:text-sm uppercase tracking-tight line-clamp-2 leading-tight">{log.reason}</h4>
+                                          <h4 className="text-white font-bold text-xs md:text-sm uppercase tracking-tight leading-relaxed">{log.reason}</h4>
                                       </div>
                                     </div>
                                     
@@ -615,15 +559,15 @@ export default function BehaviorLayer({
                                             setEditingLogId(log.id);
                                             setEditForm({ reason: log.reason, points: log.points_delta });
                                           }}
-                                          className="p-1.5 bg-white/5 text-slate-500 hover:text-primary rounded-lg border border-white/10"
+                                          className="p-2 bg-white/5 text-slate-500 hover:text-primary rounded-xl border border-white/10 hover:border-primary/30 transition-all outline-none"
                                         >
-                                            <Pencil size={12} />
+                                            <Pencil size={14} />
                                         </button>
                                         <button 
                                           onClick={() => handleDeleteLog(log.id)}
-                                          className="p-1.5 bg-white/5 text-slate-500 hover:text-rose-500 rounded-lg border border-white/10"
+                                          className="p-2 bg-white/5 text-slate-500 hover:text-rose-500 rounded-xl border border-white/10 hover:border-rose-500/30 transition-all outline-none"
                                         >
-                                            <Trash2 size={12} />
+                                            <Trash2 size={14} />
                                         </button>
                                       </div>
                                     )}
@@ -632,35 +576,33 @@ export default function BehaviorLayer({
                             </div>
                         ))
                       ) : (
-                          <div className="text-center py-20 opacity-40 animate-pulse">
-                            <Activity size={32} className="mx-auto text-primary mb-4" />
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-10">Menunggu Sinkronisasi Riwayat...</p>
+                          <div className="text-center py-20 opacity-50">
+                            <Activity size={32} className="mx-auto text-on-surface-variant mb-4" />
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Siswa belum memiliki riwayat</p>
                           </div>
                       )}
                     </div>
                 </div>
 
-                {/* Right Column: Management (LG: Always visible, SM: Conditional) */}
                 {isAdmin && (
-                  <div className={`p-4 md:p-10 space-y-6 md:space-y-10 overflow-y-auto custom-scrollbar border-l border-white/10 bg-slate-900/10 lg:flex lg:flex-col ${activeModalTab === 'MANAGE' ? 'flex flex-col' : 'hidden'}`}>
+                  <div className={`p-5 md:p-10 space-y-8 overflow-y-auto custom-scrollbar border-l border-white/10 bg-slate-900/10 lg:flex lg:flex-col ${activeModalTab === 'MANAGE' ? 'flex flex-col pb-24' : 'hidden'}`}>
                       <div>
-                        <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-4 md:mb-8 hidden lg:flex items-center gap-2">
-                            <PlusCircle size={14} /> Kelola Poin Baru
+                        <h3 className="text-xs font-black text-primary uppercase tracking-[0.3em] mb-6 hidden lg:flex items-center gap-2">
+                            <PlusCircle size={16} /> Kelola Poin Baru
                         </h3>
                         
                         <div className="space-y-8">
-                            {/* Pelanggaran Section */}
                             <div className="space-y-4">
-                              <h4 className="text-[9px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
-                                  <MinusCircle size={14} className="text-rose-500/50" /> Pelanggaran
+                              <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
+                                  <MinusCircle size={14} className="text-rose-500/80" /> Pelanggaran
                               </h4>
-                              <div className="grid grid-cols-2 gap-2 md:gap-3">
+                              <div className="grid grid-cols-2 gap-3">
                                   {behaviorReasons.bad.map(r => (
                                     <button 
                                       key={r} 
                                       disabled={isUpdatingPoints}
                                       onClick={() => handleAddBehavior('BAD', 10, r)} 
-                                      className="p-3 md:p-4 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 hover:border-rose-500/30 rounded-xl md:rounded-2xl text-left text-[9px] font-black text-rose-300 uppercase tracking-widest transition-all active:scale-95 leading-tight"
+                                      className="p-4 bg-rose-500/5 hover:bg-rose-500/20 border border-rose-500/10 hover:border-rose-500/40 rounded-2xl text-left text-[10px] font-black text-rose-300 uppercase tracking-widest transition-all active:scale-95 leading-tight shadow-sm"
                                     >
                                       {r}
                                     </button>
@@ -668,18 +610,17 @@ export default function BehaviorLayer({
                               </div>
                             </div>
                             
-                            {/* Terpuji Section */}
                             <div className="space-y-4">
-                              <h4 className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
-                                  <PlusCircle size={14} className="text-emerald-500/50" /> Tindakan Terpuji
+                              <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
+                                  <PlusCircle size={14} className="text-emerald-500/80" /> TINDAKAN TERPUJI
                               </h4>
-                              <div className="grid grid-cols-2 gap-2 md:gap-3">
+                              <div className="grid grid-cols-2 gap-3">
                                   {behaviorReasons.good.map(r => (
                                     <button 
                                       key={r} 
                                       disabled={isUpdatingPoints}
                                       onClick={() => handleAddBehavior('GOOD', 10, r)} 
-                                      className="p-3 md:p-4 bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/10 hover:border-emerald-500/30 rounded-xl md:rounded-2xl text-left text-[9px] font-black text-emerald-300 uppercase tracking-widest transition-all active:scale-95 leading-tight"
+                                      className="p-4 bg-emerald-500/5 hover:bg-emerald-500/20 border border-emerald-500/10 hover:border-emerald-500/40 rounded-2xl text-left text-[10px] font-black text-emerald-300 uppercase tracking-widest transition-all active:scale-95 leading-tight shadow-sm"
                                     >
                                       {r}
                                     </button>
@@ -689,13 +630,12 @@ export default function BehaviorLayer({
                         </div>
                       </div>
 
-                      {/* Integrity box - Always at bottom */}
-                      <div className="p-5 md:p-8 bg-slate-950/40 rounded-3xl border border-white/5 relative overflow-hidden group mt-auto">
-                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                            <ShieldCheck size={64} className="text-primary" />
+                      <div className="p-6 bg-slate-950/40 rounded-3xl border border-white/5 relative overflow-hidden group mt-auto shadow-inner">
+                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-20 transition-opacity">
+                            <ShieldCheck size={80} className="text-primary" />
                         </div>
-                        <h4 className="text-[12px] font-black text-white uppercase tracking-tight mb-1">Integritas Data</h4>
-                        <p className="text-[9px] text-slate-500 font-bold leading-relaxed uppercase tracking-wider">Sinkronisasi otomatis via RPC GradeMaster OS.</p>
+                        <h4 className="text-xs font-black text-white uppercase tracking-tight mb-1">Integritas Data</h4>
+                        <p className="text-[10px] text-slate-500 font-bold leading-relaxed uppercase tracking-wider">Sinkronisasi poin kedisiplinan otomatis via Node Network.</p>
                       </div>
                   </div>
                 )}
@@ -707,89 +647,92 @@ export default function BehaviorLayer({
       {/* REASONS MANAGEMENT MODAL */}
       {isManagingReasons && (
         <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[2000] flex items-center justify-center p-0 md:p-4">
-          <div className="bg-slate-900/50 border border-white/10 max-w-2xl w-full h-full md:h-auto md:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col">
-              <div 
-                className="p-8 md:pt-8 border-b border-white/10 bg-white/5 shrink-0 relative"
-                style={{ paddingTop: 'max(2rem, env(safe-area-inset-top))' }}
-              >
-                <button onClick={() => setIsManagingReasons(false)} className="absolute top-[max(1.5rem,env(safe-area-inset-top))] right-6 md:top-6 w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-slate-500 border border-white/10 hover:bg-rose-500 hover:text-white transition-all">
+          <div className="bg-slate-900 border border-white/10 max-w-2xl w-full h-full md:h-[80vh] md:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in-95">
+              <div className="p-6 md:p-8 border-b border-white/10 bg-white/5 shrink-0 relative flex items-start justify-between" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}>
+                <div>
+                  <h2 className="text-xl font-black text-white uppercase font-outfit">Setelan Poin Global</h2>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Kustomisasi alasan poin standar untuk seluruh kelas</p>
+                </div>
+                <button onClick={() => setIsManagingReasons(false)} className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-slate-500 border border-white/10 hover:bg-rose-500 hover:text-white transition-all shadow-md">
                   <X size={20} />
                 </button>
-                <h2 className="text-xl font-black text-white uppercase font-outfit">Setelan Poin Global</h2>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Kustomisasi alasan poin untuk seluruh kelas</p>
               </div>
               
-              <div className="p-8 space-y-8">
-                <div className="flex gap-3">
+              <div className="p-6 md:p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1">
+                <div className="flex flex-col md:flex-row gap-3">
                     <select 
-                    value={newReasonType} 
-                    onChange={(e: any) => setNewReasonType(e.target.value)}
-                    className="bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-xs font-black text-white outline-none focus:border-primary transition-all"
+                      value={newReasonType} 
+                      onChange={(e: any) => setNewReasonType(e.target.value)}
+                      className="bg-slate-950/80 border border-white/10 rounded-xl px-4 py-3 text-xs font-black text-white outline-none focus:border-primary transition-all shadow-inner"
                     >
                       <option value="good">TERPUJI (+)</option>
                       <option value="bad">PELANGGARAN (-)</option>
                     </select>
-                    <input 
-                    type="text" 
-                    placeholder="Tambah kategori..." 
-                    value={newReasonInput}
-                    onChange={(e) => setNewReasonInput(e.target.value)}
-                    className="flex-1 bg-slate-950/50 border border-white/10 rounded-xl px-5 py-3 text-sm font-black text-white outline-none focus:border-primary transition-all"
-                    />
-                    <button 
-                    onClick={() => {
-                      if (!newReasonInput.trim()) return;
-                      const updated = { ...behaviorReasons };
-                      updated[newReasonType].push(newReasonInput.trim());
-                      saveBehaviorSettings(updated);
-                      setNewReasonInput('');
-                    }}
-                    className="p-3 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all outline-none"
-                    >
-                      <PlusCircle size={20} />
-                    </button>
+                    <div className="flex flex-1 gap-2">
+                      <input 
+                        type="text" 
+                        placeholder="Tambah kategori alasan..." 
+                        value={newReasonInput}
+                        onChange={(e) => setNewReasonInput(e.target.value)}
+                        className="flex-1 bg-slate-950/80 border border-white/10 rounded-xl px-5 py-3 text-sm font-bold text-white outline-none focus:border-primary transition-all shadow-inner placeholder:text-slate-600"
+                      />
+                      <button 
+                        onClick={() => {
+                          if (!newReasonInput.trim()) return;
+                          const updated = { ...behaviorReasons };
+                          updated[newReasonType].push(newReasonInput.trim());
+                          saveBehaviorSettings(updated);
+                          setNewReasonInput('');
+                        }}
+                        className="px-6 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all outline-none font-bold text-xs uppercase"
+                      >
+                        SIMPAN
+                      </button>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <h4 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2">
-                        <ThumbsUp size={12} /> Terpuji
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2 pb-2 border-b border-white/5">
+                        <ThumbsUp size={14} /> Master Terpuji
                       </h4>
-                      <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                      <div className="space-y-2">
                           {behaviorReasons.good.map((r, i) => (
-                            <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 group">
-                              <span className="text-[10px] font-bold text-slate-300">{r}</span>
+                            <div key={i} className="flex items-center justify-between p-3.5 bg-white/5 rounded-xl border border-white/5 group hover:border-emerald-500/30 transition-colors shadow-sm">
+                              <span className="text-[11px] font-bold text-slate-300">{r}</span>
                               <button 
                                 onClick={() => {
                                   const updated = { ...behaviorReasons };
                                   updated.good = updated.good.filter((_, idx) => idx !== i);
                                   saveBehaviorSettings(updated);
                                 }}
-                                className="text-slate-600 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                                className="text-slate-600 hover:text-rose-500 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 p-1"
+                                title="Hapus kriteria ini"
                               >
-                                <Trash2 size={12} />
+                                <Trash2 size={14} />
                               </button>
                             </div>
                           ))}
                       </div>
                     </div>
-                    <div className="space-y-3">
-                      <h4 className="text-[10px] font-black text-rose-400 uppercase tracking-widest flex items-center gap-2">
-                        <ThumbsDown size={12} /> Pelanggaran
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-black text-rose-400 uppercase tracking-widest flex items-center gap-2 pb-2 border-b border-white/5">
+                        <ThumbsDown size={14} /> Master Pelanggaran
                       </h4>
-                      <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                      <div className="space-y-2">
                           {behaviorReasons.bad.map((r, i) => (
-                            <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 group">
-                              <span className="text-[10px] font-bold text-slate-300">{r}</span>
+                            <div key={i} className="flex items-center justify-between p-3.5 bg-white/5 rounded-xl border border-white/5 group hover:border-rose-500/30 transition-colors shadow-sm">
+                              <span className="text-[11px] font-bold text-slate-300">{r}</span>
                               <button 
                                 onClick={() => {
                                   const updated = { ...behaviorReasons };
                                   updated.bad = updated.bad.filter((_, idx) => idx !== i);
                                   saveBehaviorSettings(updated);
                                 }}
-                                className="text-slate-600 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                                className="text-slate-600 hover:text-rose-500 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 p-1"
+                                title="Hapus kriteria ini"
                               >
-                                <Trash2 size={12} />
+                                <Trash2 size={14} />
                               </button>
                             </div>
                           ))}
@@ -797,13 +740,9 @@ export default function BehaviorLayer({
                     </div>
                 </div>
               </div>
-
-              <div className="p-8 bg-slate-950/50 border-t border-white/10 flex justify-end">
-                <button onClick={() => setIsManagingReasons(false)} className="px-10 py-4 bg-white/5 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border border-white/10 hover:text-white transition-all">Selesai</button>
-              </div>
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }
