@@ -1,22 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  GraduationCap,
-  BookOpen,
-  User,
-  Plus,
-  Trash2,
-  Loader2,
-  HelpCircle,
-  FileText,
-  CheckCircle2,
-  Users,
-  ChevronRight,
-  ArrowLeft,
-  ShieldCheck,
-  Calendar,
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { SessionMeta } from '@/lib/grademaster/types';
 
 interface HomeLayerProps {
@@ -92,290 +77,235 @@ export default function HomeLayer({
     if (classGroups.length > 0) fetchAll();
   }, [classGroups]);
 
-  const getBehaviorLabel = (avg: number) => {
-    if (avg >= 100) return { text: 'Sangat Baik', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' };
-    if (avg >= 80) return { text: 'Baik', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' };
-    if (avg >= 60) return { text: 'Cukup', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' };
-    if (avg >= 40) return { text: 'Kurang', color: 'text-rose-400 bg-rose-500/10 border-rose-500/20' };
-    return { text: '-', color: 'text-slate-500 bg-white/5 border-white/10' };
-  };
-
   const expandedGroup = expandedClass ? classGroups.find(g => `${g.className}__${g.academicYear}` === expandedClass) : null;
 
   return (
-    <div className="min-h-dvh bg-transparent p-3 sm:p-5 lg:p-8 pb-safe-bottom max-w-7xl mx-auto animate-in mb-20 md:mb-0 page-pt md:pt-16">
-      <header className="mb-8 md:mb-12 flex flex-col md:flex-row md:items-end justify-between gap-5 md:gap-6">
-        <div className="space-y-2 md:space-y-3">
-          {/* School Names — clean, subtle, stacked on mobile */}
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.15em] text-primary/70">SMP Terpadu Al-Ittihadiyah</span>
-            <span className="text-[8px] md:text-[10px] text-slate-600 select-none">／</span>
-            <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.15em] text-primary/70">SMA Terpadu As Salaam</span>
+    <main className="min-h-screen pt-[env(safe-area-inset-top,20px)] mt-24 pb-32 px-5 flex flex-col gap-8 max-w-md mx-auto animate-in fade-in transition-all duration-300">
+      {/* Header Section */}
+      <header className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <span className="w-8 h-[2px] bg-tertiary rounded-full"></span>
+          <span className="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-semibold">
+             {expandedGroup ? `Tahun Ajaran ${expandedGroup.academicYear}` : 'Academic Year 2025/2026'}
+          </span>
+        </div>
+        
+        {expandedGroup ? (
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setExpandedClass(null)} 
+              className="w-10 h-10 rounded-full bg-surface-container-high hover:bg-surface-bright flex items-center justify-center transition-colors shadow-lg active:scale-95 border border-transparent hover:border-outline-variant/20"
+            >
+              <span className="material-symbols-outlined text-primary">arrow_back</span>
+            </button>
+            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">Kelas {expandedGroup.className}</h2>
           </div>
-
-          {/* Main Heading */}
-          <div className="flex items-center gap-3 md:gap-4">
-            <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight font-outfit">
-              {expandedGroup ? (
-                <span className="flex items-center gap-2.5 md:gap-3">
-                  <button onClick={() => setExpandedClass(null)} className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/5 text-slate-400 hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-all border border-white/10 hover:border-primary/20 shrink-0">
-                    <ArrowLeft size={16} className="md:w-5 md:h-5" />
-                  </button>
-                  <span>Kelas {expandedGroup.className}</span>
-                </span>
-              ) : (
-                'Daftar Kelas'
-              )}
-            </h1>
-            {!expandedGroup && (
-              <button
-                onClick={onOpenAbout}
-                className="w-7 h-7 md:w-9 md:h-9 rounded-full bg-white/5 text-slate-500 hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-all border border-white/5 hover:border-primary/20 shrink-0"
-                title="Tentang Sistem"
+        ) : (
+          <div className="flex items-start justify-between">
+            <div className="flex flex-col gap-2">
+              <h2 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">Daftar Kelas</h2>
+              <p className="font-body text-sm text-on-surface-variant leading-relaxed">Pilih kelas untuk melihat sesi ujian dan data kehadiran siswa.</p>
+            </div>
+            {isAdmin && (
+              <button 
+                onClick={onCreateNew}
+                className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-surface-container-lowest shrink-0 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
+                title="Buat Sesi Kelas Baru"
               >
-                <HelpCircle size={14} className="md:w-4 md:h-4" />
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'wght' 600" }}>add</span>
               </button>
             )}
           </div>
-
-          {/* Subtitle */}
-          <p className="text-[13px] md:text-base text-slate-500 font-semibold leading-relaxed max-w-lg">
-            {expandedGroup
-              ? `Tahun Ajaran ${expandedGroup.academicYear} · ${expandedGroup.schoolLevel}`
-              : 'Pilih kelas untuk melihat sesi ujian dan data kehadiran siswa.'
-            }
-          </p>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2.5 md:gap-3">
-          {isAdmin && (
-            <button
-              onClick={() => (window as any).setLayer('student_accounts')}
-              className="px-3.5 py-2.5 md:px-5 md:py-3.5 bg-white/5 text-slate-300 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all flex items-center justify-center gap-2"
-            >
-              <Users size={14} className="md:w-4 md:h-4" /> Akun Siswa
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              onClick={onCreateNew}
-              className="px-3.5 py-2.5 md:px-5 md:py-3.5 bg-primary text-white rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
-            >
-              <Plus size={14} className="md:w-4 md:h-4" /> Buat Sesi Baru
-            </button>
-          )}
-        </div>
+        )}
       </header>
 
+      {/* Main Content Area */}
       {isLoading ? (
-        <div className="flex justify-center items-center py-12 md:py-20">
-          <Loader2 size={32} className="animate-spin text-primary md:w-10 md:h-10" />
+        <div className="flex flex-col justify-center items-center py-24 gap-4">
+          <Loader2 size={40} className="animate-spin text-tertiary" />
+          <p className="font-label text-sm uppercase tracking-widest text-on-surface-variant animate-pulse">Menyiapkan Database...</p>
         </div>
       ) : sessions.length === 0 ? (
-        isAdmin ? (
-          <div className="text-center py-10 md:py-16 bg-slate-900/40 backdrop-blur-xl rounded-2xl md:rounded-[3rem] border border-white/10 shadow-2xl w-full max-w-4xl mx-auto px-4 md:px-8">
-            <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-primary/10 text-primary rounded-2xl mb-4 md:mb-6 shadow-lg shadow-primary/20">
-              <GraduationCap size={28} className="md:w-8 md:h-8" />
-            </div>
-            <h3 className="text-lg md:text-3xl font-black text-white mb-2 md:mb-3 font-outfit">Selamat Datang di GradeMaster OS</h3>
-            <p className="text-xs md:text-sm text-slate-400 font-bold mb-6 md:mb-10 max-w-2xl mx-auto leading-relaxed">
-              Platform koreksi lembar jawaban dan analitik performa cerdas untuk pendidik modern.
-              Tinggalkan cara manual, kini Anda dapat mengelola puluhan kelas hanya dengan beberapa klik.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12 text-left">
-              <div className="p-4 md:p-6 bg-white/5 rounded-2xl border border-white/10">
-                <FileText size={20} className="text-sky-400 mb-3 md:w-6 md:h-6" />
-                <h4 className="text-sm font-black text-white mb-1.5">Ekstraksi Pintar</h4>
-                <p className="text-[10px] md:text-xs text-slate-400 font-bold leading-relaxed">Upload file absen format PDF, Word, atau Excel. Sistem akan membersihkan dan menyusunnya otomatis.</p>
-              </div>
-              <div className="p-4 md:p-6 bg-white/5 rounded-2xl border border-white/10">
-                <CheckCircle2 size={20} className="text-emerald-400 mb-3 md:w-6 md:h-6" />
-                <h4 className="text-sm font-black text-white mb-1.5">Koreksi Kilat</h4>
-                <p className="text-[10px] md:text-xs text-slate-400 font-bold leading-relaxed">Ketik kunci jawaban secara acak atau tempel dari sumber mana saja, sistem akan memahaminya dalam sedetik.</p>
-              </div>
-              <div className="p-4 md:p-6 bg-white/5 rounded-2xl border border-white/10">
-                <GraduationCap size={20} className="text-primary mb-3 md:w-6 md:h-6" />
-                <h4 className="text-sm font-black text-white mb-1.5">Analitik Performa</h4>
-                <p className="text-[10px] md:text-xs text-slate-400 font-bold leading-relaxed">Dapatkan Indeks Kesulitan, distribusi nilai, dan insight otomatis dari hasil setiap siswa.</p>
-              </div>
-            </div>
-
+        <div className="text-center py-20 bg-surface-container rounded-3xl border border-dashed border-outline-variant/30 flex flex-col items-center justify-center px-6 shadow-2xl">
+           <div className="w-16 h-16 rounded-3xl bg-surface-container-high text-on-surface-variant flex items-center justify-center mb-6">
+             <span className="material-symbols-outlined text-4xl">folder_off</span>
+           </div>
+           <h3 className="font-headline text-xl font-bold text-on-surface mb-2">Belum Ada Sesi Kelas</h3>
+           <p className="font-body text-sm text-on-surface-variant leading-relaxed mb-6">Mulai perjalanan akademik Anda dengan membuat sesi evaluasi atau ujian untuk kelas pertama.</p>
+           {isAdmin && (
             <button
-              onClick={onCreateNew}
-              className="px-6 py-3.5 md:px-8 md:py-4 bg-primary text-white rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20 inline-flex items-center gap-2"
+             onClick={onCreateNew}
+             className="px-6 py-3 bg-primary text-surface-container-lowest rounded-xl text-sm font-bold shadow-xl shadow-primary/20 active:scale-95 transition-all flex items-center gap-2"
             >
-              <Plus size={16} /> Buat Sesi Kelas Perdana
+              <span className="material-symbols-outlined flex-shrink-0" style={{ fontVariationSettings: "'wght' 600" }}>add</span>
+              Buat Evaluasi Perdana
             </button>
-          </div>
-        ) : (
-          <div className="text-center py-12 md:py-20 bg-slate-900/40 backdrop-blur-xl rounded-3xl border border-dashed border-white/10 shadow-2xl w-full max-w-2xl mx-auto px-4">
-            <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-white/5 shadow-inner text-slate-700 rounded-full mb-4 border border-white/5">
-              <GraduationCap size={28} className="md:w-8 md:h-8" />
-            </div>
-            <h3 className="text-base md:text-xl font-black text-white mb-1">Belum Ada Data</h3>
-            <p className="text-xs md:text-sm text-slate-500 font-bold">Saat ini tidak ada sesi evaluasi yang aktif untuk ditampilkan.</p>
-          </div>
-        )
-      ) : expandedGroup ? (
-        /* ── Expanded Class View ── */
-        <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-          {/* Sessions */}
-          <div className="mb-6">
-            <h2 className="text-[10px] md:text-sm font-black text-slate-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <BookOpen size={16} /> Sesi Ujian
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-              {expandedGroup.sessions.map(s => (
-                <div
-                  key={s.id}
-                  onClick={() => onSessionClick(s)}
-                  className="bg-slate-900/40 backdrop-blur-xl p-4 md:p-5 rounded-2xl border border-white/10 shadow-2xl hover:border-primary/40 hover:shadow-primary/10 transition-all cursor-pointer group animate-in zoom-in-95 duration-200"
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="w-10 h-10 bg-white/5 text-slate-400 rounded-xl flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all relative border border-white/5">
-                      <BookOpen size={18} />
-                      <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border border-slate-900 flex items-center justify-center text-[8px] shadow-lg ${s.is_public ? 'bg-emerald-500 text-white' : 'bg-slate-600 text-white'}`}>
-                        {s.is_public ? '🔓' : '🔒'}
-                      </div>
-                    </div>
-                      <div className="flex items-center gap-2">
-                         <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${s.is_public ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-slate-500 bg-white/5 border-white/10'}`}>
-                          {s.is_public ? 'Public' : 'Private'}
-                        </span>
-                        {s.is_demo && (
-                          <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full text-amber-400 bg-amber-500/10 border border-amber-500/20 flex items-center gap-1">
-                            🧪 Demo
-                          </span>
-                        )}
-                        {isAdmin && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onDeleteSession(s.id, s.session_name); }}
-                            className="p-1.5 text-slate-600 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors border border-transparent hover:border-rose-500/20"
-                            title="Hapus Sesi"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                        <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-500 bg-white/5 px-2 py-0.5 rounded-full border border-white/5">
-                          {s.exam_type || 'UJIAN'}
-                        </span>
-                      </div>
-                  </div>
-                  <h3 className="text-sm md:text-lg font-black text-white mb-0.5 truncate">{s.session_name}</h3>
-                  <p className="text-xs font-bold text-slate-500 truncate">{s.subject || 'Mapel'}</p>
-                  <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
-                      <User size={12} />
-                      <span className="truncate max-w-[100px]">{s.teacher || 'Guru'}</span>
-                    </div>
-                    <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
-                      {s.student_count !== undefined ? `${s.student_count} siswa` : '-'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Behavior Summary */}
-          {(() => {
-            const key = `${expandedGroup.className}__${expandedGroup.academicYear}`;
-            const bData = behaviorSummary[key];
-            if (!bData || bData.count === 0) return null;
-            const label = getBehaviorLabel(bData.avgPoints);
-            return (
-              <div className="mb-6">
-                <h2 className="text-xs md:text-sm font-black text-slate-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <ShieldCheck size={16} /> Kehadiran & Perilaku
-                </h2>
-                <div className="bg-slate-900/40 backdrop-blur-xl p-5 md:p-6 rounded-2xl border border-white/10 shadow-2xl flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-primary/10 text-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 border border-primary/20">
-                      <Users size={28} />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-black text-white">{bData.count}</p>
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Siswa Terdaftar</p>
-                    </div>
-                  </div>
-                  <div className="h-px md:h-12 md:w-px bg-white/5" />
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <p className="text-2xl font-black text-white">{bData.avgPoints}</p>
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Rata-Rata Poin</p>
-                    </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-black border ${label.color}`}>{label.text}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
+           )}
         </div>
-      ) : (
-        /* ── Class Cards Grid ── */
-        /* ── Class Cards Grid / Mobile List ── */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-5 pb-6">
-          {classGroups.map(g => {
-            const key = `${g.className}__${g.academicYear}`;
-            const bData = behaviorSummary[key];
-            const label = bData ? getBehaviorLabel(bData.avgPoints) : null;
-            return (
-              <button
-                key={key}
-                onClick={() => setExpandedClass(key)}
-                className="relative w-full flex md:flex-col items-center md:items-start gap-3 md:gap-4 bg-slate-900/40 backdrop-blur-xl p-3 md:p-6 rounded-2xl md:rounded-3xl border border-white/10 hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/10 active:bg-white/5 active:scale-[0.98] md:active:scale-100 transition-all text-left group outline-none shadow-2xl md:shadow-none"
-              >
-                {/* Mobile: Left Icon, Desktop: Top Icon */}
-                <div className="w-11 h-11 md:w-14 md:h-14 shrink-0 bg-white/5 text-slate-400 rounded-xl md:rounded-2xl flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all border border-white/5 group-hover:border-primary shadow-lg">
-                  <Users size={20} className="md:w-7 md:h-7" />
-                </div>
-                
-                {/* Text Content */}
-                <div className="flex-1 min-w-0 md:w-full">
-                  <h3 className="text-base md:text-2xl font-black text-white mb-0.5 md:mb-1 truncate group-hover:text-primary transition-colors">Kelas {g.className}</h3>
-                  
-                  <div className="flex items-center gap-1.5 md:gap-2 mb-1 md:mb-3">
-                    <span className="text-[9px] md:text-[10px] font-black text-slate-500 bg-white/5 px-2 py-0.5 rounded-md uppercase tracking-widest border border-white/5">{g.schoolLevel}</span>
-                    <span className="text-[9px] md:text-[10px] font-bold text-slate-600 flex items-center gap-1"><Calendar size={10} />{g.academicYear}</span>
-                  </div>
-
-                  {/* Desktop Only Stats Footer */}
-                  <div className="hidden md:flex pt-3 border-t border-white/5 items-center justify-between w-full">
-                    <span className="text-[10px] md:text-xs font-black text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
-                      {g.sessions.length} Sesi Ujian
-                    </span>
-                    {label && bData && bData.count > 0 && (
-                      <span className={`text-[10px] md:text-xs font-black px-2 py-0.5 rounded-md border ${label.color}`}>
-                        {bData.count} Siswa
+      ) : expandedGroup ? (
+        /* --- SESION LIST (Expanded View) --- */
+        <section className="flex flex-col gap-4 animate-in slide-in-from-right-4 duration-300">
+          {expandedGroup.sessions.map((s, idx) => (
+            <button
+              key={s.id}
+              onClick={() => onSessionClick(s)}
+              className="group relative w-full text-left bg-surface-container hover:bg-surface-bright p-5 rounded-3xl transition-all duration-300 ease-out active:scale-[0.98] border border-transparent hover:border-outline-variant/20 shadow-lg shadow-black/10 overflow-hidden"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex-1 pr-6">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    {s.is_public ? (
+                      <span className="px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary text-[9px] font-bold uppercase tracking-wider">Public</span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant text-[9px] font-bold uppercase tracking-wider">Private</span>
+                    )}
+                    {s.is_demo && (
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 text-[9px] font-bold uppercase tracking-wider flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[10px]">science</span> Demo
                       </span>
                     )}
                   </div>
-                </div>
-
-                {/* Mobile Only Quick Stats */}
-                <div className="flex md:hidden flex-col items-end gap-1.5 shrink-0 ml-1">
-                  <span className="text-[9px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
-                    {g.sessions.length} Sesi
-                  </span>
-                  {label && bData && bData.count > 0 && (
-                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-md border ${label.color}`}>
-                      {bData.count} Siswa
-                    </span>
-                  )}
+                  <h3 className="font-headline text-xl font-bold text-on-surface truncate leading-tight">{s.session_name}</h3>
                 </div>
                 
-                {/* Chevron icon */}
-                <ChevronRight size={18} className="text-slate-600 md:hidden ml-1 shrink-0 group-hover:text-primary transition-colors" />
-                <div className="hidden md:block absolute top-6 right-6">
-                  <ChevronRight size={18} className="text-slate-700 group-hover:text-primary transition-colors" />
+                {/* Admin Deletion Action */}
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <div className="w-10 h-10 rounded-2xl bg-surface-container-high flex items-center justify-center group-hover:bg-primary group-hover:text-surface-container-lowest transition-colors duration-300">
+                    <span className="material-symbols-outlined">analytics</span>
+                  </div>
                 </div>
-              </button>
-            );
-          })}
-        </div>
+              </div>
+              
+              <div className="flex items-center gap-4 mt-2">
+                <div className="flex flex-col">
+                  <span className="font-label text-[10px] text-on-surface-variant uppercase tracking-tighter">Event</span>
+                  <span className="font-body text-sm font-semibold text-primary">{s.exam_type || 'UJIAN'}</span>
+                </div>
+                <div className="w-[1px] h-6 bg-outline-variant/30"></div>
+                <div className="flex flex-col overflow-hidden">
+                  <span className="font-label text-[10px] text-on-surface-variant uppercase tracking-tighter">Mata Pelajaran</span>
+                  <span className="font-body text-sm font-semibold text-primary truncate max-w-[140px]">{s.subject || 'Mapel'}</span>
+                </div>
+                {isAdmin && (
+                  <div className="ml-auto">
+                    <div 
+                      onClick={(e) => { e.stopPropagation(); onDeleteSession(s.id, s.session_name); }}
+                      className="w-10 h-10 rounded-full hover:bg-error/20 text-on-surface-variant hover:text-error flex items-center justify-center transition-colors z-10"
+                      title="Hapus Sesi"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>delete</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {/* Highlight decorative */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-primary/20 transition-colors pointer-events-none"></div>
+            </button>
+          ))}
+        </section>
+      ) : (
+        /* --- DAFTAR KELAS (Home / Default View) --- */
+        <>
+          <section className="flex flex-col gap-4">
+            {classGroups.map((g, index) => {
+              const key = `${g.className}__${g.academicYear}`;
+              const bData = behaviorSummary[key] || { count: 0 };
+              
+              // Tentukan "Active Highlight" - Bisa di-harcode pakai index===0 atau string check.
+              const isActive = index === 0;
+
+              let icon = 'group';
+              let iconFilled = false;
+              let levelBadge = g.schoolLevel;
+
+              if (g.schoolLevel.toUpperCase().includes('SMA')) {
+                icon = 'account_balance';
+              } else if (g.className.includes('9')) {
+                icon = 'school';
+              }
+              
+              if (isActive) {
+                icon = 'stars';
+                iconFilled = true;
+                return (
+                  <button 
+                    key={key} 
+                    onClick={() => setExpandedClass(key)} 
+                    className="group relative w-full text-left bg-gradient-to-br from-surface-container to-surface-container-high hover:from-surface-bright hover:to-surface-bright p-5 rounded-3xl transition-all duration-300 ease-out active:scale-[0.98] shadow-2xl shadow-black/20"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-label text-[10px] uppercase tracking-widest text-tertiary-dim font-bold">{levelBadge}</span>
+                          <span className="px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary text-[9px] font-bold uppercase tracking-wider">Active</span>
+                        </div>
+                        <h3 className="font-headline text-2xl font-bold text-on-surface mt-1">Kelas {g.className}</h3>
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-tertiary flex items-center justify-center text-on-tertiary shadow-lg shadow-tertiary/10 transform group-hover:scale-110 transition-transform">
+                        <span className="material-symbols-outlined" style={iconFilled ? { fontVariationSettings: "'FILL' 1" } : {}}>{icon}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex flex-col">
+                        <span className="font-label text-[10px] text-on-surface-variant uppercase tracking-tighter">Sesi Ujian</span>
+                        <span className="font-body text-sm font-semibold text-primary">{g.sessions.length} Sesi</span>
+                      </div>
+                      <div className="w-[1px] h-6 bg-outline-variant/30"></div>
+                      <div className="flex flex-col">
+                        <span className="font-label text-[10px] text-on-surface-variant uppercase tracking-tighter">Total Siswa</span>
+                        <span className="font-body text-sm font-semibold text-primary">{bData.count} Siswa</span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              }
+
+              return (
+                <button 
+                  key={key} 
+                  onClick={() => setExpandedClass(key)} 
+                  className="group relative w-full text-left bg-surface-container hover:bg-surface-bright p-5 rounded-3xl transition-all duration-300 ease-out active:scale-[0.98] border border-transparent hover:border-outline-variant/20 overflow-hidden"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <span className="font-label text-[10px] uppercase tracking-widest text-tertiary-dim font-bold">{levelBadge}</span>
+                      <h3 className="font-headline text-2xl font-bold text-on-surface mt-1">Kelas {g.className}</h3>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-surface-container-high flex items-center justify-center group-hover:bg-primary group-hover:text-surface-container-lowest transition-colors duration-300">
+                      <span className="material-symbols-outlined">{icon}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex flex-col">
+                      <span className="font-label text-[10px] text-on-surface-variant uppercase tracking-tighter">Sesi Ujian</span>
+                      <span className="font-body text-sm font-semibold text-primary">{g.sessions.length} Sesi</span>
+                    </div>
+                    <div className="w-[1px] h-6 bg-outline-variant/30"></div>
+                    <div className="flex flex-col">
+                      <span className="font-label text-[10px] text-on-surface-variant uppercase tracking-tighter">Total Siswa</span>
+                      <span className="font-body text-sm font-semibold text-primary">{bData.count} Siswa</span>
+                    </div>
+                  </div>
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-tertiary/5 blur-3xl rounded-full -mr-10 -mt-10 group-hover:bg-tertiary/10 transition-colors pointer-events-none"></div>
+                </button>
+              );
+            })}
+          </section>
+
+          {/* Promotional / Info Card */}
+          <section className="bg-surface-container-low p-6 rounded-3xl flex flex-col gap-4 border border-outline-variant/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center">
+                <span className="material-symbols-outlined text-primary text-lg">info</span>
+              </div>
+              <h4 className="font-headline font-bold text-on-surface">Insight Sinkronisasi</h4>
+            </div>
+            <p className="font-body text-xs text-on-surface-variant leading-relaxed">
+              Anda mengelola <span className="text-tertiary font-bold">{classGroups.length} Kelas Aktif</span> dengan total mencapai <span className="text-tertiary font-bold">{sessions.length} Sesi Evaluasi</span>. Pastikan perangkat Anda terhubung Internet secara reguler untuk menyinkronkan data ke panel pusat.
+            </p>
+          </section>
+        </>
       )}
-    </div>
+    </main>
   );
 }
