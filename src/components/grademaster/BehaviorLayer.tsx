@@ -437,7 +437,7 @@ export default function BehaviorLayer({
             <div className="w-16 h-16 rounded-3xl bg-surface-container-high text-on-surface-variant flex items-center justify-center mb-6 shadow-inner">
               <span className="material-symbols-outlined text-4xl">group_off</span>
             </div>
-            <h3 className="font-headline text-xl font-bold text-on-surface mb-2">Belum Memiliki Rekam Medis</h3>
+            <h3 className="font-headline text-xl font-bold text-on-surface mb-2">Belum Memiliki Catatan Kedisiplinan</h3>
             <p className="font-body text-sm text-on-surface-variant leading-relaxed">Siswa tidak ditemukan di data observasi untuk filter terkait.</p>
           </div>
         ) : (
