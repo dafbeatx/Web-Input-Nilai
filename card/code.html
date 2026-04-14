@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-dim": "#58e7ab",
+                        "surface-container-lowest": "#000000",
+                        "outline": "#767577",
+                        "on-secondary-fixed-variant": "#5c5b5e",
+                        "on-tertiary-container": "#005a3c",
+                        "on-primary-fixed": "#434545",
+                        "secondary": "#e4e1e5",
+                        "outline-variant": "#48474a",
+                        "secondary-container": "#47464a",
+                        "tertiary-container": "#69f6b8",
+                        "secondary-dim": "#d6d3d7",
+                        "on-surface-variant": "#adaaad",
+                        "surface-bright": "#2c2c2f",
+                        "on-primary-fixed-variant": "#5f6161",
+                        "error-dim": "#d73357",
+                        "on-secondary-container": "#d2cfd3",
+                        "tertiary-fixed-dim": "#58e7ab",
+                        "tertiary": "#9bffce",
+                        "on-background": "#f9f5f8",
+                        "background": "#0e0e10",
+                        "surface-container": "#19191c",
+                        "primary": "#f9f9f9",
+                        "on-primary": "#5e5f60",
+                        "surface": "#0e0e10",
+                        "on-tertiary-fixed": "#00452d",
+                        "tertiary-fixed": "#69f6b8",
+                        "primary-container": "#a0a1a1",
+                        "on-secondary-fixed": "#3f3f42",
+                        "error-container": "#a70138",
+                        "on-error": "#490013",
+                        "primary-dim": "#ebebeb",
+                        "on-tertiary-fixed-variant": "#006544",
+                        "on-secondary": "#525155",
+                        "on-surface": "#f9f5f8",
+                        "surface-variant": "#262528",
+                        "surface-tint": "#f9f9f9",
+                        "inverse-primary": "#5e5f60",
+                        "primary-fixed": "#ebebeb",
+                        "on-primary-container": "#212323",
+                        "surface-container-high": "#1f1f22",
+                        "surface-container-low": "#131315",
+                        "on-tertiary": "#006443",
+                        "surface-dim": "#0e0e10",
+                        "secondary-fixed-dim": "#d6d3d7",
+                        "surface-container-highest": "#262528",
+                        "inverse-surface": "#fcf8fb",
+                        "on-error-container": "#ffb2b9",
+                        "inverse-on-surface": "#565457",
+                        "primary-fixed-dim": "#dcdddd",
+                        "secondary-fixed": "#e4e1e5",
+                        "error": "#ff6e84"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-card {
+            background: rgba(25, 25, 28, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .emerald-glow {
+            box-shadow: 0 0 25px rgba(155, 255, 206, 0.2);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .safe-pb {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .safe-pt {
+            padding-top: env(safe-area-inset-top);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body selection:bg-tertiary/30 min-h-dvh overflow-x-hidden">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 bg-[#0e0e10]/80 backdrop-blur-xl flex items-center justify-between px-4 h-16 w-full max-w-md mx-auto left-1/2 -translate-x-1/2">
+<button class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[#19191c] transition-colors active:scale-95 transition-transform duration-200">
+<span class="material-symbols-outlined text-[#f9f9f9]">arrow_back</span>
+</button>
+<h1 class="font-['Manrope'] font-semibold text-lg text-[#f9f9f9]">Student Profile</h1>
+<button class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[#19191c] transition-colors active:scale-95 transition-transform duration-200">
+<span class="material-symbols-outlined text-[#f9f9f9]">more_vert</span>
+</button>
+</header>
+<main class="pt-20 pb-32 px-5 max-w-md mx-auto min-h-dvh flex flex-col space-y-6">
+<!-- Hero Section: Student Identity -->
+<section class="relative mt-4">
+<div class="flex flex-col items-center text-center">
+<div class="relative mb-6">
+<!-- Profile Frame -->
+<div class="w-32 h-32 rounded-3xl overflow-hidden ring-4 ring-surface-container-high relative z-10">
+<img class="w-full h-full object-cover" data-alt="Modern high-resolution portrait of a young female student with soft studio lighting against a dark minimalist background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGrZel2JziQksumNIM07j_aKhNXCaFq7c09yqLBsNTARnaJRmzGhzSnK9qf5HDvFoko4trj4Eht97h8aZxcQQmn_qshl6vbYcQsFbWS02rJMA-zXvz417yLmQNJELgMLWXUKBeLWSkybe_BQkG_OOqPzZ6GaEWCYhXVF3mYnWS89KGxodLFEOdROkpGxyKwtopvWTy-jcCl1dw5NIXBGl7RFHP-SEyOy9neWyBEA473o0aUu3b4IpjETF0JqWGpRSBmvk9jvOfBchi"/>
+</div>
+<!-- Decorative Glow Behind Image -->
+<div class="absolute inset-0 bg-tertiary/10 blur-3xl -z-10 rounded-full"></div>
+</div>
+<h2 class="font-headline font-extrabold text-3xl tracking-tight text-primary leading-tight mb-1">
+                    AMANDA HASNA MIRZA
+                </h2>
+<div class="flex items-center gap-3 mt-2">
+<span class="px-3 py-1 bg-surface-container rounded-full text-on-surface-variant font-label text-xs tracking-wider font-medium uppercase">
+                        Kelas 7A
+                    </span>
+<span class="px-3 py-1 bg-surface-container rounded-full text-on-surface-variant font-label text-xs tracking-wider font-medium uppercase">
+                        2025/2026
+                    </span>
+</div>
+</div>
+</section>
+<!-- Key Metrics Bento Layout -->
+<section class="grid grid-cols-2 gap-4">
+<!-- Points Badge -->
+<div class="glass-card rounded-xl p-5 flex flex-col items-center justify-center emerald-glow border border-white/5">
+<div class="relative mb-2">
+<svg class="w-16 h-16 transform -rotate-90">
+<circle class="text-surface-container-high" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-tertiary" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="175.9" stroke-width="4"></circle>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="font-headline font-bold text-2xl text-tertiary">0</span>
+</div>
+</div>
+<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant font-semibold">Poin Siswa</span>
+</div>
+<!-- Attendance Mini Card -->
+<div class="glass-card rounded-xl p-5 flex flex-col items-center justify-center border border-white/5">
+<span class="material-symbols-outlined text-primary text-3xl mb-2">event_available</span>
+<span class="font-headline font-bold text-xl text-primary">100%</span>
+<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant font-semibold">Kehadiran</span>
+</div>
+</section>
+<!-- Tab Controls -->
+<nav class="flex space-x-2 p-1 bg-surface-container-low rounded-2xl overflow-x-auto hide-scrollbar">
+<button class="flex-none px-5 py-2.5 rounded-xl bg-surface-bright text-primary font-label text-sm font-semibold transition-all">
+                Ringkasan
+            </button>
+<button class="flex-none px-5 py-2.5 rounded-xl text-on-surface-variant hover:text-primary font-label text-sm font-medium transition-all">
+                Akademik
+            </button>
+<button class="flex-none px-5 py-2.5 rounded-xl text-on-surface-variant hover:text-primary font-label text-sm font-medium transition-all">
+                Kehadiran
+            </button>
+<button class="flex-none px-5 py-2.5 rounded-xl text-on-surface-variant hover:text-primary font-label text-sm font-medium transition-all">
+                Dokumen
+            </button>
+</nav>
+<!-- Transparency History Section -->
+<section class="flex flex-col space-y-4">
+<div class="flex items-center justify-between px-1">
+<h3 class="font-headline font-bold text-lg text-primary">Riwayat Transparansi</h3>
+<button class="text-tertiary font-label text-xs font-semibold uppercase tracking-wider">Filter</button>
+</div>
+<!-- Sophisticated Empty State -->
+<div class="glass-card rounded-xl border border-white/5 p-12 flex flex-col items-center justify-center text-center space-y-4">
+<div class="w-16 h-16 bg-surface-container rounded-full flex items-center justify-center mb-2">
+<span class="material-symbols-outlined text-on-surface-variant text-4xl" style="font-variation-settings: 'FILL' 0;">history</span>
+</div>
+<div>
+<p class="font-headline font-semibold text-primary">Belum Ada Riwayat</p>
+<p class="font-body text-sm text-on-surface-variant mt-1 max-w-[200px]">Semua aktivitas perilaku dan log harian akan muncul di sini.</p>
+</div>
+<button class="mt-4 px-6 py-2 bg-surface-bright rounded-xl text-primary font-label text-xs font-bold uppercase tracking-wider active:scale-95 transition-transform">
+                    Perbarui Data
+                </button>
+</div>
+</section>
+<!-- Bottom Action CTA -->
+<section class="pt-4">
+<button class="w-full py-4 bg-gradient-to-r from-primary to-primary-container rounded-xl text-on-primary-container font-headline font-extrabold text-sm tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">add_circle</span>
+                TAMBAH CATATAN
+            </button>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-6 pt-3 bg-[#19191c]/80 backdrop-blur-xl rounded-t-3xl z-50 shadow-2xl shadow-black/20">
+<a class="flex flex-col items-center justify-center text-[#adaaad] px-4 py-1.5 hover:text-[#f9f9f9] active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-wider font-medium mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-[#2c2c2f] text-[#f9f9f9] rounded-2xl px-4 py-1.5 active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-wider font-medium mt-1">Students</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#adaaad] px-4 py-1.5 hover:text-[#f9f9f9] active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-wider font-medium mt-1">Activity</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#adaaad] px-4 py-1.5 hover:text-[#f9f9f9] active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-wider font-medium mt-1">Settings</span>
+</a>
+</nav>
+</body></html>
