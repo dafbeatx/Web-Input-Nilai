@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, Users, Calendar, Search, Save, Loader2, CheckCircle2, 
-  XCircle, AlertCircle, Clock, BookOpen, ChevronLeft, ChevronRight 
+  XCircle, AlertCircle, Clock, BookOpen, ChevronLeft, ChevronRight,
+  MoreVertical, Check, Info, HeartPulse, LogOut, LayoutGrid, Menu
 } from 'lucide-react';
+import Image from 'next/image';
 import { ToastType } from '@/lib/grademaster/types';
+import { createPortal } from 'react-dom';
 
 interface AttendanceRecord {
   id?: string;
@@ -13,6 +16,12 @@ interface AttendanceRecord {
   academic_year: string;
   status: string; // Hadir, Izin, Sakit, Alpa
   date: string;
+}
+
+interface Student {
+  id: string;
+  student_name: string;
+  avatar_url?: string;
 }
 
 interface AttendanceLayerProps {
@@ -35,7 +44,7 @@ export default function AttendanceLayer({
   const [subject, setSubject] = useState('Informatika');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   
-  const [students, setStudents] = useState<string[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [attendanceMap, setAttendanceMap] = useState<Record<string, string>>({});
   
   const [isLoaded, setIsLoaded] = useState(false);
@@ -45,6 +54,16 @@ export default function AttendanceLayer({
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
   const [filterStatus, setFilterStatus] = useState('Semua');
+
+  // Local state for status selection modal
+  const [targetedStudent, setTargetedStudent] = useState<Student | null>(null);
+
+  const statusOptions = [
+    { id: 'Hadir', icon: <CheckCircle2 size={18} />, color: 'text-tertiary', bgColor: 'bg-tertiary/10' },
+    { id: 'Izin', icon: <Info size={18} />, color: 'text-primary-container', bgColor: 'bg-primary-container/10' },
+    { id: 'Sakit', icon: <HeartPulse size={18} />, color: 'text-outline', bgColor: 'bg-outline/10' },
+    { id: 'Alpa', icon: <XCircle size={18} />, color: 'text-error', bgColor: 'bg-error/10' },
+  ];
 
   useEffect(() => {
     fetchAvailableClasses();
@@ -80,8 +99,7 @@ export default function AttendanceLayer({
       const dataStudents = await resStudents.json();
       if (!resStudents.ok) throw new Error(dataStudents.error);
       
-      const studentNames = dataStudents.students.map((s: any) => s.student_name);
-      setStudents(studentNames);
+      setStudents(dataStudents.students || []);
       
       // 2. Load attendance records
       const resAttendance = await fetch(`/api/grademaster/attendance?class=${encodeURIComponent(targetClass)}&year=${encodeURIComponent(academicYear)}&subject=${encodeURIComponent(targetSubject)}&date=${targetDate}`);
@@ -108,13 +126,13 @@ export default function AttendanceLayer({
     
     try {
       const records = students
-        .filter(name => attendanceMap[name])
-        .map(name => ({
-          student_name: name,
+        .filter(s => attendanceMap[s.student_name])
+        .map(s => ({
+          student_name: s.student_name,
           class_name: className,
           subject,
           academic_year: academicYear,
-          status: attendanceMap[name],
+          status: attendanceMap[s.student_name],
           date: selectedDate
         }));
         
@@ -151,240 +169,264 @@ export default function AttendanceLayer({
 
   const stats = {
     total: students.length,
-    belum_ada: students.filter(s => !attendanceMap[s]).length,
+    belum_ada: students.filter(s => !attendanceMap[s.student_name]).length,
     hadir: Object.values(attendanceMap).filter(s => s === 'Hadir').length,
     izin: Object.values(attendanceMap).filter(s => s === 'Izin').length,
     sakit: Object.values(attendanceMap).filter(s => s === 'Sakit').length,
     alpa: Object.values(attendanceMap).filter(s => s === 'Alpa').length,
   };
 
-  const filteredStudents = students.filter(name => {
+  const filteredStudents = students.filter(s => {
     if (filterStatus === 'Semua') return true;
-    if (filterStatus === 'Belum Diset') return !attendanceMap[name];
-    return attendanceMap[name] === filterStatus;
+    if (filterStatus === 'Belum Diset') return !attendanceMap[s.student_name];
+    return attendanceMap[s.student_name] === filterStatus;
   });
 
   return (
-    <div className="min-h-dvh bg-transparent p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto animate-in page-pt md:pt-16 pb-24 md:pb-8">
-      {!isAdmin && isLoaded && (
-        <div className="mb-4 flex items-center gap-2.5 px-4 py-2.5 bg-emerald-500/5 border border-emerald-500/15 rounded-2xl animate-in fade-in duration-500">
-          <Calendar size={14} className="text-emerald-400 shrink-0" />
-          <span className="text-[10px] font-bold text-emerald-400/80 uppercase tracking-widest">Data kehadiran ini dapat dilihat oleh umum</span>
-        </div>
-      )}
-      <header className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <button type="button" onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-primary font-black text-xs uppercase tracking-widest transition-all mb-4 bg-white/5 px-4 py-2 md:px-5 md:py-3 rounded-xl border border-white/10 hover:border-primary/20">
-            <ArrowLeft size={14} /> Beranda
+    <div className="font-body text-on-surface min-h-dvh flex flex-col pb-32 bg-[#0e0e10]">
+      {/* Top Navigation */}
+      <nav className="fixed top-0 w-full z-40 bg-[#0e0e10]/80 backdrop-blur-xl flex justify-between items-center px-6 h-16 border-b border-white/5">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-1 px-2 bg-white/5 rounded-lg border border-white/10 active:scale-90 transition-all">
+            <ArrowLeft className="text-primary" size={20} />
           </button>
-          <h1 className="text-xl md:text-4xl font-black text-slate-100 tracking-tight flex items-center gap-2 md:gap-3 font-outfit uppercase">
-            <Calendar className="text-primary" size={24} /> Kehadiran Siswa
-          </h1>
-          <p className="text-xs md:text-sm text-slate-500 font-bold mt-1 md:mt-2 uppercase tracking-widest">Manajemen & Monitoring Kehadiran Kelas Tingkat Lanjut</p>
+          <span className="text-xl font-black text-primary tracking-tighter font-headline">GradeMaster OS</span>
         </div>
-      </header>
+        <div className="flex items-center gap-4">
+           {isAdmin && (
+             <button 
+              onClick={saveAttendance}
+              disabled={isSaving}
+              className="px-4 py-2 bg-tertiary text-on-tertiary rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 active:scale-95 transition-all shadow-[0_0_20px_rgba(155,255,206,0.3)]"
+             >
+                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} 
+                <span className="hidden sm:inline">Simpan</span>
+             </button>
+           )}
+        </div>
+      </nav>
 
-      {/* FILTER BOX */}
-      <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl md:rounded-3xl p-3 md:p-6 shadow-2xl border border-white/10 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 items-end mb-6 relative z-10">
-        <div>
-          <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5 px-1">Kelas</label>
-          <select 
-            value={className} 
-            onChange={(e) => setClassName(e.target.value)} 
-            className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 md:p-4 text-sm font-black text-slate-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all appearance-none cursor-pointer"
-          >
-            <option value="">-- Pilih Kelas --</option>
-            {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="flex items-center gap-2 text-xs font-black text-primary uppercase tracking-widest mb-1.5 px-1">
-            <Clock size={14} /> Tanggal
-          </label>
-          <input 
-            type="date" 
-            value={selectedDate} 
-            onChange={(e) => setSelectedDate(e.target.value)} 
-            className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 md:p-4 text-sm font-black text-slate-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all cursor-pointer" 
-          />
-        </div>
-      </div>
+      {/* Main Content */}
+      <main className="flex-1 mt-16 px-6 pt-6 pb-12 overflow-x-hidden max-w-2xl mx-auto w-full">
+        {/* Header Section */}
+        <header className="mb-8">
+          <h1 className="font-headline font-extrabold text-3xl text-primary tracking-tight leading-none mb-2 uppercase">KEHADIRAN SISWA</h1>
+          <p className="text-on-surface-variant font-medium text-sm max-w-[80%] uppercase tracking-widest text-[10px]">Monitoring Kehadiran Kelas • {academicYear}</p>
+        </header>
 
-      {/* SUBJECT SELECTOR (Chips instead of Dropdown) */}
-      <div className="mb-6 md:mb-8 overflow-hidden">
-        <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Pilih Mata Pelajaran</label>
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 mask-linear-right">
-          {subjects.map((s) => (
-            <button
-              key={s}
-              onClick={() => setSubject(s)}
-              className={`px-4 py-2.5 md:px-5 md:py-3 rounded-xl md:rounded-2xl text-xs font-black uppercase tracking-widest border transition-all whitespace-nowrap ${
-                subject === s 
-                ? 'bg-primary border-primary text-slate-950 shadow-[0_0_15px_rgba(45,212,191,0.5)] scale-105' 
-                : 'bg-slate-900/40 border-white/10 text-slate-400 hover:border-primary/50'
-              }`}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-          <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
-          <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Memproses Data Presensi...</p>
-        </div>
-      ) : isLoaded ? (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-          {/* STATS SUMMARY */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { label: 'Hadir', count: stats.hadir, color: 'emerald', icon: <CheckCircle2 size={16} /> },
-              { label: 'Izin', count: stats.izin, color: 'sky', icon: <Clock size={16} /> },
-              { label: 'Sakit', count: stats.sakit, color: 'amber', icon: <AlertCircle size={16} /> },
-              { label: 'Alpa', count: stats.alpa, color: 'rose', icon: <XCircle size={16} /> },
-            ].map((s) => (
-              <div key={s.label} className={`bg-slate-900/40 border border-${s.color}-500/20 rounded-2xl p-4 flex flex-col items-center justify-center gap-1 shadow-lg shadow-black/20`}>
-                <div className={`p-3 rounded-xl bg-${s.color}-500/10 text-${s.color}-500 mb-2`}>
-                  {s.icon}
-                </div>
-                <span className="text-3xl font-black text-slate-100">{s.count}</span>
-                <span className="text-xs font-black uppercase tracking-widest text-slate-500">{s.label}</span>
+        {/* Dynamic Controls Grid */}
+        <section className="grid grid-cols-2 gap-3 mb-8">
+          <div className="flex flex-col gap-2">
+            <label className="font-label text-[10px] font-bold uppercase tracking-[0.08em] text-on-surface-variant pl-1">Pilih Kelas</label>
+            <div className="relative">
+              <select 
+                value={className}
+                onChange={(e) => setClassName(e.target.value)}
+                className="w-full bg-surface-container border border-outline-variant/20 rounded-xl px-4 py-3.5 text-primary font-semibold appearance-none outline-none focus:border-primary/50"
+              >
+                <option value="">Pilih</option>
+                {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                <ChevronRight className="text-tertiary rotate-90" size={18} />
               </div>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="font-label text-[10px] font-bold uppercase tracking-[0.08em] text-on-surface-variant pl-1">Tanggal</label>
+            <div className="relative">
+              <input 
+                type="date" 
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-full bg-surface-container border border-outline-variant/20 rounded-xl px-4 py-3.5 text-primary font-semibold outline-none focus:border-primary/50"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Subject Tabs */}
+        <section className="mb-8 -mx-6">
+          <div className="flex overflow-x-auto no-scrollbar px-6 gap-3">
+            {subjects.map((s) => (
+              <button 
+                key={s}
+                onClick={() => setSubject(s)}
+                className={`flex-none px-6 py-2.5 rounded-full font-bold text-sm transition-all whitespace-nowrap ${
+                  subject === s 
+                  ? 'bg-tertiary text-on-tertiary shadow-[0_0_15px_rgba(155,255,206,0.3)]' 
+                  : 'bg-surface-container text-on-surface-variant hover:text-primary border border-white/5'
+                }`}
+              >
+                {s}
+              </button>
             ))}
           </div>
+        </section>
 
-          <div className="bg-slate-900/40 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-white/10 bg-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-primary/10 rounded-xl border border-primary/20">
-                  <Users className="text-primary" size={18} />
-                </div>
-                <div>
-                  <h3 className="font-black text-slate-100 text-lg md:text-xl uppercase font-outfit truncate">{subject} - {className}</h3>
-                  <p className="text-xs md:text-sm font-black text-slate-500 uppercase tracking-widest">{filteredStudents.length} Siswa Terdaftar</p>
-                </div>
-              </div>
-              
-              {isAdmin && (
-                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                  <button onClick={() => {
-                    const map = { ...attendanceMap };
-                    students.forEach(s => { if (!map[s]) map[s] = 'Hadir'; });
-                    setAttendanceMap(map);
-                  }} className="w-full sm:w-auto px-6 py-3 bg-sky-500/10 text-sky-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-sky-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
-                    <CheckCircle2 size={12} /> Tandai Semua Hadir
-                  </button>
-                  <button onClick={saveAttendance} disabled={isSaving} className="w-full sm:w-auto px-6 py-3 bg-emerald-500 text-zinc-100 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
-                    {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Simpan Absensi
-                  </button>
-                </div>
-              )}
+        {/* Summary Statistics (Bento Style) */}
+        {!isLoading && isLoaded && (
+          <section className="grid grid-cols-4 gap-3 mb-10">
+            <div className="bg-surface-container-high rounded-xl p-4 flex flex-col items-center justify-center gap-1 border border-white/5">
+              <CheckCircle2 size={20} className="text-tertiary" />
+              <span className="font-headline font-extrabold text-lg text-primary">{stats.hadir}</span>
+              <span className="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">HADIR</span>
             </div>
-
-            {/* STATUS SELECTOR / FILTER */}
-            <div className="px-4 py-3 md:px-5 md:py-4 border-b border-white/5 bg-white/2 flex items-center gap-2 overflow-x-auto no-scrollbar">
-              <span className="text-xs font-black text-slate-500 uppercase tracking-widest mr-1 whitespace-nowrap">Filter:</span>
-              {['Semua', 'Hadir', 'Izin', 'Sakit', 'Alpa', 'Belum Diset'].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setFilterStatus(status)}
-                  className={`px-3 py-1.5 md:px-4 md:py-2.5 rounded-full text-xs font-black uppercase tracking-widest border transition-all whitespace-nowrap ${
-                    filterStatus === status 
-                    ? 'bg-primary border-primary text-slate-950 shadow-[0_0_15px_rgba(45,212,191,0.5)]' 
-                    : 'bg-white/5 border-white/5 text-slate-400 hover:border-white/20'
-                  }`}
-                >
-                  {status}
-                </button>
-              ))}
+            <div className="bg-surface-container-high rounded-xl p-4 flex flex-col items-center justify-center gap-1 border border-white/5">
+              <Info size={20} className="text-primary-container" />
+              <span className="font-headline font-extrabold text-lg text-primary">{stats.izin}</span>
+              <span className="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">IZIN</span>
             </div>
+            <div className="bg-surface-container-high rounded-xl p-4 flex flex-col items-center justify-center gap-1 border border-white/5">
+              <HeartPulse size={20} className="text-outline" />
+              <span className="font-headline font-extrabold text-lg text-primary">{stats.sakit}</span>
+              <span className="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">SAKIT</span>
+            </div>
+            <div className="bg-surface-container-high rounded-xl p-4 flex flex-col items-center justify-center gap-1 border border-white/5">
+              <XCircle size={20} className="text-error" />
+              <span className="font-headline font-extrabold text-lg text-primary">{stats.alpa}</span>
+              <span className="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">ALPA</span>
+            </div>
+          </section>
+        )}
 
-            <div className="p-4 md:p-6 space-y-3 max-h-[60vh] overflow-y-auto no-scrollbar pb-10">
-              {filteredStudents.length > 0 ? (
-                filteredStudents.map((name, idx) => (
-                  <div key={name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:border-white/10 transition-all group">
-                    <div className="flex items-center gap-3 mb-3 sm:mb-0">
-                      <div className="w-9 h-9 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-slate-950/50 flex items-center justify-center text-xs font-black text-slate-500 border border-white/5 group-hover:border-primary/20 group-hover:text-primary transition-all">
-                        {idx + 1}
-                      </div>
-                      <h4 className="text-sm md:text-base font-black text-slate-100 uppercase tracking-tight font-outfit">{name}</h4>
-                    </div>
+        {/* Student List */}
+        <section className="space-y-3">
+          <div className="flex justify-between items-end mb-4 px-1">
+            <h3 className="font-headline font-bold text-lg text-primary">Daftar Siswa</h3>
+            <span className="font-label text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">Total: {students.length} Siswa</span>
+          </div>
 
-                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 justify-end mt-3 sm:mt-0">
-                      {isAdmin ? (
-                        ['Hadir', 'Izin', 'Sakit', 'Alpa'].map((status) => {
-                          const currentStatus = attendanceMap[name];
-                          const active = currentStatus === status;
-                          
-                          const colors = {
-                            'Hadir': 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.4)]',
-                            'Izin': 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)]',
-                            'Sakit': 'bg-sky-500/20 border-sky-400 text-sky-300 shadow-[0_0_12px_rgba(14,165,233,0.4)]',
-                            'Alpa': 'bg-rose-500/20 border-rose-400 text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.4)]'
-                          };
-                          const inactiveColors = {
-                            'Hadir': 'hover:text-emerald-500 hover:border-emerald-500/20',
-                            'Izin': 'hover:text-amber-500 hover:border-amber-500/20',
-                            'Sakit': 'hover:text-sky-500 hover:border-sky-500/20',
-                            'Alpa': 'hover:text-rose-500 hover:border-rose-500/20'
-                          };
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 animate-pulse">
+               <Loader2 className="w-10 h-10 text-tertiary animate-spin mb-4" />
+               <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.3em]">Memuat Presensi...</p>
+            </div>
+          ) : !isLoaded ? (
+            <div className="py-20 text-center bg-surface-container rounded-3xl border border-dashed border-outline-variant/20">
+               <LayoutGrid className="w-12 h-12 text-on-surface-variant mx-auto mb-4 opacity-20" />
+               <p className="text-sm font-medium text-on-surface-variant px-10">Pilih Kelas & Mapel untuk memuat data absensi.</p>
+            </div>
+          ) : (
+            filteredStudents.map((s) => {
+              const status = attendanceMap[s.student_name];
+              const statusDisplay = status || "BELUM ADA DATA";
+              const isPresent = status === 'Hadir';
+              const isAbsent = status === 'Alpa';
+              const isPermitted = status === 'Izin' || status === 'Sakit';
 
-                          return (
-                            <button 
-                              key={status}
-                              onClick={() => handleStatusChange(name, status)}
-                              className={`
-                                flex-1 sm:flex-none px-3 py-2 sm:px-4 sm:py-2.5 min-h-[44px] rounded-lg md:rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border
-                                ${active 
-                                  ? `${colors[status as keyof typeof colors]} outline outline-1 outline-offset-1`
-                                  : `bg-slate-950/50 text-slate-500 border-white/5 ${inactiveColors[status as keyof typeof inactiveColors]}`}
-                              `}
-                            >
-                              {status[0]}<span className="hidden sm:inline">{status.slice(1)}</span>
-                            </button>
-                          );
-                        })
-                      ) : (
-                        attendanceMap[name] ? (
-                          <div 
-                            className={`
-                              px-3 py-1.5 md:px-4 md:py-2 rounded-lg md:rounded-xl text-xs font-black uppercase tracking-widest border transition-all cursor-default shadow-lg shadow-black/20
-                              ${attendanceMap[name] === 'Hadir' ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.4)]' : ''}
-                              ${attendanceMap[name] === 'Izin' ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)]' : ''}
-                              ${attendanceMap[name] === 'Sakit' ? 'bg-sky-500/20 border-sky-400 text-sky-300 shadow-[0_0_12px_rgba(14,165,233,0.4)]' : ''}
-                              ${attendanceMap[name] === 'Alpa' ? 'bg-rose-500/20 border-rose-400 text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.4)]' : ''}
-                            `}
-                          >
-                            {attendanceMap[name]}
-                          </div>
+              return (
+                <div key={s.id} className="bg-surface-container p-4 rounded-2xl flex items-center justify-between group border border-white/5 hover:border-white/10 transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="w-12 h-12 rounded-xl overflow-hidden bg-surface-container-highest flex items-center justify-center text-primary font-bold border border-white/5">
+                        {s.avatar_url ? (
+                          <img src={s.avatar_url} alt={s.student_name} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="px-3 py-1.5 md:px-4 md:py-2 rounded-lg md:rounded-xl text-xs font-black uppercase tracking-widest border border-white/5 bg-slate-900 text-slate-500 cursor-default">
-                            Belum Ada Data
-                          </div>
-                        )
+                          s.student_name.slice(0, 2).toUpperCase()
+                        )}
+                      </div>
+                      {isPresent && (
+                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-tertiary rounded-full border-2 border-surface-container flex items-center justify-center shadow-lg">
+                          <Check size={10} className="text-on-tertiary font-bold" />
+                        </div>
+                      )}
+                      {isPermitted && (
+                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-primary-container rounded-full border-2 border-surface-container flex items-center justify-center shadow-lg">
+                          <span className="text-[10px] text-white font-bold">!</span>
+                        </div>
+                      )}
+                      {isAbsent && (
+                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-error rounded-full border-2 border-surface-container flex items-center justify-center shadow-lg text-white">
+                          <XCircle size={10} />
+                        </div>
                       )}
                     </div>
+                    <div className="max-w-[150px] overflow-hidden">
+                      <h4 className={`font-headline font-bold text-sm truncate ${isPresent ? 'text-primary' : (isAbsent ? 'text-error' : 'text-primary/70')}`}>
+                        {s.student_name}
+                      </h4>
+                      <p className={`font-label text-[10px] font-bold uppercase tracking-wider ${isPresent ? 'text-tertiary' : 'text-on-surface-variant'}`}>
+                        {statusDisplay}
+                      </p>
+                    </div>
                   </div>
-                ))
-              ) : (
-                <div className="py-10 text-center">
-                  <div className="w-16 h-16 bg-slate-900 border border-white/5 border-dashed rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Search className="text-slate-700" size={24} />
-                  </div>
-                  <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Tidak ada data untuk filter ini</p>
+                  
+                  {isAdmin ? (
+                    <button 
+                      onClick={() => setTargetedStudent(s)}
+                      className="bg-surface-bright p-2.5 rounded-xl text-tertiary hover:bg-tertiary hover:text-on-tertiary active:scale-90 transition-all border border-white/5"
+                    >
+                      {status ? <MoreVertical size={18} /> : <span className="text-[10px] font-black px-1 uppercase">Set</span>}
+                    </button>
+                  ) : (
+                    status && (
+                      <div className={`p-2 rounded-lg ${isPresent ? 'text-tertiary' : 'text-on-surface-variant'}`}>
+                         {isPresent ? <CheckCircle2 size={18} /> : <Info size={18} />}
+                      </div>
+                    )
+                  )}
                 </div>
-              )}
-            </div>
+              );
+            })
+          )}
+        </section>
+      </main>
+
+      {/* Admin Status Selection Overlay */}
+      {isAdmin && targetedStudent && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setTargetedStudent(null)}></div>
+          <div className="relative bg-surface-container-high rounded-[2.5rem] w-full max-w-sm overflow-hidden border border-white/10 shadow-2xl animate-in zoom-in-95 duration-300">
+             <div className="p-8 text-center border-b border-white/5 bg-white/5">
+                <div className="w-20 h-20 rounded-3xl bg-surface-bright mx-auto mb-6 flex items-center justify-center overflow-hidden border-2 border-primary/20">
+                  {targetedStudent.avatar_url ? (
+                    <img src={targetedStudent.avatar_url} alt={targetedStudent.student_name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl font-black text-primary">{targetedStudent.student_name.slice(0, 2).toUpperCase()}</span>
+                  )}
+                </div>
+                <h3 className="text-xl font-headline font-bold text-primary truncate px-4">{targetedStudent.student_name}</h3>
+                <p className="text-xs font-bold text-on-surface-variant mt-1 uppercase tracking-[0.2em]">Pilih Status Kehadiran</p>
+             </div>
+             
+             <div className="p-6 grid grid-cols-2 gap-3 bg-[#0e0e10]/30">
+                {statusOptions.map(opt => (
+                  <button 
+                    key={opt.id}
+                    onClick={() => {
+                      handleStatusChange(targetedStudent.student_name, opt.id);
+                      setTargetedStudent(null);
+                    }}
+                    className={`flex flex-col items-center justify-center gap-3 p-5 rounded-3xl border border-white/5 transition-all active:scale-95 ${opt.bgColor} ${opt.color} hover:border-white/20`}
+                  >
+                    {opt.icon}
+                    <span className="text-[11px] font-black uppercase tracking-widest">{opt.id}</span>
+                  </button>
+                ))}
+             </div>
+             
+             <button 
+              onClick={() => setTargetedStudent(null)}
+              className="w-full py-6 text-[11px] font-black text-on-surface-variant uppercase tracking-[0.3em] hover:text-primary transition-colors border-t border-white/5 active:bg-white/5"
+             >
+               Batal
+             </button>
           </div>
-        </div>
-      ) : (
-        <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2rem] border border-white/10 border-dashed p-12 text-center">
-          <Calendar size={48} className="text-slate-700 mx-auto mb-4" />
-          <h3 className="text-slate-100 font-black text-lg md:text-xl uppercase font-outfit">Pilih Parameter</h3>
-          <p className="text-slate-500 text-xs md:text-sm font-bold uppercase tracking-widest mt-2">Silakan pilih kelas dan mata pelajaran untuk memuat data absensi.</p>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Floating Action Button for Admin */}
+      {isAdmin && isLoaded && !isLoading && (
+        <button 
+          onClick={saveAttendance}
+          disabled={isSaving}
+          className="fixed bottom-10 right-8 w-16 h-16 bg-tertiary text-on-tertiary rounded-2xl shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-transform shadow-[0_10px_30px_rgba(40,230,150,0.4)]"
+          title="Simpan Absensi"
+        >
+          {isSaving ? <Loader2 size={30} className="animate-spin" /> : <Save size={30} />}
+        </button>
       )}
     </div>
   );
