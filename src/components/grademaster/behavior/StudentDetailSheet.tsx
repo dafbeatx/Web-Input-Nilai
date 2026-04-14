@@ -63,22 +63,20 @@ export default function StudentDetailSheet({
   const status = getStatusInfo(student.total_points);
 
   return (
-    <div className="fixed inset-0 z-[2000] flex items-end justify-center animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-200">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm" 
         onClick={onClose}
       />
       
-      {/* Sheet / Modal */}
+      {/* Centered Modal */}
       <div className="
-        relative w-full md:max-w-xl h-[85dvh] max-h-[85vh]
-        bg-surface-container border-t border-outline-variant/20 shadow-[0_-10px_40px_rgba(0,0,0,0.8)]
-        rounded-t-3xl overflow-hidden
-        flex flex-col animate-in slide-in-from-bottom-full duration-300
+        relative w-full md:max-w-xl max-h-[80vh]
+        bg-surface-container border border-outline-variant/20 shadow-[0_0_60px_rgba(0,0,0,0.6)]
+        rounded-[2rem] overflow-hidden
+        flex flex-col animate-in zoom-in-95 duration-300
       ">
-        {/* Grab Handle */}
-        <div className="w-12 h-1.5 bg-outline-variant/50 rounded-full mx-auto mt-4 mb-2 shrink-0" />
         
         {/* Header */}
         <header className="px-6 py-4 border-b border-outline-variant/20 flex items-center justify-between shrink-0">
