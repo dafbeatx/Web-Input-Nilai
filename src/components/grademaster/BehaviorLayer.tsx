@@ -344,9 +344,7 @@ export default function BehaviorLayer({
     return d.toLocaleDateString('id-ID', { 
       day: 'numeric', 
       month: 'short', 
-      year: 'numeric',
-      hour: '2-digit', 
-      minute: '2-digit' 
+      year: 'numeric'
     });
   };
 

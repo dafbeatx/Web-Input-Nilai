@@ -48,8 +48,7 @@ export default function StudentDetailSheet({
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString('id-ID', { 
-      day: 'numeric', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit' 
+      day: 'numeric', month: 'short', year: 'numeric'
     });
   };
 
