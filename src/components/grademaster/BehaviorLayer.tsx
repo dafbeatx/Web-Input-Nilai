@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, Users, Search, PlusCircle, MinusCircle, AlertCircle, Save, Loader2, UserPlus, FileText, LayoutGrid, Trash2, Pencil, ShieldCheck, ThumbsUp, ThumbsDown, X, Clock, Calendar, ChevronRight, BarChart3, Activity, ListChecks, History } from 'lucide-react';
 import { ToastType, GradedStudent } from '@/lib/grademaster/types';
 import { 
@@ -349,6 +350,7 @@ export default function BehaviorLayer({
   };
 
   return (
+    <>
     <main className="min-h-screen pt-[env(safe-area-inset-top,20px)] mt-24 pb-32 px-5 flex flex-col gap-6 max-w-md md:max-w-3xl mx-auto animate-in fade-in transition-all duration-300 relative">
       {!isAdmin && isLoaded && (
         <div className="flex items-center gap-2.5 px-4 py-3 bg-tertiary/10 border border-tertiary/20 rounded-2xl mb-2">
@@ -519,8 +521,20 @@ export default function BehaviorLayer({
         )}
       </div>
 
-      {/* COMPACT & TABBED DETAIL MODAL (CENTERED OPSI B) */}
-      {selectedStudent && (
+      {/* Hidden File Input for Avatar Upload */}
+      {isAdmin && (
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          className="hidden" 
+          accept="image/*" 
+          onChange={(e) => targetedAvatarStudent && handleAvatarUpload(targetedAvatarStudent, e)} 
+        />
+      )}
+    </main>
+
+    {/* COMPACT & TABBED DETAIL MODAL (CENTERED OPSI B) — rendered via Portal */}
+    {selectedStudent && createPortal(
         <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl z-[1000] flex items-center justify-center p-4 md:p-10 animate-in fade-in duration-300">
           <div className="bg-slate-900 border border-white/10 w-full max-h-[85vh] h-auto max-w-6xl rounded-[2.5rem] md:rounded-[4rem] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] animate-in zoom-in-95 flex flex-col">
               <div 
@@ -714,11 +728,11 @@ export default function BehaviorLayer({
               </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
-      {/* REASONS MANAGEMENT MODAL */}
-      {isManagingReasons && (
-        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[2000] flex items-center justify-center p-0 md:p-4">
+    {/* REASONS MANAGEMENT MODAL — rendered via Portal */}
+    {isManagingReasons && createPortal(
+      <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[2000] flex items-center justify-center p-0 md:p-4">
           <div className="bg-slate-900 border border-white/10 max-w-2xl w-full h-full md:h-[80vh] md:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in-95">
               <div className="p-6 md:p-8 border-b border-white/10 bg-white/5 shrink-0 relative flex items-start justify-between" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}>
                 <div>
@@ -797,20 +811,9 @@ export default function BehaviorLayer({
                     </div>
                 </div>
               </div>
-          </div>
         </div>
-      )}
-
-      {/* Hidden File Input for Avatar Upload */}
-      {isAdmin && (
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          className="hidden" 
-          accept="image/*" 
-          onChange={(e) => targetedAvatarStudent && handleAvatarUpload(targetedAvatarStudent, e)} 
-        />
-      )}
-    </main>
+      </div>
+    , document.body)}
+    </>
   );
 }
