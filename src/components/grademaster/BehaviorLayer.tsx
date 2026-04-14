@@ -538,7 +538,7 @@ export default function BehaviorLayer({
           type="file" 
           ref={fileInputRef} 
           className="hidden" 
-          accept="image/*" 
+          accept=".jpg,.jpeg,.png" 
           onChange={(e) => targetedAvatarStudent && handleAvatarUpload(targetedAvatarStudent, e)} 
         />
       )}

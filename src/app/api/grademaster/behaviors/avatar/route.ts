@@ -47,7 +47,12 @@ export async function POST(req: NextRequest) {
 
     if (uploadError) {
       console.error('[Avatar] Storage upload failed:', uploadError);
-      return NextResponse.json({ error: 'Gagal mengunggah ke penyimpanan (Bucket avatars mungkin belum dibuat di database)' }, { status: 500 });
+      const isMissingBucket = uploadError.message?.toLowerCase().includes('not found');
+      return NextResponse.json({ 
+        error: isMissingBucket 
+          ? 'Bucket "avatars" tidak ditemukan. Silakan buat bucket "avatars" di Supabase Dashboard (Storage).' 
+          : 'Gagal mengunggah foto ke penyimpanan.' 
+      }, { status: 500 });
     }
 
     // Dapatkan Public URL
