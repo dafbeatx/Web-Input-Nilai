@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Users, Search, PlusCircle, MinusCircle, AlertCircle, Save, Loader2, UserPlus, FileText, LayoutGrid, Trash2, Pencil, ShieldCheck, ThumbsUp, ThumbsDown, X, Clock, Calendar, ChevronRight, BarChart3, Activity, ListChecks, History } from 'lucide-react';
+import { ArrowLeft, Users, Search, PlusCircle, MinusCircle, AlertCircle, Save, Loader2, UserPlus, FileText, LayoutGrid, Trash2, Pencil, ShieldCheck, ThumbsUp, ThumbsDown, X, Clock, Calendar, ChevronRight, BarChart3, Activity, ListChecks, History, Download, DownloadCloud, Check } from 'lucide-react';
 import { ToastType, GradedStudent } from '@/lib/grademaster/types';
 import { 
   addBehaviorAction, 
@@ -64,7 +64,9 @@ export default function BehaviorLayer({
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ reason: '', points: 0, date: '' });
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [activeModalTab, setActiveModalTab] = useState<'HISTORY' | 'MANAGE'>('HISTORY');
+  const [activeModalTab, setActiveModalTab] = useState<'HISTORY' | 'MANAGE' | 'AKADEMIK' | 'DOKUMEN'>('HISTORY');
+  const [studentSummary, setStudentSummary] = useState<{ attendance: any, academicHistory: any[], documents: any[] } | null>(null);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
 
   // Avatar Upload State
   const [uploadingAvatarId, setUploadingAvatarId] = useState<string | null>(null);
@@ -97,14 +99,16 @@ export default function BehaviorLayer({
     });
   }, [activeClass, activeYear]);
 
-  // Load history when a student is selected
+  // Load history & summary when a student is selected
   useEffect(() => {
     if (selectedStudent) {
       fetchStudentLogs(selectedStudent.id);
+      fetchStudentSummary(selectedStudent.student_name);
       setActiveModalTab('HISTORY'); // Default to history when opening modal
       document.body.classList.add('hide-mobile-header');
     } else {
       setStudentLogs([]);
+      setStudentSummary(null);
       setEditingLogId(null);
       document.body.classList.remove('hide-mobile-header');
     }
@@ -158,6 +162,21 @@ export default function BehaviorLayer({
       }
     } catch (err) {
       console.error("Failed to load behavior settings", err);
+    }
+  };
+
+  const fetchStudentSummary = async (name: string) => {
+    setIsLoadingSummary(true);
+    try {
+      const res = await fetch(`/api/grademaster/students/summary?name=${encodeURIComponent(name)}&year=${encodeURIComponent(academicYear)}`);
+      const data = await res.json();
+      if (res.ok) {
+        setStudentSummary(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch student summary", err);
+    } finally {
+      setIsLoadingSummary(false);
     }
   };
 
@@ -638,10 +657,17 @@ export default function BehaviorLayer({
               {/* Attendance Mini Card */}
               <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl p-5 flex flex-col items-center justify-center border border-white/5 shadow-lg">
                 <div className="w-10 h-10 mb-2 flex items-center justify-center">
-                   <Activity className="text-primary" size={28} />
+                   {isLoadingSummary ? <Loader2 className="animate-spin text-tertiary" size={24} /> : <Activity className="text-primary" size={28} />}
                 </div>
-                <span className="font-headline font-bold text-xl text-primary">100%</span>
-                <span className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant font-semibold">Kehadiran</span>
+                <span className="font-headline font-bold text-xl text-primary">
+                  {studentSummary?.attendance?.percentage !== null && studentSummary?.attendance?.percentage !== undefined
+                    ? `${studentSummary.attendance.percentage}%`
+                    : "—"
+                  }
+                </span>
+                <span className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant font-semibold">
+                  {studentSummary?.attendance?.percentage !== null ? "Kehadiran" : "Belum Ada Data"}
+                </span>
               </div>
             </section>
 
@@ -655,6 +681,22 @@ export default function BehaviorLayer({
               >
                 Ringkasan
               </button>
+              <button 
+                onClick={() => setActiveModalTab('AKADEMIK')}
+                className={`flex-none px-5 py-2.5 rounded-xl font-label text-sm font-semibold transition-all ${
+                  activeModalTab === 'AKADEMIK' ? 'bg-[#2c2c2f] text-primary' : 'text-on-surface-variant hover:text-primary'
+                }`}
+              >
+                Akademik
+              </button>
+              <button 
+                onClick={() => setActiveModalTab('DOKUMEN')}
+                className={`flex-none px-5 py-2.5 rounded-xl font-label text-sm font-semibold transition-all ${
+                  activeModalTab === 'DOKUMEN' ? 'bg-[#2c2c2f] text-primary' : 'text-on-surface-variant hover:text-primary'
+                }`}
+              >
+                Dokumen
+              </button>
               {isAdmin && (
                 <button 
                   onClick={() => setActiveModalTab('MANAGE')}
@@ -665,16 +707,10 @@ export default function BehaviorLayer({
                   Manajemen
                 </button>
               )}
-              <button className="flex-none px-5 py-2.5 rounded-xl text-on-surface-variant hover:text-primary font-label text-sm font-medium transition-all opacity-40">
-                Akademik
-              </button>
-              <button className="flex-none px-5 py-2.5 rounded-xl text-on-surface-variant hover:text-primary font-label text-sm font-medium transition-all opacity-40">
-                Dokumen
-              </button>
             </nav>
 
             {/* Content Sections */}
-            {activeModalTab === 'HISTORY' ? (
+            {activeModalTab === 'HISTORY' && (
               <section className="flex flex-col space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="flex items-center justify-between px-1">
                   <h3 className="font-headline font-bold text-lg text-primary">Riwayat Transparansi</h3>
@@ -781,8 +817,104 @@ export default function BehaviorLayer({
                   </div>
                 )}
               </section>
-            ) : (
-              /* Administrative Management Section */
+            )}
+
+            {activeModalTab === 'AKADEMIK' && (
+              <section className="flex flex-col space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="font-headline font-bold text-lg text-primary">Rekam Jejak Akademik</h3>
+                  <div className="px-2 py-0.5 bg-tertiary/10 rounded-md text-[9px] font-black text-tertiary uppercase tracking-widest border border-tertiary/20">
+                    Live Data
+                  </div>
+                </div>
+
+                {isLoadingSummary ? (
+                   <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-white/5 p-12 flex flex-col items-center justify-center text-center space-y-4">
+                      <Loader2 size={32} className="animate-spin text-tertiary" />
+                      <p className="font-headline font-semibold text-primary">Menarik Data Nilai...</p>
+                   </div>
+                ) : !studentSummary?.academicHistory || studentSummary.academicHistory.length === 0 ? (
+                  <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-white/5 p-12 flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-16 h-16 bg-surface-container rounded-full flex items-center justify-center mb-2">
+                       <BarChart3 className="text-on-surface-variant" size={40} />
+                    </div>
+                    <div>
+                      <p className="font-headline font-semibold text-primary">Belum Ada Riwayat Nilai</p>
+                      <p className="font-body text-sm text-on-surface-variant mt-1">Data nilai akan muncul secara otomatis setelah ujian dikoreksi oleh admin.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {studentSummary.academicHistory.map((grade: any, idx: number) => (
+                      <div key={idx} className="bg-[#19191c]/70 backdrop-blur-xl rounded-2xl p-5 border border-white/5 flex items-center justify-between group shadow-sm">
+                        <div className="flex flex-col gap-1 overflow-hidden">
+                           <h4 className="text-white font-bold text-sm uppercase tracking-tight truncate leading-tight">{grade.sessionName}</h4>
+                           <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{grade.subject}</span>
+                              <span className="text-[10px] font-bold text-on-surface-variant/40">•</span>
+                              <span className="text-[10px] font-bold text-on-surface-variant/70 italic uppercase">{formatDate(grade.date)}</span>
+                           </div>
+                        </div>
+                        <div className="flex items-center gap-4 ml-4">
+                           <div className="text-right">
+                              <span className={`text-2xl font-black font-headline ${grade.isPassing ? 'text-tertiary' : 'text-error'}`}>{grade.score}</span>
+                              <div className={`text-[8px] font-black uppercase tracking-tighter ${grade.isPassing ? 'text-tertiary/60' : 'text-error/60'}`}>
+                                 KKM: {grade.kkm}
+                              </div>
+                           </div>
+                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white ${grade.isPassing ? 'bg-tertiary/10 text-tertiary' : 'bg-error/10 text-error'}`}>
+                              {grade.isPassing ? <Check size={16} /> : <X size={16} />}
+                           </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {activeModalTab === 'DOKUMEN' && (
+              <section className="flex flex-col space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="font-headline font-bold text-lg text-primary">Pusat Dokumen</h3>
+                  <div className="px-2 py-0.5 bg-primary/10 rounded-md text-[9px] font-black text-primary-container uppercase tracking-widest border border-primary/20">
+                    Siap Unduh
+                  </div>
+                </div>
+
+                {isLoadingSummary ? (
+                   <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-white/5 p-12 flex flex-col items-center justify-center text-center space-y-4">
+                      <Loader2 size={32} className="animate-spin text-tertiary" />
+                      <p className="font-headline font-semibold text-primary">Menyiapkan Dokumen...</p>
+                   </div>
+                ) : (
+                  <div className="space-y-3">
+                    {studentSummary?.documents?.map((doc: any) => (
+                      <div key={doc.id} className={`bg-[#19191c]/70 backdrop-blur-xl rounded-2xl p-5 border border-white/5 flex items-center justify-between group shadow-sm ${!doc.ready ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+                         <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant">
+                               <FileText size={24} />
+                            </div>
+                            <div className="flex flex-col">
+                               <h4 className="text-white font-bold text-sm leading-tight">{doc.name}</h4>
+                               <p className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wider">{doc.type} • {doc.size}</p>
+                            </div>
+                         </div>
+                         <button className="w-10 h-10 bg-primary/10 text-primary-container rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all active:scale-95 shadow-lg border border-primary/20">
+                            <DownloadCloud size={18} />
+                         </button>
+                      </div>
+                    ))}
+                    <div className="p-6 bg-surface-container rounded-3xl border border-white/5 flex flex-col items-center gap-2 text-center mt-4">
+                       <ShieldCheck className="text-on-surface-variant opacity-20" size={40} />
+                       <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest leading-relaxed">Seluruh dokumen telah ditanda tangani secara digital oleh GradeMaster Trust Verification.</p>
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {activeModalTab === 'MANAGE' && (
               <section className="flex flex-col space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
                  <div className="p-5 bg-[#19191c]/70 backdrop-blur-xl border border-white/5 rounded-2xl space-y-3">
                     <label className="text-[10px] font-black text-on-surface-variant uppercase flex items-center gap-2 px-1 tracking-widest">
