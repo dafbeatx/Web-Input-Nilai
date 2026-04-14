@@ -99,7 +99,10 @@ export default function BehaviorPage() {
       const res = await fetch(`/api/grademaster/behaviors?year=${encodeURIComponent(academicYear)}`);
       const data = await res.json();
       if (data.classes && data.classes.length > 0) {
-        setAvailableClasses(['Semua Kelas', ...data.classes]);
+        const sortedClasses = [...data.classes].sort((a, b) => 
+          a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+        );
+        setAvailableClasses(['Semua Kelas', ...sortedClasses]);
       }
     } catch(err) { /* silent fail */ }
   };

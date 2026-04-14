@@ -177,7 +177,12 @@ export default function BehaviorLayer({
     try {
       const res = await fetch(`/api/grademaster/behaviors?year=${encodeURIComponent(academicYear)}`);
       const data = await res.json();
-      if (res.ok) setAvailableClasses(data.classes || []);
+      if (res.ok) {
+        const sortedClasses = (data.classes || []).sort((a: string, b: string) => 
+          a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+        );
+        setAvailableClasses(sortedClasses);
+      }
     } catch {
       // ignore
     } finally {
