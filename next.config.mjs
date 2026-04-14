@@ -6,6 +6,10 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
+        hostname: 'fwhdjqvtjzesbdcqorsn.supabase.co',
+      },
+      {
+        protocol: 'https',
         hostname: 'uploads.mangadex.org',
       },
       {

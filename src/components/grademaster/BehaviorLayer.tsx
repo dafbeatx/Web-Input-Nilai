@@ -8,6 +8,7 @@ import {
   getBehaviorLogsAction 
 } from '@/lib/actions/behavior';
 import { supabase } from '@/lib/supabase/client';
+import Image from 'next/image';
 
 interface BehaviorLog {
   id: string;
@@ -26,6 +27,7 @@ interface BehaviorStudent {
   class_name: string;
   academic_year: string;
   total_points: number;
+  avatar_url?: string | null;
   behavior_logs: BehaviorLog[];
 }
 
@@ -60,6 +62,11 @@ export default function BehaviorLayer({
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ reason: '', points: 0 });
   const [activeModalTab, setActiveModalTab] = useState<'HISTORY' | 'MANAGE'>('HISTORY');
+
+  // Avatar Upload State
+  const [uploadingAvatarId, setUploadingAvatarId] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [targetedAvatarStudent, setTargetedAvatarStudent] = useState<string | null>(null);
 
   // Settings State
   const [isManagingReasons, setIsManagingReasons] = useState(false);
@@ -283,6 +290,44 @@ export default function BehaviorLayer({
     }
   };
 
+  const handleAvatarUpload = async (studentId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Local validation
+    if (file.size > 5 * 1024 * 1024) {
+      setToast({ message: "Ukuran foto terlalu besar (Max 5MB)", type: "error" });
+      return;
+    }
+
+    setUploadingAvatarId(studentId);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('studentId', studentId);
+
+      const res = await fetch('/api/grademaster/behaviors/avatar', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal mengunggah foto");
+
+      setToast({ message: data.message || "Foto profil diperbarui", type: "success" });
+      setStudents(prev => prev.map(s => s.id === studentId ? { ...s, avatar_url: data.avatar_url } : s));
+      
+      if (selectedStudent && selectedStudent.id === studentId) {
+        setSelectedStudent(prev => prev ? { ...prev, avatar_url: data.avatar_url } : null);
+      }
+    } catch (err: any) {
+      setToast({ message: err.message, type: "error" });
+    } finally {
+      setUploadingAvatarId(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString('id-ID', { 
@@ -392,16 +437,46 @@ export default function BehaviorLayer({
             return (
               <div key={student.id} className="bg-surface-container p-5 rounded-[1.5rem] border border-white/5 relative overflow-hidden group hover:border-primary/20 transition-all shadow-md hover:shadow-xl">
                 <div className="flex justify-between items-start mb-6 z-10 relative">
-                  <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 shrink-0 rounded-[14px] bg-surface-bright flex items-center justify-center overflow-hidden ring-1 ring-white/10 text-xl font-headline font-bold text-on-surface-variant uppercase shadow-inner">
-                       {student.student_name.slice(0, 2)}
+                  <div className="flex items-start gap-4 flex-1 min-w-0 pr-4">
+                    <div 
+                      className={`w-14 h-14 shrink-0 rounded-[14px] bg-surface-bright flex items-center justify-center overflow-hidden ring-1 ring-white/10 text-xl font-headline font-bold text-on-surface-variant uppercase shadow-inner relative ${isAdmin ? 'cursor-pointer hover:ring-primary/50' : ''}`}
+                      onClick={() => {
+                        if (isAdmin) {
+                          setTargetedAvatarStudent(student.id);
+                          fileInputRef.current?.click();
+                        }
+                      }}
+                      title={isAdmin ? "Ubah Foto Siswa" : ""}
+                    >
+                       {student.avatar_url ? (
+                         <Image src={student.avatar_url} alt={student.student_name} fill className="object-cover" />
+                       ) : (
+                         student.student_name.slice(0, 2)
+                       )}
+
+                       {/* Uploading Overlay */}
+                       {uploadingAvatarId === student.id && (
+                         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+                           <Loader2 size={16} className="animate-spin text-primary" />
+                         </div>
+                       )}
+
+                       {/* Admin Hover Hint */}
+                       {isAdmin && !uploadingAvatarId && (
+                         <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                            <span className="material-symbols-outlined text-white text-lg">add_a_photo</span>
+                         </div>
+                       )}
                     </div>
-                    <div>
-                      <h2 className="font-headline font-bold text-lg text-primary leading-tight mb-1 max-w-[190px] md:max-w-[400px] truncate">{student.student_name}</h2>
-                      <p className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Kelas {student.class_name}</p>
+                    <div className="flex-1 min-w-0">
+                      <h2 className="font-headline font-bold text-lg text-primary leading-tight mb-1 truncate w-full">{student.student_name}</h2>
+                      <p className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[12px]">badge</span>
+                        Kelas {student.class_name}
+                      </p>
                     </div>
                   </div>
-                  <div className="text-right shrink-0 bg-surface-container">
+                  <div className="text-right shrink-0 bg-surface-container rounded-xl">
                     <span className={`block font-headline text-3xl font-extrabold tracking-tight ${isLowScore ? 'text-error' : 'text-tertiary'}`}>
                       {student.total_points}
                     </span>
@@ -443,16 +518,21 @@ export default function BehaviorLayer({
                 className="bg-gradient-to-br from-slate-900 to-slate-950 px-5 pb-5 md:p-10 border-b border-white/10 flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-xl"
                 style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}
               >
-                <div className="flex items-center gap-4 md:gap-6">
-                    <div className={`w-12 h-12 md:w-20 md:h-20 rounded-2xl md:rounded-[2rem] border flex flex-col items-center justify-center shadow-2xl shrink-0 ${
+                <div className="flex items-center gap-4 md:gap-6 flex-1 min-w-0 pr-4">
+                   <div className="relative shrink-0">
+                    <div className={`w-14 h-14 md:w-20 md:h-20 rounded-2xl md:rounded-[2rem] border flex flex-col items-center justify-center shadow-2xl relative overflow-hidden ${
                        selectedStudent.total_points >= 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/20' : 
                        selectedStudent.total_points >= 70 ? 'bg-primary/10 text-primary border-primary/20 shadow-primary/20' : 
                        'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-rose-500/20'
                     }`}>
-                      <span className="text-lg md:text-4xl font-black">{selectedStudent.total_points}</span>
+                      {selectedStudent.avatar_url ? (
+                         <Image src={selectedStudent.avatar_url} alt={selectedStudent.student_name} fill className="object-cover opacity-30 mix-blend-luminosity" />
+                      ) : null}
+                      <span className="text-xl md:text-4xl font-black z-10">{selectedStudent.total_points}</span>
                     </div>
-                    <div>
-                      <h2 className="text-base md:text-3xl font-black text-white font-outfit uppercase tracking-tighter line-clamp-1">{selectedStudent.student_name}</h2>
+                   </div>
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-base md:text-3xl font-black text-white font-outfit uppercase tracking-tighter truncate w-full">{selectedStudent.student_name}</h2>
                       <div className="flex flex-wrap items-center gap-1.5 md:gap-3 mt-1 md:mt-2">
                           <span className="px-2 py-0.5 bg-white/5 rounded-full text-[7px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest border border-white/10">{className}</span>
                           <span className="px-2 py-0.5 bg-primary/10 rounded-full text-[7px] md:text-[9px] font-black text-primary uppercase tracking-widest border border-primary/20 flex items-center gap-1">
@@ -742,6 +822,17 @@ export default function BehaviorLayer({
               </div>
           </div>
         </div>
+      )}
+
+      {/* Hidden File Input for Avatar Upload */}
+      {isAdmin && (
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          className="hidden" 
+          accept="image/*" 
+          onChange={(e) => targetedAvatarStudent && handleAvatarUpload(targetedAvatarStudent, e)} 
+        />
       )}
     </main>
   );
