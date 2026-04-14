@@ -422,7 +422,7 @@ export default function AttendanceLayer({
         <button 
           onClick={saveAttendance}
           disabled={isSaving}
-          className="fixed bottom-10 right-8 w-16 h-16 bg-tertiary text-on-tertiary rounded-2xl shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-transform shadow-[0_10px_30px_rgba(40,230,150,0.4)]"
+          className="fixed bottom-10 right-8 w-16 h-16 bg-tertiary text-on-tertiary rounded-2xl flex items-center justify-center z-40 active:scale-90 transition-transform shadow-[0_10px_30px_rgba(40,230,150,0.4)]"
           title="Simpan Absensi"
         >
           {isSaving ? <Loader2 size={30} className="animate-spin" /> : <Save size={30} />}
