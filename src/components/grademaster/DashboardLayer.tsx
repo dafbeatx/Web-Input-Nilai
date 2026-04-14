@@ -149,7 +149,7 @@ export default function DashboardLayer({
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1 mt-16 px-6 pt-6 pb-12 overflow-x-hidden max-w-4xl mx-auto w-full">
+      <main className="flex-1 mt-16 px-6 pt-6 pb-40 overflow-x-hidden max-w-4xl mx-auto w-full">
         {/* Header Section */}
         <header className="mb-8">
           <div className="flex items-center gap-2 text-on-surface-variant text-[10px] font-bold uppercase tracking-[0.2em] mb-2">

@@ -183,7 +183,7 @@ export default function AttendanceLayer({
   });
 
   return (
-    <div className="font-body text-on-surface min-h-dvh flex flex-col pb-32 bg-[#0e0e10]">
+    <div className="font-body text-on-surface min-h-dvh flex flex-col pb-44 bg-[#0e0e10]">
       {/* Top Navigation */}
       <nav className="fixed top-0 w-full z-40 bg-[#0e0e10]/80 backdrop-blur-xl flex justify-between items-center px-6 h-16 border-b border-white/5">
         <div className="flex items-center gap-3">
@@ -207,7 +207,7 @@ export default function AttendanceLayer({
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1 mt-16 px-6 pt-6 pb-12 overflow-x-hidden max-w-2xl mx-auto w-full">
+      <main className="flex-1 mt-16 px-6 pt-6 pb-40 overflow-x-hidden max-w-2xl mx-auto w-full">
         {/* Header Section */}
         <header className="mb-8">
           <h1 className="font-headline font-extrabold text-3xl text-primary tracking-tight leading-none mb-2 uppercase">KEHADIRAN SISWA</h1>

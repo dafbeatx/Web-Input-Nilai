@@ -393,7 +393,7 @@ export default function BehaviorLayer({
 
   return (
     <>
-    <main className="min-h-screen pt-[env(safe-area-inset-top,20px)] mt-24 pb-32 px-5 flex flex-col gap-6 max-w-md md:max-w-3xl mx-auto animate-in fade-in transition-all duration-300 relative">
+    <main className="min-h-screen pt-[env(safe-area-inset-top,20px)] mt-24 pb-44 px-5 flex flex-col gap-6 max-w-md md:max-w-3xl mx-auto animate-in fade-in transition-all duration-300 relative">
       {!isAdmin && isLoaded && (
         <div className="flex items-center gap-2.5 px-4 py-3 bg-tertiary/10 border border-tertiary/20 rounded-2xl mb-2">
           <ShieldCheck size={16} className="text-tertiary" />
@@ -592,7 +592,7 @@ export default function BehaviorLayer({
             <div className="w-10 h-10"></div> {/* Empty for spacing */}
           </header>
 
-          <main className="pt-20 pb-32 px-5 max-w-md mx-auto min-h-dvh flex flex-col space-y-6 w-full">
+          <main className="pt-20 pb-44 px-5 max-w-md mx-auto min-h-dvh flex flex-col space-y-6 w-full">
             {/* Hero Section: Student Identity */}
             <section className="relative mt-4">
               <div className="flex flex-col items-center text-center">
