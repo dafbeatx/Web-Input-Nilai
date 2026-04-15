@@ -16,7 +16,7 @@ export default function TopAppBar({
 }: TopAppBarProps) {
   return (
     <header 
-      className="sticky top-0 z-[100] w-full bg-surface/80 backdrop-blur-xl transition-colors flex items-center justify-between px-6 h-20 border-b border-white/5"
+      className="sticky top-0 z-[100] w-full bg-surface/80 backdrop-blur-xl transition-colors flex items-center justify-between px-6 h-20 border-b border-outline-variant"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="flex items-center gap-4 overflow-hidden">

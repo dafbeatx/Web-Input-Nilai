@@ -119,10 +119,10 @@ export default function SetupLayer(props: SetupLayerProps) {
     }
   };
 
-  const inputClass = "w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm font-bold text-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-600";
-  const labelClass = "flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2";
-  const sectionTitleClass = "flex items-center gap-2 text-sm font-black text-white uppercase tracking-widest mb-6 pb-4 border-b border-white/10";
-  const cardClass = "bg-slate-900/40 backdrop-blur-xl rounded-2xl p-6 shadow-2xl border border-white/10";
+  const inputClass = "w-full bg-surface-variant border border-outline-variant rounded-xl p-3 text-sm font-bold text-on-surface focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-on-surface-variant";
+  const labelClass = "flex items-center gap-2 text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2";
+  const sectionTitleClass = "flex items-center gap-2 text-sm font-black text-on-surface uppercase tracking-widest mb-6 pb-4 border-b border-outline-variant";
+  const cardClass = "bg-surface premium-shadow backdrop-blur-xl rounded-2xl p-6 premium-shadow border border-outline-variant";
 
   return (
     <div className="min-h-screen flex items-start justify-center p-4 py-8 lg:py-12 animate-in bg-transparent">
@@ -134,11 +134,11 @@ export default function SetupLayer(props: SetupLayerProps) {
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest mb-3 border border-primary/20">
               <GraduationCap size={14} /> Setup Sesi Ujian
             </div>
-            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight font-outfit">GradeMaster</h1>
-            <p className="text-slate-400 text-sm mt-1">Atur parameter dan soal untuk sesi ujian baru secara lengkap.</p>
+            <h1 className="text-3xl md:text-5xl font-black text-on-surface tracking-tight font-outfit">GradeMaster</h1>
+            <p className="text-on-surface-variant text-sm mt-1">Atur parameter dan soal untuk sesi ujian baru secara lengkap.</p>
           </div>
           <div className="hidden lg:block">
-            <button onClick={onBack} className="inline-flex items-center gap-2 text-xs font-black text-slate-400 hover:text-primary uppercase tracking-widest transition-colors bg-white/5 px-4 py-2 rounded-xl border border-white/10 shadow-sm hover:shadow-md">
+            <button onClick={onBack} className="inline-flex items-center gap-2 text-xs font-black text-on-surface-variant hover:text-primary uppercase tracking-widest transition-colors bg-surface-variant px-4 py-2 rounded-xl border border-outline-variant shadow-sm hover:premium-shadow">
               <ArrowLeft size={14} /> Kembali ke Menu
             </button>
           </div>
@@ -293,14 +293,14 @@ export default function SetupLayer(props: SetupLayerProps) {
                 </div>
                 <div>
                   <label className={labelClass}>Sesi Publik</label>
-                  <div className="flex items-center justify-between p-3.5 bg-white/5 rounded-xl border border-white/10">
+                  <div className="flex items-center justify-between p-3.5 bg-surface-variant rounded-xl border border-outline-variant">
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isPublic ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-slate-500'}`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isPublic ? 'bg-emerald-500/20 text-emerald-400' : 'bg-surface-container-highest text-on-surface-variant'}`}>
                         {isPublic ? '🔓' : '🔒'}
                       </div>
                       <div>
-                        <h4 className="text-xs font-black text-slate-200">Hasil Publik</h4>
-                        <p className="text-[9px] font-bold text-slate-500">Siswa bisa melihat nilai</p>
+                        <h4 className="text-xs font-black text-on-surface">Hasil Publik</h4>
+                        <p className="text-[9px] font-bold text-on-surface-variant">Siswa bisa melihat nilai</p>
                       </div>
                     </div>
                     <button
@@ -316,7 +316,7 @@ export default function SetupLayer(props: SetupLayerProps) {
                     <label className={labelClass}>Mode Sandbox</label>
                     <div className="flex items-center justify-between p-3.5 bg-amber-500/10 rounded-xl border border-amber-500/20">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isDemo ? 'bg-amber-500/30 text-amber-400' : 'bg-white/10 text-slate-500'}`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isDemo ? 'bg-amber-500/30 text-amber-400' : 'bg-surface-container-highest text-on-surface-variant'}`}>
                           {isDemo ? '🧪' : '🛑'}
                         </div>
                         <div>
@@ -341,7 +341,7 @@ export default function SetupLayer(props: SetupLayerProps) {
 
               {/* Preview PG Keys */}
               {parsedCount > 0 && (
-                <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl p-5 shadow-2xl border border-primary/20 border-t-4 border-t-primary">
+                <div className="bg-surface premium-shadow backdrop-blur-xl rounded-2xl p-5 premium-shadow border border-primary/20 border-t-4 border-t-primary">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-[10px] font-black uppercase tracking-widest text-primary">Preview Kunci PG</span>
                     <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-primary/20 text-primary">
@@ -350,8 +350,8 @@ export default function SetupLayer(props: SetupLayerProps) {
                   </div>
                   <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-60 overflow-y-auto pr-2">
                     {parsedPreview.map((ans, idx) => (
-                      <span key={idx} className="inline-flex justify-center items-center gap-1.5 px-2 py-1.5 bg-white/5 rounded-lg border border-white/10 text-[10px] font-bold">
-                        <span className="text-slate-500">{idx + 1}.</span>
+                      <span key={idx} className="inline-flex justify-center items-center gap-1.5 px-2 py-1.5 bg-surface-variant rounded-lg border border-outline-variant text-[10px] font-bold">
+                        <span className="text-on-surface-variant">{idx + 1}.</span>
                         <span className="text-primary">{ans}</span>
                       </span>
                     ))}
@@ -361,7 +361,7 @@ export default function SetupLayer(props: SetupLayerProps) {
             </div>
 
             {/* ACTION BUTTON (Desktop Static, Mobile Sticky) */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900 border-t border-white/10 z-50 lg:static lg:bg-transparent lg:border-none lg:p-0">
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900 border-t border-outline-variant z-50 lg:static lg:bg-transparent lg:border-none lg:p-0">
               <button
                 onClick={handleSubmit}
                 disabled={isLoading}
@@ -371,7 +371,7 @@ export default function SetupLayer(props: SetupLayerProps) {
               </button>
               <button 
                 onClick={onBack} 
-                className="w-full mt-3 py-3 bg-white/5 text-slate-400 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-colors lg:hidden flex items-center justify-center gap-2 border border-white/5"
+                className="w-full mt-3 py-3 bg-surface-variant text-on-surface-variant rounded-xl text-xs font-black uppercase tracking-widest hover:bg-surface-container-highest transition-colors lg:hidden flex items-center justify-center gap-2 border border-outline-variant"
               >
                 <ArrowLeft size={14} /> Kembali
               </button>

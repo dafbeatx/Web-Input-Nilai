@@ -130,11 +130,11 @@ export default function DashboardLayer({
   const passRate = gradedStudents.length > 0 ? Math.round((passCount / gradedStudents.length) * 100) : 0;
 
   return (
-    <div className="font-body text-on-surface min-h-dvh flex flex-col pb-32 bg-[#0e0e10]">
+    <div className="font-body text-on-surface min-h-dvh flex flex-col pb-32 bg-surface">
       {/* Top Navigation */}
-      <nav className="fixed top-0 w-full z-40 bg-[#0e0e10]/80 backdrop-blur-xl flex justify-between items-center px-6 h-16 border-b border-white/5">
+      <nav className="fixed top-0 w-full z-40 bg-surface/80 backdrop-blur-xl flex justify-between items-center px-6 h-16 border-b border-outline-variant">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-1 px-2 bg-white/5 rounded-lg border border-white/10 active:scale-90 transition-all">
+          <button onClick={onBack} className="p-1 px-2 bg-surface-variant rounded-lg border border-outline-variant active:scale-90 transition-all">
             <ArrowLeft className="text-primary" size={20} />
           </button>
           <span className="text-xl font-black text-primary tracking-tighter font-headline">GradeMaster OS</span>
@@ -163,25 +163,25 @@ export default function DashboardLayer({
 
         {/* Bento Statistics Grid */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
-          <div className="bg-surface-container-high rounded-2xl p-4 flex flex-col items-center justify-center gap-1 border border-white/5 relative overflow-hidden group">
+          <div className="bg-surface-container-high rounded-2xl p-4 flex flex-col items-center justify-center gap-1 border border-outline-variant relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-12 h-12 bg-tertiary/5 rounded-bl-full group-hover:bg-tertiary/10 transition-all"></div>
             <TrendingUp size={20} className="text-tertiary mb-1" />
             <span className="font-headline font-extrabold text-2xl text-primary">{analytics.avgScore}</span>
             <span className="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Rata-rata</span>
           </div>
-          <div className="bg-surface-container-high rounded-2xl p-4 flex flex-col items-center justify-center gap-1 border border-white/5 relative overflow-hidden group">
+          <div className="bg-surface-container-high rounded-2xl p-4 flex flex-col items-center justify-center gap-1 border border-outline-variant relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-12 h-12 bg-primary-container/5 rounded-bl-full group-hover:bg-primary-container/10 transition-all"></div>
             <Target size={20} className="text-primary-container mb-1" />
             <span className="font-headline font-extrabold text-2xl text-primary">{passRate}%</span>
             <span className="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Lulus (KKM {kkm})</span>
           </div>
-          <div className="bg-surface-container-high rounded-2xl p-4 flex flex-col items-center justify-center gap-1 border border-white/5 relative overflow-hidden group">
+          <div className="bg-surface-container-high rounded-2xl p-4 flex flex-col items-center justify-center gap-1 border border-outline-variant relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-12 h-12 bg-outline/5 rounded-bl-full group-hover:bg-outline/10 transition-all"></div>
             <Trophy size={20} className="text-outline mb-1" />
             <span className="font-headline font-extrabold text-2xl text-primary">{analytics.highestScore}</span>
             <span className="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Tertinggi</span>
           </div>
-          <div className="bg-surface-container-high rounded-2xl p-4 flex flex-col items-center justify-center gap-1 border border-white/5 relative overflow-hidden group">
+          <div className="bg-surface-container-high rounded-2xl p-4 flex flex-col items-center justify-center gap-1 border border-outline-variant relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-12 h-12 bg-error/5 rounded-bl-full group-hover:bg-error/10 transition-all"></div>
             <XCircle size={20} className="text-error mb-1" />
             <span className="font-headline font-extrabold text-2xl text-primary">{analytics.lowestScore}</span>
@@ -203,7 +203,7 @@ export default function DashboardLayer({
                 className={`flex-none px-6 py-2.5 rounded-full font-bold text-sm transition-all whitespace-nowrap flex items-center gap-2 ${
                   activeTab === t.id 
                   ? 'bg-tertiary text-on-tertiary shadow-[0_0_15px_rgba(155,255,206,0.3)]' 
-                  : 'bg-surface-container text-on-surface-variant hover:text-primary border border-white/5'
+                  : 'bg-surface-container text-on-surface-variant hover:text-primary border border-outline-variant'
                 }`}
               >
                 {t.icon} {t.label}
@@ -225,9 +225,9 @@ export default function DashboardLayer({
                 const isPassing = s.finalScore >= kkm;
                 const behavior = behaviorMap[s.name.toLowerCase()];
                 return (
-                  <div key={s.id} className="bg-surface-container-high p-4 rounded-[1.5rem] flex items-center justify-between group border border-white/5 hover:border-white/10 transition-all">
+                  <div key={s.id} className="bg-surface-container-high p-4 rounded-[1.5rem] flex items-center justify-between group border border-outline-variant hover:border-outline-variant transition-all">
                     <div className="flex items-center gap-4 min-w-0 flex-1">
-                      <div className="w-12 h-12 rounded-2xl overflow-hidden bg-surface-container-highest flex items-center justify-center text-primary font-bold border border-white/5">
+                      <div className="w-12 h-12 rounded-2xl overflow-hidden bg-surface-container-highest flex items-center justify-center text-primary font-bold border border-outline-variant">
                         {behavior?.avatar_url ? (
                           <img src={behavior.avatar_url} alt={s.name} className="w-full h-full object-cover" />
                         ) : (
@@ -264,7 +264,7 @@ export default function DashboardLayer({
         {/* Tab Content: Analisis Visual */}
         {activeTab === 'analisis' && (
           <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-             <div className="bg-surface-container-high p-6 rounded-[2rem] border border-white/5">
+             <div className="bg-surface-container-high p-6 rounded-[2rem] border border-outline-variant">
                 <h3 className="text-xs font-black text-on-surface-variant uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
                   <TrendingUp size={14} className="text-tertiary" /> Distribusi Nilai Siswa
                 </h3>
@@ -288,7 +288,7 @@ export default function DashboardLayer({
              </div>
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-surface-container-high p-6 rounded-[2rem] border border-white/5 flex flex-col items-center">
+                <div className="bg-surface-container-high p-6 rounded-[2rem] border border-outline-variant flex flex-col items-center">
                    <h3 className="text-xs font-black text-on-surface-variant uppercase tracking-[0.2em] mb-4 self-start">Tingkat Ketuntasan</h3>
                    <div className="h-[180px] w-full max-w-[180px]">
                       <ResponsiveContainer width="100%" height="100%">
@@ -316,16 +316,16 @@ export default function DashboardLayer({
                    </div>
                 </div>
 
-                <div className="bg-surface-container-high p-6 rounded-[2rem] border border-white/5">
+                <div className="bg-surface-container-high p-6 rounded-[2rem] border border-outline-variant">
                    <h3 className="text-xs font-black text-on-surface-variant uppercase tracking-[0.2em] mb-6">Metrik Performa</h3>
                    <div className="space-y-5">
                       <div className="flex justify-between items-center">
                          <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">CSI Index</span>
-                         <span className="text-sm font-black text-primary p-2 bg-white/5 rounded-lg">{analytics.avgCsi.toFixed(1)} / 4.0</span>
+                         <span className="text-sm font-black text-primary p-2 bg-surface-variant rounded-lg">{analytics.avgCsi.toFixed(1)} / 4.0</span>
                       </div>
                       <div className="flex justify-between items-center">
                          <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">LPS Ratio</span>
-                         <span className="text-sm font-black text-primary p-2 bg-white/5 rounded-lg">{analytics.avgLps.toFixed(2)}</span>
+                         <span className="text-sm font-black text-primary p-2 bg-surface-variant rounded-lg">{analytics.avgLps.toFixed(2)}</span>
                       </div>
                       <div className="mt-4 p-3 bg-tertiary/5 rounded-2xl border border-tertiary/10">
                          <p className="text-[9px] font-medium text-tertiary leading-relaxed text-center italic">CSI & LPS menunjukkan tingkat konsistensi dan efektivitas pemahaman siswa dalam sesi ini.</p>
@@ -339,7 +339,7 @@ export default function DashboardLayer({
         {/* Tab Content: Laporan */}
         {activeTab === 'laporan' && (
           <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-             <div className="bg-surface-container p-6 rounded-[2rem] border border-white/5">
+             <div className="bg-surface-container p-6 rounded-[2rem] border border-outline-variant">
                 <div className="flex items-center gap-4 mb-6">
                    <div className="p-3 bg-outline/10 rounded-2xl text-outline border border-outline/20">
                       <ShieldCheck size={24} />
@@ -351,14 +351,14 @@ export default function DashboardLayer({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                   <button onClick={handleExportXML} className="flex items-center justify-between p-5 bg-surface-bright rounded-2xl border border-white/5 hover:border-primary/20 transition-all group active:scale-95">
+                   <button onClick={handleExportXML} className="flex items-center justify-between p-5 bg-surface-bright rounded-2xl border border-outline-variant hover:border-primary/20 transition-all group active:scale-95">
                       <div className="flex items-center gap-3">
                          <DownloadCloud size={20} className="text-primary group-hover:animate-bounce" />
                          <span className="text-xs font-black uppercase tracking-widest">Export SPSS/XML</span>
                       </div>
                       <ChevronRight size={16} className="text-on-surface-variant" />
                    </button>
-                   <button className="flex items-center justify-between p-5 bg-surface-bright rounded-2xl border border-white/5 hover:border-primary/20 transition-all group opacity-50 grayscale active:scale-95">
+                   <button className="flex items-center justify-between p-5 bg-surface-bright rounded-2xl border border-outline-variant hover:border-primary/20 transition-all group opacity-50 grayscale active:scale-95">
                       <div className="flex items-center gap-3">
                          <FileText size={20} className="text-primary" />
                          <span className="text-xs font-black uppercase tracking-widest">PDF Report Full</span>
@@ -391,7 +391,7 @@ export default function DashboardLayer({
 
       {/* Bottom Nav Placeholder UI */}
       {!isPublicView && (
-        <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 bg-[#19191c]/80 backdrop-blur-xl z-50 pb-[env(safe-area-inset-bottom)] border-t border-white/5">
+        <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 bg-[#19191c]/80 backdrop-blur-xl z-50 pb-[env(safe-area-inset-bottom)] border-t border-outline-variant">
           <button onClick={onBack} className="flex flex-col items-center justify-center text-[#adaaad] px-4 py-1.5 active:scale-90 duration-300">
             <LayoutGrid size={24} />
             <span className="font-['Inter'] text-[10px] font-medium uppercase tracking-[0.05em] mt-1">Sesi</span>

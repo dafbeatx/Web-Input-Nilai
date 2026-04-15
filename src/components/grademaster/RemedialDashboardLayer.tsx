@@ -149,7 +149,7 @@ export default function RemedialDashboardLayer({
       'IN_PROGRESS': { label: 'PROSES', color: 'text-amber-400 bg-amber-400/10', icon: 'clock_loader_40' },
       'CHEATED': { label: 'CURANG', color: 'text-error bg-error/10', icon: 'security_update_warning' },
       'FAILED_EFFORT': { label: 'TIDAK VALID', color: 'text-error bg-error/10', icon: 'report' },
-      'TIME_UP': { label: 'TIMEOUT', color: 'text-on-surface-variant bg-white/5', icon: 'timer_off' },
+      'TIME_UP': { label: 'TIMEOUT', color: 'text-on-surface-variant bg-surface-variant', icon: 'timer_off' },
       'REMEDIAL': { 
         label: teacherReviewed ? 'DIKOREKSI' : 'ANTREAN', 
         color: teacherReviewed ? 'text-tertiary bg-tertiary/10' : 'text-amber-400 bg-amber-400/10',
@@ -157,10 +157,10 @@ export default function RemedialDashboardLayer({
       }
     };
 
-    const s = config[status] || { label: status, color: 'text-on-surface-variant bg-white/5', icon: 'info' };
+    const s = config[status] || { label: status, color: 'text-on-surface-variant bg-surface-variant', icon: 'info' };
     
     return (
-      <div className={`px-2 py-1 rounded-lg border border-white/5 flex items-center gap-1.5 ${s.color}`}>
+      <div className={`px-2 py-1 rounded-lg border border-outline-variant flex items-center gap-1.5 ${s.color}`}>
         <span className="material-symbols-outlined text-[12px] font-bold">{s.icon}</span>
         <span className="text-[9px] font-black uppercase tracking-widest leading-none">{s.label}</span>
       </div>
@@ -173,7 +173,7 @@ export default function RemedialDashboardLayer({
       {/* Editorial TopBar */}
       <header className="fixed top-0 w-full z-50 bg-surface-container/80 backdrop-blur-xl flex justify-between items-center px-6 h-16 border-b border-outline-variant/10">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-1 hover:bg-white/5 rounded-lg transition-colors">
+          <button onClick={onBack} className="p-1 hover:bg-surface-variant rounded-lg transition-colors">
             <span className="material-symbols-outlined text-primary">arrow_back</span>
           </button>
           <h1 className="font-headline font-bold text-lg tracking-tight text-primary uppercase">Remedial Center</h1>
@@ -233,7 +233,7 @@ export default function RemedialDashboardLayer({
             placeholder="Cari nama siswa..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-surface-container-low border-none rounded-2xl py-4.5 pl-12 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-tertiary/20 transition-all shadow-inner outline-none" 
+            className="w-full bg-surface-container-low border-none rounded-2xl py-4.5 pl-12 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-tertiary/20 transition-all shadow-sm outline-none" 
           />
         </div>
 
@@ -279,7 +279,7 @@ export default function RemedialDashboardLayer({
                              )}
                           </div>
                           {student.isCheated && (
-                            <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-error text-white rounded-full flex items-center justify-center border-2 border-surface shadow-lg">
+                            <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-error text-on-surface rounded-full flex items-center justify-center border-2 border-surface shadow-lg">
                                <span className="material-symbols-outlined text-[10px] font-black">gpp_maybe</span>
                             </div>
                           )}
@@ -372,7 +372,7 @@ export default function RemedialDashboardLayer({
                                        <button 
                                          onClick={() => submitReview(student.id, 'review')}
                                          disabled={isSubmitting || !reviewScore}
-                                         className="flex-1 py-3 bg-surface-bright text-primary text-[10px] font-black uppercase tracking-widest rounded-2xl disabled:opacity-30 border border-white/5 active:scale-95 transition-transform"
+                                         className="flex-1 py-3 bg-surface-bright text-primary text-[10px] font-black uppercase tracking-widest rounded-2xl disabled:opacity-30 border border-outline-variant active:scale-95 transition-transform"
                                        >
                                          Update
                                        </button>
@@ -439,7 +439,7 @@ export default function RemedialDashboardLayer({
          <div className="max-w-lg mx-auto flex flex-col gap-3 pointer-events-auto">
             <button 
               onClick={() => setIsEditing(true)}
-              className="w-full h-14 bg-gradient-to-br from-[#f9f9f9] to-[#a0a1a1] text-on-primary-container rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-[0.98] transition-all"
+              className="w-full h-14 bg-gradient-to-br from-[#f9f9f9] to-[#a0a1a1] text-on-primary-container rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 premium-shadow active:scale-[0.98] transition-all"
             >
               <span className="material-symbols-outlined">auto_fix_high</span>
               Atur Soal Remedial
@@ -461,7 +461,7 @@ export default function RemedialDashboardLayer({
            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsEditing(false)} />
            
            {/* Sheet Content */}
-           <div className="absolute bottom-0 w-full max-w-xl left-1/2 -translate-x-1/2 bg-surface-container-highest rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom-full duration-500 max-h-[90vh] overflow-y-auto flex flex-col gap-6 custom-scrollbar">
+           <div className="absolute bottom-0 w-full max-w-xl left-1/2 -translate-x-1/2 bg-surface-container-highest rounded-t-3xl p-6 premium-shadow animate-in slide-in-from-bottom-full duration-500 max-h-[90vh] overflow-y-auto flex flex-col gap-6 custom-scrollbar">
               
               {/* Drag Handle */}
               <div className="w-12 h-1 bg-outline/20 rounded-full mx-auto mb-2 shrink-0" />
@@ -471,7 +471,7 @@ export default function RemedialDashboardLayer({
                   <h3 className="font-headline font-black text-xl text-primary uppercase tracking-tight">Atur Soal Remedial</h3>
                   <p className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest mt-1">Konfigurasi Essay System</p>
                 </div>
-                <button onClick={() => setIsEditing(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+                <button onClick={() => setIsEditing(false)} className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center">
                   <X size={20} />
                 </button>
               </div>
@@ -536,7 +536,7 @@ export default function RemedialDashboardLayer({
            </div>
 
            <div className="relative flex flex-col items-center text-center max-w-xs animate-in zoom-in-95 slide-in-from-bottom-8 duration-700">
-              <div className={`w-20 h-20 rounded-[2.5rem] bg-surface-container-highest flex items-center justify-center mb-8 border border-white/5 shadow-2xl transition-all duration-300 ${unlockError ? 'shake bg-error/10 border-error/20' : ''}`}>
+              <div className={`w-20 h-20 rounded-[2.5rem] bg-surface-container-highest flex items-center justify-center mb-8 border border-outline-variant premium-shadow transition-all duration-300 ${unlockError ? 'shake bg-error/10 border-error/20' : ''}`}>
                  <span className={`material-symbols-outlined text-4xl ${unlockError ? 'text-error animate-pulse' : 'text-primary'}`}>
                    {unlockError ? 'lock_reset' : 'shield_person'}
                  </span>
@@ -562,7 +562,7 @@ export default function RemedialDashboardLayer({
                  
                  <button 
                   onClick={handleUnlock}
-                  className="w-full py-5 bg-primary text-on-primary rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-transform"
+                  className="w-full py-5 bg-primary text-on-primary rounded-2xl font-black text-xs uppercase tracking-[0.2em] premium-shadow active:scale-95 transition-transform"
                  >
                     Verifikasi Akses
                  </button>

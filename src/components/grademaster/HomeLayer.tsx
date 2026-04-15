@@ -126,7 +126,7 @@ export default function HomeLayer({
           <p className="font-label text-sm uppercase tracking-widest text-on-surface-variant animate-pulse">Menyiapkan Database...</p>
         </div>
       ) : sessions.length === 0 ? (
-        <div className="text-center py-20 bg-surface-container rounded-3xl border border-dashed border-outline-variant/30 flex flex-col items-center justify-center px-6 shadow-2xl">
+        <div className="text-center py-20 bg-surface-container rounded-3xl border border-dashed border-outline-variant/30 flex flex-col items-center justify-center px-6 premium-shadow">
            <div className="w-16 h-16 rounded-3xl bg-surface-container-high text-on-surface-variant flex items-center justify-center mb-6">
              <span className="material-symbols-outlined text-4xl">folder_off</span>
            </div>

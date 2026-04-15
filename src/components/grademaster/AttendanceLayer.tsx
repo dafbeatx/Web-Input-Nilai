@@ -33,10 +33,10 @@ interface AttendanceLayerProps {
 
 // Status configuration
 const STATUS_CONFIG = [
-  { id: 'Hadir', label: 'H', icon: CheckCircle2, color: 'text-emerald-400', bgActive: 'bg-emerald-500/20 border-emerald-500/50 ring-1 ring-emerald-500/30', bgIdle: 'bg-white/[0.03] border-white/[0.06]', dotColor: 'bg-emerald-400' },
-  { id: 'Izin', label: 'I', icon: Info, color: 'text-sky-400', bgActive: 'bg-sky-500/20 border-sky-500/50 ring-1 ring-sky-500/30', bgIdle: 'bg-white/[0.03] border-white/[0.06]', dotColor: 'bg-sky-400' },
-  { id: 'Sakit', label: 'S', icon: HeartPulse, color: 'text-amber-400', bgActive: 'bg-amber-500/20 border-amber-500/50 ring-1 ring-amber-500/30', bgIdle: 'bg-white/[0.03] border-white/[0.06]', dotColor: 'bg-amber-400' },
-  { id: 'Alpa', label: 'A', icon: XCircle, color: 'text-rose-400', bgActive: 'bg-rose-500/20 border-rose-500/50 ring-1 ring-rose-500/30', bgIdle: 'bg-white/[0.03] border-white/[0.06]', dotColor: 'bg-rose-400' },
+  { id: 'Hadir', label: 'H', icon: CheckCircle2, color: 'text-emerald-400', bgActive: 'bg-emerald-500/20 border-emerald-500/50 ring-1 ring-emerald-500/30', bgIdle: 'bg-surface-variant border-outline-variant', dotColor: 'bg-emerald-400' },
+  { id: 'Izin', label: 'I', icon: Info, color: 'text-sky-400', bgActive: 'bg-sky-500/20 border-sky-500/50 ring-1 ring-sky-500/30', bgIdle: 'bg-surface-variant border-outline-variant', dotColor: 'bg-sky-400' },
+  { id: 'Sakit', label: 'S', icon: HeartPulse, color: 'text-amber-400', bgActive: 'bg-amber-500/20 border-amber-500/50 ring-1 ring-amber-500/30', bgIdle: 'bg-surface-variant border-outline-variant', dotColor: 'bg-amber-400' },
+  { id: 'Alpa', label: 'A', icon: XCircle, color: 'text-rose-400', bgActive: 'bg-rose-500/20 border-rose-500/50 ring-1 ring-rose-500/30', bgIdle: 'bg-surface-variant border-outline-variant', dotColor: 'bg-rose-400' },
 ] as const;
 
 export default function AttendanceLayer({ 
@@ -247,11 +247,11 @@ export default function AttendanceLayer({
   };
 
   return (
-    <div className="font-body text-on-surface min-h-dvh flex flex-col bg-[#0e0e10]">
+    <div className="font-body text-on-surface min-h-dvh flex flex-col bg-surface">
       {/* Top Navigation — Compact */}
-      <nav className="fixed top-0 w-full z-40 bg-[#0e0e10]/80 backdrop-blur-xl flex justify-between items-center px-4 sm:px-6 h-14 border-b border-white/5">
+      <nav className="fixed top-0 w-full z-40 bg-surface/80 backdrop-blur-xl flex justify-between items-center px-4 sm:px-6 h-14 border-b border-outline-variant">
         <div className="flex items-center gap-2.5">
-          <button onClick={onBack} className="p-1.5 bg-white/5 rounded-lg border border-white/10 active:scale-90 transition-all">
+          <button onClick={onBack} className="p-1.5 bg-surface-variant rounded-lg border border-outline-variant active:scale-90 transition-all">
             <ArrowLeft className="text-primary" size={18} />
           </button>
           <span className="text-lg font-black text-primary tracking-tighter font-headline">KEHADIRAN</span>
@@ -269,7 +269,7 @@ export default function AttendanceLayer({
               <select 
                 value={className}
                 onChange={(e) => setClassName(e.target.value)}
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-primary text-sm font-semibold appearance-none outline-none focus:border-primary/40 transition-colors"
+                className="w-full bg-surface-variant border border-outline-variant rounded-xl px-3 py-2.5 text-primary text-sm font-semibold appearance-none outline-none focus:border-primary/40 transition-colors"
               >
                 <option value="">Pilih</option>
                 {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
@@ -285,7 +285,7 @@ export default function AttendanceLayer({
               type="date" 
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-primary text-sm font-semibold outline-none focus:border-primary/40 transition-colors"
+              className="w-full bg-surface-variant border border-outline-variant rounded-xl px-3 py-2.5 text-primary text-sm font-semibold outline-none focus:border-primary/40 transition-colors"
             />
           </div>
         </section>
@@ -300,7 +300,7 @@ export default function AttendanceLayer({
                 className={`flex-none px-4 py-2 rounded-full font-bold text-xs transition-all whitespace-nowrap ${
                   subject === s 
                   ? 'bg-tertiary text-on-tertiary shadow-[0_0_12px_rgba(155,255,206,0.25)]' 
-                  : 'bg-white/[0.04] text-on-surface-variant/60 hover:text-primary border border-white/[0.06]'
+                  : 'bg-surface-variant text-on-surface-variant/60 hover:text-primary border border-outline-variant'
                 }`}
               >
                 {s}
@@ -317,9 +317,9 @@ export default function AttendanceLayer({
               { label: 'Izin', count: stats.izin, color: 'text-sky-400', bg: 'bg-sky-500/10' },
               { label: 'Sakit', count: stats.sakit, color: 'text-amber-400', bg: 'bg-amber-500/10' },
               { label: 'Alpa', count: stats.alpa, color: 'text-rose-400', bg: 'bg-rose-500/10' },
-              { label: 'Belum', count: stats.belum, color: 'text-on-surface-variant/50', bg: 'bg-white/[0.04]' },
+              { label: 'Belum', count: stats.belum, color: 'text-on-surface-variant/50', bg: 'bg-surface-variant' },
             ].map(st => (
-              <div key={st.label} className={`flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-full ${st.bg} border border-white/[0.06]`}>
+              <div key={st.label} className={`flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-full ${st.bg} border border-outline-variant`}>
                 <span className={`text-xs font-extrabold ${st.color}`}>{st.count}</span>
                 <span className="text-[9px] font-bold text-on-surface-variant/50 uppercase tracking-wider">{st.label}</span>
               </div>
@@ -353,7 +353,7 @@ export default function AttendanceLayer({
                <p className="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-[0.3em]">Memuat Presensi...</p>
             </div>
           ) : !isLoaded ? (
-            <div className="py-16 text-center bg-white/[0.02] rounded-2xl border border-dashed border-white/[0.08]">
+            <div className="py-16 text-center bg-surface-variant rounded-2xl border border-dashed border-outline-variant">
                <LayoutGrid className="w-10 h-10 text-on-surface-variant/15 mx-auto mb-3" />
                <p className="text-xs font-medium text-on-surface-variant/40 px-8">Pilih Kelas & Mapel untuk memuat data absensi.</p>
             </div>
@@ -365,14 +365,14 @@ export default function AttendanceLayer({
               return (
                 <div 
                   key={s.id} 
-                  className="bg-white/[0.025] rounded-2xl border border-white/[0.06] overflow-hidden transition-all"
+                  className="bg-surface-variant rounded-2xl border border-outline-variant overflow-hidden transition-all"
                   style={{ animationDelay: `${idx * 30}ms` }}
                 >
                   {/* Student Info Row */}
                   <div className="flex items-center gap-3 px-3.5 pt-3 pb-2">
                     {/* Avatar */}
                     <div className="relative flex-none">
-                      <div className="w-9 h-9 rounded-xl overflow-hidden bg-white/[0.05] flex items-center justify-center text-primary text-xs font-bold border border-white/[0.08]">
+                      <div className="w-9 h-9 rounded-xl overflow-hidden bg-surface-variant flex items-center justify-center text-primary text-xs font-bold border border-outline-variant">
                         {s.avatar_url ? (
                           <img src={s.avatar_url} alt={s.student_name} className="w-full h-full object-cover" />
                         ) : (

@@ -31,7 +31,7 @@ const Badge = ({ children, color = 'indigo' }: { children: React.ReactNode; colo
     indigo: 'bg-primary/10 text-primary border-primary/20',
     emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    slate: 'bg-white/5 text-slate-300 border-white/10',
+    slate: 'bg-surface-variant text-on-surface-variant border-outline-variant',
     rose: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
   };
   return (
@@ -1974,12 +1974,12 @@ export default function StudentRemedialLayer({
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#3b82f615,transparent)]"></div>
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-30"></div>
         
-        <div className="w-full max-w-xl relative bg-slate-900/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl p-6 md:p-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <div className="w-full max-w-xl relative bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant rounded-[2.5rem] premium-shadow p-6 md:p-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
            <header className="text-center mb-8">
               <div className="w-20 h-20 bg-primary/20 rounded-[2rem] border border-primary/30 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/20">
                  <ShieldCheck size={40} className="text-primary" />
               </div>
-              <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight uppercase leading-tight font-outfit">Protokol Keamanan <br /><span className="text-primary italic">GradeMaster OS</span></h2>
+              <h2 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight uppercase leading-tight font-outfit">Protokol Keamanan <br /><span className="text-primary italic">GradeMaster OS</span></h2>
               <div className="flex justify-center gap-2 mt-4">
                  <Badge color="indigo">{subject}</Badge>
                  <Badge color="emerald">{examType}</Badge>
@@ -1994,13 +1994,13 @@ export default function StudentRemedialLayer({
                 { icon: <Activity size={18}/>, title: "Koneksi Stabil", desc: "Setiap aksi disinkronisasi setiap detik. Pastikan internet Anda stabil." },
                 { icon: <AppWindow size={18}/>, title: "Deteksi Multi-Aplikasi", desc: "Menutup browser atau berpindah aplikasi akan dianggap pelanggaran berat." }
               ].map((rule, idx) => (
-                <div key={idx} className="flex gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
+                <div key={idx} className="flex gap-4 p-4 rounded-2xl bg-surface-variant border border-outline-variant hover:bg-surface-container-highest transition-all group">
                    <div className="w-10 h-10 shrink-0 bg-primary/10 text-primary rounded-xl flex items-center justify-center border border-primary/20 group-hover:scale-110 transition-transform">
                       {rule.icon}
                    </div>
                    <div>
-                      <h4 className="text-[11px] font-black uppercase tracking-widest text-white mb-1">{rule.title}</h4>
-                      <p className="text-[10px] md:text-xs font-bold text-slate-500 leading-relaxed text-left">{rule.desc}</p>
+                      <h4 className="text-[11px] font-black uppercase tracking-widest text-on-surface mb-1">{rule.title}</h4>
+                      <p className="text-[10px] md:text-xs font-bold text-on-surface-variant leading-relaxed text-left">{rule.desc}</p>
                    </div>
                 </div>
               ))}
@@ -2019,7 +2019,7 @@ export default function StudentRemedialLayer({
            <button 
              onClick={() => setStep('INFO')}
              disabled={!agreedRules}
-             className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 group border border-white/10 disabled:opacity-30 disabled:grayscale disabled:pointer-events-none"
+             className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 group border border-outline-variant disabled:opacity-30 disabled:grayscale disabled:pointer-events-none"
            >
              Mulai Verifikasi Sistem <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
            </button>
@@ -2035,8 +2035,8 @@ export default function StudentRemedialLayer({
     return (
       <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4 pt-safe">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#3b82f610,transparent)]"></div>
-        <div className="w-full max-w-lg relative bg-slate-900/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl p-6 md:p-10 animate-in zoom-in duration-500">
-           <button onClick={() => setStep('RULES')} className="flex items-center gap-2 text-slate-500 hover:text-white font-black text-[10px] uppercase tracking-widest transition-all mb-8 group">
+        <div className="w-full max-w-lg relative bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant rounded-[2.5rem] premium-shadow p-6 md:p-10 animate-in zoom-in duration-500">
+           <button onClick={() => setStep('RULES')} className="flex items-center gap-2 text-on-surface-variant hover:text-white font-black text-[10px] uppercase tracking-widest transition-all mb-8 group">
             <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Kembali ke Peraturan
           </button>
           
@@ -2044,35 +2044,35 @@ export default function StudentRemedialLayer({
             <div className="w-20 h-20 bg-rose-500/10 text-rose-400 rounded-[2rem] border border-rose-500/20 flex items-center justify-center mb-6 shadow-2xl shadow-rose-500/10">
               <Camera size={40} />
             </div>
-            <h2 className="text-2xl font-black text-white tracking-tight uppercase font-outfit">Persiapan Teknis</h2>
-            <p className="text-[10px] md:text-xs font-bold text-slate-500 mt-2 uppercase tracking-widest">Verifikasi lingkungan pengerjaan</p>
+            <h2 className="text-2xl font-black text-on-surface tracking-tight uppercase font-outfit">Persiapan Teknis</h2>
+            <p className="text-[10px] md:text-xs font-bold text-on-surface-variant mt-2 uppercase tracking-widest">Verifikasi lingkungan pengerjaan</p>
           </header>
 
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8 space-y-4">
-            <div className="flex items-center justify-between pb-4 border-b border-white/5">
-               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Identitas Peserta</span>
+          <div className="bg-surface-variant border border-outline-variant rounded-2xl p-6 mb-8 space-y-4">
+            <div className="flex items-center justify-between pb-4 border-b border-outline-variant">
+               <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Identitas Peserta</span>
                <Badge color="emerald">{studentName}</Badge>
             </div>
             <div className="grid grid-cols-2 gap-4 pt-safe">
               <div>
-                <p className="text-[9px] text-slate-500 font-black uppercase tracking-tighter mb-1.5">Mata Pelajaran</p>
-                <div className="text-[11px] font-bold text-white uppercase truncate">{subject}</div>
+                <p className="text-[9px] text-on-surface-variant font-black uppercase tracking-tighter mb-1.5">Mata Pelajaran</p>
+                <div className="text-[11px] font-bold text-on-surface uppercase truncate">{subject}</div>
               </div>
               <div>
-                <p className="text-[9px] text-slate-500 font-black uppercase tracking-tighter mb-1.5">Waktu Ujian</p>
-                <div className="text-[11px] font-bold text-white uppercase">{remedialTimer} Menit</div>
+                <p className="text-[9px] text-on-surface-variant font-black uppercase tracking-tighter mb-1.5">Waktu Ujian</p>
+                <div className="text-[11px] font-bold text-on-surface uppercase">{remedialTimer} Menit</div>
               </div>
             </div>
           </div>
 
           <div className="space-y-4 mb-8">
-            <div className={`p-4 rounded-2xl border transition-all flex items-center gap-4 ${checkingPerms ? 'bg-amber-500/5 border-amber-500/20' : cameraOk ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-slate-900/50 border-white/10'}`}>
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${checkingPerms ? 'bg-amber-500/20 text-amber-400 border-amber-500/20' : cameraOk ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20' : 'bg-white/5 text-slate-600 border-white/10'}`}>
+            <div className={`p-4 rounded-2xl border transition-all flex items-center gap-4 ${checkingPerms ? 'bg-amber-500/5 border-amber-500/20' : cameraOk ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-surface-variant border-outline-variant'}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${checkingPerms ? 'bg-amber-500/20 text-amber-400 border-amber-500/20' : cameraOk ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20' : 'bg-surface-variant text-slate-600 border-outline-variant'}`}>
                 <Camera size={18} />
               </div>
               <div className="flex-1">
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-0.5">Sensor Kamera</p>
-                <p className={`text-[11px] font-black uppercase ${checkingPerms ? 'text-amber-400 animate-pulse' : cameraOk ? 'text-emerald-400' : 'text-slate-500'}`}>
+                <p className="text-[10px] font-black uppercase tracking-wider text-on-surface-variant mb-0.5">Sensor Kamera</p>
+                <p className={`text-[11px] font-black uppercase ${checkingPerms ? 'text-amber-400 animate-pulse' : cameraOk ? 'text-emerald-400' : 'text-on-surface-variant'}`}>
                   {checkingPerms ? 'Mengevaluasi...' : cameraOk ? 'Terhubung' : 'Terputus'}
                 </p>
               </div>
@@ -2095,7 +2095,7 @@ export default function StudentRemedialLayer({
           <button
             onClick={() => setStep('GUIDE')}
             disabled={isSubmitting || !allPermsOk || (remedialQuestions.length === 0 && !loadRemedialSession()?.remedialQuestions)}
-            className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all border border-white/10 disabled:opacity-30 disabled:grayscale disabled:pointer-events-none group flex items-center justify-center gap-2"
+            className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all border border-outline-variant disabled:opacity-30 disabled:grayscale disabled:pointer-events-none group flex items-center justify-center gap-2"
           >
             {isSubmitting ? 'Sinkronisasi...' : 
              (remedialQuestions.length === 0 && !loadRemedialSession()?.remedialQuestions) ? 'Mengunduh Data...' :
@@ -2112,8 +2112,8 @@ export default function StudentRemedialLayer({
     return (
       <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4 pt-safe">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,#3b82f610,transparent)]"></div>
-        <div className="w-full max-w-xl relative bg-slate-900/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl p-6 md:p-10 animate-in slide-in-from-bottom-8 duration-700">
-          <button onClick={() => setStep('INFO')} className="flex items-center gap-2 text-slate-500 hover:text-white font-black text-[10px] uppercase tracking-widest transition-all mb-8 group">
+        <div className="w-full max-w-xl relative bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant rounded-[2.5rem] premium-shadow p-6 md:p-10 animate-in slide-in-from-bottom-8 duration-700">
+          <button onClick={() => setStep('INFO')} className="flex items-center gap-2 text-on-surface-variant hover:text-white font-black text-[10px] uppercase tracking-widest transition-all mb-8 group">
             <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Kembali ke Persiapan
           </button>
           
@@ -2121,8 +2121,8 @@ export default function StudentRemedialLayer({
             <div className="w-20 h-20 bg-emerald-500/10 text-emerald-400 rounded-[2rem] border border-emerald-500/20 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-emerald-500/10">
               <ShieldCheck size={40} />
             </div>
-            <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight uppercase font-outfit">Panduan Visual</h2>
-            <p className="text-[10px] md:text-xs font-bold text-slate-500 mt-2 uppercase tracking-widest">Optimalkan Pengawasan Sistem</p>
+            <h2 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight uppercase font-outfit">Panduan Visual</h2>
+            <p className="text-[10px] md:text-xs font-bold text-on-surface-variant mt-2 uppercase tracking-widest">Optimalkan Pengawasan Sistem</p>
           </header>
 
           <div className="grid grid-cols-2 gap-4 mb-8">
@@ -2132,12 +2132,12 @@ export default function StudentRemedialLayer({
               { icon: <Star size={20}/>, title: "Cahaya Cukup", desc: "Pastikan area wajah terang & tidak silau." },
               { icon: <Camera size={20}/>, title: "Tetap Fokus", desc: "Jangan bergerak keluar dari jangkauan kamera." }
             ].map((item, idx) => (
-              <div key={idx} className="bg-white/5 border border-white/10 p-5 rounded-2xl flex flex-col items-center text-center group hover:bg-white/10 transition-all hover:border-primary/30">
+              <div key={idx} className="bg-surface-variant border border-outline-variant p-5 rounded-2xl flex flex-col items-center text-center group hover:bg-surface-container-highest transition-all hover:border-primary/30">
                  <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center mb-4 border border-primary/20 group-hover:scale-110 transition-transform">
                    {item.icon}
                  </div>
-                 <h4 className="text-[10px] font-black uppercase tracking-widest text-white mb-1.5">{item.title}</h4>
-                 <p className="text-[9px] text-slate-500 font-bold leading-relaxed">{item.desc}</p>
+                 <h4 className="text-[10px] font-black uppercase tracking-widest text-on-surface mb-1.5">{item.title}</h4>
+                 <p className="text-[9px] text-on-surface-variant font-bold leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -2154,7 +2154,7 @@ export default function StudentRemedialLayer({
           <button
             onClick={startExam}
             disabled={isSubmitting}
-            className="w-full py-5 bg-emerald-500 text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all border border-white/10 flex items-center justify-center gap-3 group"
+            className="w-full py-5 bg-emerald-500 text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all border border-outline-variant flex items-center justify-center gap-3 group"
           >
             {isSubmitting ? 'Inisialisasi...' : 'Saya Mengerti, Mulai Sesi'}
             {!isSubmitting && <Play size={18} className="fill-current group-hover:translate-x-1 transition-transform" />}
@@ -2167,20 +2167,20 @@ export default function StudentRemedialLayer({
   // RENDER: TIME UP MODAL (Extension points feature)
   if (step === 'EXAM' && showTimeUpModal) {
     return (
-      <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-300">
-        <div className="bg-slate-900/40 backdrop-blur-2xl border border-white/10 max-w-lg w-full rounded-[2.5rem] p-8 md:p-10 shadow-2xl flex flex-col items-center text-center relative overflow-hidden">
+      <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-surface/80 backdrop-blur-xl animate-in fade-in duration-300">
+        <div className="bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant max-w-lg w-full rounded-[2.5rem] p-8 md:p-10 premium-shadow flex flex-col items-center text-center relative overflow-hidden">
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-rose-500/50 to-transparent"></div>
           <div className="w-20 h-20 rounded-[2rem] flex items-center justify-center mb-6 bg-rose-500/10 text-rose-400 border border-rose-500/20 animate-pulse">
             <Clock size={40} />
           </div>
-          <h2 className="text-2xl font-black text-white mb-2 tracking-tight uppercase font-outfit">Waktu Habis!</h2>
-          <p className="text-[12px] font-bold text-slate-400 mb-8 leading-relaxed uppercase tracking-wider">
+          <h2 className="text-2xl font-black text-on-surface mb-2 tracking-tight uppercase font-outfit">Waktu Habis!</h2>
+          <p className="text-[12px] font-bold text-on-surface-variant mb-8 leading-relaxed uppercase tracking-wider">
             Sistem mendeteksi durasi ujian Anda telah berakhir.
           </p>
           
-          <div className="bg-white/5 border border-white/10 rounded-2xl w-full p-6 mb-8 space-y-4">
+          <div className="bg-surface-variant border border-outline-variant rounded-2xl w-full p-6 mb-8 space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Saldo Poin Disiplin</span>
+              <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Saldo Poin Disiplin</span>
               <span className="text-sm font-black text-primary">{pointsBal ? pointsBal.total : '...'} Poin</span>
             </div>
             <div className="flex justify-between items-center text-rose-400">
@@ -2196,14 +2196,14 @@ export default function StudentRemedialLayer({
                 setTimeout(handleExtendTime, 0);
               }}
               disabled={extendLoading || !pointsBal || pointsBal.total < 10 || pointsBal.usedToday >= 10}
-              className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all border border-white/10 disabled:opacity-30 disabled:grayscale"
+              className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all border border-outline-variant disabled:opacity-30 disabled:grayscale"
             >
               {extendLoading ? 'Sinkronisasi...' : 'Gunakan 10 Poin (+10 Menit)'}
             </button>
             <button
               onClick={() => handleStatusUpdate('TIMEOUT')}
               disabled={extendLoading || isSubmitting}
-              className="w-full py-3 bg-white/5 text-rose-400 border border-white/10 rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] hover:bg-rose-500/10 transition-all"
+              className="w-full py-3 bg-surface-variant text-rose-400 border border-outline-variant rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] hover:bg-rose-500/10 transition-all"
             >
               Akhiri Sesi (Gagal)
             </button>
@@ -2235,14 +2235,14 @@ export default function StudentRemedialLayer({
     return (
       <div className="fixed inset-0 z-[1000] bg-transparent flex items-center justify-center p-4 pt-safe">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#f59e0b10,transparent)]"></div>
-        <div className="bg-slate-900/40 backdrop-blur-2xl border border-amber-500/20 max-w-lg w-full rounded-[2.5rem] p-8 md:p-10 shadow-2xl text-center relative">
+        <div className="bg-surface premium-shadow backdrop-blur-2xl border border-amber-500/20 max-w-lg w-full rounded-[2.5rem] p-8 md:p-10 premium-shadow text-center relative">
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
           <div className="w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-6 bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse">
             <AlertTriangle size={40} />
           </div>
 
-          <h2 className="text-2xl font-black text-white mb-2 tracking-tight uppercase font-outfit">Pelanggaran Terdeteksi</h2>
-          <p className="text-[10px] md:text-xs font-bold text-slate-500 mb-6 uppercase tracking-widest leading-relaxed">
+          <h2 className="text-2xl font-black text-on-surface mb-2 tracking-tight uppercase font-outfit">Pelanggaran Terdeteksi</h2>
+          <p className="text-[10px] md:text-xs font-bold text-on-surface-variant mb-6 uppercase tracking-widest leading-relaxed">
             Sistem merekam aktivitas mencurigakan pada sesi Anda
           </p>
 
@@ -2253,16 +2253,16 @@ export default function StudentRemedialLayer({
           <div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-6 mb-8 text-left space-y-4">
              <div className="flex items-center gap-3">
                 <div className="w-2 h-2 rounded-full bg-amber-500 shadow-lg shadow-amber-500/50"></div>
-                <p className="text-[10px] font-black text-white uppercase tracking-widest">Kesempatan Terakhir (1/1)</p>
+                <p className="text-[10px] font-black text-on-surface uppercase tracking-widest">Kesempatan Terakhir (1/1)</p>
              </div>
-             <p className="text-[11px] text-slate-400 font-bold leading-relaxed">
+             <p className="text-[11px] text-on-surface-variant font-bold leading-relaxed">
                Anda diberikan <span className="text-amber-500">satu</span> kali kesempatan untuk melanjutkan. Pelanggaran berikutnya akan memicu diskualifikasi otomatis & nilai <span className="text-rose-500 font-black">NOL</span>.
              </p>
           </div>
 
           <button
             onClick={handleUseSecondChance}
-            className="w-full py-5 bg-amber-500 text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-amber-500/20 hover:scale-[1.02] active:scale-95 transition-all border border-white/10 flex items-center justify-center gap-3 mb-4"
+            className="w-full py-5 bg-amber-500 text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-amber-500/20 hover:scale-[1.02] active:scale-95 transition-all border border-outline-variant flex items-center justify-center gap-3 mb-4"
           >
             Pulihkan Sesi Ujian <Play size={18} className="fill-current" />
           </button>
@@ -2305,27 +2305,27 @@ export default function StudentRemedialLayer({
       <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4 overflow-y-auto custom-scrollbar">
         <div className={`absolute inset-0 opacity-20 ${isCheat ? 'bg-rose-500/10' : isTimeout ? 'bg-amber-500/10' : 'bg-emerald-500/10'}`}></div>
         
-        <div className={`w-full max-w-xl relative bg-slate-900/40 backdrop-blur-2xl border rounded-[2.5rem] shadow-2xl p-8 md:p-12 text-center animate-in zoom-in-95 duration-700 ${isCheat ? 'border-rose-500/20' : isTimeout ? 'border-amber-500/20' : 'border-emerald-500/20'}`}>
+        <div className={`w-full max-w-xl relative bg-surface premium-shadow backdrop-blur-2xl border rounded-[2.5rem] premium-shadow p-8 md:p-12 text-center animate-in zoom-in-95 duration-700 ${isCheat ? 'border-rose-500/20' : isTimeout ? 'border-amber-500/20' : 'border-emerald-500/20'}`}>
           <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-${isCheat ? 'rose' : isTimeout ? 'amber' : 'emerald'}-500/50 to-transparent`}></div>
           
           <div className={`w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border ${isCheat ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : isTimeout ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
             {isCheat ? <ShieldX size={48} /> : isTimeout ? <Clock size={48} /> : <CheckCircle2 size={48} />}
           </div>
           
-          <h2 className="text-3xl font-black text-white mb-3 tracking-tight uppercase font-outfit">
+          <h2 className="text-3xl font-black text-on-surface mb-3 tracking-tight uppercase font-outfit">
             {isCheat ? 'Diskualifikasi!' : isTimeout ? 'Waktu Berakhir' : 'Sesi Selesai!'}
           </h2>
           
           <div className="space-y-4 mb-10">
             {isCheat ? (
-               <p className="text-[12px] md:text-sm text-slate-400 font-bold leading-relaxed uppercase tracking-wide">Pelanggaran berat terdeteksi. Skor otomatis diatur menjadi <span className="text-rose-500 font-black">NOL</span>. Silakan hubungi Guru Pengampu.</p>
+               <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide">Pelanggaran berat terdeteksi. Skor otomatis diatur menjadi <span className="text-rose-500 font-black">NOL</span>. Silakan hubungi Guru Pengampu.</p>
             ) : isTimeout ? (
-               <p className="text-[12px] md:text-sm text-slate-400 font-bold leading-relaxed uppercase tracking-wide">Sesi ditutup otomatis oleh sistem. Jawaban terakhir yang tersimpan akan dievaluasi.</p>
+               <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide">Sesi ditutup otomatis oleh sistem. Jawaban terakhir yang tersimpan akan dievaluasi.</p>
             ) : (
                <div className="space-y-4">
-                  <p className="text-[12px] md:text-sm text-slate-400 font-bold leading-relaxed uppercase tracking-wide">Evaluasi mandiri selesai. Data Anda telah disinkronisasi dengan Server Nilai Pusat.</p>
-                  <div className="py-6 px-10 bg-white/5 border border-white/10 rounded-3xl inline-block">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Skor Akhir</p>
+                  <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide">Evaluasi mandiri selesai. Data Anda telah disinkronisasi dengan Server Nilai Pusat.</p>
+                  <div className="py-6 px-10 bg-surface-variant border border-outline-variant rounded-3xl inline-block">
+                    <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] mb-1">Skor Akhir</p>
                     <p className={`text-5xl font-black font-outfit tracking-tighter ${finalScore !== null && finalScore < 70 ? 'text-rose-500' : 'text-emerald-500'}`}>
                       {finalScore}
                     </p>
@@ -2343,14 +2343,14 @@ export default function StudentRemedialLayer({
                  {finalScore !== null && finalScore < 70 ? (
                     <button
                       onClick={() => { clearRemedialSession(); window.location.reload(); }}
-                      className="w-full py-5 bg-primary text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all border border-white/10 flex items-center justify-center gap-3"
+                      className="w-full py-5 bg-primary text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all border border-outline-variant flex items-center justify-center gap-3"
                     >
                       Coba Lagi Sekarang <RefreshCw size={18} />
                     </button>
                  ) : (
                     <button
                       onClick={handleShare}
-                      className="w-full py-5 bg-emerald-500 text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all border border-white/10 flex items-center justify-center gap-3"
+                      className="w-full py-5 bg-emerald-500 text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all border border-outline-variant flex items-center justify-center gap-3"
                     >
                       Kabarkan Teman Sekelas <Send size={18} />
                     </button>
@@ -2360,22 +2360,22 @@ export default function StudentRemedialLayer({
             
             <button
               onClick={handleExit}
-              className={`w-full py-4 rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] transition-all border border-white/10 ${isCheat ? 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
+              className={`w-full py-4 rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] transition-all border border-outline-variant ${isCheat ? 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20' : 'bg-surface-variant text-on-surface-variant hover:bg-surface-container-highest'}`}
             >
               Keluar ke Dasbor
             </button>
           </div>
 
           {isCompleted && remainingStudents.length > 0 && (
-            <div className="mt-12 pt-8 border-t border-white/5 text-left">
+            <div className="mt-12 pt-8 border-t border-outline-variant text-left">
               <div className="flex items-center justify-between mb-6">
-                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Rekan Belum Mengerjakan</h4>
+                <h4 className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Rekan Belum Mengerjakan</h4>
                 <Badge color="rose">Sisa {getRemainingTimeStr()}</Badge>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
                 {remainingStudents.map((s, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 group hover:border-primary/30 transition-all">
-                    <span className="text-[11px] font-bold text-slate-400 truncate group-hover:text-white transition-colors">{s.name}</span>
+                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-surface-variant border border-outline-variant group hover:border-primary/30 transition-all">
+                    <span className="text-[11px] font-bold text-on-surface-variant truncate group-hover:text-white transition-colors">{s.name}</span>
                     <div className="w-2 h-2 rounded-full bg-rose-500/50"></div>
                   </div>
                 ))}
@@ -2395,11 +2395,11 @@ export default function StudentRemedialLayer({
   };
 
   return (
-    <div className="relative min-h-screen bg-transparent font-inter text-slate-200 selection:bg-primary/30 selection:text-white overflow-x-hidden">
+    <div className="relative min-h-screen bg-transparent font-inter text-on-surface selection:bg-primary/30 selection:text-white overflow-x-hidden">
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,#3b82f605,transparent)] pointer-events-none"></div>
       
       {/* ── TOP APP BAR (GradeMaster OS Header) ── */}
-      <header className="fixed top-0 w-full z-[80] bg-slate-900/40 backdrop-blur-2xl border-b border-white/5 px-6 py-4">
+      <header className="fixed top-0 w-full z-[80] bg-surface premium-shadow backdrop-blur-2xl border-b border-outline-variant px-6 py-4">
         <div className="flex justify-between items-center w-full max-w-7xl mx-auto">
           <div className="flex items-center gap-4 pt-safe">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/10">
@@ -2408,7 +2408,7 @@ export default function StudentRemedialLayer({
               </span>
             </div>
             <div className="hidden xs:flex flex-col">
-              <h1 className="text-sm font-black tracking-tight text-white uppercase font-outfit leading-tight">{studentName}</h1>
+              <h1 className="text-sm font-black tracking-tight text-on-surface uppercase font-outfit leading-tight">{studentName}</h1>
               <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-primary italic">Sesi Remedial Terproteksi</span>
             </div>
           </div>
@@ -2417,20 +2417,20 @@ export default function StudentRemedialLayer({
             {/* Timer Desktop */}
             <div className="hidden md:flex items-center gap-6 pt-safe">
               <div className="flex flex-col items-center">
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Durasi Tersisa</span>
-                <span className={`text-xl font-black font-outfit tabular-nums tracking-tighter ${timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-white'}`}>
+                <span className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest mb-1">Durasi Tersisa</span>
+                <span className={`text-xl font-black font-outfit tabular-nums tracking-tighter ${timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-on-surface'}`}>
                   {formatTime(timeLeft)}
                 </span>
               </div>
-              <div className="h-8 w-px bg-white/5"></div>
+              <div className="h-8 w-px bg-surface-variant"></div>
               <div className="flex flex-col">
-                <span className="text-[11px] font-black text-white uppercase tracking-tight truncate max-w-[150px]">{subject}</span>
-                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">{examType} • {academicYear}</span>
+                <span className="text-[11px] font-black text-on-surface uppercase tracking-tight truncate max-w-[150px]">{subject}</span>
+                <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-tighter">{examType} • {academicYear}</span>
               </div>
             </div>
 
             <div className="flex items-center gap-4 pt-safe">
-              <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10">
+              <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-variant border border-outline-variant">
                 <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'}`}></div>
                 <span className={`text-[10px] font-black uppercase tracking-widest ${isOffline ? 'text-rose-400' : 'text-emerald-400'}`}>
                   {isOffline ? 'Offline' : 'Server Aktif'}
@@ -2439,7 +2439,7 @@ export default function StudentRemedialLayer({
               <button 
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="bg-primary text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-30 flex items-center gap-2 border border-white/10"
+                className="bg-primary text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-30 flex items-center gap-2 border border-outline-variant"
               >
                 {isSubmitting ? <RefreshCw className="animate-spin" size={14} /> : <Send size={14} />}
                 Submit
@@ -2454,43 +2454,43 @@ export default function StudentRemedialLayer({
         
         {/* Monitoring Panel */}
         <aside className="w-full lg:w-72 lg:sticky lg:top-32 h-fit space-y-6">
-          <div className="bg-slate-900/40 backdrop-blur-2xl border border-white/10 p-6 rounded-[2rem] shadow-xl">
+          <div className="bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant p-6 rounded-[2rem] shadow-xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-white">Telemetri</h2>
+              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface">Telemetri</h2>
               <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
                 <Activity size={16} />
               </div>
             </div>
             
             <div className="space-y-3">
-              <div className="flex items-center gap-3 p-4 bg-white/5 border border-white/10 rounded-2xl">
+              <div className="flex items-center gap-3 p-4 bg-surface-variant border border-outline-variant rounded-2xl">
                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
                    <ShieldCheck size={16} />
                  </div>
                  <div>
-                   <p className="text-[10px] font-black text-white uppercase tracking-widest">Proteksi AI</p>
+                   <p className="text-[10px] font-black text-on-surface uppercase tracking-widest">Proteksi AI</p>
                    <p className="text-[9px] font-bold text-emerald-400 uppercase">Terverifikasi</p>
                  </div>
               </div>
               
-              <div className={`flex items-center gap-3 p-4 bg-white/5 border rounded-2xl transition-colors ${tabWarningCount > 0 ? 'border-rose-500/30' : 'border-white/10'}`}>
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${tabWarningCount > 0 ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-white/5 text-slate-500 border-white/10'}`}>
+              <div className={`flex items-center gap-3 p-4 bg-surface-variant border rounded-2xl transition-colors ${tabWarningCount > 0 ? 'border-rose-500/30' : 'border-outline-variant'}`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${tabWarningCount > 0 ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-surface-variant text-on-surface-variant border-outline-variant'}`}>
                   <AppWindow size={16} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-white uppercase tracking-widest">Layar Aktif</p>
-                  <p className={`text-[9px] font-bold uppercase ${tabWarningCount > 0 ? 'text-rose-400' : 'text-slate-500'}`}>
+                  <p className="text-[10px] font-black text-on-surface uppercase tracking-widest">Layar Aktif</p>
+                  <p className={`text-[9px] font-bold uppercase ${tabWarningCount > 0 ? 'text-rose-400' : 'text-on-surface-variant'}`}>
                     Warn: {tabWarningCount}/{MAX_TAB_WARNINGS}
                   </p>
                 </div>
               </div>
 
-              <div className={`flex items-center gap-3 p-4 bg-white/5 border rounded-2xl transition-colors ${isOffline ? 'border-rose-500/30' : 'border-white/10'}`}>
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${isOffline ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-white/5 text-slate-500 border-white/10'}`}>
+              <div className={`flex items-center gap-3 p-4 bg-surface-variant border rounded-2xl transition-colors ${isOffline ? 'border-rose-500/30' : 'border-outline-variant'}`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${isOffline ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-surface-variant text-on-surface-variant border-outline-variant'}`}>
                   <Wifi size={16} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-white uppercase tracking-widest">Konektivitas</p>
+                  <p className="text-[10px] font-black text-on-surface uppercase tracking-widest">Konektivitas</p>
                   <p className={`text-[9px] font-bold uppercase ${isOffline ? 'text-rose-400' : 'text-emerald-400'}`}>
                     {isOffline ? 'Terputus' : 'Stabil'}
                   </p>
@@ -2503,12 +2503,12 @@ export default function StudentRemedialLayer({
             <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/20 transition-colors"></div>
             <p className="text-[9px] font-black text-primary uppercase tracking-[0.3em] mb-4">Statistik Progres</p>
             <div className="flex items-baseline justify-between mb-4">
-              <span className="text-4xl font-black font-outfit text-white tracking-tighter">
+              <span className="text-4xl font-black font-outfit text-on-surface tracking-tighter">
                 {answers.filter(a => a.trim() !== '').length}
               </span>
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">/ {remedialEssayCount} Soal</span>
+              <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">/ {remedialEssayCount} Soal</span>
             </div>
-            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+            <div className="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden border border-outline-variant">
               <div 
                 className="h-full bg-primary shadow-[0_0_12px_rgba(59,130,246,0.5)] transition-all duration-1000 ease-out" 
                 style={{ width: `${(answers.filter(a => a.trim() !== '').length / remedialEssayCount) * 100}%` }}
@@ -2520,7 +2520,7 @@ export default function StudentRemedialLayer({
         {/* Question Area */}
         <section className="flex-1 space-y-8 animate-in fade-in duration-1000">
           {answers.map((ans, idx) => (
-            <div key={idx} className="bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] p-8 md:p-12 border border-white/10 shadow-2xl relative overflow-hidden group hover:border-primary/30 transition-all">
+            <div key={idx} className="bg-surface premium-shadow backdrop-blur-2xl rounded-[2.5rem] p-8 md:p-12 border border-outline-variant premium-shadow relative overflow-hidden group hover:border-primary/30 transition-all">
               <div className="absolute top-0 left-0 w-1.5 h-full bg-primary/20 group-hover:bg-primary transition-all duration-500" />
               
               <div className="flex items-center gap-4 mb-8">
@@ -2528,14 +2528,14 @@ export default function StudentRemedialLayer({
                   {idx + 1}
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-white tracking-tight font-outfit uppercase">Soal Essay {idx + 1}</h3>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Kategori Pengerjaan Mandiri</p>
+                  <h3 className="text-xl font-black text-on-surface tracking-tight font-outfit uppercase">Soal Essay {idx + 1}</h3>
+                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em]">Kategori Pengerjaan Mandiri</p>
                 </div>
               </div>
 
               {shuffledQuestions[idx] && (
-                <div className="bg-slate-950/50 p-8 rounded-[2rem] mb-10 border border-white/5 shadow-inner">
-                  <p className="text-slate-300 font-bold leading-relaxed whitespace-pre-wrap text-lg font-outfit italic">
+                <div className="bg-surface-variant p-8 rounded-[2rem] mb-10 border border-outline-variant shadow-sm">
+                  <p className="text-on-surface-variant font-bold leading-relaxed whitespace-pre-wrap text-lg font-outfit italic">
                     "{shuffledQuestions[idx].text}"
                   </p>
                 </div>
@@ -2543,7 +2543,7 @@ export default function StudentRemedialLayer({
 
               <div className="relative">
                 <textarea
-                  className="w-full bg-slate-950/50 border border-white/10 rounded-[2rem] p-8 text-lg font-bold text-white outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all resize-none min-h-[320px] shadow-inner custom-scrollbar"
+                  className="w-full bg-surface-variant border border-outline-variant rounded-[2rem] p-8 text-lg font-bold text-on-surface outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all resize-none min-h-[320px] shadow-sm custom-scrollbar"
                   placeholder="Ketikkan argumentasi jawaban Anda secara sistematis di sini..."
                   value={ans}
                   onChange={(e) => handleChange(idx, e.target.value)}
@@ -2559,31 +2559,31 @@ export default function StudentRemedialLayer({
                 </div>
               </div>
               
-              <div className="mt-6 flex items-center justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest pl-2">
+              <div className="mt-6 flex items-center justify-between text-[10px] font-black text-on-surface-variant uppercase tracking-widest pl-2">
                 <span className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
                   Sistem Sinkronisasi Aktif
                 </span>
-                <span className="bg-white/5 px-4 py-1.5 rounded-full border border-white/5">{ans.length} Karakter</span>
+                <span className="bg-surface-variant px-4 py-1.5 rounded-full border border-outline-variant">{ans.length} Karakter</span>
               </div>
             </div>
           ))}
 
           {/* Bottom Actions */}
-          <div className="bg-slate-900/40 backdrop-blur-2xl p-10 md:p-16 rounded-[3rem] border border-white/10 flex flex-col items-center text-center relative overflow-hidden">
+          <div className="bg-surface premium-shadow backdrop-blur-2xl p-10 md:p-16 rounded-[3rem] border border-outline-variant flex flex-col items-center text-center relative overflow-hidden">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,#3b82f605,transparent)]"></div>
             <div className="w-20 h-20 bg-primary/10 text-primary rounded-[2rem] flex items-center justify-center mb-8 border border-primary/20 shadow-2xl shadow-primary/20">
               <ShieldCheck size={36} />
             </div>
-            <h3 className="text-2xl md:text-3xl font-black text-white mb-3 font-outfit uppercase tracking-tight">Finalisasi Jawaban</h3>
-            <p className="text-[11px] md:text-xs text-slate-500 font-bold mb-10 max-w-sm uppercase tracking-widest leading-loose">Pastikan seluruh poin argumentasi telah terjawab secara komprehensif sebelum mengunci sesi ujian.</p>
+            <h3 className="text-2xl md:text-3xl font-black text-on-surface mb-3 font-outfit uppercase tracking-tight">Finalisasi Jawaban</h3>
+            <p className="text-[11px] md:text-xs text-on-surface-variant font-bold mb-10 max-w-sm uppercase tracking-widest leading-loose">Pastikan seluruh poin argumentasi telah terjawab secara komprehensif sebelum mengunci sesi ujian.</p>
             
             <button
               onClick={handleSubmit}
               disabled={isSubmitting || isOffline}
-              className={`group flex items-center gap-4 px-12 py-5 rounded-2xl text-[11px] md:text-xs font-black uppercase tracking-[0.3em] transition-all shadow-2xl border border-white/10 ${
+              className={`group flex items-center gap-4 px-12 py-5 rounded-2xl text-[11px] md:text-xs font-black uppercase tracking-[0.3em] transition-all premium-shadow border border-outline-variant ${
                 isSubmitting || isOffline 
-                  ? 'bg-slate-800 text-slate-600 border-white/5 cursor-not-allowed grayscale' 
+                  ? 'bg-slate-800 text-slate-600 border-outline-variant cursor-not-allowed grayscale' 
                   : 'bg-primary text-white hover:scale-105 active:scale-95 shadow-primary/20'
               }`}
             >
@@ -2606,7 +2606,7 @@ export default function StudentRemedialLayer({
       {step === 'EXAM' && (
         <div
           ref={pipRef}
-          className="fixed z-[90] rounded-3xl overflow-hidden border-2 border-white/20 shadow-2xl bg-slate-900 w-28 h-40 md:w-48 md:h-72 animate-in slide-in-from-right duration-500 cursor-grab active:cursor-grabbing select-none touch-none"
+          className="fixed z-[90] rounded-3xl overflow-hidden border-2 border-white/20 premium-shadow bg-slate-900 w-28 h-40 md:w-48 md:h-72 animate-in slide-in-from-right duration-500 cursor-grab active:cursor-grabbing select-none touch-none"
           style={pipPos
             ? { left: `${pipPos.x}px`, top: `${pipPos.y}px`, transition: isDraggingRef.current ? 'none' : 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)' }
             : { right: '32px', bottom: '32px' }
@@ -2685,11 +2685,11 @@ export default function StudentRemedialLayer({
             <div className="absolute bottom-3 left-3 flex flex-col gap-1">
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
-                <span className="text-[8px] font-black text-white uppercase tracking-widest">Live AI</span>
+                <span className="text-[8px] font-black text-on-surface uppercase tracking-widest">Live AI</span>
               </div>
             </div>
-            <div className="absolute top-3 right-3 bg-slate-950/60 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10">
-              <span className="text-[10px] font-black font-mono text-white/90">{formatTime(timeLeft)}</span>
+            <div className="absolute top-3 right-3 bg-surface/60 backdrop-blur-md px-2 py-1 rounded-lg border border-outline-variant">
+              <span className="text-[10px] font-black font-mono text-on-surface/90">{formatTime(timeLeft)}</span>
             </div>
           </div>
         </div>
@@ -2697,22 +2697,22 @@ export default function StudentRemedialLayer({
 
       {/* ── MODALS & OVERLAYS ── */}
       {activeWarning && step === 'EXAM' && (
-        <div className="fixed inset-0 z-[1000] bg-slate-950/90 backdrop-blur-xl flex justify-center items-center p-4 pt-safe">
-          <div className="bg-slate-900/40 border border-white/10 max-w-sm w-full rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95">
+        <div className="fixed inset-0 z-[1000] bg-surface/90 backdrop-blur-xl flex justify-center items-center p-4 pt-safe">
+          <div className="bg-surface premium-shadow border border-outline-variant max-w-sm w-full rounded-[2.5rem] premium-shadow overflow-hidden animate-in zoom-in-95">
             <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-8 flex flex-col items-center">
               <div className="w-16 h-16 rounded-[1.5rem] bg-white/20 flex items-center justify-center border border-white/30 mb-4">
-                <AlertTriangle size={36} className="text-white" />
+                <AlertTriangle size={36} className="text-on-surface" />
               </div>
-              <h2 className="text-xl font-black text-white uppercase tracking-tight font-outfit">Sistem Peringatan</h2>
+              <h2 className="text-xl font-black text-on-surface uppercase tracking-tight font-outfit">Sistem Peringatan</h2>
             </div>
             <div className="p-8 pt-safe text-center">
               <div className="bg-rose-500/10 border border-rose-500/20 px-5 py-2 rounded-full text-xs font-black text-rose-400 mb-6 inline-block uppercase tracking-widest">
                 Pelanggaran {activeWarning.count}/{activeWarning.limit}
               </div>
-              <p className="text-[12px] text-slate-400 font-bold mb-8 leading-relaxed uppercase tracking-wide">{activeWarning.message}</p>
+              <p className="text-[12px] text-on-surface-variant font-bold mb-8 leading-relaxed uppercase tracking-wide">{activeWarning.message}</p>
               <button 
                 onClick={() => setActiveWarning(null)}
-                className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all border border-white/10"
+                className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all border border-outline-variant"
               >
                 Saya Mengerti
               </button>
@@ -2722,8 +2722,8 @@ export default function StudentRemedialLayer({
       )}
 
       {showAiBotWarning && step === 'EXAM' && (
-         <div className="fixed inset-0 z-[1001] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-300 text-center">
-            <div className={`bg-slate-900/40 border-2 max-w-sm w-full rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 ${overlayViolationCount >= 3 ? 'border-rose-500/50' : 'border-amber-500/50'}`}>
+         <div className="fixed inset-0 z-[1001] flex items-center justify-center p-4 bg-surface/90 backdrop-blur-xl animate-in fade-in duration-300 text-center">
+            <div className={`bg-surface premium-shadow border-2 max-w-sm w-full rounded-[2.5rem] overflow-hidden premium-shadow animate-in zoom-in-95 ${overlayViolationCount >= 3 ? 'border-rose-500/50' : 'border-amber-500/50'}`}>
                <div className={`p-10 flex flex-col items-center text-white ${overlayViolationCount >= 3 ? 'bg-rose-600/20' : 'bg-amber-600/20'}`}>
                   <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center mb-6 border ${overlayViolationCount >= 3 ? 'bg-rose-500/20 border-rose-500/30' : 'bg-amber-500/20 border-amber-500/30'}`}>
                     <Cpu size={36} className="animate-pulse" />
@@ -2731,12 +2731,12 @@ export default function StudentRemedialLayer({
                   <h2 className="text-xl font-black mb-1 tracking-tight font-outfit uppercase">
                     {overlayViolationCount >= 3 ? 'AI KRITIS' : 'Aktivitas Ilegal'}
                   </h2>
-                  <div className="px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.2em] bg-white/5 border border-white/10 mt-2">
+                  <div className="px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.2em] bg-surface-variant border border-outline-variant mt-2">
                     Lacak {overlayViolationCount}/3
                   </div>
                </div>
-               <div className="p-8 text-center bg-slate-900/40">
-                  <p className="text-[11px] text-slate-400 font-bold leading-relaxed mb-6 uppercase tracking-widest">
+               <div className="p-8 text-center bg-surface premium-shadow">
+                  <p className="text-[11px] text-on-surface-variant font-bold leading-relaxed mb-6 uppercase tracking-widest">
                     Sistem mendeteksi aplikasi pihak ketiga yang berjalan di latar belakang.
                   </p>
                   <div className="text-5xl font-black text-rose-500 font-outfit tracking-tighter">{aiCountdown}</div>
@@ -2751,10 +2751,10 @@ export default function StudentRemedialLayer({
            <div className="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-[2.5rem] border border-rose-500/20 flex items-center justify-center mb-8 animate-bounce shadow-2xl shadow-rose-500/20">
             {isConnectionLocked ? <MonitorOff size={48} /> : <Monitor size={48} />}
           </div>
-          <h2 className="text-3xl font-black text-white mb-3 tracking-tighter uppercase font-outfit">
+          <h2 className="text-3xl font-black text-on-surface mb-3 tracking-tighter uppercase font-outfit">
             {isConnectionLocked ? 'Koneksi Terputus' : 'Layar Terpisah'}
           </h2>
-          <p className="text-slate-500 font-bold max-w-xs mb-12 leading-relaxed uppercase text-[11px] tracking-widest">
+          <p className="text-on-surface-variant font-bold max-w-xs mb-12 leading-relaxed uppercase text-[11px] tracking-widest">
             {isConnectionLocked 
                ? 'Ujian ditangguhkan. Hubungkan kembali akses internet untuk melanjutkan sinkronisasi data.' 
                : 'Aktivitas Split-Screen dilarang demi integritas pengawasan. Gunakan mode layar penuh.'}
@@ -2762,7 +2762,7 @@ export default function StudentRemedialLayer({
           {isConnectionLocked && (
             <button 
               onClick={syncWithServer} 
-              className="px-12 py-5 bg-primary text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all border border-white/10"
+              className="px-12 py-5 bg-primary text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all border border-outline-variant"
             >
               Pulihkan Sesi
             </button>
@@ -2780,21 +2780,21 @@ export default function StudentRemedialLayer({
       `}</style>
       {/* Offline Security Overlay */}
       {(isOffline || isConnectionLocked) && step === 'EXAM' && (
-        <div className="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+        <div className="fixed inset-0 z-[9999] bg-surface/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
            <div className="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center mb-8 border border-rose-500/20 animate-pulse">
               <Wifi size={48} />
            </div>
-           <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-4">Koneksi Terputus</h2>
-           <p className="text-slate-400 max-w-xs mb-8 font-bold leading-relaxed">
+           <h2 className="text-3xl font-black text-on-surface uppercase tracking-tight mb-4">Koneksi Terputus</h2>
+           <p className="text-on-surface-variant max-w-xs mb-8 font-bold leading-relaxed">
              Sistem mengunci ujian untuk mencegah kecurangan. Konten disembunyikan sampai koneksi kembali stabil.
            </p>
            
            <div className="flex flex-col gap-3 w-full max-w-xs">
-              <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center gap-3">
+              <div className="p-4 bg-surface-variant rounded-2xl border border-outline-variant flex items-center gap-3">
                  <RefreshCw size={20} className="text-primary animate-spin" />
                  <div className="text-left">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Status Sinkronisasi</p>
-                    <p className="text-xs font-black text-white">{isSyncing ? "Menghubungkan..." : "Menunggu Sinyal..."}</p>
+                    <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Status Sinkronisasi</p>
+                    <p className="text-xs font-black text-on-surface">{isSyncing ? "Menghubungkan..." : "Menunggu Sinyal..."}</p>
                  </div>
               </div>
               

@@ -193,22 +193,22 @@ export default function StudentAccountsLayer({
   return (
     <div className="min-h-dvh bg-transparent p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto page-pt md:pt-16 pb-24 md:pb-8">
       <header className="mb-6 md:mb-10">
-        <button type="button" onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-[#00b4ff] font-sans text-[13px] font-medium transition-all mb-4 bg-white/5 px-4 py-2 rounded-xl border border-white/10 hover:border-[#00b4ff]/20">
+        <button type="button" onClick={onBack} className="flex items-center gap-2 text-on-surface-variant hover:text-[#00b4ff] font-sans text-[13px] font-medium transition-all mb-4 bg-surface-variant px-4 py-2 rounded-xl border border-outline-variant hover:border-[#00b4ff]/20">
           <ArrowLeft size={14} /> Beranda
         </button>
-        <h1 className="text-xl md:text-3xl font-sans font-bold text-white tracking-[-0.5px] flex items-center gap-3">
+        <h1 className="text-xl md:text-3xl font-sans font-bold text-on-surface tracking-[-0.5px] flex items-center gap-3">
           <KeyRound className="text-[#00b4ff]" size={24} /> Manajemen Akun Siswa
         </h1>
-        <p className="text-[13px] text-slate-500 font-sans mt-1">Buat, kelola, dan ekspor kredensial login siswa</p>
+        <p className="text-[13px] text-on-surface-variant font-sans mt-1">Buat, kelola, dan ekspor kredensial login siswa</p>
       </header>
 
       {/* Class Selector */}
-      <div className="bg-[#111113] rounded-2xl p-4 border border-white/10 mb-6 shadow-xl shadow-black/20">
-        <label className="block text-[12px] font-sans font-medium text-slate-400 mb-2">Pilih Kelas</label>
+      <div className="bg-[#111113] rounded-2xl p-4 border border-outline-variant mb-6 shadow-xl shadow-black/20">
+        <label className="block text-[12px] font-sans font-medium text-on-surface-variant mb-2">Pilih Kelas</label>
         <select
           value={selectedClass}
           onChange={(e) => setSelectedClass(e.target.value)}
-          className="w-full bg-black/40 border border-white/10 rounded-xl p-3.5 text-[15px] font-sans font-medium text-white outline-none focus:border-[#00b4ff]/50 transition-all appearance-none"
+          className="w-full bg-black/40 border border-outline-variant rounded-xl p-3.5 text-[15px] font-sans font-medium text-on-surface outline-none focus:border-[#00b4ff]/50 transition-all appearance-none"
         >
           <option value="">-- Pilih Kelas --</option>
           {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
@@ -242,7 +242,7 @@ export default function StudentAccountsLayer({
             {isClearing ? <Loader2 size={16} className="animate-spin" /> : <Shield size={16} />}
             Hapus Password
           </button>
-          <div className="hidden md:flex items-center justify-center px-4 py-3.5 bg-white/5 border border-white/5 rounded-2xl text-[13px] font-sans font-medium text-slate-500">
+          <div className="hidden md:flex items-center justify-center px-4 py-3.5 bg-surface-variant border border-outline-variant rounded-2xl text-[13px] font-sans font-medium text-on-surface-variant">
             <Users size={16} className="mr-2" /> {accounts.length} Akun
           </div>
         </div>
@@ -252,21 +252,21 @@ export default function StudentAccountsLayer({
       <div className="space-y-3">
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="bg-[#111113] border border-white/5 rounded-2xl p-4 animate-pulse flex gap-4 items-center">
-              <div className="w-12 h-12 bg-white/5 rounded-2xl shrink-0" />
+            <div key={i} className="bg-[#111113] border border-outline-variant rounded-2xl p-4 animate-pulse flex gap-4 items-center">
+              <div className="w-12 h-12 bg-surface-variant rounded-2xl shrink-0" />
               <div className="flex-1 space-y-2.5">
-                <div className="h-4 bg-white/10 rounded-full w-2/3" />
-                <div className="h-3 bg-white/5 rounded-full w-1/3" />
+                <div className="h-4 bg-surface-container-highest rounded-full w-2/3" />
+                <div className="h-3 bg-surface-variant rounded-full w-1/3" />
               </div>
             </div>
           ))
         ) : accounts.length > 0 ? (
           accounts.map((account, idx) => (
-            <div key={account.id} className="bg-[#111113] border border-white/10 rounded-2xl p-4 shadow-lg shadow-black/20 transition-all active:scale-[0.99]">
+            <div key={account.id} className="bg-[#111113] border border-outline-variant rounded-2xl p-4 shadow-lg shadow-black/20 transition-all active:scale-[0.99]">
               <div className="flex items-center gap-4">
                 {/* Photo / Avatar */}
                 <div className="relative group shrink-0">
-                  <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-2xl overflow-hidden bg-surface-variant border border-outline-variant flex items-center justify-center">
                     {account.profile_photo_url ? (
                       <img
                         src={account.profile_photo_url}
@@ -279,7 +279,7 @@ export default function StudentAccountsLayer({
                     )}
                   </div>
                   <label className="absolute inset-0 cursor-pointer opacity-0 group-hover:opacity-100 bg-black/60 rounded-2xl flex items-center justify-center transition-opacity">
-                    <Camera size={16} className="text-white" />
+                    <Camera size={16} className="text-on-surface" />
                     <input
                       type="file"
                       accept="image/*"
@@ -295,8 +295,8 @@ export default function StudentAccountsLayer({
                 {/* Info */}
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-[15px] font-sans font-semibold text-white truncate">{account.student_name}</h3>
-                    <span className="text-[11px] font-sans text-slate-500">#{idx + 1}</span>
+                    <h3 className="text-[15px] font-sans font-semibold text-on-surface truncate">{account.student_name}</h3>
+                    <span className="text-[11px] font-sans text-on-surface-variant">#{idx + 1}</span>
                   </div>
                   <div className="flex items-center gap-3 mt-1">
                     <span className="text-[12px] font-sans text-[#00b4ff] font-medium">@{account.username}</span>
@@ -313,7 +313,7 @@ export default function StudentAccountsLayer({
                 {/* Delete */}
                 <button
                   onClick={() => handleDeleteAccount(account.id)}
-                  className="p-2 text-slate-600 hover:text-rose-500 rounded-xl transition-colors active:bg-white/5 shrink-0"
+                  className="p-2 text-slate-600 hover:text-rose-500 rounded-xl transition-colors active:bg-surface-variant shrink-0"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -323,13 +323,13 @@ export default function StudentAccountsLayer({
         ) : selectedClass ? (
           <div className="py-20 text-center">
             <Users size={48} className="mx-auto text-slate-700 mb-4 stroke-1" />
-            <p className="text-[14px] font-sans font-medium text-slate-500">Belum ada akun untuk kelas ini</p>
+            <p className="text-[14px] font-sans font-medium text-on-surface-variant">Belum ada akun untuk kelas ini</p>
             <p className="text-[12px] font-sans text-slate-600 mt-1">Klik "Generate" untuk membuat akun otomatis</p>
           </div>
         ) : (
           <div className="py-20 text-center">
             <KeyRound size={48} className="mx-auto text-slate-700 mb-4 stroke-1" />
-            <p className="text-[14px] font-sans font-medium text-slate-500">Pilih kelas untuk memulai</p>
+            <p className="text-[14px] font-sans font-medium text-on-surface-variant">Pilih kelas untuk memulai</p>
           </div>
         )}
       </div>
@@ -340,7 +340,7 @@ export default function StudentAccountsLayer({
           <AlertCircle size={18} className="text-amber-500 shrink-0 mt-0.5" />
           <div>
             <h4 className="text-[13px] font-sans font-semibold text-amber-400">Password Masih Tersimpan</h4>
-            <p className="text-[12px] font-sans text-slate-400 mt-0.5 leading-relaxed">
+            <p className="text-[12px] font-sans text-on-surface-variant mt-0.5 leading-relaxed">
               Segera ekspor ke Excel lalu klik "Hapus Password" untuk keamanan. Password plain hanya bersifat sementara.
             </p>
           </div>

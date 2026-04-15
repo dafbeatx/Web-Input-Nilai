@@ -374,9 +374,9 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
 
     if (permissionDenied || errorMessage) {
       return (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-white gap-2 p-3">
+        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-on-surface gap-2 p-3">
           <CameraOff size={24} className="text-rose-400" />
-          <span className="text-[9px] font-bold text-center leading-tight text-slate-300">
+          <span className="text-[9px] font-bold text-center leading-tight text-on-surface-variant">
             {errorMessage || 'Aktifkan kamera untuk melanjutkan'}
           </span>
           <button
@@ -402,7 +402,7 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 rounded-xl gap-1.5">
             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             {retryCount > 0 && (
-              <span className="text-[8px] text-white/60 font-bold">
+              <span className="text-[8px] text-on-surface/60 font-bold">
                 Percobaan {retryCount + 1}/{MAX_SETUP_RETRIES}
               </span>
             )}

@@ -48,10 +48,10 @@ export default function LoginLayer({ onBack, onSuccess, setToast }: LoginLayerPr
 
   return (
     <div className="min-h-screen bg-transparent flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md bg-slate-900/40 backdrop-blur-xl rounded-[2rem] border border-white/10 shadow-2xl p-8 md:p-10 animate-in fade-in slide-in-from-bottom-5 duration-500">
+      <div className="w-full max-w-md bg-surface premium-shadow backdrop-blur-xl rounded-[2rem] border border-outline-variant premium-shadow p-8 md:p-10 animate-in fade-in slide-in-from-bottom-5 duration-500">
         <button 
           onClick={onBack}
-          className="mb-8 p-3 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-2xl transition-all inline-flex items-center gap-2 font-bold text-sm border border-transparent hover:border-primary/20"
+          className="mb-8 p-3 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-2xl transition-all inline-flex items-center gap-2 font-bold text-sm border border-transparent hover:border-primary/20"
         >
           <ArrowLeft size={18} /> Kembali
         </button>
@@ -60,8 +60,8 @@ export default function LoginLayer({ onBack, onSuccess, setToast }: LoginLayerPr
           <div className="w-16 h-16 bg-primary/10 text-primary rounded-3xl flex items-center justify-center mb-6 shadow-lg shadow-primary/20">
             <Lock size={32} />
           </div>
-          <h2 className="text-3xl font-black text-white tracking-tight leading-tight">Admin Login</h2>
-          <p className="text-slate-400 font-bold mt-2 text-sm leading-relaxed">Masuk untuk membuat sesi kelas baru dan mengelola data GradeMaster.</p>
+          <h2 className="text-3xl font-black text-on-surface tracking-tight leading-tight">Admin Login</h2>
+          <p className="text-on-surface-variant font-bold mt-2 text-sm leading-relaxed">Masuk untuk membuat sesi kelas baru dan mengelola data GradeMaster.</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
@@ -73,9 +73,9 @@ export default function LoginLayer({ onBack, onSuccess, setToast }: LoginLayerPr
           )}
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Username</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant ml-1">Username</label>
             <div className="relative group">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">
                 <User size={18} />
               </div>
               <input
@@ -83,16 +83,16 @@ export default function LoginLayer({ onBack, onSuccess, setToast }: LoginLayerPr
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Masukkan username admin"
-                className="w-full pl-12 pr-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold text-slate-200 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all placeholder:text-slate-600"
+                className="w-full pl-12 pr-6 py-4 bg-surface-variant border border-outline-variant rounded-2xl text-sm font-bold text-on-surface focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all placeholder:text-on-surface-variant"
                 disabled={isLoading}
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Password</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant ml-1">Password</label>
             <div className="relative group">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">
                 <Key size={18} />
               </div>
               <input
@@ -100,7 +100,7 @@ export default function LoginLayer({ onBack, onSuccess, setToast }: LoginLayerPr
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Masukkan password admin"
-                className="w-full pl-12 pr-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold text-slate-200 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all placeholder:text-slate-600"
+                className="w-full pl-12 pr-6 py-4 bg-surface-variant border border-outline-variant rounded-2xl text-sm font-bold text-on-surface focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all placeholder:text-on-surface-variant"
                 disabled={isLoading}
               />
             </div>

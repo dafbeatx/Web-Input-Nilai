@@ -448,7 +448,7 @@ export default function BehaviorLayer({
 
       {/* Kontrol Pencarian Khusus Admin */}
       {isAdmin && (
-        <div className="bg-surface-container-low p-4 rounded-3xl border border-outline-variant/10 shadow-inner mt-2">
+        <div className="bg-surface-container-low p-4 rounded-3xl border border-outline-variant/10 shadow-sm mt-2">
           <div className="flex items-center bg-surface-container border border-outline-variant/20 rounded-xl px-4 py-1 transition-colors focus-within:border-primary/50">
             <Search size={16} className="text-on-surface-variant shrink-0" />
             <input 
@@ -456,7 +456,7 @@ export default function BehaviorLayer({
               placeholder="Cari spesifik siswa..." 
               value={newStudentName} 
               onChange={(e) => setNewStudentName(e.target.value)} 
-              className="w-full bg-transparent p-2 text-sm font-bold text-white outline-none placeholder:text-on-surface-variant" 
+              className="w-full bg-transparent p-2 text-sm font-bold text-on-surface outline-none placeholder:text-on-surface-variant" 
             />
           </div>
         </div>
@@ -474,7 +474,7 @@ export default function BehaviorLayer({
                 disabled={isLoading}
                 className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all border border-transparent shadow-sm 
                   ${isActive 
-                    ? 'bg-gradient-to-br from-[#f9f9f9] to-[#a0a1a1] text-[#0e0e10] scale-105 shadow-md' 
+                    ? 'bg-gradient-to-br from-[#f9f9f9] to-[#a0a1a1] text-[#0e0e10] scale-105 premium-shadow' 
                     : 'bg-surface-container text-on-surface-variant hover:text-primary active:scale-95 hover:border-outline-variant/20 hover:bg-surface-bright'
                   }`}
               >
@@ -494,7 +494,7 @@ export default function BehaviorLayer({
           </div>
         ) : students.length === 0 ? (
           <div className="text-center py-20 bg-surface-container rounded-3xl border border-dashed border-outline-variant/30 flex flex-col items-center justify-center px-6 shadow-xl">
-            <div className="w-16 h-16 rounded-3xl bg-surface-container-high text-on-surface-variant flex items-center justify-center mb-6 shadow-inner">
+            <div className="w-16 h-16 rounded-3xl bg-surface-container-high text-on-surface-variant flex items-center justify-center mb-6 shadow-sm">
               <span className="material-symbols-outlined text-4xl">group_off</span>
             </div>
             <h3 className="font-headline text-xl font-bold text-on-surface mb-2">Belum Memiliki Catatan Kedisiplinan</h3>
@@ -504,11 +504,11 @@ export default function BehaviorLayer({
           students.filter(s => s.student_name.toLowerCase().includes(newStudentName.toLowerCase())).map((student) => {
             const hasViolations = student.total_points > 0;
             return (
-              <div key={student.id} className="bg-surface-container p-5 rounded-[1.5rem] border border-white/5 relative overflow-hidden group hover:border-primary/20 transition-all shadow-md hover:shadow-xl">
+              <div key={student.id} className="bg-surface-container p-5 rounded-[1.5rem] border border-outline-variant relative overflow-hidden group hover:border-primary/20 transition-all premium-shadow hover:shadow-xl">
                 <div className="flex justify-between items-start mb-6 z-10 relative">
                   <div className="flex items-start gap-4 flex-1 min-w-0 pr-4">
                     <div 
-                      className={`w-14 h-14 shrink-0 rounded-[14px] bg-surface-bright flex items-center justify-center overflow-hidden ring-1 ring-white/10 text-xl font-headline font-bold text-on-surface-variant uppercase shadow-inner relative ${isAdmin ? 'cursor-pointer hover:ring-primary/50' : ''}`}
+                      className={`w-14 h-14 shrink-0 rounded-[14px] bg-surface-bright flex items-center justify-center overflow-hidden ring-1 ring-white/10 text-xl font-headline font-bold text-on-surface-variant uppercase shadow-sm relative ${isAdmin ? 'cursor-pointer hover:ring-primary/50' : ''}`}
                       onClick={() => {
                         if (isAdmin) {
                           setTargetedAvatarStudent(student.id);
@@ -533,8 +533,8 @@ export default function BehaviorLayer({
                        {/* Admin Hover Hint */}
                        {isAdmin && !uploadingAvatarId && (
                          <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity p-2 text-center">
-                            <span className="material-symbols-outlined text-white text-lg mb-1">add_a_photo</span>
-                            <span className="text-[7px] text-white/80 font-bold uppercase tracking-tighter">Click to Change<br/>Landscape Auto-Crop</span>
+                            <span className="material-symbols-outlined text-on-surface text-lg mb-1">add_a_photo</span>
+                            <span className="text-[7px] text-on-surface/80 font-bold uppercase tracking-tighter">Click to Change<br/>Landscape Auto-Crop</span>
                          </div>
                        )}
                     </div>
@@ -567,7 +567,7 @@ export default function BehaviorLayer({
                   </div>
                   <button 
                     onClick={() => setSelectedStudent(student)}
-                    className="flex items-center gap-1 text-primary text-xs font-bold px-3 py-1.5 bg-surface-bright rounded-lg active:scale-95 transition-all outline-none border border-transparent hover:border-primary/20 shadow-md"
+                    className="flex items-center gap-1 text-primary text-xs font-bold px-3 py-1.5 bg-surface-bright rounded-lg active:scale-95 transition-all outline-none border border-transparent hover:border-primary/20 premium-shadow"
                   >
                     {isAdmin ? 'Kelola Poin' : 'Riwayat Poin'}
                     <span className="material-symbols-outlined text-sm">chevron_right</span>
@@ -596,9 +596,9 @@ export default function BehaviorLayer({
 
     {/* COMPACT & TABBED DETAIL MODAL (CENTERED OPSI B) — rendered via Portal */}
     {selectedStudent && createPortal(
-        <div className="fixed inset-0 bg-[#0e0e10]/95 backdrop-blur-2xl z-[1000] flex flex-col animate-in fade-in duration-300 overflow-y-auto no-scrollbar">
+        <div className="fixed inset-0 bg-surface/95 backdrop-blur-2xl z-[1000] flex flex-col animate-in fade-in duration-300 overflow-y-auto no-scrollbar">
           {/* Top Navigation Bar */}
-          <header className="fixed top-0 w-full z-50 bg-[#0e0e10]/80 backdrop-blur-xl flex items-center justify-between px-4 h-16 max-w-md mx-auto left-1/2 -translate-x-1/2 border-b border-white/5">
+          <header className="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl flex items-center justify-between px-4 h-16 max-w-md mx-auto left-1/2 -translate-x-1/2 border-b border-outline-variant">
             <button 
               onClick={() => setSelectedStudent(null)}
               className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[#19191c] active:scale-95 transition-all duration-200"
@@ -649,10 +649,10 @@ export default function BehaviorLayer({
             {/* Key Metrics Bento Layout */}
             <section className="grid grid-cols-2 gap-4">
               {/* Points Badge */}
-              <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl p-5 flex flex-col items-center justify-center border border-white/5 shadow-[0_0_25px_rgba(155,255,206,0.1)]">
+              <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl p-5 flex flex-col items-center justify-center border border-outline-variant shadow-[0_0_25px_rgba(155,255,206,0.1)]">
                 <div className="relative mb-2">
                   <svg className="w-16 h-16 transform -rotate-90">
-                    <circle className="text-white/5" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" strokeWidth="4"></circle>
+                    <circle className="text-on-surface/5" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" strokeWidth="4"></circle>
                     <circle 
                       className={selectedStudent.total_points > 0 ? 'text-error' : 'text-tertiary'} 
                       cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" 
@@ -672,7 +672,7 @@ export default function BehaviorLayer({
               </div>
               
               {/* Attendance Mini Card */}
-              <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl p-5 flex flex-col items-center justify-center border border-white/5 shadow-lg">
+              <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl p-5 flex flex-col items-center justify-center border border-outline-variant shadow-lg">
                 <div className="w-10 h-10 mb-2 flex items-center justify-center">
                    {isLoadingSummary ? <Loader2 className="animate-spin text-tertiary" size={24} /> : <Activity className="text-primary" size={28} />}
                 </div>
@@ -731,18 +731,18 @@ export default function BehaviorLayer({
               <section className="flex flex-col space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="flex items-center justify-between px-1">
                   <h3 className="font-headline font-bold text-lg text-primary">Riwayat Transparansi</h3>
-                  <div className="px-3 py-1 bg-white/5 rounded-lg text-[9px] font-bold text-on-surface-variant uppercase tracking-widest group">
+                  <div className="px-3 py-1 bg-surface-variant rounded-lg text-[9px] font-bold text-on-surface-variant uppercase tracking-widest group">
                     {studentLogs.length} Entri terpantau
                   </div>
                 </div>
 
                 {isLoadingLogs ? (
-                   <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-white/5 p-12 flex flex-col items-center justify-center text-center space-y-4">
+                   <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-outline-variant p-12 flex flex-col items-center justify-center text-center space-y-4">
                       <Loader2 size={32} className="animate-spin text-tertiary" />
                       <p className="font-headline font-semibold text-primary">Sinkronisasi Data...</p>
                    </div>
                 ) : studentLogs.length === 0 ? (
-                  <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-white/5 p-12 flex flex-col items-center justify-center text-center space-y-4 shadow-xl">
+                  <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-outline-variant p-12 flex flex-col items-center justify-center text-center space-y-4 shadow-xl">
                     <div className="w-16 h-16 bg-surface-container rounded-full flex items-center justify-center mb-2">
                        <History className="text-on-surface-variant" size={40} />
                     </div>
@@ -754,7 +754,7 @@ export default function BehaviorLayer({
                 ) : (
                   <div className="space-y-3">
                     {studentLogs.map((log) => (
-                      <div key={log.id} className="bg-[#19191c]/70 backdrop-blur-xl rounded-2xl p-5 border border-white/5 hover:border-primary/20 transition-all group shadow-sm">
+                      <div key={log.id} className="bg-[#19191c]/70 backdrop-blur-xl rounded-2xl p-5 border border-outline-variant hover:border-primary/20 transition-all group shadow-sm">
                         <div className="flex items-start justify-between gap-3">
                            <div className="flex items-start gap-4 flex-1">
                               <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${
@@ -767,11 +767,11 @@ export default function BehaviorLayer({
                                     <span className={`text-base font-black ${log.points_delta > 0 ? 'text-error' : 'text-tertiary'}`}>
                                        {log.points_delta > 0 ? '+' : ''}{log.points_delta} Poin
                                     </span>
-                                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded-full">
+                                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest bg-surface-variant px-2 py-0.5 rounded-full">
                                        {formatDate(log.violation_date || log.created_at)}
                                     </span>
                                  </div>
-                                 <h4 className="text-white font-bold text-sm leading-relaxed">{log.reason}</h4>
+                                 <h4 className="text-on-surface font-bold text-sm leading-relaxed">{log.reason}</h4>
                               </div>
                            </div>
 
@@ -786,13 +786,13 @@ export default function BehaviorLayer({
                                       date: (log.violation_date || log.created_at).split('T')[0]
                                     });
                                   }}
-                                  className="w-8 h-8 flex items-center justify-center bg-white/5 text-on-surface-variant hover:text-primary rounded-lg transition-colors"
+                                  className="w-8 h-8 flex items-center justify-center bg-surface-variant text-on-surface-variant hover:text-primary rounded-lg transition-colors"
                                 >
                                   <Pencil size={14} />
                                 </button>
                                 <button 
                                   onClick={() => handleDeleteLog(log.id)}
-                                  className="w-8 h-8 flex items-center justify-center bg-white/5 text-on-surface-variant hover:text-error rounded-lg transition-colors"
+                                  className="w-8 h-8 flex items-center justify-center bg-surface-variant text-on-surface-variant hover:text-error rounded-lg transition-colors"
                                 >
                                   <Trash2 size={14} />
                                 </button>
@@ -802,7 +802,7 @@ export default function BehaviorLayer({
 
                         {/* Inline Edit UI */}
                         {isAdmin && editingLogId === log.id && (
-                          <div className="mt-4 pt-4 border-t border-white/5 space-y-4 animate-in slide-in-from-top-2">
+                          <div className="mt-4 pt-4 border-t border-outline-variant space-y-4 animate-in slide-in-from-top-2">
                              <div className="grid grid-cols-1 gap-3">
                                 <div className="space-y-1">
                                   <label className="text-[8px] font-black text-on-surface-variant uppercase ml-1">Tanggal</label>
@@ -810,7 +810,7 @@ export default function BehaviorLayer({
                                     type="date" 
                                     value={editForm.date} 
                                     onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
-                                    className="w-full bg-[#0e0e10] border border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-white outline-none focus:border-primary"
+                                    className="w-full bg-surface border border-outline-variant rounded-xl px-4 py-2 text-xs font-bold text-on-surface outline-none focus:border-primary"
                                   />
                                 </div>
                                 <div className="space-y-1">
@@ -819,13 +819,13 @@ export default function BehaviorLayer({
                                     type="text" 
                                     value={editForm.reason} 
                                     onChange={(e) => setEditForm(prev => ({ ...prev, reason: e.target.value }))}
-                                    className="w-full bg-[#0e0e10] border border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-white outline-none focus:border-primary"
+                                    className="w-full bg-surface border border-outline-variant rounded-xl px-4 py-2 text-xs font-bold text-on-surface outline-none focus:border-primary"
                                   />
                                 </div>
                              </div>
                              <div className="flex gap-2">
                                 <button onClick={() => handleUpdateLog(log.id)} className="flex-1 py-2.5 bg-primary text-[#0e0e10] rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all">Simpan</button>
-                                <button onClick={() => setEditingLogId(null)} className="px-5 py-2.5 bg-white/5 text-on-surface-variant rounded-xl text-xs font-black uppercase tracking-widest">Batal</button>
+                                <button onClick={() => setEditingLogId(null)} className="px-5 py-2.5 bg-surface-variant text-on-surface-variant rounded-xl text-xs font-black uppercase tracking-widest">Batal</button>
                              </div>
                           </div>
                         )}
@@ -846,12 +846,12 @@ export default function BehaviorLayer({
                 </div>
 
                 {isLoadingSummary ? (
-                   <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-white/5 p-12 flex flex-col items-center justify-center text-center space-y-4">
+                   <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-outline-variant p-12 flex flex-col items-center justify-center text-center space-y-4">
                       <Loader2 size={32} className="animate-spin text-tertiary" />
                       <p className="font-headline font-semibold text-primary">Menarik Data Nilai...</p>
                    </div>
                 ) : !studentSummary?.academicHistory || studentSummary.academicHistory.length === 0 ? (
-                  <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-white/5 p-12 flex flex-col items-center justify-center text-center space-y-4">
+                  <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-outline-variant p-12 flex flex-col items-center justify-center text-center space-y-4">
                     <div className="w-16 h-16 bg-surface-container rounded-full flex items-center justify-center mb-2">
                        <BarChart3 className="text-on-surface-variant" size={40} />
                     </div>
@@ -863,9 +863,9 @@ export default function BehaviorLayer({
                 ) : (
                   <div className="space-y-3">
                     {studentSummary.academicHistory.map((grade: any, idx: number) => (
-                      <div key={idx} className="bg-[#19191c]/70 backdrop-blur-xl rounded-2xl p-5 border border-white/5 flex items-center justify-between group shadow-sm">
+                      <div key={idx} className="bg-[#19191c]/70 backdrop-blur-xl rounded-2xl p-5 border border-outline-variant flex items-center justify-between group shadow-sm">
                         <div className="flex flex-col gap-1 overflow-hidden">
-                           <h4 className="text-white font-bold text-sm uppercase tracking-tight truncate leading-tight">{grade.sessionName}</h4>
+                           <h4 className="text-on-surface font-bold text-sm uppercase tracking-tight truncate leading-tight">{grade.sessionName}</h4>
                            <div className="flex items-center gap-2">
                               <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{grade.subject}</span>
                               <span className="text-[10px] font-bold text-on-surface-variant/40">•</span>
@@ -879,7 +879,7 @@ export default function BehaviorLayer({
                                  KKM: {grade.kkm}
                               </div>
                            </div>
-                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white ${grade.isPassing ? 'bg-tertiary/10 text-tertiary' : 'bg-error/10 text-error'}`}>
+                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-on-surface ${grade.isPassing ? 'bg-tertiary/10 text-tertiary' : 'bg-error/10 text-error'}`}>
                               {grade.isPassing ? <Check size={16} /> : <X size={16} />}
                            </div>
                         </div>
@@ -900,20 +900,20 @@ export default function BehaviorLayer({
                 </div>
 
                 {isLoadingSummary ? (
-                   <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-white/5 p-12 flex flex-col items-center justify-center text-center space-y-4">
+                   <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-outline-variant p-12 flex flex-col items-center justify-center text-center space-y-4">
                       <Loader2 size={32} className="animate-spin text-tertiary" />
                       <p className="font-headline font-semibold text-primary">Menyiapkan Dokumen...</p>
                    </div>
                 ) : (
                   <div className="space-y-3">
                     {studentSummary?.documents?.map((doc: any) => (
-                      <div key={doc.id} className={`bg-[#19191c]/70 backdrop-blur-xl rounded-2xl p-5 border border-white/5 flex items-center justify-between group shadow-sm ${!doc.ready ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+                      <div key={doc.id} className={`bg-[#19191c]/70 backdrop-blur-xl rounded-2xl p-5 border border-outline-variant flex items-center justify-between group shadow-sm ${!doc.ready ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
                          <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant">
                                <FileText size={24} />
                             </div>
                             <div className="flex flex-col">
-                               <h4 className="text-white font-bold text-sm leading-tight">{doc.name}</h4>
+                               <h4 className="text-on-surface font-bold text-sm leading-tight">{doc.name}</h4>
                                <p className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wider">{doc.type} • {doc.size}</p>
                             </div>
                          </div>
@@ -922,7 +922,7 @@ export default function BehaviorLayer({
                          </button>
                       </div>
                     ))}
-                    <div className="p-6 bg-surface-container rounded-3xl border border-white/5 flex flex-col items-center gap-2 text-center mt-4">
+                    <div className="p-6 bg-surface-container rounded-3xl border border-outline-variant flex flex-col items-center gap-2 text-center mt-4">
                        <ShieldCheck className="text-on-surface-variant opacity-20" size={40} />
                        <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest leading-relaxed">Seluruh dokumen telah ditanda tangani secara digital oleh GradeMaster Trust Verification.</p>
                     </div>
@@ -933,7 +933,7 @@ export default function BehaviorLayer({
 
             {activeModalTab === 'MANAGE' && (
               <section className="flex flex-col space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
-                 <div className="p-5 bg-[#19191c]/70 backdrop-blur-xl border border-white/5 rounded-2xl space-y-3">
+                 <div className="p-5 bg-[#19191c]/70 backdrop-blur-xl border border-outline-variant rounded-2xl space-y-3">
                     <label className="text-[10px] font-black text-on-surface-variant uppercase flex items-center gap-2 px-1 tracking-widest">
                        <Calendar size={12} className="text-tertiary" /> Tanggal Peristiwa
                     </label>
@@ -941,7 +941,7 @@ export default function BehaviorLayer({
                       type="date" 
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
-                      className="w-full bg-[#0e0e10] border border-white/10 rounded-xl p-3 text-sm font-bold text-white outline-none focus:border-tertiary transition-all"
+                      className="w-full bg-surface border border-outline-variant rounded-xl p-3 text-sm font-bold text-on-surface outline-none focus:border-tertiary transition-all"
                     />
                  </div>
 
@@ -958,7 +958,7 @@ export default function BehaviorLayer({
                            className="p-5 bg-error/5 hover:bg-error/10 border border-error/10 hover:border-error/30 rounded-2xl text-left transition-all active:scale-95 flex items-center justify-between group shadow-sm"
                          >
                             <div className="flex flex-col gap-1">
-                               <span className="text-[11px] font-black text-white uppercase tracking-wider">{r.text}</span>
+                               <span className="text-[11px] font-black text-on-surface uppercase tracking-wider">{r.text}</span>
                                <span className="text-[9px] text-on-surface-variant font-bold">Resiko: Akumulatif Demerit</span>
                             </div>
                             <span className="text-xs font-black text-error bg-error/10 px-3 py-1 rounded-lg border border-error/20">
@@ -970,11 +970,11 @@ export default function BehaviorLayer({
                  </div>
 
                  {/* Information Banner */}
-                 <div className="p-6 bg-[#0e0e10] rounded-3xl border border-white/5 relative overflow-hidden group shadow-inner">
+                 <div className="p-6 bg-surface rounded-3xl border border-outline-variant relative overflow-hidden group shadow-sm">
                     <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                        <ShieldCheck size={80} className="text-primary" />
                     </div>
-                    <h4 className="text-xs font-black text-white uppercase tracking-tight mb-1">Integritas Riwayat</h4>
+                    <h4 className="text-xs font-black text-on-surface uppercase tracking-tight mb-1">Integritas Riwayat</h4>
                     <p className="text-[10px] text-on-surface-variant font-medium leading-relaxed uppercase tracking-wider">Laporan ini bersifat transparan dan dapat dipantau langsung oleh wali murid melalui dashboard siswa.</p>
                  </div>
               </section>
@@ -998,29 +998,29 @@ export default function BehaviorLayer({
 
     {/* REASONS MANAGEMENT MODAL — rendered via Portal */}
     {isManagingReasons && createPortal(
-      <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[2000] flex items-center justify-center p-0 md:p-4">
-          <div className="bg-slate-900 border border-white/10 max-w-2xl w-full h-full md:h-[80vh] md:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in-95">
-              <div className="p-6 md:p-8 border-b border-white/10 bg-white/5 shrink-0 relative flex items-start justify-between" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}>
+      <div className="fixed inset-0 bg-surface/90 backdrop-blur-xl z-[2000] flex items-center justify-center p-0 md:p-4">
+          <div className="bg-slate-900 border border-outline-variant max-w-2xl w-full h-full md:h-[80vh] md:rounded-[3rem] overflow-hidden premium-shadow flex flex-col animate-in fade-in zoom-in-95">
+              <div className="p-6 md:p-8 border-b border-outline-variant bg-surface-variant shrink-0 relative flex items-start justify-between" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}>
                 <div>
-                  <h2 className="text-xl font-black text-white uppercase font-outfit">Setelan Poin Global</h2>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Kustomisasi alasan poin standar untuk seluruh kelas</p>
+                  <h2 className="text-xl font-black text-on-surface uppercase font-outfit">Setelan Poin Global</h2>
+                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mt-1">Kustomisasi alasan poin standar untuk seluruh kelas</p>
                 </div>
-                <button onClick={() => setIsManagingReasons(false)} className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-slate-500 border border-white/10 hover:bg-rose-500 hover:text-white transition-all shadow-md">
+                <button onClick={() => setIsManagingReasons(false)} className="w-10 h-10 bg-surface-variant rounded-full flex items-center justify-center text-on-surface-variant border border-outline-variant hover:bg-rose-500 hover:text-white transition-all premium-shadow">
                   <X size={20} />
                 </button>
               </div>
               
               <div className="p-6 md:p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1">
                 <div className="flex flex-col md:flex-row gap-3">
-                    <div className="flex flex-1 gap-2 border border-white/10 rounded-xl bg-slate-950/80 shadow-inner overflow-hidden focus-within:border-primary transition-all">
+                    <div className="flex flex-1 gap-2 border border-outline-variant rounded-xl bg-surface/80 shadow-sm overflow-hidden focus-within:border-primary transition-all">
                       <input 
                         type="text" 
                         placeholder="Kategori pelanggaran baru..." 
                         value={newReasonInput}
                         onChange={(e) => setNewReasonInput(e.target.value)}
-                        className="flex-1 bg-transparent px-5 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600"
+                        className="flex-1 bg-transparent px-5 py-3 text-sm font-bold text-on-surface outline-none placeholder:text-on-surface-variant"
                       />
-                      <div className="flex items-center bg-white/5 border-l border-white/10 px-3">
+                      <div className="flex items-center bg-surface-variant border-l border-outline-variant px-3">
                         <span className="text-[10px] font-black text-rose-500 mr-2 uppercase">+ Poin</span>
                         <input 
                           type="number" 
@@ -1028,7 +1028,7 @@ export default function BehaviorLayer({
                           max="100"
                           value={newReasonWeight}
                           onChange={(e) => setNewReasonWeight(parseInt(e.target.value) || 0)}
-                          className="w-16 bg-transparent text-sm font-bold text-rose-400 outline-none placeholder:text-slate-600"
+                          className="w-16 bg-transparent text-sm font-bold text-rose-400 outline-none placeholder:text-on-surface-variant"
                         />
                       </div>
                     </div>
@@ -1051,14 +1051,14 @@ export default function BehaviorLayer({
 
                 <div className="grid grid-cols-1 gap-8">
                     <div className="space-y-4">
-                      <h4 className="text-xs font-black text-rose-400 uppercase tracking-widest flex items-center gap-2 pb-2 border-b border-white/5">
+                      <h4 className="text-xs font-black text-rose-400 uppercase tracking-widest flex items-center gap-2 pb-2 border-b border-outline-variant">
                         <AlertCircle size={14} /> Master Pelanggaran (Demerit Lists)
                       </h4>
                       <div className="space-y-2 grid grid-cols-1 md:grid-cols-2 gap-2">
                           {behaviorReasons.map((r, i) => (
-                            <div key={i} className="flex items-center justify-between p-3.5 bg-white/5 rounded-xl border border-white/5 group hover:border-rose-500/30 transition-colors shadow-sm">
+                            <div key={i} className="flex items-center justify-between p-3.5 bg-surface-variant rounded-xl border border-outline-variant group hover:border-rose-500/30 transition-colors shadow-sm">
                               <div className="flex items-center gap-3">
-                                <span className="text-[11px] font-bold text-slate-300">{r.text}</span>
+                                <span className="text-[11px] font-bold text-on-surface-variant">{r.text}</span>
                                 <span className="text-[9px] font-black text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md">+{r.weight} Pts</span>
                               </div>
                               <button 

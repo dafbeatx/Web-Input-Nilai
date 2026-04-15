@@ -13,7 +13,7 @@ export default function InsightPanel({ insights }: InsightPanelProps) {
 
   return (
     <div className="space-y-3 mb-6 md:mb-8">
-      <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Auto Insights</h4>
+      <h4 className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Auto Insights</h4>
       {insights.map((insight, idx) => {
         const iconMap = {
           warning: <AlertCircle size={16} className="text-amber-500 shrink-0" />,
@@ -31,7 +31,7 @@ export default function InsightPanel({ insights }: InsightPanelProps) {
             {iconMap[insight.type]}
             <div>
               <h5 className="text-xs font-black text-slate-700 mb-0.5">{insight.title}</h5>
-              <p className="text-[10px] md:text-xs font-bold text-slate-500 leading-relaxed">{insight.description}</p>
+              <p className="text-[10px] md:text-xs font-bold text-on-surface-variant leading-relaxed">{insight.description}</p>
             </div>
           </div>
         );

@@ -235,7 +235,7 @@ export default function StudentDetailSheet({
                               setEditingLogId(null);
                             }}
                             disabled={isUpdating}
-                            className="flex-1 bg-primary text-on-primary py-2 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-md flex items-center justify-center gap-2"
+                            className="flex-1 bg-primary text-on-primary py-2 rounded-xl text-xs font-bold active:scale-95 transition-all premium-shadow flex items-center justify-center gap-2"
                           >
                             {isUpdating ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} SIMPAN PERUBAHAN
                           </button>
