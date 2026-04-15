@@ -385,8 +385,11 @@ export default function BehaviorLayer({
     if (parts.length === 1) return name;
 
     let firstName = parts[0];
-    // Auto-shorten if first name is long (e.g., Muhammad -> M.)
-    if (firstName.length > 8) {
+    const lowerFirst = firstName.toLowerCase();
+    // Specific rule for Muhamad/Muhammad
+    if (lowerFirst === 'muhammad' || lowerFirst === 'muhamad') {
+      firstName = "M.";
+    } else if (firstName.length > 10) {
       firstName = firstName[0].toUpperCase() + ".";
     }
 
