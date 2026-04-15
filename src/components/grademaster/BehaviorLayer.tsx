@@ -336,13 +336,15 @@ export default function BehaviorLayer({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Local validation
+    // 1. Validasi Ukuran (Max 20MB untuk foto resolusi tinggi modern)
     if (file.size > 20 * 1024 * 1024) {
-      setToast({ message: "Ukuran foto terlalu besar (Max 20MB)", type: "error" });
+      setToast({ message: "Ukuran foto terlalu besar (Maksimal 20MB)", type: "error" });
       return;
     }
 
     setUploadingAvatarId(studentId);
+    setToast({ message: "Sedang memproses & mengoptimalkan gambar...", type: "success" });
+
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -356,14 +358,15 @@ export default function BehaviorLayer({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal mengunggah foto");
 
-      setToast({ message: data.message || "Foto profil diperbarui", type: "success" });
+      setToast({ message: "Foto profil berhasil diperbarui!", type: "success" });
       setStudents(prev => prev.map(s => s.id === studentId ? { ...s, avatar_url: data.avatar_url } : s));
       
       if (selectedStudent && selectedStudent.id === studentId) {
         setSelectedStudent(prev => prev ? { ...prev, avatar_url: data.avatar_url } : null);
       }
     } catch (err: any) {
-      setToast({ message: err.message, type: "error" });
+      console.error("Upload error:", err);
+      setToast({ message: err.message || "Gagal mengunggah. Coba gunakan format JPG/PNG.", type: "error" });
     } finally {
       setUploadingAvatarId(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -529,8 +532,9 @@ export default function BehaviorLayer({
 
                        {/* Admin Hover Hint */}
                        {isAdmin && !uploadingAvatarId && (
-                         <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                            <span className="material-symbols-outlined text-white text-lg">add_a_photo</span>
+                         <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity p-2 text-center">
+                            <span className="material-symbols-outlined text-white text-lg mb-1">add_a_photo</span>
+                            <span className="text-[7px] text-white/80 font-bold uppercase tracking-tighter">Click to Change<br/>Landscape Auto-Crop</span>
                          </div>
                        )}
                     </div>
@@ -584,7 +588,7 @@ export default function BehaviorLayer({
           type="file" 
           ref={fileInputRef} 
           className="hidden" 
-          accept=".jpg,.jpeg,.png" 
+          accept="image/*" 
           onChange={(e) => targetedAvatarStudent && handleAvatarUpload(targetedAvatarStudent, e)} 
         />
       )}

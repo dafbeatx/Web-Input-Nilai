@@ -157,11 +157,14 @@ export default function StudentAccountsLayer({
   };
 
   const handlePhotoUpload = async (accountId: string, file: File) => {
-    if (file.size > 5 * 1024 * 1024) {
-      setToast({ message: 'Ukuran foto maksimal 5MB', type: 'error' });
+    // 1. Validasi Ukuran (Batas lebih besar untuk foto modern 20MB)
+    if (file.size > 20 * 1024 * 1024) {
+      setToast({ message: 'Ukuran foto maksimal 20MB', type: 'error' });
       return;
     }
 
+    setToast({ message: "Memproses & mengoptimalkan foto...", type: "success" });
+    
     const formData = new FormData();
     formData.append('photo', file);
     formData.append('accountId', accountId);

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { checkRateLimit } from '@/lib/grademaster/security';
-import sharp from 'sharp';
+import { compressAndConvertToWebP } from '@/lib/grademaster/image-utils';
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,18 +31,15 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     // 3. Konversi Extrem via Sharp (Resizing + WebP + Compression 80%)
-    const processedImageBuffer = await sharp(buffer)
-      .rotate() // Normalisasi orientasi EXIF (Penting untuk kamera HP)
-      .resize(256, 256, { fit: 'cover', position: 'center' }) // Aman & asimetrikal
-      .webp({ quality: 80 }) // Super hemat size, rata-rata hanya ~15KB
-      .toBuffer();
+    const processedImageBuffer = await compressAndConvertToWebP(buffer);
 
     // 4. Upload ke Supabase Storage (Bucket: avatars)
-    const filePath = `behavior_${studentId}_${Date.now()}.webp`;
+    const filePath = `student_${studentId}_${Date.now()}.webp`;
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('avatars')
       .upload(filePath, processedImageBuffer, {
         contentType: 'image/webp',
+        cacheControl: '3600',
         upsert: true,
       });
 

@@ -14,12 +14,21 @@ export function generatePhotoFileName(studentId: string): string {
 export async function compressAndConvertToWebP(buffer: Buffer): Promise<Buffer> {
   const sharp = (await import('sharp')).default;
 
-  const processed = await sharp(buffer)
+  // Refactor: Menggunakan failOnError: false untuk mentolerir metadata EXIF yang rusak di beberapa device
+  // Ditambah .rotate() tanpa argumen untuk normalisasi otomatis berdasarkan EXIF orientation
+  const processed = await sharp(buffer, { failOnError: false })
+    .rotate() 
     .resize(MAX_DIMENSION, MAX_DIMENSION, {
       fit: 'cover',
+      position: 'center',
       withoutEnlargement: true,
+      background: { r: 0, g: 0, b: 0, alpha: 0 }
     })
-    .webp({ quality: OUTPUT_QUALITY })
+    .webp({ 
+      quality: 85, 
+      effort: 6,
+      lossless: false 
+    })
     .toBuffer();
 
   return processed;
