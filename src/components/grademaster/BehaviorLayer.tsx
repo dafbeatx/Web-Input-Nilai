@@ -382,13 +382,23 @@ export default function BehaviorLayer({
   const formatStudentName = (name: string) => {
     if (!name) return "";
     const parts = name.trim().split(/\s+/);
-    if (parts.length <= 2) return name;
-    
-    // Always keep the first name full
-    const firstName = parts[0];
-    // Abbreviate the rest: "Aufar Danan Jaya" -> "Aufar D. J."
-    const initials = parts.slice(1).map(p => p[0].toUpperCase() + ".").join(" ");
-    return `${firstName} ${initials}`;
+    if (parts.length === 1) return name;
+
+    let firstName = parts[0];
+    // Auto-shorten if first name is long (e.g., Muhammad -> M.)
+    if (firstName.length > 8) {
+      firstName = firstName[0].toUpperCase() + ".";
+    }
+
+    if (parts.length === 2) {
+      return `${firstName} ${parts[1]}`;
+    }
+
+    // 3+ parts: [First] [Middle] [Rest...]
+    // Keep first (shortened if long), keep middle, abbreviate the rest
+    const middleName = parts[1];
+    const rest = parts.slice(2).map(p => p[0].toUpperCase() + ".").join(" ");
+    return `${firstName} ${middleName} ${rest}`;
   };
 
   return (

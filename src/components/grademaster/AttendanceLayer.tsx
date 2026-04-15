@@ -220,6 +220,29 @@ export default function AttendanceLayer({
     });
   }, [students, attendanceMap, className, subject, academicYear, selectedDate, setToast]);
 
+  // Format student name for mobile readability
+  const formatStudentName = (name: string) => {
+    if (!name) return "";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return name;
+
+    let firstName = parts[0];
+    // Auto-shorten if first name is long (e.g., Muhammad -> M.)
+    if (firstName.length > 8) {
+      firstName = firstName[0].toUpperCase() + ".";
+    }
+
+    if (parts.length === 2) {
+      return `${firstName} ${parts[1]}`;
+    }
+
+    // 3+ parts: [First] [Middle] [Rest...]
+    // Keep first (shortened if long), keep middle, abbreviate the rest
+    const middleName = parts[1];
+    const rest = parts.slice(2).map(p => p[0].toUpperCase() + ".").join(" ");
+    return `${firstName} ${middleName} ${rest}`;
+  };
+
   return (
     <div className="font-body text-on-surface min-h-dvh flex flex-col bg-[#0e0e10]">
       {/* Top Navigation — Compact */}
@@ -363,8 +386,8 @@ export default function AttendanceLayer({
 
                     {/* Name + status text */}
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-headline font-bold text-[13px] text-primary/90 truncate leading-tight">
-                        {s.student_name}
+                      <h4 className="font-headline font-bold text-[13px] text-primary/90 truncate leading-tight" title={s.student_name}>
+                        {formatStudentName(s.student_name)}
                       </h4>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         {currentStatus ? (
