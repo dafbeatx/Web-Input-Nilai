@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { 
-  ArrowLeft, RefreshCcw, User, MapPin, Clock, Eye, CheckCircle2, AlertTriangle, AlertCircle, FileText, Search, ChevronDown, ChevronUp, Plus, Trash2, Save, Settings2, ShieldAlert, Check, RotateCcw
+  ArrowLeft, Search, CheckCircle2, AlertTriangle, AlertCircle, 
+  Clock, ShieldAlert, Check, RotateCcw, X, Save, Wand2, 
+  MapPin, FileText, ChevronDown, ChevronUp, User, LayoutGrid
 } from 'lucide-react';
 import { GradedStudent, ScoringConfig } from '@/lib/grademaster/types';
 
@@ -31,7 +33,7 @@ export default function RemedialDashboardLayer({
   scoringConfig,
   examType = "UTS",
   academicYear = "2025/2026",
-  studentClass = "10A",
+  studentClass = "XII-IPA-1",
   subject = "Matematika",
   schoolLevel = "SMA",
   semester = "Ganjil",
@@ -51,6 +53,22 @@ export default function RemedialDashboardLayer({
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
+  // Stats Logic
+  const remedialStudents = useMemo(() => {
+    return gradedStudents.filter(s => 
+      s.remedialStatus && s.remedialStatus !== 'NONE' && !deletedIds.includes(s.id)
+    ).filter(s => 
+      s.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [gradedStudents, deletedIds, searchQuery]);
+
+  const stats = useMemo(() => ({
+    total: remedialStudents.length,
+    waitingReview: remedialStudents.filter(s => s.remedialStatus === 'REMEDIAL' && !s.teacherReviewed).length,
+    issue: remedialStudents.filter(s => s.remedialStatus === 'CHEATED' || s.remedialStatus === 'TIME_UP' || s.remedialStatus === 'TIMEOUT').length
+  }), [remedialStudents]);
+
+  // Actions
   const handleSaveQuestions = () => {
     onUpdateRemedial?.(
       parseEssayQuestions(remedialQuestionsInput),
@@ -60,13 +78,8 @@ export default function RemedialDashboardLayer({
   };
 
   function parseEssayQuestions(input: string): string[] {
-    const questions = input.split(/\d+\./).map(s => s.trim()).filter(Boolean);
-    return questions;
+    return input.split(/\d+\./).map(s => s.trim()).filter(Boolean);
   }
-
-  const resetEditing = () => {
-    setIsEditing(false);
-  };
 
   const handleResetRemedial = async (e: React.MouseEvent, id: string, name: string) => {
     e.stopPropagation();
@@ -84,49 +97,6 @@ export default function RemedialDashboardLayer({
       alert('Gagal mereset data remedial. Silakan coba lagi.');
     } finally {
       setIsDeleting(null);
-    }
-  };
-
-  const remedialStudents = gradedStudents.filter(s => 
-    s.remedialStatus && s.remedialStatus !== 'NONE' && !deletedIds.includes(s.id)
-  ).filter(s => 
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const stats = {
-    total: remedialStudents.length,
-    completed: remedialStudents.filter(s => s.remedialStatus === 'SUBMITTED' || s.remedialStatus === 'COMPLETED').length,
-    failed: remedialStudents.filter(s => s.remedialStatus === 'FAILED_EFFORT').length,
-    cheated: remedialStudents.filter(s => s.remedialStatus === 'CHEATED').length,
-    timeout: remedialStudents.filter(s => s.remedialStatus === 'TIME_UP' || s.remedialStatus === 'TIMEOUT').length,
-    waitingReview: remedialStudents.filter(s => s.remedialStatus === 'REMEDIAL' && !s.teacherReviewed).length
-  };
-
-  const getStatusBadge = (status: string, teacherReviewed?: boolean) => {
-    switch (status) {
-      case 'SUBMITTED':
-      case 'COMPLETED':
-        return <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_15px_rgba(16,185,129,0.1)]"><CheckCircle2 size={10}/> SELESAI (VALID)</span>;
-      case 'ACTIVE':
-      case 'INITIATED':
-      case 'IN_PROGRESS':
-        return <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_15px_rgba(245,158,11,0.1)]"><Clock size={10}/> PROSES</span>;
-      case 'CHEATED':
-        return <span className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_15px_rgba(244,63,94,0.1)]"><ShieldAlert size={10}/> CURANG</span>;
-      case 'FAILED_EFFORT':
-      case 'FAILED':
-        return <span className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_15px_rgba(244,63,94,0.1)]"><AlertTriangle size={10}/> TIDAK VALID</span>;
-      case 'TIME_UP':
-      case 'TIMEOUT':
-        return <span className="px-2.5 py-1 rounded-lg bg-white/5 text-slate-400 border border-white/10 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"><Clock size={10}/> WAKTU HABIS</span>;
-      case 'REMEDIAL':
-        if (teacherReviewed) {
-           return <span className="px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_15px_rgba(14,165,233,0.1)]"><Check size={10}/> SUDAH DIKOREKSI</span>;
-        } else {
-           return <span className="px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_15px_rgba(249,115,22,0.1)]"><Clock size={10}/> BELUM DIKOREKSI</span>;
-        }
-      default:
-        return <span className="px-2.5 py-1 rounded-lg bg-white/5 text-slate-400 border border-white/10 text-[10px] font-black uppercase tracking-wider">{status}</span>;
     }
   };
 
@@ -154,398 +124,399 @@ export default function RemedialDashboardLayer({
     }
   };
 
-  return (
-    <div className="bg-slate-950 min-h-screen text-white p-3 sm:p-5 lg:p-8 w-full max-w-5xl mx-auto px-4 md:px-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4 pt-4">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest mb-3 border border-primary/20">
-            <RefreshCcw size={12} /> Management Remedial
-          </div>
-          <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight font-outfit uppercase">
-            Pusat Data Remedial <span className="text-primary">{examType}</span>
-          </h1>
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-             <DarkBadge color="emerald">Kelas {studentClass} ({schoolLevel})</DarkBadge>
-             <DarkBadge color="amber">{academicYear}</DarkBadge>
-             <DarkBadge color="indigo">Semester {semester}</DarkBadge>
-             <DarkBadge color="slate">{subject}</DarkBadge>
-          </div>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
-          <button 
-            onClick={() => setIsEditing(!isEditing)}
-            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border ${
-              isEditing ? 'bg-primary text-white border-primary/20 shadow-xl shadow-primary/20' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
-            }`}
-          >
-            <Settings2 size={16} /> {isEditing ? 'Tutup' : 'Atur Soal'}
-          </button>
+  const getStatusBadge = (status: string, teacherReviewed?: boolean) => {
+    const config: Record<string, { label: string, color: string, icon: string }> = {
+      'SUBMITTED': { label: 'SELESAI', color: 'text-tertiary bg-tertiary/10', icon: 'check_circle' },
+      'COMPLETED': { label: 'SELESAI', color: 'text-tertiary bg-tertiary/10', icon: 'check_circle' },
+      'ACTIVE': { label: 'PROSES', color: 'text-amber-400 bg-amber-400/10', icon: 'clock_loader_40' },
+      'IN_PROGRESS': { label: 'PROSES', color: 'text-amber-400 bg-amber-400/10', icon: 'clock_loader_40' },
+      'CHEATED': { label: 'CURANG', color: 'text-error bg-error/10', icon: 'security_update_warning' },
+      'FAILED_EFFORT': { label: 'TIDAK VALID', color: 'text-error bg-error/10', icon: 'report' },
+      'TIME_UP': { label: 'TIMEOUT', color: 'text-on-surface-variant bg-white/5', icon: 'timer_off' },
+      'REMEDIAL': { 
+        label: teacherReviewed ? 'DIKOREKSI' : 'ANTREAN', 
+        color: teacherReviewed ? 'text-tertiary bg-tertiary/10' : 'text-amber-400 bg-amber-400/10',
+        icon: teacherReviewed ? 'done_all' : 'pending_actions'
+      }
+    };
 
-          <div className="flex flex-1 items-center gap-2 bg-slate-900/40 backdrop-blur-xl p-1 rounded-2xl border border-white/10 shadow-xl overflow-x-auto">
-             <div className="flex flex-col items-center px-4 py-2 border-r border-white/5 min-w-fit">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter leading-none mb-1">Total</span>
-                <span className="text-lg font-black text-white">{stats.total}</span>
-             </div>
-             <div className="flex flex-col items-center px-4 py-2 border-r border-white/5 min-w-fit">
-                <span className="text-[10px] font-black text-orange-400/60 uppercase tracking-tighter leading-none mb-1">Antrean</span>
-                <span className="text-lg font-black text-orange-400">{stats.waitingReview}</span>
-             </div>
-             <div className="flex flex-col items-center px-4 py-2 min-w-fit">
-                <span className="text-[10px] font-black text-rose-400/60 uppercase tracking-tighter leading-none mb-1">Isu</span>
-                <span className="text-lg font-black text-rose-400">{stats.cheated + stats.timeout}</span>
-             </div>
-          </div>
+    const s = config[status] || { label: status, color: 'text-on-surface-variant bg-white/5', icon: 'info' };
+    
+    return (
+      <div className={`px-2 py-1 rounded-lg border border-white/5 flex items-center gap-1.5 ${s.color}`}>
+        <span className="material-symbols-outlined text-[12px] font-bold">{s.icon}</span>
+        <span className="text-[9px] font-black uppercase tracking-widest leading-none">{s.label}</span>
+      </div>
+    );
+  };
+
+  return (
+    <div className="font-body text-on-surface selection:bg-tertiary/30 min-h-dvh flex flex-col bg-surface relative overflow-x-hidden">
+      
+      {/* Editorial TopBar */}
+      <header className="fixed top-0 w-full z-50 bg-surface-container/80 backdrop-blur-xl flex justify-between items-center px-6 h-16 border-b border-outline-variant/10">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-1 hover:bg-white/5 rounded-lg transition-colors">
+            <span className="material-symbols-outlined text-primary">arrow_back</span>
+          </button>
+          <h1 className="font-headline font-bold text-lg tracking-tight text-primary uppercase">Remedial Center</h1>
+        </div>
+        <div className="h-8 w-8 rounded-xl overflow-hidden border border-outline-variant/30 bg-surface-bright flex items-center justify-center">
+            <User size={18} className="text-on-surface-variant" />
         </div>
       </header>
 
-      {/* Question Editor Section */}
-      {isEditing && (
-        <div className="mb-8 p-6 bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl animate-in zoom-in-95 duration-200">
-           <div className="flex items-center justify-between mb-6">
-              <div>
-                 <h2 className="text-white font-black text-lg tracking-tight uppercase">Pengaturan Soal Remedial</h2>
-                 <p className="text-slate-400 text-xs font-bold leading-relaxed">Daftar pertanyaan essay yang akan dijawab siswa saat melakukan remedial.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                 <button onClick={resetEditing} className="px-4 py-2 text-slate-500 hover:text-white text-xs font-black uppercase tracking-widest transition-colors">Batal</button>
-                 <button 
-                   onClick={handleSaveQuestions}
-                   disabled={isSaving}
-                   className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-600/20 active:scale-95"
-                 >
-                   {isSaving ? 'Menyimpan...' : <><Save size={14}/> Simpan Soal</>}
-                 </button>
-              </div>
-           </div>
-
-            {parseEssayQuestions(remedialQuestionsInput).length === 0 && (
-              <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3 animate-pulse">
-                <AlertCircle className="text-amber-400 shrink-0" size={20} />
-                <p className="text-[11px] font-black text-amber-400 uppercase tracking-tight">Perhatian: Anda belum memasukkan soal. Siswa tidak akan bisa mengerjakan remedial jika soal kosong.</p>
-              </div>
-            )}
-
-            <div className="space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Bagian Kiri: List Pertanyaan */}
-                  <div className="space-y-4">
-                     <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block ml-1">Ketik Soal (Format: 1. Soal A 2. Soal B)</label>
-                        <textarea 
-                           className="w-full bg-slate-900/60 border border-white/10 rounded-2xl p-4 text-sm font-medium text-white outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all resize-y placeholder:text-slate-700"
-                           rows={6}
-                           placeholder="1. Jelaskan pengertian... 2. Sebutkan contoh..."
-                           value={remedialQuestionsInput}
-                           onChange={(e) => onRemedialInputChange?.(e.target.value)}
-                        />
-                     </div>
-                     <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block ml-1">Preview Deteksi Soal ({parseEssayQuestions(remedialQuestionsInput).length})</label>
-                        <div className="bg-slate-900 border border-white/5 rounded-2xl p-4 max-h-[220px] overflow-y-auto space-y-2 custom-scrollbar">
-                           {parseEssayQuestions(remedialQuestionsInput).map((q, idx) => (
-                              <div key={idx} className="flex gap-3 text-[11px] text-slate-400">
-                                 <span className="font-black text-primary">{idx + 1}.</span>
-                                 <span className="leading-relaxed">"{q}"</span>
-                              </div>
-                           ))}
-                           {parseEssayQuestions(remedialQuestionsInput).length === 0 && <p className="text-[10px] text-slate-700 font-bold italic">Belum ada soal terdeteksi.</p>}
-                        </div>
-                     </div>
-                  </div>
-
-                  {/* Bagian Kanan: List Kunci Jawaban */}
-                  <div className="space-y-4">
-                     <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-emerald-500/70 mb-2 block ml-1">Ketik Kunci Jawaban (Format: 1. Kunci A 2. Kunci B)</label>
-                        <textarea 
-                           className="w-full bg-slate-900/60 border border-white/10 rounded-2xl p-4 text-sm font-medium text-emerald-100/80 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all resize-y placeholder:text-emerald-900/50"
-                           rows={6}
-                           placeholder="1. Jawaban dari soal 1 adalah... 2. Jawaban soal 2 adalah..."
-                           value={remedialAnswerKeysInput}
-                           onChange={(e) => onAnswerKeysInputChange?.(e.target.value)}
-                        />
-                     </div>
-                     <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-emerald-500/70 mb-2 block ml-1">Preview Deteksi Kunci ({parseEssayQuestions(remedialAnswerKeysInput).length})</label>
-                        <div className="bg-slate-900 border border-white/5 rounded-2xl p-4 max-h-[220px] overflow-y-auto space-y-2 custom-scrollbar">
-                           {parseEssayQuestions(remedialAnswerKeysInput).map((ak, idx) => (
-                              <div key={idx} className="flex gap-3 text-[11px] text-emerald-400/50">
-                                 <span className="font-black text-emerald-500">{idx + 1}.</span>
-                                 <span className="leading-relaxed">"{ak}"</span>
-                              </div>
-                           ))}
-                           {parseEssayQuestions(remedialAnswerKeysInput).length === 0 && <p className="text-[10px] text-emerald-900/30 font-bold italic">Belum ada kunci jawaban terdeteksi.</p>}
-                        </div>
-                     </div>
-                  </div>
-               </div>
-            </div>
-         </div>
-       )}
-
-      <div className="mb-6 relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
-        <input 
-          type="text"
-          placeholder="Cari nama siswa..."
-          className="w-full bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-bold text-white focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all shadow-xl placeholder:text-slate-600"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-
-      {remedialStudents.length === 0 ? (
-        <div className="bg-slate-900/40 backdrop-blur-xl rounded-3xl p-12 text-center border-2 border-dashed border-white/10">
-          <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/10 shadow-xl">
-            <RefreshCcw size={32} className="text-slate-600" />
+      {/* Main Content Area */}
+      <main className="flex-1 pt-20 pb-32 px-4 flex flex-col gap-5 max-w-lg mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+        
+        {/* Editorial Header */}
+        <section className="flex flex-col gap-4">
+          <div className="space-y-1">
+            <span className="font-label text-[10px] uppercase tracking-[0.15em] text-tertiary-dim font-black">Data Management</span>
+            <h2 className="font-headline text-2xl font-black tracking-tight leading-tight">PUSAT DATA REMEDIAL {examType}</h2>
           </div>
-          <h3 className="text-lg font-black text-white mb-1 uppercase tracking-tight">Belum Ada Data Remedial</h3>
-          <p className="text-sm text-slate-500 font-bold max-w-sm mx-auto leading-relaxed">Siswa yang melakukan pengerjaan ulang akan otomatis muncul di sini beserta jawaban dan lokasinya.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {remedialStudents.map((student) => (
-            <div 
-              key={student.id} 
-              className={`bg-slate-900/40 backdrop-blur-xl rounded-3xl border transition-all overflow-hidden relative group ${
-                selectedStudentId === student.id ? 'border-primary ring-4 ring-primary/10' : 'border-white/10 hover:border-white/20'
-              }`}
-            >
-              <div 
-                className="p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer"
-                onClick={() => setSelectedStudentId(selectedStudentId === student.id ? null : student.id)}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden border-2 ${
-                    student.remedialStatus === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
-                    student.remedialStatus === 'CHEATED' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
-                    'bg-white/5 text-slate-500 border-white/10'
-                  }`}>
-                    {student.remedialPhoto ? (
-                      <img src={student.remedialPhoto} alt={student.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <User size={24} />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-black text-white text-base md:text-lg uppercase tracking-tight group-hover:text-primary transition-colors">{student.name}</h3>
-                    <div className="flex flex-wrap items-center gap-y-1 gap-x-3 mt-1">
-                      <div className="flex items-center gap-1.5 text-slate-500 text-[10px] md:text-xs font-bold">
-                        <MapPin size={12} className="text-primary/50" /> {student.remedialLocation || 'Lokasi tidak diketahui'}
-                      </div>
-                      <div className="flex items-center gap-1.5 text-slate-500 text-[10px] md:text-xs font-bold">
-                        <FileText size={12} className="text-primary/50" /> {scoringConfig.remedialQuestions?.length || 0} Soal Essay
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto mt-2 md:mt-0 pt-3 md:pt-0 border-t md:border-t-0 border-white/5">
-                  <div className="flex items-center gap-3 md:gap-4 text-right flex-1 md:flex-none justify-end">
-                    <div className="flex flex-col shrink-0">
-                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none mb-1">Awal</span>
-                       <span className="text-sm font-black text-slate-300">{student.originalScore || student.finalScore}</span>
-                    </div>
-                    {student.remedialStatus === 'COMPLETED' && (
-                      <div className="flex flex-col border-l border-white/10 pl-3 md:pl-4 shrink-0">
-                         <span className="text-[10px] text-primary/60 font-bold uppercase tracking-widest leading-none mb-1">Rem</span>
-                         <span className="text-sm font-black text-primary">{student.remedialScore}</span>
-                      </div>
-                    )}
-                    <div className="flex flex-col border-l border-white/10 pl-3 md:pl-4 items-end shrink-0">
-                      <div className="mb-2 text-right">
-                        {student.remedialStatus === 'COMPLETED' && student.isCheated ? (
-                           <div className="flex flex-col items-end gap-1">
-                              <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-black uppercase tracking-wider flex items-center gap-1"><AlertTriangle size={9}/> DITANDAI SISTEM</span>
-                              {getStatusBadge('COMPLETED')}
-                           </div>
-                        ) : getStatusBadge(student.remedialStatus || '', student.teacherReviewed)}
-                      </div>
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        Akhir: <span className="text-primary">{student.finalScoreLocked || student.finalScore}</span>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button 
-                      onClick={(e) => handleResetRemedial(e, student.id, student.name)}
-                      disabled={isDeleting === student.id}
-                      className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400 hover:bg-amber-500 hover:text-white transition-all border border-amber-500/20"
-                      title="Reset Remedial"
-                    >
-                      {isDeleting === student.id ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <RotateCcw size={16} />}
-                    </button>
-                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-slate-500 group-hover:bg-primary/20 group-hover:text-primary transition-colors border border-white/10">
-                      {selectedStudentId === student.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                    </div>
-                  </div>
+          
+          {/* Advanced Filters Grid */}
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: 'Kelas', value: studentClass },
+              { label: 'Tahun', value: academicYear.replace('20', '') },
+              { label: 'Semester', value: semester },
+            ].map(f => (
+              <div key={f.label} className="bg-surface-container-low p-3 rounded-2xl flex flex-col gap-1 items-start border border-white/[0.03]">
+                <span className="font-label text-[9px] text-on-surface-variant uppercase font-black tracking-widest">{f.label}</span>
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-xs font-bold text-primary truncate pr-1">{f.value}</span>
+                  <span className="material-symbols-outlined text-sm text-outline/40">expand_more</span>
                 </div>
               </div>
+            ))}
+          </div>
+        </section>
 
-              {selectedStudentId === student.id && (
-                <div className="px-4 pb-6 md:px-6 md:pb-8 border-t border-white/5 bg-slate-950/20 animate-in slide-in-from-top-4">
-                  <div className="mt-6 space-y-6">
-                    {/* Cheating Alerts */}
-                    {student.isCheated && student.cheatingFlags && student.cheatingFlags.length > 0 && (
-                      <div className={`p-4 border rounded-2xl flex gap-3 shadow-xl ${student.remedialStatus === 'CHEATED' ? 'bg-rose-500/10 border-rose-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
-                         <ShieldAlert className={student.remedialStatus === 'CHEATED' ? 'text-rose-500 shrink-0' : 'text-amber-500 shrink-0'} size={20} />
-                         <div>
-                           <h4 className={`text-sm font-black tracking-tight uppercase ${student.remedialStatus === 'CHEATED' ? 'text-rose-400' : 'text-amber-400'}`}>
-                             {student.remedialStatus === 'CHEATED' ? 'Sistem Memblokir Sesi (Curang)' : 'Aktivitas Tidak Biasa Terdeteksi'}
-                           </h4>
-                           <ul className={`mt-2 list-disc list-inside text-xs font-bold space-y-1 ${student.remedialStatus === 'CHEATED' ? 'text-rose-400/70' : 'text-amber-400/70'}`}>
-                             {student.cheatingFlags.map((flag, idx) => <li key={idx}>{flag}</li>)}
-                           </ul>
-                           <p className={`mt-2 text-[10px] font-black uppercase tracking-tight ${student.remedialStatus === 'CHEATED' ? 'text-rose-500/50' : 'text-amber-500/50'}`}>
-                             {student.remedialStatus === 'CHEATED' 
-                               ? 'Siswa ini telah diblokir secara permanen dari sesi ini dan nilai otomatis menjadi 0.' 
-                               : 'Siswa tetap dapat mengerjakan, namun sistem menandai adanya indikasi aktivitas tidak biasa untuk ditinjau oleh guru.'}
-                           </p>
-                         </div>
-                      </div>
-                    )}
-
-                    {/* Teacher Action Panel */}
-                    {(student.remedialStatus === 'REMEDIAL' || student.remedialStatus === 'COMPLETED') && !student.isCheated && (
-                      <div className="p-5 bg-slate-900/40 backdrop-blur-xl border border-primary/20 rounded-2xl shadow-2xl">
-                         <h4 className="text-xs font-black uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
-                           Evaluasi Guru
-                         </h4>
-                         
-                         <div className="flex flex-col md:flex-row gap-4 items-center">
-                            <div className="flex-1 w-full">
-                               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block ml-1">Input Nilai Remedial (0 - 100)</label>
-                               <input 
-                                 type="number" 
-                                 className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-black text-white outline-none focus:border-primary transition-all" 
-                                 placeholder="Masukkan nilai murni remedial..."
-                                 value={reviewScore || (student.remedialScore || '')}
-                                 onChange={(e) => setReviewScore(e.target.value)}
-                                 disabled={student.remedialStatus === 'COMPLETED' || isSubmitting}
-                               />
-                            </div>
-                            
-                            {student.remedialStatus === 'REMEDIAL' && (
-                              <div className="flex gap-2 w-full md:w-auto mt-4 md:mt-0">
-                                <button 
-                                  onClick={() => submitReview(student.id, 'review')}
-                                  disabled={isSubmitting || !reviewScore}
-                                  className="flex-1 md:flex-none px-6 py-2.5 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl disabled:opacity-50 transition-all shadow-xl shadow-primary/20 active:scale-95"
-                                >
-                                  Simpan Koreksi
-                                </button>
-                                {student.teacherReviewed && (
-                                  <button 
-                                    onClick={() => submitReview(student.id, 'finalize')}
-                                    disabled={isSubmitting}
-                                    className="flex-1 md:flex-none px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl disabled:opacity-50 transition-all shadow-xl shadow-emerald-600/20 active:scale-95"
-                                  >
-                                    Finalisasi Nilai
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                         </div>
-                         {student.teacherReviewed && student.remedialStatus !== 'COMPLETED' && (
-                           <p className="mt-3 text-[10px] text-primary font-black uppercase tracking-tight italic">* KOREKSI PERTAMA DISIMPAN! Klik Finalisasi Nilai untuk merekap ke nilai akhir (maksimal sesuai KKM {kkm}).</p>
-                         )}
-                      </div>
-                    )}
-
-                    {/* Remedial Answers with Auto-Scoring */}
-                    <div>
-                      <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500 mb-4">
-                        <FileText size={14} className="text-primary/60" /> Jawaban Essay Remedial
-                        {student.essayScoreAuto !== undefined && (
-                          <span className="ml-auto text-primary normal-case tracking-normal">
-                            Skor Otomatis: <strong className="text-white">{student.essayScoreAuto}</strong>
-                            {student.essayScoreManual !== undefined && (
-                              <span className="text-emerald-400 ml-3">| Override Guru: <strong className="text-white">{student.essayScoreManual}</strong></span>
-                            )}
-                          </span>
-                        )}
-                      </h4>
-                      <div className="space-y-4">
-                        {scoringConfig.remedialQuestions?.map((q, idx) => {
-                           const detail = student.essayAutoDetails?.[idx];
-                           const ansKey = scoringConfig.remedialAnswerKeys?.[idx];
-                           return (
-                            <div key={idx} className="bg-white/5 backdrop-blur-xl rounded-2xl p-4 md:p-5 border border-white/10 shadow-xl group/q">
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="text-[10px] font-black text-primary/60 uppercase tracking-widest">Soal {idx + 1}</div>
-                                {detail && (
-                                  <div className="flex items-center gap-3">
-                                    <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border ${
-                                      detail.similarity >= 0.85 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                                      detail.similarity >= 0.70 ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' :
-                                      detail.similarity >= 0.50 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                                      'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                                    }`}>
-                                      Similarity: {Math.round(detail.similarity * 100)}%
-                                    </span>
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Skor: <span className="text-white ml-1">{detail.score}</span></span>
-                                  </div>
-                                )}
-                              </div>
-                              <p className="text-sm font-black text-white mb-4 leading-relaxed group-hover/q:text-primary transition-colors">{q}</p>
-                              
-                              <div className="bg-emerald-500/5 rounded-xl p-3 border border-emerald-500/10 text-xs font-bold text-emerald-400/80 leading-relaxed mb-3">
-                                <span className="text-[9px] uppercase tracking-widest text-emerald-500/40 block mb-1">Kunci Jawaban:</span>
-                                {ansKey}
-                              </div>
-
-                              <div className="bg-slate-900 border border-white/5 rounded-xl p-3 text-xs font-bold text-slate-400 leading-relaxed italic">
-                                <span className="text-[9px] uppercase tracking-widest text-slate-600 block mb-1 not-italic font-black">Jawaban Siswa:</span>
-                                &quot;{student.remedialAnswers?.[idx] || '(Tidak ada jawaban)'}&quot;
-                              </div>
-                            </div>
-                           );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Note */}
-                    {student.remedialNote && (
-                      <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 text-sm font-bold text-primary italic shadow-xl">
-                        Catatan Siswa: <span className="text-white not-italic">&quot;{student.remedialNote}&quot;</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+        {/* Dynamic Stats Cards */}
+        <section className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'Total', value: stats.total, color: 'text-primary' },
+            { label: 'Antrean', value: stats.waitingReview, color: 'text-tertiary-dim' },
+            { label: 'Isu', value: stats.issue, color: 'text-error' },
+          ].map(st => (
+            <div key={st.label} className="bg-surface-container p-4 rounded-3xl flex flex-col gap-1 items-center border border-white/[0.03] shadow-sm">
+              <span className={`text-3xl font-headline font-black ${st.color}`}>{st.value}</span>
+              <span className="font-label text-[9px] uppercase tracking-[0.15em] text-on-surface-variant/60 font-black">{st.label}</span>
             </div>
           ))}
+        </section>
+
+        {/* Editorial Search Bar */}
+        <div className="relative group">
+          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-tertiary transition-colors">search</span>
+          <input 
+            type="text"
+            placeholder="Cari nama siswa..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-surface-container-low border-none rounded-2xl py-4.5 pl-12 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-tertiary/20 transition-all shadow-inner outline-none" 
+          />
+        </div>
+
+        {/* Student List Section */}
+        <div className="flex flex-col gap-3">
+          {remedialStudents.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+               <div className="relative mb-6">
+                <div className="absolute inset-0 bg-tertiary/5 blur-[60px] rounded-full scale-150"></div>
+                <div className="relative h-20 w-20 bg-surface-container-high rounded-full flex items-center justify-center border border-outline-variant/10">
+                  <span className="material-symbols-outlined text-4xl text-tertiary/30 animate-pulse">radar</span>
+                </div>
+              </div>
+              <h3 className="font-headline text-lg font-bold text-on-surface mb-1 uppercase tracking-tight">Data Kosong</h3>
+              <p className="text-on-surface-variant/50 text-[11px] font-bold max-w-[200px] leading-relaxed uppercase tracking-widest">
+                Belum ada records untuk filter yang aktif.
+              </p>
+            </div>
+          ) : (
+            remedialStudents.map((student) => {
+              const isSelected = selectedStudentId === student.id;
+              return (
+                <div 
+                  key={student.id}
+                  className={`bg-surface-container rounded-3xl border transition-all duration-300 overflow-hidden ${
+                    isSelected ? 'ring-1 ring-tertiary/20 border-tertiary/10 bg-surface-container-high' : 'border-white/[0.03] active:bg-surface-container-low'
+                  }`}
+                >
+                   {/* Card Basic Info */}
+                   <div 
+                    className="p-4 flex items-center justify-between gap-3 cursor-pointer"
+                    onClick={() => setSelectedStudentId(isSelected ? null : student.id)}
+                   >
+                      <div className="flex items-center gap-3.5">
+                        <div className="relative">
+                          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden border ${
+                            student.remedialStatus === 'CHEATED' ? 'border-error/30' : 'border-outline-variant/20'
+                          }`}>
+                             {student.remedialPhoto ? (
+                               <img src={student.remedialPhoto} alt={student.name} className="w-full h-full object-cover" />
+                             ) : (
+                               <User size={20} className="text-on-surface-variant/40" />
+                             )}
+                          </div>
+                          {student.isCheated && (
+                            <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-error text-white rounded-full flex items-center justify-center border-2 border-surface shadow-lg">
+                               <span className="material-symbols-outlined text-[10px] font-black">gpp_maybe</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-headline font-bold text-sm text-primary uppercase tracking-tight truncate max-w-[150px]">{student.name}</h4>
+                          <div className="flex items-center gap-2 mt-0.5">
+                             {getStatusBadge(student.remedialStatus || '', student.teacherReviewed)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                         <div className="text-right flex flex-col items-end">
+                            <span className="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-widest mb-0.5">Final Score</span>
+                            <span className="text-lg font-headline font-black text-primary leading-none">
+                              {student.finalScoreLocked || student.finalScore}
+                            </span>
+                         </div>
+                         <button 
+                          onClick={(e) => handleResetRemedial(e, student.id, student.name)}
+                          disabled={isDeleting === student.id}
+                          className="w-8 h-8 rounded-xl bg-surface-bright flex items-center justify-center text-outline/60 hover:text-error transition-colors"
+                         >
+                            {isDeleting === student.id ? <Clock size={14} className="animate-spin" /> : <RotateCcw size={16} />}
+                         </button>
+                      </div>
+                   </div>
+
+                   {/* Card Expanded Details */}
+                   {isSelected && (
+                     <div className="px-4 pb-6 pt-2 border-t border-white/[0.05] animate-in slide-in-from-top-2 duration-300">
+                        
+                        {/* Cheating Alerts */}
+                        {student.isCheated && student.cheatingFlags && student.cheatingFlags.length > 0 && (
+                          <div className="mb-6 p-4 bg-error/5 border border-error/10 rounded-2xl flex gap-3">
+                             <span className="material-symbols-outlined text-error text-xl shrink-0">security_update_warning</span>
+                             <div>
+                               <h5 className="text-[10px] font-black uppercase tracking-widest text-error mb-1.5">Indikasi Pelanggaran</h5>
+                               <ul className="space-y-1">
+                                 {student.cheatingFlags.map((flag, idx) => (
+                                   <li key={idx} className="text-[10px] font-bold text-error/70 flex items-center gap-1.5 lowercase">
+                                      <div className="w-1 h-1 rounded-full bg-error/40" /> {flag}
+                                   </li>
+                                 ))}
+                               </ul>
+                             </div>
+                          </div>
+                        )}
+
+                        {/* Location / Meta */}
+                        <div className="grid grid-cols-2 gap-3 mb-6">
+                           <div className="bg-surface-container-low p-3 rounded-2xl flex items-center gap-3">
+                              <span className="material-symbols-outlined text-tertiary/60 text-lg">location_on</span>
+                              <div className="min-w-0">
+                                <p className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/40 leading-none mb-1">Location</p>
+                                <p className="text-[10px] font-bold text-on-surface-variant truncate">{student.remedialLocation || 'N/A'}</p>
+                              </div>
+                           </div>
+                           <div className="bg-surface-container-low p-3 rounded-2xl flex items-center gap-3">
+                              <span className="material-symbols-outlined text-tertiary/60 text-lg">description</span>
+                              <div className="min-w-0">
+                                <p className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/40 leading-none mb-1">Soal Essay</p>
+                                <p className="text-[10px] font-bold text-on-surface-variant">{scoringConfig.remedialQuestions?.length || 0} Records</p>
+                              </div>
+                           </div>
+                        </div>
+
+                        {/* Evaluasi Guru Section */}
+                        {(student.remedialStatus === 'REMEDIAL' || student.remedialStatus === 'COMPLETED') && !student.isCheated && (
+                          <section className="mb-6">
+                            <h5 className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 mb-3 flex items-center gap-2">
+                              <span className="material-symbols-outlined text-sm">edit_note</span> Evaluasi Akademik
+                            </h5>
+                            <div className="bg-surface-container-low p-4 rounded-3xl border border-white/[0.03]">
+                               <div className="flex flex-col gap-4">
+                                  <div className="w-full">
+                                     <label className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/40 mb-2 block pl-1">Input Nilai Remedial (0-100)</label>
+                                     <input 
+                                       type="number"
+                                       className="w-full bg-surface-container-lowest border-none rounded-2xl p-4 text-sm font-black text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/30 outline-none"
+                                       placeholder="Murni..."
+                                       value={reviewScore || (student.remedialScore || '')}
+                                       onChange={(e) => setReviewScore(e.target.value)}
+                                       disabled={student.remedialStatus === 'COMPLETED' || isSubmitting}
+                                     />
+                                  </div>
+                                  {student.remedialStatus === 'REMEDIAL' && (
+                                    <div className="flex gap-2">
+                                       <button 
+                                         onClick={() => submitReview(student.id, 'review')}
+                                         disabled={isSubmitting || !reviewScore}
+                                         className="flex-1 py-3 bg-surface-bright text-primary text-[10px] font-black uppercase tracking-widest rounded-2xl disabled:opacity-30 border border-white/5 active:scale-95 transition-transform"
+                                       >
+                                         Update
+                                       </button>
+                                       {student.teacherReviewed && (
+                                         <button 
+                                           onClick={() => submitReview(student.id, 'finalize')}
+                                           disabled={isSubmitting}
+                                           className="flex-1 py-3 bg-tertiary text-on-tertiary text-[10px] font-black uppercase tracking-widest rounded-2xl disabled:opacity-30 active:scale-95 transition-transform shadow-[0_0_20px_rgba(155,255,206,0.15)]"
+                                         >
+                                           Finalisasi
+                                         </button>
+                                       )}
+                                    </div>
+                                  )}
+                               </div>
+                               {student.teacherReviewed && student.remedialStatus !== 'COMPLETED' && (
+                                 <p className="mt-3 text-[9px] text-tertiary/70 font-bold tracking-tight text-center italic leading-tight">
+                                   Status: Koreksi tersimpan. Klik Finalisasi untuk memasukkan ke KKM ({kkm}).
+                                 </p>
+                               )}
+                            </div>
+                          </section>
+                        )}
+
+                        {/* Answers List */}
+                        <section className="space-y-4">
+                           <h5 className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 flex justify-between items-center">
+                              <span>Jawaban Siswa</span>
+                              <span className="text-tertiary-dim lowercase">Auto Score: {student.essayScoreAuto || 0}</span>
+                           </h5>
+                           {student.remedialAnswers?.map((ans, idx) => {
+                             const detail = student.essayAutoDetails?.[idx];
+                             return (
+                               <div key={idx} className="bg-surface-container-lowest p-4 rounded-3xl border border-white/[0.03]">
+                                  <div className="flex justify-between items-center mb-3">
+                                     <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/30">Soal {idx + 1}</span>
+                                     {detail && (
+                                       <div className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${
+                                         detail.similarity > 0.7 ? 'bg-tertiary/10 text-tertiary' : 'bg-error/10 text-error'
+                                       }`}>
+                                          Matches: {Math.round(detail.similarity * 100)}%
+                                       </div>
+                                     )}
+                                  </div>
+                                  <p className="text-[11px] font-bold text-on-surface-variant/60 leading-relaxed mb-3">"{scoringConfig.remedialQuestions?.[idx]}"</p>
+                                  <div className="bg-surface-container-high/40 p-3 rounded-2xl text-[11px] font-medium text-primary italic leading-relaxed border-l-2 border-tertiary/40">
+                                     "{ans || 'Kosong'}"
+                                  </div>
+                               </div>
+                             );
+                           })}
+                        </section>
+                     </div>
+                   )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </main>
+
+      {/* Sticky Bottom Actions */}
+      <div className="fixed bottom-0 w-full z-40 px-6 pb-6 pt-4 bg-gradient-to-t from-surface via-surface/90 to-transparent pointer-events-none">
+         <div className="max-w-lg mx-auto flex flex-col gap-3 pointer-events-auto">
+            <button 
+              onClick={() => setIsEditing(true)}
+              className="w-full h-14 bg-gradient-to-br from-[#f9f9f9] to-[#a0a1a1] text-on-primary-container rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-[0.98] transition-all"
+            >
+              <span className="material-symbols-outlined">auto_fix_high</span>
+              Atur Soal Remedial
+            </button>
+            <button 
+              onClick={onBack}
+              className="w-full py-2 text-on-surface-variant/50 hover:text-primary transition-colors text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2"
+            >
+               <span className="material-symbols-outlined text-sm">arrow_back</span>
+               Menu Utama
+            </button>
+         </div>
+      </div>
+
+      {/* Premium Slide-Up Sheet for Editor */}
+      {isEditing && (
+        <div className="fixed inset-0 z-[100] animate-in fade-in duration-300">
+           {/* Backdrop */}
+           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsEditing(false)} />
+           
+           {/* Sheet Content */}
+           <div className="absolute bottom-0 w-full max-w-xl left-1/2 -translate-x-1/2 bg-surface-container-highest rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom-full duration-500 max-h-[90vh] overflow-y-auto flex flex-col gap-6 custom-scrollbar">
+              
+              {/* Drag Handle */}
+              <div className="w-12 h-1 bg-outline/20 rounded-full mx-auto mb-2 shrink-0" />
+
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-headline font-black text-xl text-primary uppercase tracking-tight">Atur Soal Remedial</h3>
+                  <p className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest mt-1">Konfigurasi Essay System</p>
+                </div>
+                <button onClick={() => setIsEditing(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Editor Fields */}
+              <div className="flex flex-col gap-6">
+                 {/* Questions */}
+                 <div className="flex flex-col gap-2">
+                    <label className="font-label text-[10px] text-tertiary-dim uppercase font-black tracking-widest pl-1">Pertanyaan Essay (Format: 1. Soal)</label>
+                    <textarea 
+                      className="w-full bg-surface-container-lowest border-none rounded-3xl p-5 text-sm font-medium text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none resize-none min-h-[160px]"
+                      placeholder="1. Sebutkan... 2. Jelaskan..."
+                      value={remedialQuestionsInput}
+                      onChange={(e) => onRemedialInputChange?.(e.target.value)}
+                    />
+                 </div>
+                 
+                 {/* Answer Keys */}
+                 <div className="flex flex-col gap-2">
+                    <label className="font-label text-[10px] text-tertiary uppercase font-black tracking-widest pl-1">Kunci Jawaban (Similarity Matcher)</label>
+                    <textarea 
+                      className="w-full bg-surface-container-lowest border-none rounded-3xl p-5 text-sm font-medium text-tertiary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none resize-none min-h-[160px]"
+                      placeholder="1. Jawaban kunci... 2. Penjelasan..."
+                      value={remedialAnswerKeysInput}
+                      onChange={(e) => onAnswerKeysInputChange?.(e.target.value)}
+                    />
+                 </div>
+
+                 {/* Alerts */}
+                 {parseEssayQuestions(remedialQuestionsInput).length === 0 && (
+                   <div className="p-4 bg-error/10 border border-error/20 rounded-2xl flex items-center gap-3">
+                      <span className="material-symbols-outlined text-error">warning</span>
+                      <p className="text-[9px] font-black text-error uppercase tracking-widest">Satu atau lebih soal wajib diisi agar sistem aktif.</p>
+                   </div>
+                 )}
+              </div>
+
+              {/* Footer Save */}
+              <div className="pt-4 sticky bottom-0 bg-surface-container-highest pb-2">
+                <button 
+                  onClick={handleSaveQuestions}
+                  disabled={isSaving}
+                  className="w-full h-14 bg-tertiary text-on-tertiary rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  {isSaving ? <Clock size={18} className="animate-spin" /> : <Save size={18} />}
+                  Simpan Konfigurasi
+                </button>
+              </div>
+           </div>
         </div>
       )}
 
-      <div className="mt-10 flex justify-center pb-20">
-        <button 
-          onClick={onBack}
-          className="py-3 px-8 text-slate-500 bg-white/5 border border-white/10 rounded-2xl font-black uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-2 hover:bg-white/10 hover:text-primary transition-all hover:-translate-x-1"
-        >
-          <ArrowLeft size={16} /> Kembali ke Menu Utama
-        </button>
-      </div>
+      {/* Bottom OLED Safe Area Padding */}
+      <div className="h-safe bg-surface-container shrink-0" />
+      
+      {/* Dynamic Styling for Custom Scrollbar */}
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
+      `}</style>
+
     </div>
-  );
-}
-
-function Badge({ children, color = 'indigo' }: { children: React.ReactNode; color?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'rose' }) {
-  return <DarkBadge color={color}>{children}</DarkBadge>;
-}
-
-function DarkBadge({ children, color = 'indigo' }: { children: React.ReactNode; color?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'rose' }) {
-  const colors = {
-    indigo: 'bg-primary/10 text-primary border-primary/20',
-    emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    slate: 'bg-white/5 text-slate-300 border-white/10',
-    rose: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-  };
-  return (
-    <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-tight border ${colors[color]}`}>
-      {children}
-    </span>
   );
 }
