@@ -29,7 +29,7 @@ interface ModalsProps {
   onLoadPublic?: () => void;
   onDelete: () => void;
   onClose: () => void;
-  onUpdateAdmin?: (username: string, pass: string) => Promise<void>;
+  onUpdateAdmin?: (username: string, pass: string, remedialPass?: string) => Promise<void>;
 }
 
 export default function Modals(props: ModalsProps) {
@@ -42,6 +42,7 @@ export default function Modals(props: ModalsProps) {
 
   const [newUsername, setNewUsername] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
+  const [newRemedialPassword, setNewRemedialPassword] = React.useState('');
   const [isUpdatingAdmin, setIsUpdatingAdmin] = React.useState(false);
   const [adminError, setAdminError] = React.useState('');
 
@@ -50,6 +51,7 @@ export default function Modals(props: ModalsProps) {
     if (modal === 'adminSettings') {
       setNewUsername('');
       setNewPassword('');
+      setNewRemedialPassword('');
       setAdminError('');
     }
   }, [modal]);
@@ -133,7 +135,7 @@ export default function Modals(props: ModalsProps) {
       setIsUpdatingAdmin(true);
       setAdminError('');
       try {
-        await onUpdateAdmin(newUsername, newPassword);
+        await onUpdateAdmin(newUsername, newPassword, newRemedialPassword);
         onClose();
       } catch (err: any) {
         setAdminError(err.message || 'Gagal mengubah profil admin.');
@@ -178,7 +180,7 @@ export default function Modals(props: ModalsProps) {
               </div>
             </div>
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Password Baru</label>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Password Baru (Sistem)</label>
               <div className="relative group">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-primary transition-colors"><Key size={18} /></div>
                 <input
@@ -186,6 +188,21 @@ export default function Modals(props: ModalsProps) {
                    placeholder="Minimal 6 karakter"
                    className="w-full pl-12 pr-4 py-4 bg-slate-950/50 border border-white/10 rounded-2xl text-sm font-bold text-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-slate-700"
                    disabled={isUpdatingAdmin}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Password Akses Remedial</label>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-primary transition-colors"><Key size={18} className="text-tertiary-dim" /></div>
+                <input
+                   type="password" 
+                   placeholder="Password khusus Dashboard Remedial..."
+                   className="w-full pl-12 pr-4 py-4 bg-slate-950/50 border border-white/10 rounded-2xl text-sm font-bold text-tertiary focus:ring-4 focus:ring-tertiary/10 focus:border-tertiary outline-none transition-all placeholder:text-slate-700"
+                   disabled={isUpdatingAdmin}
+                   id="remedial-password-input"
+                   value={newRemedialPassword}
+                   onChange={(e) => setNewRemedialPassword(e.target.value)}
                 />
               </div>
             </div>

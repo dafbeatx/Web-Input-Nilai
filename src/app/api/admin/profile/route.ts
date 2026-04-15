@@ -10,7 +10,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Tidak ada akses (Unauthorized)' }, { status: 401 });
     }
 
-    const { username, password } = await req.json();
+    const { username, password, remedialPassword } = await req.json();
 
     if (!username || username.trim().length < 3) {
       return NextResponse.json({ error: 'Username minimal 3 karakter' }, { status: 400 });

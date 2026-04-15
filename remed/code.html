@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#262528",
+                    "primary-fixed-dim": "#dcdddd",
+                    "secondary-fixed-dim": "#d6d3d7",
+                    "surface-tint": "#f9f9f9",
+                    "surface": "#0e0e10",
+                    "on-secondary": "#525155",
+                    "on-tertiary-fixed-variant": "#006544",
+                    "on-surface": "#f9f5f8",
+                    "tertiary-fixed": "#69f6b8",
+                    "on-primary-container": "#212323",
+                    "on-error-container": "#ffb2b9",
+                    "on-secondary-fixed": "#3f3f42",
+                    "primary": "#f9f9f9",
+                    "primary-dim": "#ebebeb",
+                    "on-tertiary-fixed": "#00452d",
+                    "secondary-container": "#47464a",
+                    "outline-variant": "#48474a",
+                    "background": "#0e0e10",
+                    "error": "#ff6e84",
+                    "on-error": "#490013",
+                    "on-primary": "#5e5f60",
+                    "inverse-surface": "#fcf8fb",
+                    "tertiary-container": "#69f6b8",
+                    "primary-container": "#a0a1a1",
+                    "tertiary-dim": "#58e7ab",
+                    "on-tertiary": "#006443",
+                    "on-primary-fixed": "#434545",
+                    "error-container": "#a70138",
+                    "tertiary-fixed-dim": "#58e7ab",
+                    "surface-container-high": "#1f1f22",
+                    "surface-bright": "#2c2c2f",
+                    "tertiary": "#9bffce",
+                    "on-tertiary-container": "#005a3c",
+                    "surface-container-highest": "#262528",
+                    "on-primary-fixed-variant": "#5f6161",
+                    "error-dim": "#d73357",
+                    "on-secondary-container": "#d2cfd3",
+                    "surface-container": "#19191c",
+                    "primary-fixed": "#ebebeb",
+                    "secondary-dim": "#d6d3d7",
+                    "inverse-on-surface": "#565457",
+                    "on-background": "#f9f5f8",
+                    "outline": "#767577",
+                    "secondary-fixed": "#e4e1e5",
+                    "surface-container-low": "#131315",
+                    "inverse-primary": "#5e5f60",
+                    "on-secondary-fixed-variant": "#5c5b5e",
+                    "secondary": "#e4e1e5",
+                    "surface-container-lowest": "#000000",
+                    "on-surface-variant": "#adaaad",
+                    "surface-dim": "#0e0e10",
+                    "warning-amber": "#ffbf00"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "1rem",
+                    "2xl": "1.5rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+      body { background-color: #0e0e10; }
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .glass-card {
+        background: linear-gradient(145deg, rgba(25, 25, 28, 0.7), rgba(19, 19, 21, 0.9));
+        backdrop-filter: blur(12px);
+      }
+      .premium-gradient {
+        background: linear-gradient(15deg, #f9f9f9 0%, #a0a1a1 100%);
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body text-on-surface selection:bg-tertiary/30 min-h-dvh flex flex-col">
+<!-- Top AppBar (JSON Mapping) -->
+<header class="fixed top-0 w-full z-50 bg-[#19191c]/80 backdrop-blur-xl flex justify-between items-center px-6 h-16 w-full">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#f9f9f9]">menu</span>
+<h1 class="font-['Manrope'] font-bold text-lg tracking-tight text-[#f9f9f9]">Remedial Center</h1>
+</div>
+<div class="h-8 w-8 rounded-full overflow-hidden border border-outline-variant/30">
+<img alt="Professor Profile" class="w-full h-full object-cover" data-alt="close up portrait of a professional academic professor with glasses and a friendly expression" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnzWCsiEhmFcaZrQlvc3dCGB5_rOzvnLIOuhZdeDOi5JzTMlbud4Tolzqw9CvJ_DCBatd8e0AOqds8ApHyMRlLE29xHAUITI1rglpZpJhzDudukbRYGT2y7gOboo2b23K258cGtbNrOXPYMJ8tDNeM1udGc3swJQ3YlX_LGvr_G94au4Jwc_7C617rRjkR6pu8_vhccjkTKQoj75iAP4M_1A_pi3EfAK3ETyycifhWHg7HNddSNjR5mtyNXlKJnNizba1DbLeiDxYp"/>
+</div>
+</header>
+<main class="flex-1 pt-20 pb-28 px-4 flex flex-col gap-6 max-w-lg mx-auto w-full">
+<!-- Header Section -->
+<section class="flex flex-col gap-4">
+<div class="space-y-1">
+<span class="font-label text-[10px] uppercase tracking-[0.1em] text-tertiary-dim font-bold">Data Management</span>
+<h2 class="font-headline text-2xl font-extrabold tracking-tight">PUSAT DATA REMEDIAL UTS</h2>
+</div>
+<!-- Advanced Filters -->
+<div class="grid grid-cols-3 gap-2">
+<button class="bg-surface-container-low p-3 rounded-xl flex flex-col gap-1 items-start hover:bg-surface-bright transition-colors group">
+<span class="font-label text-[10px] text-on-surface-variant uppercase font-medium">Kelas</span>
+<div class="flex items-center justify-between w-full">
+<span class="text-sm font-semibold">XII-IPA-1</span>
+<span class="material-symbols-outlined text-sm text-outline">expand_more</span>
+</div>
+</button>
+<button class="bg-surface-container-low p-3 rounded-xl flex flex-col gap-1 items-start hover:bg-surface-bright transition-colors">
+<span class="font-label text-[10px] text-on-surface-variant uppercase font-medium">Tahun</span>
+<div class="flex items-center justify-between w-full">
+<span class="text-sm font-semibold">23/24</span>
+<span class="material-symbols-outlined text-sm text-outline">expand_more</span>
+</div>
+</button>
+<button class="bg-surface-container-low p-3 rounded-xl flex flex-col gap-1 items-start hover:bg-surface-bright transition-colors">
+<span class="font-label text-[10px] text-on-surface-variant uppercase font-medium">Semester</span>
+<div class="flex items-center justify-between w-full">
+<span class="text-sm font-semibold">Ganjil</span>
+<span class="material-symbols-outlined text-sm text-outline">expand_more</span>
+</div>
+</button>
+</div>
+</section>
+<!-- Summary Stats (Tonal Layering) -->
+<section class="grid grid-cols-3 gap-3">
+<div class="bg-surface-container p-4 rounded-2xl flex flex-col gap-1 items-center">
+<span class="text-3xl font-headline font-black text-primary">0</span>
+<span class="font-label text-[10px] uppercase tracking-wider text-on-surface-variant">Total</span>
+</div>
+<div class="bg-surface-container p-4 rounded-2xl flex flex-col gap-1 items-center">
+<span class="text-3xl font-headline font-black text-tertiary">0</span>
+<span class="font-label text-[10px] uppercase tracking-wider text-on-surface-variant">Antrean</span>
+</div>
+<div class="bg-surface-container p-4 rounded-2xl flex flex-col gap-1 items-center">
+<span class="text-3xl font-headline font-black text-error">0</span>
+<span class="font-label text-[10px] uppercase tracking-wider text-on-surface-variant">Isu</span>
+</div>
+</section>
+<!-- Search Bar -->
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-tertiary transition-colors">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-xl py-4 pl-12 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant focus:ring-1 focus:ring-tertiary/50 transition-all shadow-inner" placeholder="Cari nama siswa..." type="text"/>
+</div>
+<!-- Content Area: Empty State (The Sanctuary Aesthetic) -->
+<div class="flex-1 flex flex-col items-center justify-center py-12 text-center">
+<div class="relative mb-6">
+<div class="absolute inset-0 bg-tertiary/10 blur-[60px] rounded-full scale-150"></div>
+<div class="relative h-24 w-24 bg-surface-container-high rounded-full flex items-center justify-center border border-outline-variant/20 overflow-hidden">
+<span class="material-symbols-outlined text-4xl text-tertiary/60" style="font-variation-settings: 'FILL' 0, 'wght' 200;">radar</span>
+<!-- Decorative scanning arc -->
+<div class="absolute inset-0 border-2 border-tertiary/20 rounded-full animate-pulse"></div>
+</div>
+</div>
+<h3 class="font-headline text-lg font-bold text-on-surface mb-2">Belum ada data remedial</h3>
+<p class="text-on-surface-variant text-sm max-w-[240px] leading-relaxed">
+                Silahkan pilih parameter di atas atau periksa kembali filter Anda.
+            </p>
+</div>
+<!-- Sticky Primary Action -->
+<div class="mt-auto space-y-4">
+<button class="w-full premium-gradient text-on-primary-container h-14 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-black/40">
+<span class="material-symbols-outlined">auto_fix_high</span>
+                Atur Soal
+            </button>
+<button class="w-full py-2 text-on-surface-variant hover:text-primary transition-colors text-sm font-medium flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-lg">arrow_back</span>
+                Kembali ke Menu Utama
+            </button>
+</div>
+</main>
+<!-- Bottom Navigation (JSON Mapping) -->
+<nav class="fixed bottom-0 w-full z-50 pb-safe bg-[#19191c]/80 backdrop-blur-xl flex justify-around items-center h-20 px-4 w-full shadow-[0_-8px_30px_rgb(0,0,0,0.12)]">
+<div class="flex flex-col items-center justify-center text-[#adaaad] px-4 py-2 hover:text-[#f9f9f9] transition-all active:scale-90 duration-300">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-medium">Insights</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#adaaad] px-4 py-2 hover:text-[#f9f9f9] transition-all active:scale-90 duration-300">
+<span class="material-symbols-outlined">group</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-medium">Students</span>
+</div>
+<!-- ACTIVE STATE: Remedial -->
+<div class="flex flex-col items-center justify-center bg-[#2c2c2f] text-[#f9f9f9] rounded-2xl px-4 py-2 active:scale-90 duration-300">
+<span class="material-symbols-outlined">auto_fix_high</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-medium">Remedial</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#adaaad] px-4 py-2 hover:text-[#f9f9f9] transition-all active:scale-90 duration-300">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-medium">Settings</span>
+</div>
+</nav>
+<!-- Visual Layering Element (Safe area padding for OLED screens) -->
+<div class="fixed bottom-0 w-full h-safe bg-[#19191c] z-[60]"></div>
+</body></html>

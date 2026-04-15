@@ -252,14 +252,24 @@ export default function GradeMaster() {
     }
   };
 
-  const handleUpdateAdmin = async (username: string, pass: string) => {
+  const handleUpdateAdmin = async (username: string, pass: string, remedialPass?: string) => {
     const res = await fetch('/api/admin/profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password: pass }),
+      body: JSON.stringify({ 
+        username, 
+        password: pass,
+        remedialPassword: remedialPass
+      }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Gagal mengubah profil admin');
+    
+    // Store remedial password locally if provided (as a fallback/gatekeeper)
+    if (remedialPass) {
+      localStorage.setItem('gm_remedial_password', remedialPass);
+    }
+    
     setToast({ message: 'Profil admin berhasil diperbarui!', type: 'success' });
     setAdminUser(username);
   };
