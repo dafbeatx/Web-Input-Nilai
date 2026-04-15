@@ -7,7 +7,7 @@
     scroll-behavior: smooth;
   }
   body {
-    @apply bg-slate-950 text-slate-900;
+    @apply bg-slate-50 text-slate-900;
     font-family: 'Inter', sans-serif;
     overscroll-behavior-y: none;
     -webkit-overflow-scrolling: touch;
@@ -49,7 +49,7 @@
   }
 
   .premium-shadow {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 10px 40px -10px rgba(37, 99, 235, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
 
   .app-window {
@@ -96,10 +96,10 @@
   @apply bg-transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-black/10 rounded-full;
+  @apply bg-slate-300 rounded-full;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  @apply bg-black/20;
+  @apply bg-slate-400;
 }
 
 .font-arabic {

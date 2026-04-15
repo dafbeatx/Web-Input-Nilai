@@ -31,12 +31,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className="dark">
+    <html lang="id">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
       </head>
-      <body className={`${inter.variable} ${outfit.variable} ${amiri.variable} ${manrope.variable} font-sans text-slate-50 antialiased selection:bg-primary/30 flex flex-col min-h-dvh`}>
+      <body className={`${inter.variable} ${outfit.variable} ${amiri.variable} ${manrope.variable} font-sans text-slate-900 antialiased selection:bg-primary/30 flex flex-col min-h-dvh`}>
         <StarBackground />
 
         <GradeMasterProvider>
