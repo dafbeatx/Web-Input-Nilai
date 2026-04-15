@@ -53,23 +53,10 @@ export default function RemedialDashboardLayer({
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
-  // Filter States
-  const [selectedClass, setSelectedClass] = useState<string>(studentClass);
-  const [selectedYear, setSelectedYear] = useState<string>(academicYear);
-  const [selectedSemester, setSelectedSemester] = useState<string>(semester);
-  const [selectedSubject, setSelectedSubject] = useState<string>(subject);
-  const [activeDropdown, setActiveDropdown] = useState<'class' | 'year' | 'semester' | 'subject' | null>(null);
-
   // Security State
   const [isLocked, setIsLocked] = useState(true);
   const [passwordInput, setPasswordInput] = useState('');
   const [unlockError, setUnlockError] = useState(false);
-
-  // Extract unique values for dropdowns
-  const uniqueClasses = useMemo(() => Array.from(new Set(gradedStudents.map(s => s.className || studentClass).filter(Boolean))), [gradedStudents, studentClass]);
-  const uniqueSubjects = useMemo(() => Array.from(new Set(gradedStudents.map(s => s.subject || subject).filter(Boolean))), [gradedStudents, subject]);
-  const uniqueYears = useMemo(() => Array.from(new Set(gradedStudents.map(s => s.academicYear || academicYear).filter(Boolean))), [gradedStudents, academicYear]);
-  const semesters = ["Ganjil", "Genap"];
 
   const handleUnlock = () => {
     const savedPass = localStorage.getItem('gm_remedial_password');
@@ -87,15 +74,10 @@ export default function RemedialDashboardLayer({
   const remedialStudents = useMemo(() => {
     return gradedStudents.filter(s => 
       s.remedialStatus && s.remedialStatus !== 'NONE' && !deletedIds.includes(s.id)
-    ).filter(s => {
-      const matchName = s.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchClass = selectedClass ? (s.className === selectedClass || (!s.className && selectedClass === studentClass)) : true;
-      const matchYear = selectedYear ? (s.academicYear === selectedYear || (!s.academicYear && selectedYear === academicYear)) : true;
-      const matchSemester = selectedSemester ? (s.semester === selectedSemester || (!s.semester && selectedSemester === semester)) : true;
-      const matchSubject = selectedSubject ? (s.subject === selectedSubject || (!s.subject && selectedSubject === subject)) : true;
-      return matchName && matchClass && matchYear && matchSemester && matchSubject;
-    });
-  }, [gradedStudents, deletedIds, searchQuery, selectedClass, selectedYear, selectedSemester, selectedSubject, studentClass, academicYear, semester, subject]);
+    ).filter(s => 
+      s.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [gradedStudents, deletedIds, searchQuery]);
 
   const stats = useMemo(() => ({
     total: remedialStudents.length,
@@ -214,60 +196,16 @@ export default function RemedialDashboardLayer({
           {/* Advanced Filters Grid */}
           <div className="grid grid-cols-2 gap-2 relative">
             {[
-              { id: 'class' as const, label: 'Kelas', value: selectedClass, options: uniqueClasses },
-              { id: 'year' as const, label: 'Tahun', value: selectedYear.replace('20', ''), options: uniqueYears },
-              { id: 'semester' as const, label: 'Semester', value: selectedSemester, options: semesters },
-              { id: 'subject' as const, label: 'Subjek', value: selectedSubject, options: uniqueSubjects },
+              { label: 'Kelas', value: studentClass },
+              { label: 'Tahun', value: academicYear.replace('20', '') },
+              { label: 'Semester', value: semester },
+              { label: 'Subjek', value: subject },
             ].map(f => (
-              <div key={f.label} className="relative">
-                <button 
-                  onClick={() => setActiveDropdown(activeDropdown === f.id ? null : f.id)}
-                  className={`w-full bg-surface-container-low p-3 rounded-2xl flex flex-col gap-1 items-start border transition-all ${
-                    activeDropdown === f.id ? 'border-tertiary/40 bg-surface-container-high' : 'border-white/[0.03]'
-                  }`}
-                >
-                  <span className="font-label text-[9px] text-on-surface-variant uppercase font-black tracking-widest leading-none">{f.label}</span>
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-xs font-bold text-primary truncate pr-1">{f.value}</span>
-                    <span className={`material-symbols-outlined text-sm text-outline/40 transition-transform ${activeDropdown === f.id ? 'rotate-180 text-tertiary' : ''}`}>expand_more</span>
-                  </div>
-                </button>
-
-                {/* Dropdown Popover */}
-                {activeDropdown === f.id && (
-                  <>
-                    <div className="fixed inset-0 z-[60]" onClick={() => setActiveDropdown(null)} />
-                    <div className="absolute top-full left-0 w-full mt-2 bg-surface-container-highest border border-white/10 rounded-2xl shadow-2xl z-[70] py-2 overflow-hidden animate-in zoom-in-95 duration-200 origin-top">
-                      {f.options.map((opt: string) => (
-                        <button
-                          key={opt}
-                          onClick={() => {
-                            if (f.id === 'class') setSelectedClass(opt);
-                            if (f.id === 'year') setSelectedYear(opt);
-                            if (f.id === 'semester') setSelectedSemester(opt);
-                            if (f.id === 'subject') setSelectedSubject(opt);
-                            setActiveDropdown(null);
-                          }}
-                          className={`w-full px-4 py-2.5 text-left text-[11px] font-bold transition-colors flex items-center justify-between ${
-                            (f.id === 'class' && selectedClass === opt) ||
-                            (f.id === 'year' && selectedYear === opt) ||
-                            (f.id === 'semester' && selectedSemester === opt) ||
-                            (f.id === 'subject' && selectedSubject === opt)
-                              ? 'text-tertiary bg-tertiary/5' : 'text-on-surface-variant hover:bg-white/5'
-                          }`}
-                        >
-                          {opt}
-                          {((f.id === 'class' && selectedClass === opt) ||
-                            (f.id === 'year' && selectedYear === opt) ||
-                            (f.id === 'semester' && selectedSemester === opt) ||
-                            (f.id === 'subject' && selectedSubject === opt)) && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-tertiary" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
+              <div key={f.label} className="bg-surface-container-low p-3 rounded-2xl flex flex-col gap-1 items-start border border-white/[0.03]">
+                <span className="font-label text-[9px] text-on-surface-variant uppercase font-black tracking-widest leading-none">{f.label}</span>
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-xs font-bold text-primary truncate pr-1">{f.value}</span>
+                </div>
               </div>
             ))}
           </div>
