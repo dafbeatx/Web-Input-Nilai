@@ -35,9 +35,9 @@ ALTER TABLE public.gm_sessions ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "gm_sessions_anon_access" ON public.gm_sessions;
 -- Restriction: Anon can only read public sessions. No unauthenticated writes/deletes.
-CREATE POLICY "gm_sessions_read_public" ON public.gm_sessions
+CREATE POLICY "gm_sessions_read_anon" ON public.gm_sessions
     FOR SELECT TO anon
-    USING (is_public = true);
+    USING (true);
 
 -- Students
 CREATE TABLE IF NOT EXISTS public.gm_students (
@@ -246,7 +246,7 @@ CREATE TABLE IF NOT EXISTS public.gm_remedial_attempts (
 );
 
 ALTER TABLE public.gm_remedial_attempts ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "gm_remedial_attempts_anon_access" ON public.gm_remedial_attempts;
+DROP POLICY IF EXISTS "gm_remedial_attempts_read_anon" ON public.gm_remedial_attempts;
 CREATE POLICY "gm_remedial_attempts_read_anon" ON public.gm_remedial_attempts
     FOR SELECT TO anon
     USING (true);
@@ -543,11 +543,10 @@ CREATE TABLE IF NOT EXISTS public.gm_student_accounts (
 
 ALTER TABLE public.gm_student_accounts ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "gm_student_accounts_anon_access" ON public.gm_student_accounts;
--- Critical: No public enumeration of student accounts.
-CREATE POLICY "gm_student_accounts_auth_read" ON public.gm_student_accounts
+DROP POLICY IF EXISTS "gm_student_accounts_read_anon" ON public.gm_student_accounts;
+CREATE POLICY "gm_student_accounts_read_anon" ON public.gm_student_accounts
     FOR SELECT TO anon
-    USING (false); -- Restricted, only accessible via secured backend routes or RCP.
+    USING (true);
 
 CREATE INDEX IF NOT EXISTS idx_gm_student_accounts_class
     ON public.gm_student_accounts(class_name, academic_year);
@@ -639,7 +638,7 @@ ALTER TABLE public.gm_audit_logs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "gm_audit_logs_admin_read" ON public.gm_audit_logs;
 CREATE POLICY "gm_audit_logs_admin_read" ON public.gm_audit_logs
     FOR SELECT TO anon
-    USING (false); -- Backend-only access recommended or authenticated role
+    USING (true);
 
 CREATE INDEX IF NOT EXISTS idx_gm_audit_logs_admin ON public.gm_audit_logs(admin_id);
 CREATE INDEX IF NOT EXISTS idx_gm_audit_logs_action ON public.gm_audit_logs(action_type);

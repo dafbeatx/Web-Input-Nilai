@@ -13,8 +13,13 @@ import {
   Settings,
   User,
   Key,
+  Shield,
+  Activity,
+  Calendar,
+  Clock,
+  Terminal,
 } from 'lucide-react';
-import { ModalType, ToastType } from '@/lib/grademaster/types';
+import { ModalType, ToastType, AuditLog } from '@/lib/grademaster/types';
 
 interface ModalsProps {
   modal: ModalType;
@@ -46,6 +51,23 @@ export default function Modals(props: ModalsProps) {
   const [isUpdatingAdmin, setIsUpdatingAdmin] = React.useState(false);
   const [adminError, setAdminError] = React.useState('');
 
+  const [activeTab, setActiveTab] = React.useState<'profile' | 'system'>('profile');
+  const [auditLogs, setAuditLogs] = React.useState<AuditLog[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = React.useState(false);
+
+  const fetchAuditLogs = async () => {
+    setIsLoadingLogs(true);
+    try {
+      const res = await fetch('/api/admin/audit');
+      const data = await res.json();
+      if (data.logs) setAuditLogs(data.logs);
+    } catch (err) {
+      console.error('Failed to fetch audit logs:', err);
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  };
+
   // Reset local state when modal opens
   React.useEffect(() => {
     if (modal === 'adminSettings') {
@@ -53,8 +75,16 @@ export default function Modals(props: ModalsProps) {
       setNewPassword('');
       setNewRemedialPassword('');
       setAdminError('');
+      setActiveTab('profile');
+      setAuditLogs([]);
     }
   }, [modal]);
+
+  React.useEffect(() => {
+    if (modal === 'adminSettings' && activeTab === 'system') {
+      fetchAuditLogs();
+    }
+  }, [modal, activeTab]);
 
   if (!modal) return null;
 
@@ -152,67 +182,146 @@ export default function Modals(props: ModalsProps) {
             <X size={18} />
           </button>
 
-          <div className="flex flex-col items-center mb-8 pt-4">
+          <div className="flex flex-col items-center mb-6 pt-4">
             <div className="w-16 h-16 bg-primary shadow-2xl shadow-primary/20 text-white rounded-[1.5rem] flex items-center justify-center mb-4 border border-outline-variant">
               <Settings size={32} />
             </div>
-            <h3 className="font-black text-xl text-on-surface uppercase tracking-tight">Profil Admin</h3>
-            <p className="text-[10px] font-bold text-on-surface-variant mt-2 text-center uppercase tracking-widest leading-relaxed">Keamanan Sistem GradeMaster OS</p>
+            <h3 className="font-black text-xl text-on-surface uppercase tracking-tight">Pengaturan Sistem</h3>
           </div>
 
-          <form onSubmit={handleAdminSave} className="space-y-5">
-            {adminError && (
-              <div className="flex gap-2 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-400 text-[11px] font-bold animate-in fade-in">
-                <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                <p>{adminError}</p>
-              </div>
-            )}
-            <div>
-              <label className="block text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2 ml-1">Username Baru</label>
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-primary transition-colors"><User size={18} /></div>
-                <input
-                   type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)}
-                   placeholder="admin123"
-                   className="w-full pl-12 pr-4 py-4 bg-surface-variant border border-outline-variant rounded-2xl text-sm font-bold text-on-surface focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-on-surface-variant"
-                   disabled={isUpdatingAdmin}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2 ml-1">Password Baru (Sistem)</label>
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-primary transition-colors"><Key size={18} /></div>
-                <input
-                   type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                   placeholder="Minimal 6 karakter"
-                   className="w-full pl-12 pr-4 py-4 bg-surface-variant border border-outline-variant rounded-2xl text-sm font-bold text-on-surface focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-on-surface-variant"
-                   disabled={isUpdatingAdmin}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2 ml-1">Password Akses Remedial</label>
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-primary transition-colors"><Key size={18} className="text-tertiary-dim" /></div>
-                <input
-                   type="password" 
-                   placeholder="Password khusus Dashboard Remedial..."
-                   className="w-full pl-12 pr-4 py-4 bg-surface-variant border border-outline-variant rounded-2xl text-sm font-bold text-tertiary focus:ring-4 focus:ring-tertiary/10 focus:border-tertiary outline-none transition-all placeholder:text-on-surface-variant"
-                   disabled={isUpdatingAdmin}
-                   id="remedial-password-input"
-                   value={newRemedialPassword}
-                   onChange={(e) => setNewRemedialPassword(e.target.value)}
-                />
-              </div>
-            </div>
+          {/* Tab Switcher */}
+          <div className="flex p-1 bg-surface-variant rounded-2xl mb-6 border border-outline-variant">
             <button
-               type="submit" disabled={isUpdatingAdmin}
-               className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all mt-4 flex items-center justify-center gap-2 disabled:opacity-50 border border-outline-variant"
+              onClick={() => setActiveTab('profile')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                activeTab === 'profile' ? 'bg-primary text-white shadow-lg' : 'text-on-surface-variant hover:text-on-surface'
+              }`}
             >
-               {isUpdatingAdmin ? <><Loader2 size={16} className="animate-spin" /> Memproses...</> : 'Simpan Profil'}
+              <User size={14} /> Profil
             </button>
-          </form>
+            <button
+              onClick={() => setActiveTab('system')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                activeTab === 'system' ? 'bg-primary text-white shadow-lg' : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <Activity size={14} /> Sistem
+            </button>
+          </div>
+
+          {activeTab === 'profile' ? (
+            <form onSubmit={handleAdminSave} className="space-y-5">
+              {adminError && (
+                <div className="flex gap-2 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-400 text-[11px] font-bold animate-in fade-in">
+                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                  <p>{adminError}</p>
+                </div>
+              )}
+              <div>
+                <label className="block text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2 ml-1">Username Baru</label>
+                <div className="relative group">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-primary transition-colors"><User size={18} /></div>
+                  <input
+                    type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)}
+                    placeholder="admin123"
+                    className="w-full pl-12 pr-4 py-4 bg-surface-variant border border-outline-variant rounded-2xl text-sm font-bold text-on-surface focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-on-surface-variant"
+                    disabled={isUpdatingAdmin}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2 ml-1">Password Baru (Sistem)</label>
+                <div className="relative group">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-primary transition-colors"><Key size={18} /></div>
+                  <input
+                    type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Minimal 6 karakter"
+                    className="w-full pl-12 pr-4 py-4 bg-surface-variant border border-outline-variant rounded-2xl text-sm font-bold text-on-surface focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-on-surface-variant"
+                    disabled={isUpdatingAdmin}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2 ml-1">Password Akses Remedial</label>
+                <div className="relative group">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-primary transition-colors"><Key size={18} className="text-tertiary-dim" /></div>
+                  <input
+                    type="password" 
+                    placeholder="Password khusus Dashboard Remedial..."
+                    className="w-full pl-12 pr-4 py-4 bg-surface-variant border border-outline-variant rounded-2xl text-sm font-bold text-tertiary focus:ring-4 focus:ring-tertiary/10 focus:border-tertiary outline-none transition-all placeholder:text-on-surface-variant"
+                    disabled={isUpdatingAdmin}
+                    id="remedial-password-input"
+                    value={newRemedialPassword}
+                    onChange={(e) => setNewRemedialPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+              <button
+                type="submit" disabled={isUpdatingAdmin}
+                className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all mt-4 flex items-center justify-center gap-2 disabled:opacity-50 border border-outline-variant"
+              >
+                {isUpdatingAdmin ? <><Loader2 size={16} className="animate-spin" /> Memproses...</> : 'Simpan Profil'}
+              </button>
+            </form>
+          ) : (
+            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="flex items-center justify-between px-1">
+                <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Aktivitas Sistem Terbaru</p>
+                <button 
+                  onClick={fetchAuditLogs} disabled={isLoadingLogs}
+                  className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline flex items-center gap-1 disabled:opacity-50"
+                >
+                  <RefreshCcw size={10} className={isLoadingLogs ? 'animate-spin' : ''} /> Refresh
+                </button>
+              </div>
+
+              <div className="max-h-[350px] overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+                {isLoadingLogs && auditLogs.length === 0 ? (
+                  <div className="py-12 flex flex-col items-center justify-center text-on-surface-variant opacity-50">
+                    <Loader2 size={24} className="animate-spin mb-2" />
+                    <p className="text-[10px] uppercase font-black tracking-widest">Memuat Audit Logs...</p>
+                  </div>
+                ) : auditLogs.length === 0 ? (
+                  <div className="py-12 text-center text-on-surface-variant opacity-50 border border-dashed border-outline-variant rounded-3xl">
+                    <Terminal size={24} className="mx-auto mb-2" />
+                    <p className="text-[10px] uppercase font-black tracking-widest">Belum ada aktivitas tercatat</p>
+                  </div>
+                ) : (
+                  auditLogs.map((log) => (
+                    <div key={log.id} className="p-3 bg-surface-variant rounded-2xl border border-outline-variant group hover:border-primary/30 transition-all">
+                      <div className="flex items-start justify-between mb-1.5">
+                        <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest ${
+                          log.action_type === 'DELETE' ? 'bg-rose-500/10 text-rose-400' :
+                          log.action_type === 'UPDATE' ? 'bg-amber-500/10 text-amber-400' :
+                          'bg-emerald-500/10 text-emerald-400'
+                        }`}>
+                          {log.action_type}
+                        </span>
+                        <span className="text-[8px] font-bold text-on-surface-variant flex items-center gap-1">
+                          <Clock size={8} /> {new Date(log.created_at).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <p className="text-[11px] font-bold text-on-surface leading-tight">
+                        {log.admin_username || 'System'} {log.action_type === 'CREATE' ? 'membuat' : log.action_type === 'UPDATE' ? 'memperbarui' : 'menghapus'} <span className="text-primary">{log.entity_type}</span>
+                      </p>
+                      {log.entity_id && (
+                        <p className="text-[9px] font-mono text-on-surface-variant mt-1.5 truncate opacity-60">ID: {log.entity_id}</p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="pt-2 px-1">
+                <div className="flex items-center gap-2 p-3 bg-primary/10 border border-primary/20 rounded-2xl">
+                  <Shield size={16} className="text-primary shrink-0" />
+                  <p className="text-[9px] font-bold text-primary/80 leading-relaxed uppercase tracking-tight">
+                    Audit log bersifat permanen untuk menjamin integritas data sistem GradeMaster OS.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

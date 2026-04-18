@@ -142,6 +142,18 @@ export interface StudentAccount {
   updated_at: string;
 }
 
+export interface AuditLog {
+  id: string;
+  admin_id?: string;
+  admin_username?: string;
+  action_type: string;
+  entity_type: string;
+  entity_id?: string;
+  payload: any;
+  ip_address?: string;
+  created_at: string;
+}
+
 export interface ExamsLog {
   id: string;
   session_id: string;
