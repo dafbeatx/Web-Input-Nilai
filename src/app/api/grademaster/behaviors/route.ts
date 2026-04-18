@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { checkRateLimit } from '@/lib/grademaster/security';
+import { logActivity } from '@/lib/grademaster/audit';
 
 export async function GET(req: NextRequest) {
   try {
@@ -98,6 +99,17 @@ export async function POST(req: NextRequest) {
 
     if (fetchErr) throw fetchErr;
 
+    // Log behavior data initialization
+    logActivity({
+      adminId: adminSession.user_id,
+      adminUsername: adminSession.admin_users.username,
+      actionType: 'INITIALIZE_BEHAVIORS',
+      entityType: 'CLASS',
+      entityId: className,
+      payload: { studentCount: students.length, academicYear },
+      ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+    });
+
     return NextResponse.json({ students: currentStudents });
   } catch (err: any) {
     console.error('Create behaviors failure:', err);
@@ -128,6 +140,17 @@ export async function DELETE(req: NextRequest) {
         console.error('[DELETE Behaviors - Class] Error:', error);
         throw error;
       }
+
+      logActivity({
+        adminId: adminSession.user_id,
+        adminUsername: adminSession.admin_users.username,
+        actionType: 'DELETE_CLASS',
+        entityType: 'CLASS',
+        entityId: cls,
+        payload: { academicYear: year, target: 'BEHAVIORS' },
+        ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+      });
+
       return NextResponse.json({ message: `Kelas ${cls} berhasil dihapus` });
     }
 
@@ -137,6 +160,16 @@ export async function DELETE(req: NextRequest) {
       console.error('[DELETE Behaviors - Single] Error:', error);
       throw error;
     }
+
+    logActivity({
+      adminId: adminSession.user_id,
+      adminUsername: adminSession.admin_users.username,
+      actionType: 'DELETE_STUDENT',
+      entityType: 'BEHAVIOR',
+      entityId: id,
+      ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+    });
+
     return NextResponse.json({ message: 'Siswa berhasil dihapus' });
   } catch (err: any) {
     console.error('Delete behaviors failure:', err);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { getAdminSession } from '@/lib/grademaster/admin';
+import { logActivity } from '@/lib/grademaster/audit';
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -42,6 +43,17 @@ export async function PATCH(req: NextRequest) {
       console.error('[PATCH Score] DB Error:', error);
       throw error;
     }
+
+    // Log this sensitive admin activity
+    logActivity({
+      adminId: adminSession.user_id,
+      adminUsername: adminSession.admin_users.username,
+      actionType: 'UPDATE_GRADE',
+      entityType: 'STUDENT',
+      entityId: studentId,
+      payload: { newScore },
+      ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+    });
 
     return NextResponse.json({ message: 'Nilai berhasil diperbarui', newScore });
   } catch (err: any) {

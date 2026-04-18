@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase/client';
 import { checkRateLimit } from '@/lib/grademaster/security';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { getStudentSession } from '@/lib/grademaster/studentAuth';
+import { logActivity } from '@/lib/grademaster/audit';
 
 export async function POST(req: NextRequest) {
   try {
@@ -101,6 +102,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Log the student addition/update
+    logActivity({
+      adminId: adminSession.user_id,
+      adminUsername: adminSession.admin_users.username,
+      actionType: 'UPDATE_GRADE',
+      entityType: 'STUDENT',
+      entityId: studentData?.id,
+      payload: { name: name.trim(), finalScore, isUpdate: !!existingStudent },
+      ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+    });
+
     return NextResponse.json({ message: existingStudent ? 'Nilai siswa berhasil diperbarui' : 'Siswa berhasil ditambahkan', studentId: studentData?.id });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Gagal menyimpan siswa';
@@ -191,6 +203,15 @@ export async function DELETE(req: NextRequest) {
       .eq('id', studentId);
 
     if (error) throw error;
+
+    logActivity({
+      adminId: adminSession.user_id,
+      adminUsername: adminSession.admin_users.username,
+      actionType: 'DELETE_STUDENT',
+      entityType: 'STUDENT',
+      entityId: studentId,
+      ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+    });
 
     return NextResponse.json({ message: 'Siswa berhasil dihapus' });
   } catch (err: unknown) {

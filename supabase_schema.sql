@@ -617,3 +617,29 @@ CREATE POLICY "gm_student_sessions_anon_access" ON public.gm_student_sessions
 CREATE INDEX IF NOT EXISTS idx_gm_student_sessions_token ON public.gm_student_sessions(token);
 CREATE INDEX IF NOT EXISTS idx_gm_student_sessions_account ON public.gm_student_sessions(account_id);
 
+
+-- ============================================================
+-- 5. Audit Logs (Admin Activity Tracking)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.gm_audit_logs (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    admin_id UUID REFERENCES public.admin_users(id) ON DELETE SET NULL,
+    admin_username TEXT,
+    action_type TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT,
+    payload JSONB DEFAULT '{}',
+    ip_address TEXT,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.gm_audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- Only authenticated admins can view audit logs. Anon access is blocked.
+DROP POLICY IF EXISTS "gm_audit_logs_admin_read" ON public.gm_audit_logs;
+CREATE POLICY "gm_audit_logs_admin_read" ON public.gm_audit_logs
+    FOR SELECT TO anon
+    USING (false); -- Backend-only access recommended or authenticated role
+
+CREATE INDEX IF NOT EXISTS idx_gm_audit_logs_admin ON public.gm_audit_logs(admin_id);
+CREATE INDEX IF NOT EXISTS idx_gm_audit_logs_action ON public.gm_audit_logs(action_type);
