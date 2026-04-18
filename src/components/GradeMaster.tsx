@@ -186,8 +186,26 @@ export default function GradeMaster() {
     try {
       const res = await fetch("/api/admin/check");
       const data = await res.json();
-      setIsAdmin(data.authenticated);
-      setAdminUser(data.username || null);
+      
+      if (data.authenticated) {
+        setIsAdmin(true);
+        setAdminUser(data.username || null);
+      } else if (data.role === 'student_google') {
+        setIsAdmin(false);
+        setIsStudent(true);
+        
+        // Preserve any existing student data like class_name but set identity
+        setStudentData((prev: any) => ({
+          ...prev,
+          name: data.username,
+          username: data.email,
+          photo_url: data.avatar_url,
+          id: data.email,
+          isGoogleLinked: true
+        }));
+      } else {
+        setIsAdmin(false);
+      }
     } catch (err) {
       setIsAdmin(false);
     }
