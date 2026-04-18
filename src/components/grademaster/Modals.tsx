@@ -18,6 +18,7 @@ import {
   Calendar,
   Clock,
   Terminal,
+  RefreshCcw,
 } from 'lucide-react';
 import { ModalType, ToastType, AuditLog } from '@/lib/grademaster/types';
 
