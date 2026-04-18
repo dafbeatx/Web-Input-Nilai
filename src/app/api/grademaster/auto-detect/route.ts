@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     let rawText = '';
 
     if (filename.endsWith('.png') || filename.endsWith('.jpg') || filename.endsWith('.jpeg')) {
-        const result = await Tesseract.recognize(buffer, 'eng');
+        const result = await Tesseract.recognize(buffer, 'ind+eng');
         rawText = result.data.text;
     } else if (filename.endsWith('.pdf')) {
       const pdfParse = require('pdf-parse');

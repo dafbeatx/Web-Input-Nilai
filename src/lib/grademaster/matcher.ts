@@ -18,8 +18,8 @@ export function matchStudentName(rawExtractedName: string, studentList: string[]
 
   const match = findBestMatch(cleanedExtract, cleanedList);
   
-  // A threshold of 0.3 allows for significant abbreviations like "MHD BUDI S" vs "Muhammad Budi Santoso"
-  if (match.bestMatch.rating > 0.3) {
+  // A threshold of 0.4 balances safety against abbreviations like "MHD BUDI S" vs "Muhammad Budi Santoso"
+  if (match.bestMatch.rating > 0.4) {
       return studentList[match.bestMatchIndex];
   }
   
