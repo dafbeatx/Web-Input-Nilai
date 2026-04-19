@@ -14,6 +14,7 @@ import {
   LogIn,
   RefreshCcw,
   Calendar,
+  Loader2
 } from 'lucide-react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import { usePathname, useRouter } from 'next/navigation';
@@ -26,6 +27,11 @@ export default function Navbar() {
   const { 
     isAdmin, 
     adminUser, 
+    isStudent,
+    studentData,
+    setStudentData,
+    toast,
+    setToast,
     layer, 
     setLayer: onNavigate, 
     logout: onLogout, 
@@ -33,6 +39,8 @@ export default function Navbar() {
   } = useGradeMaster();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isLinking, setIsLinking] = useState(false);
 
   // Hidden in behavior page (uses its own nav), exam and login
   if (pathname?.startsWith('/behavior')) return null;
@@ -47,6 +55,31 @@ export default function Navbar() {
     if (target === 'attendance') return layer === 'attendance';
     if (target === 'remedial') return layer === 'remedial_dashboard';
     return false;
+  };
+
+  const handleLinkGoogleStudent = async () => {
+    if (!studentData?.name) return;
+    setIsLinking(true);
+    try {
+      const res = await fetch('/api/student/link-google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ google_name: studentData.name })
+      });
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error);
+      
+      setToast({ message: data.message, type: 'success' });
+      // Configure context with matched DB data along with indicating link status
+      setStudentData({ ...studentData, ...data.student, isGoogleLinked: true });
+      setIsProfileDropdownOpen(false);
+      onNavigate('dashboard');
+    } catch (err: any) {
+      setToast({ message: err.message, type: 'error' });
+    } finally {
+      setIsLinking(false);
+    }
   };
 
   return (
@@ -112,7 +145,7 @@ export default function Navbar() {
             </div>
 
             {/* Right: User/Auth */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 relative">
               {isAdmin ? (
                 <>
                   <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-emerald-500/20">
@@ -124,6 +157,57 @@ export default function Navbar() {
                   <button onClick={onLogout} className="px-3 py-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border border-transparent hover:border-rose-500/20">
                     <LogOut size={12} />
                   </button>
+                </>
+              ) : isStudent && studentData?.isGoogleLinked ? (
+                <>
+                  <button 
+                    onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                    className="flex items-center gap-2 px-1 py-1 rounded-full hover:bg-surface-variant border border-transparent hover:border-outline-variant transition-all focus:outline-none"
+                  >
+                    {studentData.photo_url ? (
+                      <img src={studentData.photo_url} alt="Profile" className="w-8 h-8 rounded-full shadow-md object-cover border border-outline-variant" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
+                        {studentData.name?.[0] || 'U'}
+                      </div>
+                    )}
+                  </button>
+
+                  {isProfileDropdownOpen && (
+                    <div className="absolute top-14 right-0 w-64 bg-surface premium-shadow border border-outline-variant rounded-2xl p-2 animate-in fade-in zoom-in-95 duration-200 z-50">
+                      <div className="px-4 py-3 border-b border-outline-variant mb-2">
+                        <p className="text-xs text-on-surface-variant font-bold">Masuk Sebagai:</p>
+                        <p className="text-sm font-black text-on-surface truncate">{studentData.name}</p>
+                      </div>
+                      
+                      <button 
+                        onClick={handleLinkGoogleStudent}
+                        disabled={isLinking}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-emerald-500/10 hover:text-emerald-500 text-on-surface-variant transition-colors text-sm font-bold text-left disabled:opacity-50"
+                      >
+                        {isLinking ? <Loader2 size={16} className="animate-spin" /> : <GraduationCap size={16} />} 
+                        Siswa / Mahasiswa
+                      </button>
+                      <button 
+                        onClick={() => {
+                           alert('Fitur Orang Tua akan segera hadir (Coming Soon).');
+                           setIsProfileDropdownOpen(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-500/10 hover:text-blue-500 text-on-surface-variant transition-colors text-sm font-bold text-left mt-1"
+                      >
+                        <Users size={16} /> Orang Tua / Wali
+                      </button>
+                      
+                      <div className="border-t border-outline-variant mt-2 pt-2">
+                        <button 
+                          onClick={() => { onLogout(); setIsProfileDropdownOpen(false); }}
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-400 hover:bg-rose-500/10 transition-colors text-sm font-bold text-left"
+                        >
+                          <LogOut size={16} /> Logout Global
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <button onClick={onLoginClick} className="px-4 py-2 text-on-surface-variant hover:text-primary hover:bg-surface-variant rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
@@ -150,6 +234,17 @@ export default function Navbar() {
         {isAdmin && (
            <button onClick={onOpenSettings} className="w-9 h-9 rounded-lg bg-surface-variant text-on-surface-variant flex items-center justify-center border border-outline-variant hover:text-primary hover:bg-surface-container-highest transition-colors">
              <Settings size={16} />
+           </button>
+        )}
+        {!isAdmin && isStudent && studentData?.isGoogleLinked && (
+           <button onClick={() => setIsMobileMenuOpen(true)} className="w-8 h-8 rounded-full shadow-md object-cover border border-outline-variant overflow-hidden">
+             {studentData.photo_url ? (
+               <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" />
+             ) : (
+               <div className="w-full h-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                 {studentData.name?.[0] || 'U'}
+               </div>
+             )}
            </button>
         )}
       </div>
@@ -224,6 +319,33 @@ export default function Navbar() {
                     className="w-full p-4 bg-primary/10 text-primary rounded-2xl text-xs font-black uppercase tracking-widest text-left flex items-center gap-3 border border-primary/20"
                   >
                     <Users size={16} /> Manajemen Akun Siswa
+                  </button>
+                </>
+              ) : isStudent && studentData?.isGoogleLinked ? (
+                <>
+                  <div className="bg-surface-variant p-4 rounded-3xl border border-outline-variant mb-4">
+                    <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">Masuk Sebagai</p>
+                    <div className="flex items-center gap-3 mt-2">
+                      {studentData.photo_url && <img src={studentData.photo_url} alt="Profile" className="w-10 h-10 rounded-full border border-outline-variant" />}
+                      <p className="text-sm font-black text-on-surface truncate">{studentData.name}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => { handleLinkGoogleStudent(); setIsMobileMenuOpen(false); }} 
+                    disabled={isLinking}
+                    className="w-full p-4 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-2xl text-xs font-black uppercase tracking-widest text-left flex items-center gap-3 border border-emerald-500/20 mb-2 disabled:opacity-50"
+                  >
+                    {isLinking ? <Loader2 size={16} className="animate-spin" /> : <GraduationCap size={16} />} 
+                    Manajemen Nilai Siswa
+                  </button>
+                  <button 
+                    onClick={() => { alert('Fitur Orang Tua akan segera hadir.'); setIsMobileMenuOpen(false); }} 
+                    className="w-full p-4 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-2xl text-xs font-black uppercase tracking-widest text-left flex items-center gap-3 border border-blue-500/20 mb-4"
+                  >
+                    <Users size={16} /> Panel Orang Tua
+                  </button>
+                  <button onClick={() => { onLogout(); setIsMobileMenuOpen(false); }} className="w-full p-4 bg-rose-500/10 text-rose-400 rounded-2xl text-xs font-black uppercase tracking-widest text-left flex items-center gap-3 border border-rose-500/20">
+                    <LogOut size={16} /> Logout Sistem
                   </button>
                 </>
               ) : (
