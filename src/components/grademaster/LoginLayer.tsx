@@ -10,9 +10,6 @@ interface LoginLayerProps {
 }
 
 export default function LoginLayer({ onBack, onSuccess, setToast }: LoginLayerProps) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -35,38 +32,6 @@ export default function LoginLayer({ onBack, onSuccess, setToast }: LoginLayerPr
     } catch (err: any) {
       setError(err.message || 'Gagal login via Google');
       setIsGoogleLoading(false);
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username || !password) {
-      setError('Username dan password wajib diisi');
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const res = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Login gagal');
-      }
-
-      setToast({ message: 'Login Admin Berhasil', type: 'success' });
-      onSuccess(data.username);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -99,7 +64,7 @@ export default function LoginLayer({ onBack, onSuccess, setToast }: LoginLayerPr
           <button
             type="button"
             onClick={handleGoogleLogin}
-            disabled={isGoogleLoading || isLoading}
+            disabled={isGoogleLoading}
             className="w-full py-4 bg-white text-slate-800 border border-slate-200 rounded-2xl font-bold text-sm shadow-sm hover:shadow-md hover:bg-slate-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
           >
             {isGoogleLoading ? (
@@ -114,62 +79,6 @@ export default function LoginLayer({ onBack, onSuccess, setToast }: LoginLayerPr
             )}
             Lanjutkan dengan Google
           </button>
-
-          <div className="relative flex items-center">
-            <div className="flex-grow border-t border-outline-variant"></div>
-            <span className="flex-shrink-0 mx-4 text-on-surface-variant text-[10px] font-black uppercase tracking-widest bg-transparent">ATAU LOGIN LAMA</span>
-            <div className="flex-grow border-t border-outline-variant"></div>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant ml-1">Username Admin Legacy</label>
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">
-                  <User size={18} />
-                </div>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Masukkan username admin"
-                  className="w-full pl-12 pr-6 py-4 bg-surface-variant border border-outline-variant rounded-2xl text-sm font-bold text-on-surface focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all placeholder:text-on-surface-variant"
-                  disabled={isLoading || isGoogleLoading}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant ml-1">Password Legacy</label>
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">
-                  <Key size={18} />
-                </div>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Masukkan password admin"
-                  className="w-full pl-12 pr-6 py-4 bg-surface-variant border border-outline-variant rounded-2xl text-sm font-bold text-on-surface focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all placeholder:text-on-surface-variant"
-                  disabled={isLoading || isGoogleLoading}
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading || isGoogleLoading}
-              className="w-full py-4 bg-surface-variant border border-outline-variant text-on-surface hover:text-white hover:bg-primary rounded-2xl font-black uppercase tracking-[0.15em] text-sm shadow-md hover:shadow-xl hover:shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-3 mt-4 disabled:opacity-50 disabled:hover:scale-100 disabled:hover:bg-surface-variant disabled:hover:text-on-surface"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" /> Masuk...
-                </>
-              ) : (
-                'Masuk Manual'
-              )}
-            </button>
-          </form>
         </div>
 
         <p className="mt-8 text-center text-[10px] text-slate-600 font-bold uppercase tracking-widest">
