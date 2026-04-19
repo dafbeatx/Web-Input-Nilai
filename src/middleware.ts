@@ -10,14 +10,15 @@ export async function middleware(request: NextRequest) {
     // to strip the code from the URL after it's processed.
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.searchParams.delete('code');
-    supabaseResponse = NextResponse.redirect(redirectUrl, {
-      request: { headers: request.headers },
-    });
+    supabaseResponse = NextResponse.redirect(redirectUrl);
   } else {
-    supabaseResponse = NextResponse.next({
-      request: { headers: request.headers },
-    });
+    supabaseResponse = NextResponse.next();
   }
+
+  // Forward request headers to the response
+  request.headers.forEach((value, key) => {
+    supabaseResponse.headers.set(key, value);
+  });
 
   // Skip middleware for static assets
   if (
