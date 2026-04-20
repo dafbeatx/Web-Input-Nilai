@@ -221,143 +221,262 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile Top Header (Just Brand) - Robust Safe Area Solution */}
+      {/* ═══════════════════════════════════════════════════════════
+          MOBILE TOP HEADER — Frosted Glass, Safe Area Aware
+       ═══════════════════════════════════════════════════════════ */}
       <div 
         id="mobile-navbar"
-        className="md:hidden fixed top-0 left-0 right-0 z-[100] bg-surface/90 backdrop-blur-xl border-b border-outline-variant flex items-center justify-between px-4 transition-all duration-300"
+        className="md:hidden fixed top-0 left-0 right-0 z-[100] bg-white/85 backdrop-blur-2xl border-b border-surface-container-high/60 flex items-center justify-between px-5 transition-all duration-300"
         style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingBottom: '0.75rem' }}
       >
-        <div className="flex items-center gap-2.5">
-           <div className="w-8 h-8 md:w-7 md:h-7 bg-primary text-white rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
+        <div className="flex items-center gap-3">
+           <div className="w-9 h-9 bg-primary-container rounded-xl flex items-center justify-center shadow-sm">
              <NeonGraduationCap size={18} />
            </div>
-           <span className="text-base md:text-sm font-black text-on-surface font-outfit uppercase tracking-tight">GradeMaster OS</span>
+           <div className="flex flex-col">
+             <span className="text-[13px] font-extrabold text-on-surface tracking-tight leading-none">GradeMaster</span>
+             <span className="text-[9px] font-bold text-on-surface-variant/60 tracking-wider uppercase leading-tight">Education OS</span>
+           </div>
         </div>
-        {isAdmin && (
-           <button onClick={onOpenSettings} className="w-9 h-9 rounded-lg bg-surface-variant text-on-surface-variant flex items-center justify-center border border-outline-variant hover:text-primary hover:bg-surface-container-highest transition-colors">
-             <Settings size={16} />
-           </button>
-        )}
-        {!isAdmin && isStudent && studentData?.isGoogleLinked && (
-           <button onClick={() => setIsMobileMenuOpen(true)} className="w-8 h-8 rounded-full shadow-md object-cover border border-outline-variant overflow-hidden">
-             {studentData.photo_url ? (
-               <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" />
-             ) : (
-               <div className="w-full h-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
-                 {studentData.name?.[0] || 'U'}
-               </div>
-             )}
-           </button>
-        )}
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+             <button onClick={onOpenSettings} className="w-9 h-9 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center border border-surface-container-high hover:bg-surface-container transition-colors active:scale-95">
+               <Settings size={16} />
+             </button>
+          )}
+          {!isAdmin && isStudent && studentData?.isGoogleLinked && (
+             <button 
+               onClick={() => onNavigate('student_profile')} 
+               className="w-9 h-9 rounded-full overflow-hidden border-2 border-surface-container-high shadow-sm active:scale-95 transition-transform"
+             >
+               {studentData.photo_url ? (
+                 <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" />
+               ) : (
+                 <div className="w-full h-full bg-primary-container text-white flex items-center justify-center font-bold text-xs">
+                   {studentData.name?.[0] || 'U'}
+                 </div>
+               )}
+             </button>
+          )}
+        </div>
       </div>
 
-      {/* Mobile Bottom Navigation (Pinned to Bottom) */}
-      <nav id="mobile-bottom-nav" className="md:hidden fixed bottom-0 left-0 right-0 z-[1001] bg-slate-900/80 backdrop-blur-3xl border-t border-outline-variant pb-[env(safe-area-inset-bottom)] px-4 transition-all duration-300">
-        <div className="flex items-center justify-between h-16">
-          <button 
-            onClick={() => onNavigate('home')}
-            className={`flex-1 flex flex-col items-center justify-center py-3 rounded-2xl transition-all ${isActive('exam') ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-on-surface-variant'}`}
-          >
-            <ClipboardList size={22} className={isActive('exam') ? 'animate-pulse' : ''} />
-            {isActive('exam') && <span className="text-[8px] font-black uppercase tracking-widest mt-1">Ujian</span>}
-          </button>
-          
-          <button 
-            onClick={() => onNavigate('behavior')}
-            className={`flex-1 flex flex-col items-center justify-center py-3 rounded-2xl transition-all ${isActive('behavior') ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-on-surface-variant'}`}
-          >
-            <ShieldCheck size={22} className={isActive('behavior') ? 'animate-pulse' : ''} />
-            {isActive('behavior') && <span className="text-[8px] font-black uppercase tracking-widest mt-1">Sikap</span>}
-          </button>
-
-          <button 
-            onClick={() => onNavigate('attendance')}
-            className={`flex-1 flex flex-col items-center justify-center py-3 rounded-2xl transition-all ${isActive('attendance') ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-on-surface-variant'}`}
-          >
-            <Calendar size={22} className={isActive('attendance') ? 'animate-pulse' : ''} />
-            {isActive('attendance') && <span className="text-[8px] font-black uppercase tracking-widest mt-1">Absen</span>}
-          </button>
-
-          {isAdmin && (
+      {/* ═══════════════════════════════════════════════════════════
+          MOBILE BOTTOM NAVIGATION — Floating Pill Bar
+       ═══════════════════════════════════════════════════════════ */}
+      <nav 
+        id="mobile-bottom-nav" 
+        className="md:hidden fixed bottom-0 left-0 right-0 z-[1001] transition-all duration-300"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        {/* Floating container */}
+        <div className="mx-4 mb-2 bg-white/90 backdrop-blur-2xl rounded-2xl border border-surface-container-high/50 shadow-[0_-4px_30px_rgba(0,0,0,0.06)] px-2 py-1.5">
+          <div className="flex items-center justify-around">
+            {/* Beranda */}
             <button 
-              onClick={() => onNavigate('remedial_dashboard')}
-              className={`flex-1 flex flex-col items-center justify-center py-3 rounded-2xl transition-all ${isActive('remedial') ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-on-surface-variant'}`}
+              onClick={() => onNavigate('home')}
+              className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
+                isActive('exam') 
+                  ? 'bg-primary-container/20 text-on-primary-fixed' 
+                  : 'text-on-surface-variant/60 hover:text-on-surface-variant'
+              }`}
             >
-              <RefreshCcw size={22} className={isActive('remedial') ? 'animate-pulse' : ''} />
-              {isActive('remedial') && <span className="text-[8px] font-black uppercase tracking-widest mt-1">Remedial</span>}
+              <ClipboardList size={20} strokeWidth={isActive('exam') ? 2.5 : 1.8} />
+              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('exam') ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>Beranda</span>
             </button>
-          )}
+            
+            {/* Sikap */}
+            <button 
+              onClick={() => onNavigate('behavior')}
+              className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
+                isActive('behavior') 
+                  ? 'bg-primary-container/20 text-on-primary-fixed' 
+                  : 'text-on-surface-variant/60 hover:text-on-surface-variant'
+              }`}
+            >
+              <ShieldCheck size={20} strokeWidth={isActive('behavior') ? 2.5 : 1.8} />
+              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('behavior') ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>Sikap</span>
+            </button>
 
-          <button 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className={`flex-1 flex flex-col items-center justify-center py-3 rounded-2xl transition-all ${isMobileMenuOpen ? 'bg-surface-container-highest text-on-surface' : 'text-on-surface-variant'}`}
-          >
-            <Menu size={22} />
-            {isMobileMenuOpen && <span className="text-[8px] font-black uppercase tracking-widest mt-1">Lainnya</span>}
-          </button>
+            {/* Kehadiran */}
+            <button 
+              onClick={() => onNavigate('attendance')}
+              className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
+                isActive('attendance') 
+                  ? 'bg-primary-container/20 text-on-primary-fixed' 
+                  : 'text-on-surface-variant/60 hover:text-on-surface-variant'
+              }`}
+            >
+              <Calendar size={20} strokeWidth={isActive('attendance') ? 2.5 : 1.8} />
+              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('attendance') ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>Absen</span>
+            </button>
+
+            {/* Remedial (Admin only) */}
+            {isAdmin && (
+              <button 
+                onClick={() => onNavigate('remedial_dashboard')}
+                className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
+                  isActive('remedial') 
+                    ? 'bg-primary-container/20 text-on-primary-fixed' 
+                    : 'text-on-surface-variant/60 hover:text-on-surface-variant'
+                }`}
+              >
+                <RefreshCcw size={20} strokeWidth={isActive('remedial') ? 2.5 : 1.8} />
+                <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('remedial') ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>Remedial</span>
+              </button>
+            )}
+
+            {/* More Menu */}
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
+                isMobileMenuOpen 
+                  ? 'bg-surface-container text-on-surface' 
+                  : 'text-on-surface-variant/60 hover:text-on-surface-variant'
+              }`}
+            >
+              {isMobileMenuOpen ? <X size={20} strokeWidth={2.5} /> : <Menu size={20} strokeWidth={1.8} />}
+              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>Menu</span>
+            </button>
+          </div>
         </div>
       </nav>
 
-      {/* Mobile Drawer (Menu Overlay) */}
+      {/* ═══════════════════════════════════════════════════════════
+          MOBILE DRAWER — Bottom Sheet with Light Theme
+       ═══════════════════════════════════════════════════════════ */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[1002] md:hidden animate-in fade-in duration-300">
-          <div className="absolute inset-0 bg-surface/80 backdrop-blur-md" onClick={() => setIsMobileMenuOpen(false)} />
-          <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] bg-slate-900 rounded-t-[2.5rem] border-t border-outline-variant p-8 pb-[calc(1.5rem + env(safe-area-inset-bottom))] animate-in slide-in-from-bottom-full duration-500 premium-shadow overflow-y-auto">
-            <div className="space-y-3">
+        <div className="fixed inset-0 z-[1002] md:hidden animate-in fade-in duration-200">
+          {/* Scrim */}
+          <div className="absolute inset-0 bg-on-surface/30 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+          
+          {/* Sheet */}
+          <div className="absolute bottom-0 left-0 right-0 max-h-[80vh] bg-white rounded-t-3xl border-t border-surface-container-high shadow-[0_-20px_60px_rgba(0,0,0,0.08)] animate-in slide-in-from-bottom duration-400 overflow-hidden">
+            {/* Drag Handle */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-10 h-1 bg-surface-container-highest rounded-full" />
+            </div>
+
+            <div className="px-6 pb-[calc(6rem+env(safe-area-inset-bottom))] space-y-3 overflow-y-auto max-h-[calc(80vh-2rem)]">
               {isAdmin ? (
                 <>
-                  <div className="bg-surface-variant p-4 rounded-3xl border border-outline-variant mb-4">
-                    <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">Masuk Sebagai</p>
-                    <p className="text-sm font-black text-on-surface uppercase">{adminUser || 'Administrator'}</p>
+                  {/* Admin Identity Card */}
+                  <div className="bg-surface-container-low p-5 rounded-2xl border border-surface-container flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center">
+                      <CheckCircle2 size={22} className="text-secondary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Administrator</p>
+                      <p className="text-sm font-extrabold text-on-surface truncate mt-0.5">{adminUser || 'Admin'}</p>
+                    </div>
                   </div>
-                  <button onClick={() => { onOpenSettings(); setIsMobileMenuOpen(false); }} className="w-full p-4 bg-surface-variant text-on-surface-variant rounded-2xl text-xs font-black uppercase tracking-widest text-left flex items-center gap-3">
-                    <Settings size={16} /> Pengaturan Profil
-                  </button>
-                  <button onClick={() => { onLogout(); setIsMobileMenuOpen(false); }} className="w-full p-4 bg-rose-500/10 text-rose-400 rounded-2xl text-xs font-black uppercase tracking-widest text-left flex items-center gap-3">
-                    <LogOut size={16} /> Logout Sistem
-                  </button>
+
+                  {/* Admin Actions */}
                   <button 
                     onClick={() => { onNavigate('student_accounts'); setIsMobileMenuOpen(false); }} 
-                    className="w-full p-4 bg-primary/10 text-primary rounded-2xl text-xs font-black uppercase tracking-widest text-left flex items-center gap-3 border border-primary/20"
+                    className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container"
                   >
-                    <Users size={16} /> Manajemen Akun Siswa
+                    <div className="w-10 h-10 rounded-xl bg-primary-container/15 flex items-center justify-center">
+                      <Users size={18} className="text-on-primary-fixed" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-on-surface block leading-tight">Manajemen Akun Siswa</span>
+                      <span className="text-[9px] font-medium text-on-surface-variant">Kelola data dan akses siswa</span>
+                    </div>
                   </button>
+                  
+                  <button 
+                    onClick={() => { onOpenSettings(); setIsMobileMenuOpen(false); }} 
+                    className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center">
+                      <Settings size={18} className="text-on-surface-variant" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-on-surface block leading-tight">Pengaturan</span>
+                      <span className="text-[9px] font-medium text-on-surface-variant">Profil, keamanan & konfigurasi</span>
+                    </div>
+                  </button>
+
+                  <div className="pt-2">
+                    <button 
+                      onClick={() => { onLogout(); setIsMobileMenuOpen(false); }} 
+                      className="w-full p-4 bg-error/5 hover:bg-error/10 rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-error/10"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-error/10 flex items-center justify-center">
+                        <LogOut size={18} className="text-error" />
+                      </div>
+                      <span className="text-[11px] font-bold text-error">Logout Sistem</span>
+                    </button>
+                  </div>
                 </>
               ) : isStudent && studentData?.isGoogleLinked ? (
                 <>
-                  <div className="bg-surface-variant p-4 rounded-3xl border border-outline-variant mb-4">
-                    <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">Masuk Sebagai</p>
-                    <div className="flex items-center gap-3 mt-2">
-                      {studentData.photo_url && <img src={studentData.photo_url} alt="Profile" className="w-10 h-10 rounded-full border border-outline-variant" />}
-                      <p className="text-sm font-black text-on-surface truncate">{studentData.name}</p>
+                  {/* Student Identity Card */}
+                  <div className="bg-surface-container-low p-5 rounded-2xl border border-surface-container flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-surface-container-high shadow-sm flex-shrink-0">
+                      {studentData.photo_url ? (
+                        <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-primary-container text-white flex items-center justify-center font-bold text-sm">
+                          {studentData.name?.[0] || 'U'}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Siswa</p>
+                      <p className="text-sm font-extrabold text-on-surface truncate mt-0.5">{studentData.name}</p>
                     </div>
                   </div>
+
+                  {/* Student Actions */}
+                  <button 
+                    onClick={() => { onNavigate('student_profile'); setIsMobileMenuOpen(false); }}
+                    className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-primary-container/15 flex items-center justify-center">
+                      <User size={18} className="text-on-primary-fixed" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-on-surface block leading-tight">Profil Saya</span>
+                      <span className="text-[9px] font-medium text-on-surface-variant">Lihat data & performa</span>
+                    </div>
+                  </button>
+
                   <button 
                     onClick={() => { handleLinkGoogleStudent(); setIsMobileMenuOpen(false); }} 
                     disabled={isLinking}
-                    className="w-full p-4 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-2xl text-xs font-black uppercase tracking-widest text-left flex items-center gap-3 border border-emerald-500/20 mb-2 disabled:opacity-50"
+                    className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container disabled:opacity-50"
                   >
-                    {isLinking ? <Loader2 size={16} className="animate-spin" /> : <GraduationCap size={16} />} 
-                    Manajemen Nilai Siswa
+                    <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center">
+                      {isLinking ? <Loader2 size={18} className="animate-spin text-secondary" /> : <GraduationCap size={18} className="text-secondary" />}
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-on-surface block leading-tight">Manajemen Nilai</span>
+                      <span className="text-[9px] font-medium text-on-surface-variant">Sinkronkan data akademik</span>
+                    </div>
                   </button>
-                  <button 
-                    onClick={() => { alert('Fitur Orang Tua akan segera hadir.'); setIsMobileMenuOpen(false); }} 
-                    className="w-full p-4 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-2xl text-xs font-black uppercase tracking-widest text-left flex items-center gap-3 border border-blue-500/20 mb-4"
-                  >
-                    <Users size={16} /> Panel Orang Tua
-                  </button>
-                  <button onClick={() => { onLogout(); setIsMobileMenuOpen(false); }} className="w-full p-4 bg-rose-500/10 text-rose-400 rounded-2xl text-xs font-black uppercase tracking-widest text-left flex items-center gap-3 border border-rose-500/20">
-                    <LogOut size={16} /> Logout Sistem
-                  </button>
+
+                  <div className="pt-2">
+                    <button 
+                      onClick={() => { onLogout(); setIsMobileMenuOpen(false); }} 
+                      className="w-full p-4 bg-error/5 hover:bg-error/10 rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-error/10"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-error/10 flex items-center justify-center">
+                        <LogOut size={18} className="text-error" />
+                      </div>
+                      <span className="text-[11px] font-bold text-error">Logout</span>
+                    </button>
+                  </div>
                 </>
               ) : (
-                <button onClick={() => { onLoginClick(); setIsMobileMenuOpen(false); }} className="w-full p-6 bg-primary text-white rounded-[2rem] text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20">
-                  <LogIn size={20} className="inline mr-2" /> Login
+                <button 
+                  onClick={() => { onLoginClick(); setIsMobileMenuOpen(false); }} 
+                  className="w-full p-5 bg-primary-container text-white rounded-2xl text-sm font-extrabold uppercase tracking-widest shadow-lg shadow-primary-container/30 flex items-center justify-center gap-3 active:scale-[0.97] transition-transform"
+                >
+                  <LogIn size={20} /> Login
                 </button>
               )}
-              <button onClick={() => setIsMobileMenuOpen(false)} className="w-full p-4 bg-surface-variant text-on-surface-variant rounded-2xl text-[10px] font-black uppercase tracking-widest">
-                Tutup Menu
-              </button>
             </div>
           </div>
         </div>
