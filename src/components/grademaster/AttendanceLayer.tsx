@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { ToastType } from '@/lib/grademaster/types';
+import { useGradeMaster } from '@/context/GradeMasterContext';
 
 interface AttendanceRecord {
   id?: string;
@@ -46,6 +47,7 @@ export default function AttendanceLayer({
   activeClass = '', 
   activeYear = '2025/2026' 
 }: AttendanceLayerProps) {
+  const { setLayer, adminUser, studentData } = useGradeMaster();
   const [className, setClassName] = useState(activeClass || '');
   const [academicYear, setAcademicYear] = useState(activeYear || '2025/2026');
   const [subject, setSubject] = useState('Informatika');
@@ -247,221 +249,225 @@ export default function AttendanceLayer({
   };
 
   return (
-    <div className="font-body text-on-surface min-h-dvh flex flex-col bg-surface">
-      {/* Top Navigation — Compact */}
-      <nav className="fixed top-0 w-full z-40 bg-surface/80 backdrop-blur-xl flex justify-between items-center px-4 sm:px-6 h-14 border-b border-outline-variant">
-        <div className="flex items-center gap-2.5">
-          <button onClick={onBack} className="p-1.5 bg-surface-variant rounded-lg border border-outline-variant active:scale-90 transition-all">
-            <ArrowLeft className="text-primary" size={18} />
-          </button>
-          <span className="text-lg font-black text-primary tracking-tighter font-headline">KEHADIRAN</span>
+    
+    <div className="bg-surface-container-lowest text-on-surface antialiased min-h-screen pb-32">
+      {/* TopAppBar */}
+      <header className="bg-white/80 backdrop-blur-lg fixed top-0 z-[60] w-full flex justify-between items-center px-6 py-4 shadow-[0_10px_40px_rgba(15,23,42,0.04)]">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary-container p-1.5 rounded-lg flex items-center justify-center">
+            <span className="material-symbols-outlined text-white text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>school</span>
+          </div>
+          <span className="text-sm font-bold tracking-[0.05em] uppercase text-slate-950 font-outfit">GRADEMASTER OS</span>
         </div>
-      </nav>
+        <div className="flex items-center gap-4">
+          <button className="hover:opacity-70 transition-opacity text-slate-400 hidden sm:block">
+            <span className="material-symbols-outlined shrink-0">notifications</span>
+          </button>
+          <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center font-bold text-on-surface-variant overflow-hidden border-2 border-surface-container shadow-sm object-cover">
+             {isAdmin ? (
+                adminUser?.[0] || 'A'
+             ) : (
+                studentData?.photo_url ? <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" /> : (studentData?.name?.[0] || 'S')
+             )}
+          </div>
+        </div>
+      </header>
 
-      {/* Main Content */}
-      <main className="flex-1 mt-14 px-4 sm:px-6 pt-4 pb-32 overflow-x-hidden max-w-2xl mx-auto w-full">
-        
-        {/* Controls — Compact 2-col */}
-        <section className="grid grid-cols-2 gap-2.5 mb-4">
-          <div className="flex flex-col gap-1">
-            <label className="font-label text-[9px] font-bold uppercase tracking-[0.1em] text-on-surface-variant/60 pl-1">Kelas</label>
-            <div className="relative">
-              <select 
-                value={className}
-                onChange={(e) => setClassName(e.target.value)}
-                className="w-full bg-surface-variant border border-outline-variant rounded-xl px-3 py-2.5 text-primary text-sm font-semibold appearance-none outline-none focus:border-primary/40 transition-colors"
-              >
-                <option value="">Pilih</option>
-                {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                <ChevronRight className="text-on-surface-variant/40 rotate-90" size={14} />
-              </div>
+      <main className="pt-24 max-w-5xl mx-auto px-6">
+        {/* Navigation Tabs */}
+        <nav className="flex items-center gap-8 mb-12 border-b border-surface-container overflow-x-auto no-scrollbar hidden md:flex">
+          <button onClick={onBack} className="pb-4 text-xs font-bold uppercase tracking-[0.05em] text-slate-400 hover:text-slate-600 transition-colors whitespace-nowrap">Beranda</button>
+          <button onClick={() => setLayer('behavior')} className="pb-4 text-xs font-bold uppercase tracking-[0.05em] text-slate-400 hover:text-slate-600 transition-colors whitespace-nowrap">Sikap</button>
+          <button className="pb-4 text-xs font-bold uppercase tracking-[0.05em] text-on-primary-fixed border-b-2 border-on-primary-fixed whitespace-nowrap">Kehadiran</button>
+        </nav>
+
+        {/* Info Banner */}
+        {!isAdmin && isLoaded && (
+          <div className="bg-[#EBF5FF] p-5 rounded-xl mb-10 flex items-start gap-4 shadow-sm border border-blue-100">
+            <span className="material-symbols-outlined text-[#0061FF] mt-0.5 shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>shield</span>
+            <p className="text-[13px] font-bold text-[#0061FF] leading-relaxed tracking-tight">
+              TRANSPARANSI: DAFTAR KEHADIRAN INI DAPAT DIPANTAU OLEH WALI MURID.
+            </p>
+          </div>
+        )}
+
+        {/* Title Section */}
+        <div className="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-on-surface-variant mb-2 block">TAHUN AJARAN {academicYear}</span>
+            <div className="flex items-center gap-4">
+              <button onClick={onBack} className="w-10 h-10 shrink-0 rounded-full border border-surface-container flex items-center justify-center hover:bg-surface-container transition-colors active:scale-95">
+                <span className="material-symbols-outlined text-on-surface shrink-0">arrow_back</span>
+              </button>
+              <h1 className="text-3xl sm:text-4xl font-headline font-semibold tracking-[-0.04em] text-on-primary-fixed">Kehadiran</h1>
             </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="font-label text-[9px] font-bold uppercase tracking-[0.1em] text-on-surface-variant/60 pl-1">Tanggal</label>
-            <input 
-              type="date" 
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full bg-surface-variant border border-outline-variant rounded-xl px-3 py-2.5 text-primary text-sm font-semibold outline-none focus:border-primary/40 transition-colors"
-            />
+          <div className="flex bg-surface-container-highest rounded-2xl p-1 gap-1">
+             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="bg-white border-none rounded-xl px-4 py-2.5 text-sm font-bold outline-none text-on-surface focus:ring-2 focus:ring-primary/20 shadow-sm transition-all text-center w-[160px]" />
           </div>
-        </section>
+        </div>
 
-        {/* Subject Tabs — Horizontal scroll */}
-        <section className="mb-5 -mx-4 sm:-mx-6">
-          <div className="flex overflow-x-auto no-scrollbar px-4 sm:px-6 gap-2">
+        {/* Horizontal Filters (Classes & Subjects) */}
+        <div className="space-y-4 mb-8 -mx-6 px-6 sm:mx-0 sm:px-0">
+          <div className="overflow-x-auto no-scrollbar flex items-center gap-3 py-2">
+            <div className="bg-surface-container-high px-4 py-2.5 rounded-full text-xs font-bold text-on-surface-variant shrink-0 border border-outline-variant/30 uppercase tracking-widest flex items-center gap-2">
+              <Users size={14} /> Kelas {'>'}
+            </div>
+            {availableClasses.map((cls) => {
+              const isActive = className === cls;
+              return (
+                <button
+                  key={cls}
+                  onClick={() => setClassName(cls)}
+                  className={"px-6 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap outline-none flex-shrink-0 " + (isActive ? 'bg-on-primary-fixed text-white shadow-lg shadow-on-primary-fixed/20' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container')}
+                >
+                  {cls}
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="overflow-x-auto no-scrollbar flex items-center gap-3 py-1">
+            <div className="bg-surface-container-high px-4 py-2.5 rounded-full text-xs font-bold text-on-surface-variant shrink-0 border border-outline-variant/30 uppercase tracking-widest flex items-center gap-2">
+              <BookOpen size={14} /> Mapel {'>'}
+            </div>
             {subjects.map((s) => (
               <button 
                 key={s}
                 onClick={() => setSubject(s)}
-                className={`flex-none px-4 py-2 rounded-full font-bold text-xs transition-all whitespace-nowrap ${
-                  subject === s 
-                  ? 'bg-tertiary text-on-tertiary shadow-[0_0_12px_rgba(155,255,206,0.25)]' 
-                  : 'bg-surface-variant text-on-surface-variant/60 hover:text-primary border border-outline-variant'
-                }`}
+                className={"px-5 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap outline-none flex-shrink-0 " + (subject === s ? 'bg-surface-variant border border-surface-container-highest text-on-surface shadow-sm font-bold' : 'bg-transparent text-on-surface-variant hover:bg-surface-container-low')}
               >
                 {s}
               </button>
             ))}
           </div>
-        </section>
+        </div>
 
-        {/* Summary Stats — Tight pills */}
+        {/* Stats and Batch Action */}
         {!isLoading && isLoaded && (
-          <section className="flex gap-2 mb-5 overflow-x-auto no-scrollbar -mx-4 sm:-mx-6 px-4 sm:px-6">
-            {[
-              { label: 'Hadir', count: stats.hadir, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-              { label: 'Izin', count: stats.izin, color: 'text-sky-400', bg: 'bg-sky-500/10' },
-              { label: 'Sakit', count: stats.sakit, color: 'text-amber-400', bg: 'bg-amber-500/10' },
-              { label: 'Alpa', count: stats.alpa, color: 'text-rose-400', bg: 'bg-rose-500/10' },
-              { label: 'Belum', count: stats.belum, color: 'text-on-surface-variant/50', bg: 'bg-surface-variant' },
-            ].map(st => (
-              <div key={st.label} className={`flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-full ${st.bg} border border-outline-variant`}>
-                <span className={`text-xs font-extrabold ${st.color}`}>{st.count}</span>
-                <span className="text-[9px] font-bold text-on-surface-variant/50 uppercase tracking-wider">{st.label}</span>
-              </div>
-            ))}
-          </section>
-        )}
-
-        {/* Student List Header */}
-        {!isLoading && isLoaded && (
-          <div className="flex justify-between items-center mb-3 px-0.5">
-            <h3 className="font-headline font-bold text-sm text-primary">Daftar Siswa</h3>
-            <div className="flex items-center gap-2">
-              {isAdmin && stats.belum > 0 && (
-                <button
-                  onClick={setAllHadir}
-                  className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[9px] font-black text-emerald-400 uppercase tracking-wider active:scale-95 transition-all hover:bg-emerald-500/20"
-                >
-                  Semua Hadir
-                </button>
-              )}
-              <span className="font-label text-[9px] text-on-surface-variant/40 font-bold uppercase tracking-widest">{students.length} Siswa</span>
-            </div>
+          <div className="flex flex-col sm:flex-row justify-between items-center bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-surface-container mb-6 gap-4">
+             <div className="flex items-center gap-3 w-full sm:w-auto overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+               {[
+                 { label: 'Hadir', count: stats.hadir, color: 'text-[#006C49]', bg: 'bg-[#E6F4EF]' },
+                 { label: 'Izin', count: stats.izin, color: 'text-[#0061FF]', bg: 'bg-[#EBF5FF]' },
+                 { label: 'Sakit', count: stats.sakit, color: 'text-[#B45309]', bg: 'bg-[#FFF9E6]' },
+                 { label: 'Alpa', count: stats.alpa, color: 'text-[#93000A]', bg: 'bg-[#FFDAD6]' }
+               ].map(st => (
+                 <div key={st.label} className={"flex-none flex items-center gap-2 px-4 py-1.5 rounded-full " + st.bg}>
+                   <span className={"text-sm font-black " + st.color}>{st.count}</span>
+                   <span className="text-[10px] font-bold text-on-surface-variant/70 uppercase tracking-wider">{st.label}</span>
+                 </div>
+               ))}
+               {stats.belum > 0 && (
+                 <div className="flex-none flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-container-low">
+                   <span className="text-sm font-black text-on-surface-variant">{stats.belum}</span>
+                   <span className="text-[10px] font-bold text-on-surface-variant/70 uppercase tracking-wider">Belum Set</span>
+                 </div>
+               )}
+             </div>
+             {isAdmin && stats.belum > 0 && (
+               <button onClick={setAllHadir} className="px-5 py-2.5 w-full sm:w-auto shrink-0 bg-[#006C49] hover:bg-[#005236] text-white rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-[#006C49]/20 transition-all flex justify-center items-center gap-2">
+                 <CheckCircle2 size={16} /> Tandai Semua Hadir
+               </button>
+             )}
           </div>
         )}
 
-        {/* Student Cards */}
-        <section className="space-y-2">
+        {/* Student Cards List */}
+        <section className="grid grid-cols-1 gap-4">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-               <Loader2 className="w-8 h-8 text-tertiary animate-spin mb-3" />
-               <p className="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-[0.3em]">Memuat Presensi...</p>
-            </div>
+             <div className="py-24 flex flex-col items-center justify-center gap-4">
+                <Loader2 size={32} className="animate-spin text-primary" />
+                <span className="text-sm font-bold text-on-surface-variant uppercase tracking-widest">Memuat Presensi...</span>
+             </div>
           ) : !isLoaded ? (
-            <div className="py-16 text-center bg-surface-variant rounded-2xl border border-dashed border-outline-variant">
-               <LayoutGrid className="w-10 h-10 text-on-surface-variant/15 mx-auto mb-3" />
-               <p className="text-xs font-medium text-on-surface-variant/40 px-8">Pilih Kelas & Mapel untuk memuat data absensi.</p>
-            </div>
+             <div className="text-center py-24 bg-white rounded-[16px] border border-surface-container flex flex-col items-center justify-center px-6 shadow-sm">
+               <LayoutGrid size={48} className="text-on-surface-variant/30 mb-4" />
+               <h3 className="text-lg font-bold text-on-primary-fixed mb-2 tracking-tight">Belum Ada Presensi Aktif</h3>
+               <p className="text-sm text-on-surface-variant leading-relaxed max-w-sm">Pilih Kelas, Mapel, dan Tanggal untuk memuat daftar absensi.</p>
+             </div>
           ) : (
-            students.map((s, idx) => {
+            students.map((s) => {
               const currentStatus = attendanceMap[s.student_name];
               const isSavingThis = savingStudents[s.student_name];
+              const safeColors: Record<string, { id: string; label: string; text: string; bg: string; }> = {
+                 Hadir: { id: 'Hadir', label: 'Hadir', text: 'text-[#006C49]', bg: 'bg-[#E6F4EF]' },
+                 Izin: { id: 'Izin', label: 'Izin', text: 'text-[#0061FF]', bg: 'bg-[#EBF5FF]' },
+                 Sakit: { id: 'Sakit', label: 'Sakit', text: 'text-[#B45309]', bg: 'bg-[#FFF9E6]' },
+                 Alpa: { id: 'Alpa', label: 'Alpa', text: 'text-[#93000A]', bg: 'bg-[#FFDAD6]' }
+              };
 
               return (
-                <div 
-                  key={s.id} 
-                  className="bg-surface-variant rounded-2xl border border-outline-variant overflow-hidden transition-all"
-                  style={{ animationDelay: `${idx * 30}ms` }}
-                >
-                  {/* Student Info Row */}
-                  <div className="flex items-center gap-3 px-3.5 pt-3 pb-2">
-                    {/* Avatar */}
-                    <div className="relative flex-none">
-                      <div className="w-9 h-9 rounded-xl overflow-hidden bg-surface-variant flex items-center justify-center text-primary text-xs font-bold border border-outline-variant">
-                        {s.avatar_url ? (
-                          <img src={s.avatar_url} alt={s.student_name} className="w-full h-full object-cover" />
-                        ) : (
-                          s.student_name.slice(0, 2).toUpperCase()
-                        )}
-                      </div>
-                      {/* Status dot indicator */}
-                      {currentStatus && (
-                        <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#0e0e10] ${
-                          STATUS_CONFIG.find(c => c.id === currentStatus)?.dotColor || 'bg-gray-400'
-                        }`} />
-                      )}
+                <div key={s.id} className="group bg-white rounded-[16px] p-5 sm:p-6 shadow-[0_10px_40px_rgba(15,23,42,0.04)] border border-transparent hover:border-surface-container transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                  <div className="flex items-center gap-4 sm:gap-5 w-full sm:w-auto">
+                    <div className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-white font-semibold text-lg tracking-wider relative overflow-hidden bg-on-primary-fixed ring-2 ring-surface-bright shadow-sm">
+                      {s.avatar_url ? (
+                         <img src={s.avatar_url} alt={s.student_name} className="w-full h-full object-cover" />
+                      ) : s.student_name.slice(0, 2).toUpperCase()}
                     </div>
-
-                    {/* Name + status text */}
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-headline font-bold text-[13px] text-primary/90 truncate leading-tight" title={s.student_name}>
-                        {formatStudentName(s.student_name)}
-                      </h4>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        {currentStatus ? (
-                          <span className={`text-[9px] font-extrabold uppercase tracking-wider ${
-                            STATUS_CONFIG.find(c => c.id === currentStatus)?.color || 'text-on-surface-variant'
-                          }`}>
-                            {currentStatus}
-                          </span>
-                        ) : (
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/30">
-                            Belum diset
-                          </span>
-                        )}
-                        {isSavingThis && (
-                          <Loader2 size={8} className="animate-spin text-tertiary" />
-                        )}
-                      </div>
+                    <div className="min-w-0 pr-4 flex-1">
+                      <h3 className="text-base sm:text-lg font-headline font-bold tracking-tight text-on-primary-fixed mb-1 uppercase truncate w-full" title={formatStudentName(s.student_name)}>
+                         {formatStudentName(s.student_name)}
+                      </h3>
+                      <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.05em] text-on-surface-variant flex items-center gap-2">
+                        {isSavingThis ? <Loader2 size={12} className="animate-spin text-primary" /> : <span className="w-1.5 h-1.5 bg-surface-container-highest rounded-full"></span>}
+                        Status: {currentStatus || 'BELUM DISET'}
+                      </p>
                     </div>
                   </div>
-
-                  {/* Inline Status Buttons — Always visible for Admin */}
-                  {isAdmin ? (
-                    <div className="flex gap-1.5 px-3.5 pb-3 pt-1">
-                      {STATUS_CONFIG.map(opt => {
-                        const isActive = currentStatus === opt.id;
-                        const Icon = opt.icon;
+                  
+                  {/* Status Toggles */}
+                  <div className="flex flex-row items-center w-full sm:w-auto gap-2">
+                    {isAdmin ? (
+                      ['Hadir', 'Izin', 'Sakit', 'Alpa'].map(opt => {
+                        const styleInfo = safeColors[opt];
+                        const isActive = currentStatus === opt;
                         return (
                           <button
-                            key={opt.id}
-                            onClick={() => handleStatusChange(s.student_name, opt.id)}
+                            key={opt}
+                            onClick={() => handleStatusChange(s.student_name, opt)}
                             disabled={isSavingThis}
-                            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-center transition-all duration-200 active:scale-[0.96] ${
-                              isActive ? opt.bgActive : opt.bgIdle
-                            } ${isActive ? opt.color : 'text-on-surface-variant/30'} ${
-                              isSavingThis ? 'opacity-50 pointer-events-none' : ''
-                            }`}
+                            className={"flex-1 sm:flex-none px-4 sm:px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.05em] transition-all outline-none border flex items-center justify-center min-w-[70px] " + (isActive ? styleInfo.bg + ' ' + styleInfo.text + ' border-transparent shadow-sm' : 'bg-transparent border-surface-container text-on-surface-variant hover:bg-surface-container-lowest hover:border-outline-variant')}
                           >
-                            <Icon size={13} strokeWidth={isActive ? 2.5 : 1.5} />
-                            <span className={`text-[10px] font-extrabold uppercase tracking-wide ${isActive ? '' : 'hidden sm:inline'}`}>
-                              {opt.label}
-                            </span>
+                            <span className="sm:hidden">{opt.slice(0, 1)}</span>
+                            <span className="hidden sm:inline">{opt}</span>
                           </button>
                         );
-                      })}
-                    </div>
-                  ) : (
-                    currentStatus && (
-                      <div className="px-3.5 pb-3 pt-0.5">
-                        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full ${
-                          STATUS_CONFIG.find(c => c.id === currentStatus)?.bgActive || ''
-                        }`}>
-                          {(() => {
-                            const cfg = STATUS_CONFIG.find(c => c.id === currentStatus);
-                            const Icon = cfg?.icon || Info;
-                            return <Icon size={12} className={cfg?.color} />;
-                          })()}
-                          <span className={`text-[10px] font-extrabold uppercase tracking-wider ${
-                            STATUS_CONFIG.find(c => c.id === currentStatus)?.color || ''
-                          }`}>
-                            {currentStatus}
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  )}
+                      })
+                    ) : (
+                      currentStatus ? (
+                         <div className={"px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-[0.05em] " + safeColors[currentStatus].bg + ' ' + safeColors[currentStatus].text}>
+                           {currentStatus}
+                         </div>
+                      ) : (
+                         <div className="px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-[0.05em] bg-surface-container-highest text-on-surface-variant/50">
+                           N/A
+                         </div>
+                      )
+                    )}
+                  </div>
                 </div>
               );
             })
           )}
         </section>
       </main>
+
+      {/* BottomNavBar */}
+      <nav id="mobile-bottom-nav" className="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 sm:px-8 pb-8 pt-4 bg-white/90 backdrop-blur-xl border-t border-surface-container shadow-[0_-10px_40px_rgba(15,23,42,0.04)] z-50 md:hidden">
+        <button onClick={onBack} className="flex flex-col items-center justify-center text-slate-400 hover:text-slate-900 transition-colors w-16">
+          <span className="material-symbols-outlined">home</span>
+          <span className="font-['Inter'] text-[9px] font-bold uppercase tracking-[0.05em] mt-1">Beranda</span>
+        </button>
+        <button onClick={() => setLayer('behavior')} className="flex flex-col items-center justify-center text-slate-400 hover:text-slate-900 transition-colors w-16">
+          <span className="material-symbols-outlined">star_rate</span>
+          <span className="font-['Inter'] text-[9px] font-bold uppercase tracking-[0.05em] mt-1">Sikap</span>
+        </button>
+        <button className="flex flex-col items-center justify-center text-slate-950 scale-110 transition-transform w-16">
+          <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>event_available</span>
+          <span className="font-['Inter'] text-[9px] font-bold uppercase tracking-[0.05em] mt-1 text-primary">Kehadiran</span>
+        </button>
+      </nav>
     </div>
   );
 }
