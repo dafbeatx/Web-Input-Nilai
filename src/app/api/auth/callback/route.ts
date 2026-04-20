@@ -18,5 +18,7 @@ export async function GET(request: Request) {
   }
 
   // URL to redirect to after sign in process completes
-  return NextResponse.redirect(`${requestUrl.origin}`)
+  // Redirect to /#home so GradeMasterContext picks up the hash
+  // and checkAdmin() can properly detect & route the session
+  return NextResponse.redirect(`${requestUrl.origin}/#home`)
 }

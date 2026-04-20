@@ -194,6 +194,10 @@ export default function GradeMaster() {
         setIsAdmin(false);
         setIsStudent(true);
         setStudentData(studentCheckData.student);
+        // Navigate away from login page if session is already active
+        if (layer === 'student_login') {
+          setLayer('home');
+        }
         return;
       }
 
@@ -219,7 +223,7 @@ export default function GradeMaster() {
           isGoogleLinked: false
         });
 
-        if (layer !== 'student_claim' && layer === 'home') {
+        if (layer !== 'student_claim' && (layer === 'home' || layer === 'student_login')) {
           setLayer('student_claim');
         }
       } else {
