@@ -24,7 +24,35 @@ export async function GET() {
           avatar_url: identityData.avatar_url
         });
       } else {
-        // Logged in as regular User/Student, but NOT admin
+        // Query to check if this Google email is already bound to a student account
+        const { data: boundAccount, error: boundError } = await supabase
+          .from('gm_student_accounts')
+          .select('id, student_name, class_name, academic_year, username, profile_photo_url')
+          .eq('google_email', email)
+          .single();
+
+        if (boundAccount && !boundError) {
+          // Yes! This email is permanently linked to a student.
+          // Let's create the internal application session cookie for them.
+          const { createStudentSession } = await import('@/lib/grademaster/studentAuth');
+          await createStudentSession(boundAccount.id);
+
+          return NextResponse.json({
+            authenticated: true,
+            role: 'student',
+            student: {
+              id: boundAccount.id,
+              name: boundAccount.student_name,
+              class_name: boundAccount.class_name,
+              academic_year: boundAccount.academic_year,
+              username: boundAccount.username,
+              photo_url: boundAccount.profile_photo_url,
+              isGoogleLinked: true
+            }
+          });
+        }
+
+        // Logged in as regular User/Student via Google, but NOT linked to any student account yet
         return NextResponse.json({
           authenticated: false,
           role: 'student_google',

@@ -205,11 +205,18 @@ export default function GradeMaster() {
       const res = await fetch("/api/admin/check");
       const data = await res.json();
       
-      if (data.authenticated) {
+      if (data.authenticated && data.role === 'admin') {
         setIsAdmin(true);
         setAdminUser(data.username || null);
         
         if (layer === 'student_login' || layer === 'login') {
+          setLayer('home');
+        }
+      } else if (data.authenticated && data.role === 'student') {
+        setIsAdmin(false);
+        setIsStudent(true);
+        setStudentData(data.student);
+        if (layer === 'student_login') {
           setLayer('home');
         }
       } else if (data.role === 'student_google') {
@@ -946,6 +953,7 @@ export default function GradeMaster() {
           isAdmin={false}
           onBack={() => setLayer("home")}
           setToast={setToast}
+          onLogout={handleAdminLogout}
           onAvatarUpdate={(url) => setStudentData({ ...studentData, avatar_url: url })}
         />
       )}

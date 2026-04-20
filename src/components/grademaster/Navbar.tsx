@@ -66,7 +66,10 @@ export default function Navbar() {
       const res = await fetch('/api/student/link-google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ google_name: studentData.name })
+        body: JSON.stringify({ 
+          google_name: studentData.name,
+          email: studentData.email || studentData.username
+        })
       });
       const data = await res.json();
       

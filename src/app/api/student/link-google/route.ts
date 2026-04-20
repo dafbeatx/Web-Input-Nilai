@@ -11,10 +11,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan.' }, { status: 429 });
     }
 
-    const { google_name, studentId } = await req.json();
+    const { google_name, studentId, email } = await req.json();
 
     if (!google_name && !studentId) {
       return NextResponse.json({ error: 'Data identifikasi tidak lengkap' }, { status: 400 });
+    }
+
+    if (!email) {
+      return NextResponse.json({ error: 'Email Google diperlukan untuk validasi keamanan' }, { status: 400 });
     }
 
     let account;
@@ -23,7 +27,7 @@ export async function POST(req: NextRequest) {
       // Explicit identification via student_id (New flow)
       const { data, error } = await supabase
         .from('gm_student_accounts')
-        .select('id, student_name, class_name, academic_year, username, profile_photo_url')
+        .select('id, student_name, class_name, academic_year, username, profile_photo_url, google_email')
         .eq('id', studentId)
         .single();
       
@@ -35,7 +39,7 @@ export async function POST(req: NextRequest) {
       // Fallback: Fuzzy name matching (Old flow)
       const { data: accounts, error } = await supabase
         .from('gm_student_accounts')
-        .select('id, student_name, class_name, academic_year, username, profile_photo_url')
+        .select('id, student_name, class_name, academic_year, username, profile_photo_url, google_email')
         .ilike('student_name', `%${google_name.trim()}%`);
 
       if (error || !accounts || accounts.length === 0) {
@@ -46,11 +50,31 @@ export async function POST(req: NextRequest) {
       account = accounts[0];
     }
 
+    // Security Verification: Is the account already bound to another email?
+    if (account.google_email && account.google_email !== email) {
+      return NextResponse.json({ 
+        error: `Akses ditolak! Profil "${account.student_name}" sudah terikat permanen dengan akun Google lain.` 
+      }, { status: 403 });
+    }
+
+    // Bind the account to this email if it's not bound yet
+    if (!account.google_email) {
+      const { error: updateError } = await supabase
+        .from('gm_student_accounts')
+        .update({ google_email: email })
+        .eq('id', account.id);
+
+      if (updateError) {
+        console.error('Failed to bind google_email:', updateError);
+        // Continue anyway to not break the flow if column is missing, but log it.
+      }
+    }
+
     // Create session to validate the identity
     await createStudentSession(account.id);
 
     return NextResponse.json({
-      message: 'Berhasil mengaitkan profil Siswa',
+      message: 'Berhasil mengaitkan profil Siswa secara permanen',
       student: {
         id: account.id,
         name: account.student_name,

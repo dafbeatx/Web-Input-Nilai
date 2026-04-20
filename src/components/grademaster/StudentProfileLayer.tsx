@@ -5,7 +5,7 @@ import {
   ArrowLeft, PlusCircle, MinusCircle, Loader2, FileText, 
   Trash2, Pencil, ShieldCheck, ThumbsUp, X, Calendar, 
   Activity, History, DownloadCloud, Check, User,
-  Settings, AlertCircle
+  Settings, AlertCircle, LogOut
 } from 'lucide-react';
 import { ToastType } from '@/lib/grademaster/types';
 import { 
@@ -39,6 +39,7 @@ interface StudentProfileLayerProps {
   canEditPhoto?: boolean;
   onAvatarUpdate?: (newUrl: string) => void;
   onPointsUpdate?: (newPoints: number) => void;
+  onLogout?: () => void;
 }
 
 export default function StudentProfileLayer({ 
@@ -53,7 +54,8 @@ export default function StudentProfileLayer({
   avatarUrl = null,
   canEditPhoto = false,
   onAvatarUpdate,
-  onPointsUpdate
+  onPointsUpdate,
+  onLogout
 }: StudentProfileLayerProps) {
   const [totalPoints, setTotalPoints] = useState(initialPoints);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(avatarUrl);
@@ -226,7 +228,17 @@ export default function StudentProfileLayer({
           <ArrowLeft size={20} />
         </button>
         <h1 className="font-headline font-bold text-lg tracking-tight">Student Profile</h1>
-        <div className="w-10"></div>
+        {onLogout ? (
+          <button 
+            onClick={onLogout}
+            className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-error/10 text-error transition-all active:scale-95"
+            title="Keluar"
+          >
+            <LogOut size={18} />
+          </button>
+        ) : (
+          <div className="w-10"></div>
+        )}
       </header>
 
       {/* Main Content */}
