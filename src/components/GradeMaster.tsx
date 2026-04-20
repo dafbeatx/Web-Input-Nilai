@@ -981,7 +981,6 @@ export default function GradeMaster() {
             await checkAdmin();
             setLayer("home");
           }}
-          onSwitchToAdmin={() => setLayer("login")}
         />
       )}
 
