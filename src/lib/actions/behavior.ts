@@ -1,13 +1,15 @@
 'use server';
 
 import { supabase } from '@/lib/supabase/client';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 
 /**
  * Internal helper: recalculates total_points from ALL logs (Demerit System: base 0, sum all deltas).
+ * Uses admin client to bypass RLS.
  */
 async function recomputePoints(studentId: string): Promise<number> {
-  const { data: logs, error } = await supabase
+  const { data: logs, error } = await supabaseAdmin
     .from('gm_behavior_logs')
     .select('points_delta')
     .eq('student_id', studentId);
@@ -16,9 +18,9 @@ async function recomputePoints(studentId: string): Promise<number> {
 
   const total = (logs || []).reduce((sum, log) => sum + (log.points_delta || 0), 0);
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await supabaseAdmin
     .from('gm_behaviors')
-    .update({ total_points: total })
+    .update({ total_points: total, updated_at: new Date().toISOString() })
     .eq('id', studentId);
 
   if (updateError) throw updateError;
