@@ -340,7 +340,7 @@ export default function Navbar() {
               </button>
             )}
 
-            {/* More Menu */}
+            {/* More Menu / Profile */}
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
@@ -349,8 +349,20 @@ export default function Navbar() {
                   : 'text-on-surface-variant/60 hover:text-on-surface-variant'
               }`}
             >
-              {isMobileMenuOpen ? <X size={20} strokeWidth={2.5} /> : <Menu size={20} strokeWidth={1.8} />}
-              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>Menu</span>
+              {isMobileMenuOpen ? (
+                <X size={20} strokeWidth={2.5} />
+              ) : (!isAdmin && isStudent && studentData?.photo_url) ? (
+                <img src={studentData.photo_url} alt="Profile" className="w-[20px] h-[20px] rounded-full object-cover border border-outline-variant shadow-sm" />
+              ) : (!isAdmin && isStudent && studentData?.name) ? (
+                <div className="w-[20px] h-[20px] rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[10px] border border-primary/20">
+                  {studentData.name[0]}
+                </div>
+              ) : (
+                <Menu size={20} strokeWidth={1.8} />
+              )}
+              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>
+                {(!isAdmin && isStudent && studentData) ? 'Profil' : 'Menu'}
+              </span>
             </button>
           </div>
         </div>

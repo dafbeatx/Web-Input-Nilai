@@ -193,7 +193,7 @@ export default function GradeMaster() {
       if (studentCheckData.authenticated) {
         setIsAdmin(false);
         setIsStudent(true);
-        setStudentData(studentCheckData.student);
+        setStudentData({ ...studentCheckData.student, isGoogleLinked: true });
         // Navigate away from login page if session is already active
         if (layer === 'student_login') {
           setLayer('home');
@@ -208,6 +208,10 @@ export default function GradeMaster() {
       if (data.authenticated) {
         setIsAdmin(true);
         setAdminUser(data.username || null);
+        
+        if (layer === 'student_login' || layer === 'login') {
+          setLayer('home');
+        }
       } else if (data.role === 'student_google') {
         setIsAdmin(false);
         setIsStudent(true);

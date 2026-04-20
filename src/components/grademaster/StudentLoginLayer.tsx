@@ -241,20 +241,6 @@ export default function StudentLoginLayer({
             </div>
           )}
 
-          {/* ── Divider + Akses Admin ───────────────────────── */}
-          <div className="mt-14 pt-8 border-t border-slate-100 w-full text-center">
-            <button
-              onClick={onSwitchToAdmin}
-              className="
-                text-[0.6rem] font-black text-slate-300
-                uppercase tracking-[0.3em]
-                hover:text-[#0F172A]
-                transition-colors duration-300
-              "
-            >
-              Akses Administrator
-            </button>
-          </div>
         </div>
       </main>
 
