@@ -44,9 +44,9 @@ export default function Navbar() {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
 
-  // Hidden in behavior page (uses its own nav), exam and login
+  // Hidden in behavior page (uses its own nav), exam, and auth layers
   if (pathname?.startsWith('/behavior')) return null;
-  if (['login', 'remedial'].includes(layer)) return null;
+  if (['login', 'student_login', 'student_claim', 'remedial'].includes(layer)) return null;
 
   const onOpenSettings = () => setModal("adminSettings");
   const onLoginClick = () => onNavigate("login");
