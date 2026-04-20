@@ -327,7 +327,7 @@ export default function BehaviorLayer({
 
       <main className="pt-24 max-w-5xl mx-auto px-6">
         {/* Navigation Tabs */}
-        <nav className="flex items-center gap-8 mb-12 border-b border-surface-container overflow-x-auto no-scrollbar hidden md:flex">
+        <nav className="hidden md:flex items-center gap-8 mb-12 border-b border-surface-container overflow-x-auto no-scrollbar">
           <button onClick={onBack} className="pb-4 text-xs font-bold uppercase tracking-[0.05em] text-slate-400 hover:text-slate-600 transition-colors whitespace-nowrap">Beranda</button>
           <button className="pb-4 text-xs font-bold uppercase tracking-[0.05em] text-on-primary-fixed border-b-2 border-on-primary-fixed whitespace-nowrap">Sikap</button>
           <button onClick={() => setLayer('attendance')} className="pb-4 text-xs font-bold uppercase tracking-[0.05em] text-slate-400 hover:text-slate-600 transition-colors whitespace-nowrap">Kehadiran</button>
