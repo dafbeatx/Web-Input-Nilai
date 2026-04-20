@@ -11,29 +11,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan.' }, { status: 429 });
     }
 
-    const { google_name } = await req.json();
+    const { google_name, studentId } = await req.json();
 
-    if (!google_name) {
-      return NextResponse.json({ error: 'Nama Google tidak ditemukan dalam request' }, { status: 400 });
+    if (!google_name && !studentId) {
+      return NextResponse.json({ error: 'Data identifikasi tidak lengkap' }, { status: 400 });
     }
 
-    // Melakukan pencarian spesifik case-insensitive terhadap nama lengkap siswa
-    // Menggunakan ilike '%name%' untuk menangani perbedaan spasi awal/akhir atau pemotongan nama
-    const { data: accounts, error } = await supabase
-      .from('gm_student_accounts')
-      .select('id, student_name, class_name, academic_year, username, profile_photo_url')
-      .ilike('student_name', `%${google_name.trim()}%`);
+    let account;
 
-    if (error || !accounts || accounts.length === 0) {
-      return NextResponse.json({ 
-        error: `Data kelas untuk nama "${google_name}" tidak ditemukan di database` 
-      }, { status: 404 });
+    if (studentId) {
+      // Explicit identification via student_id (New flow)
+      const { data, error } = await supabase
+        .from('gm_student_accounts')
+        .select('id, student_name, class_name, academic_year, username, profile_photo_url')
+        .eq('id', studentId)
+        .single();
+      
+      if (error || !data) {
+        return NextResponse.json({ error: 'Akun siswa tidak ditemukan' }, { status: 404 });
+      }
+      account = data;
+    } else {
+      // Fallback: Fuzzy name matching (Old flow)
+      const { data: accounts, error } = await supabase
+        .from('gm_student_accounts')
+        .select('id, student_name, class_name, academic_year, username, profile_photo_url')
+        .ilike('student_name', `%${google_name.trim()}%`);
+
+      if (error || !accounts || accounts.length === 0) {
+        return NextResponse.json({ 
+          error: `Data kelas untuk nama "${google_name}" tidak ditemukan di database` 
+        }, { status: 404 });
+      }
+      account = accounts[0];
     }
 
-    // Mengambil kecocokan pertama apabila ada multiple match (Meski seharusnya unik)
-    const account = accounts[0];
-
-    // Otomatis menanamkan auth-session agar kedepannya sistem menganggap anak ini telah validasi DB
+    // Create session to validate the identity
     await createStudentSession(account.id);
 
     return NextResponse.json({

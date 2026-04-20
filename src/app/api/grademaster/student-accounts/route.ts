@@ -62,6 +62,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ account: data });
     }
 
+    // mode: claim - Public directory for student identification (limited fields)
+    if (mode === 'claim') {
+      const { data, error } = await supabase
+        .from('gm_student_accounts')
+        .select('id, student_name, class_name')
+        .order('student_name', { ascending: true });
+
+      if (error) {
+        console.error('[GET Student Accounts - Claim] Database error:', error);
+        return NextResponse.json({ error: 'Gagal memuat daftar siswa' }, { status: 500 });
+      }
+
+      return NextResponse.json({ students: data || [] });
+    }
+
     // All other modes require admin session
     const adminSession = await getAdminSession();
     if (!adminSession) {

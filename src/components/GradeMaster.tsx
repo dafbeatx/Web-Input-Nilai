@@ -31,6 +31,7 @@ import AttendanceLayer from "./grademaster/AttendanceLayer";
 import StudentAccountsLayer from "./grademaster/StudentAccountsLayer";
 import StudentLoginLayer from "./grademaster/StudentLoginLayer";
 import StudentProfileLayer from "./grademaster/StudentProfileLayer";
+import StudentClaimLayer from "./grademaster/StudentClaimLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 
 const ESSAY_COUNT = 5;
@@ -185,6 +186,18 @@ export default function GradeMaster() {
 
   const checkAdmin = async () => {
     try {
+      // 1. Check for Student Session first (Authenticated school account)
+      const studentRes = await fetch("/api/student/check");
+      const studentCheckData = await studentRes.json();
+
+      if (studentCheckData.authenticated) {
+        setIsAdmin(false);
+        setIsStudent(true);
+        setStudentData(studentCheckData.student);
+        return;
+      }
+
+      // 2. Fallback to Google Auth / Admin check
       const res = await fetch("/api/admin/check");
       const data = await res.json();
       
@@ -195,15 +208,20 @@ export default function GradeMaster() {
         setIsAdmin(false);
         setIsStudent(true);
         
-        // Preserve any existing student data like class_name but set identity
-        setStudentData((prev: any) => ({
-          ...prev,
+        // Google session exists, but no linked student record found (authenticated: false above)
+        // Transition to claim layer unless already there
+        setStudentData({
           name: data.username,
           username: data.email,
           photo_url: data.avatar_url,
+          email: data.email,
           id: data.email,
-          isGoogleLinked: true
-        }));
+          isGoogleLinked: false
+        });
+
+        if (layer !== 'student_claim' && layer === 'home') {
+          setLayer('student_claim');
+        }
       } else {
         setIsAdmin(false);
       }
@@ -943,6 +961,25 @@ export default function GradeMaster() {
             setLayer("home");
           }}
           onSwitchToAdmin={() => setLayer("login")}
+        />
+      )}
+
+      {layer === "student_claim" && studentData && (
+        <StudentClaimLayer
+          googleUser={{
+            name: studentData.name,
+            email: studentData.email,
+            photo_url: studentData.photo_url || studentData.avatar_url
+          }}
+          onSuccess={(data) => {
+            setIsStudent(true);
+            setStudentData(data);
+            setLayer("home");
+          }}
+          onLogout={() => {
+            logout();
+          }}
+          setToast={setToast}
         />
       )}
 
