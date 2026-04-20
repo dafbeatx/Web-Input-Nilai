@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Student Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#eceef0",
+                        "secondary-container": "#6cf8bb",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#c76c00",
+                        "inverse-surface": "#2d3133",
+                        "surface-dim": "#d8dadc",
+                        "on-error": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "tertiary-fixed-dim": "#ffb77d",
+                        "on-secondary-fixed": "#002113",
+                        "error": "#ba1a1a",
+                        "outline-variant": "#c6c6cd",
+                        "background": "#f7f9fb",
+                        "primary": "#000000",
+                        "on-surface-variant": "#45464d",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface": "#f7f9fb",
+                        "on-tertiary": "#ffffff",
+                        "secondary": "#006c49",
+                        "on-primary-container": "#7c839b",
+                        "tertiary-container": "#2f1500",
+                        "on-error-container": "#93000a",
+                        "primary-fixed": "#dae2fd",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#e6e8ea",
+                        "primary-container": "#131b2e",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "tertiary": "#000000",
+                        "surface-tint": "#565e74",
+                        "on-secondary-fixed-variant": "#005236",
+                        "surface-bright": "#f7f9fb",
+                        "primary-fixed-dim": "#bec6e0",
+                        "outline": "#76777d",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-secondary-container": "#00714d",
+                        "inverse-primary": "#bec6e0",
+                        "surface-variant": "#e0e3e5",
+                        "on-primary-fixed": "#131b2e",
+                        "tertiary-fixed": "#ffdcc3",
+                        "surface-container-low": "#f2f4f6",
+                        "on-background": "#191c1e",
+                        "on-tertiary-fixed-variant": "#6e3900",
+                        "on-tertiary-fixed": "#2f1500",
+                        "on-surface": "#191c1e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-lowest text-on-surface antialiased pb-24 selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl bg-slate-50/50 dark:bg-slate-900/50 shadow-[0_20px_50px_rgba(15,23,42,0.04)]">
+<div class="flex items-center justify-between px-6 h-16 w-full max-w-7xl mx-auto">
+<button aria-label="Go back" class="text-slate-900 dark:text-slate-50 hover:opacity-70 transition-opacity duration-300 active:scale-95 transition-transform duration-200 focus:outline-none flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-['Inter'] font-semibold tracking-[-0.04em] text-lg text-slate-900 dark:text-slate-50 font-bold tracking-tighter">Student Profile</h1>
+<div class="w-6"></div> <!-- Spacer for centering -->
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-24 px-6 max-w-md mx-auto space-y-12">
+<!-- Profile Header -->
+<section class="flex flex-col items-center text-center space-y-4">
+<div class="w-24 h-24 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-3xl font-bold tracking-tight shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                AB
+            </div>
+<div>
+<h2 class="text-on-primary-fixed font-bold text-2xl tracking-tight leading-tight">ABILA YAZID RIZAI</h2>
+<p class="text-on-surface-variant text-sm mt-1">Kelas 7B • Tahun Ajaran 2025/2026</p>
+</div>
+</section>
+<!-- Metric Cards (Bento-style stacked) -->
+<section class="grid grid-cols-1 gap-4">
+<!-- Poin Demerit -->
+<div class="bg-surface-container-low p-6 rounded-xl relative overflow-hidden transition-all duration-300 hover:bg-surface-container">
+<div class="flex justify-between items-center relative z-10">
+<div>
+<p class="text-on-surface-variant uppercase tracking-[0.05em] text-[10px] font-bold mb-1">Poin Demerit</p>
+<p class="text-4xl font-semibold text-secondary tracking-tight">0</p>
+</div>
+<div class="w-12 h-12 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-[0_4px_20px_rgba(15,23,42,0.02)]">
+<span class="material-symbols-outlined text-secondary" data-icon="error" style="font-variation-settings: 'FILL' 1;">error</span>
+</div>
+</div>
+</div>
+<!-- Kehadiran -->
+<div class="bg-surface-container-low p-6 rounded-xl relative overflow-hidden transition-all duration-300 hover:bg-surface-container">
+<div class="flex justify-between items-center relative z-10">
+<div>
+<p class="text-on-surface-variant uppercase tracking-[0.05em] text-[10px] font-bold mb-1">Kehadiran</p>
+<p class="text-4xl font-semibold text-secondary tracking-tight">100%</p>
+</div>
+<div class="w-12 h-12 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-[0_4px_20px_rgba(15,23,42,0.02)]">
+<span class="material-symbols-outlined text-secondary" data-icon="monitor_heart" style="font-variation-settings: 'FILL' 1;">monitor_heart</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Tabs -->
+<nav aria-label="Profile Tabs" class="flex border-b border-surface-container-high overflow-x-auto no-scrollbar">
+<button aria-current="page" class="pb-3 px-4 font-semibold text-primary border-b-2 border-primary text-sm whitespace-nowrap">Ringkasan</button>
+<button class="pb-3 px-4 text-on-surface-variant hover:text-primary transition-colors text-sm whitespace-nowrap">Akademik</button>
+<button class="pb-3 px-4 text-on-surface-variant hover:text-primary transition-colors text-sm whitespace-nowrap">Dokumen</button>
+</nav>
+<!-- History Section -->
+<section class="space-y-6 pt-4">
+<div class="flex items-center justify-between">
+<h3 class="text-on-primary-fixed font-bold text-lg tracking-tight">Riwayat Transparansi</h3>
+<span class="bg-surface-container-high text-on-surface-variant text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">1 ENTRI TERPANTAU</span>
+</div>
+<!-- History Item -->
+<div class="flex items-start space-x-4 group cursor-pointer">
+<div class="mt-1 flex-shrink-0 w-10 h-10 rounded-full bg-surface-container flex items-center justify-center transition-colors group-hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-on-surface-variant text-xl" data-icon="schedule">schedule</span>
+</div>
+<div class="flex-1 pb-4 border-b border-surface-container-high group-hover:border-transparent transition-colors">
+<div class="flex justify-between items-baseline mb-1">
+<h4 class="font-semibold text-on-primary-fixed">Telat Masuk Sekolah</h4>
+<span class="text-secondary font-bold text-sm">+5 Poin</span>
+</div>
+<p class="text-on-surface-variant text-sm">16 Apr 2026</p>
+</div>
+</div>
+<div class="pt-8 text-center">
+<button class="text-sm font-semibold text-primary bg-surface-container-high hover:bg-surface-container-highest px-6 py-3 rounded-full transition-colors">Muat Lebih Banyak</button>
+</div>
+</section>
+</main>
+</body></html>

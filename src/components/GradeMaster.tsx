@@ -30,6 +30,7 @@ import RemedialDashboardLayer from "./grademaster/RemedialDashboardLayer";
 import AttendanceLayer from "./grademaster/AttendanceLayer";
 import StudentAccountsLayer from "./grademaster/StudentAccountsLayer";
 import StudentLoginLayer from "./grademaster/StudentLoginLayer";
+import StudentProfileLayer from "./grademaster/StudentProfileLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 
 const ESSAY_COUNT = 5;
@@ -904,6 +905,22 @@ export default function GradeMaster() {
           isAdmin={isAdmin}
           activeClass={studentClass}
           activeYear={academicYear}
+        />
+      )}
+
+      {layer === "student_profile" && isStudent && studentData && (
+        <StudentProfileLayer 
+          studentId={studentData.student_id || studentData.id}
+          studentName={studentData.name}
+          className={studentData.class_name}
+          academicYear={academicYear}
+          initialPoints={studentData.total_points || 0}
+          avatarUrl={studentData.avatar_url}
+          canEditPhoto={true}
+          isAdmin={false}
+          onBack={() => setLayer("home")}
+          setToast={setToast}
+          onAvatarUpdate={(url) => setStudentData({ ...studentData, avatar_url: url })}
         />
       )}
 

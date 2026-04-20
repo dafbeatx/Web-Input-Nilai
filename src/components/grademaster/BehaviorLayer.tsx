@@ -11,6 +11,7 @@ import {
 import { supabase } from '@/lib/supabase/client';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import Image from 'next/image';
+import StudentProfileLayer from './StudentProfileLayer';
 
 interface BehaviorLog {
   id: string;
@@ -61,16 +62,8 @@ export default function BehaviorLayer({
   
   // Modal & History State
   const [selectedStudent, setSelectedStudent] = useState<BehaviorStudent | null>(null);
-  const [studentLogs, setStudentLogs] = useState<BehaviorLog[]>([]);
-  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
-  const [editingLogId, setEditingLogId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ reason: '', points: 0, date: '' });
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [activeModalTab, setActiveModalTab] = useState<'HISTORY' | 'MANAGE' | 'AKADEMIK' | 'DOKUMEN'>('HISTORY');
-  const [studentSummary, setStudentSummary] = useState<{ attendance: any, academicHistory: any[], documents: any[] } | null>(null);
-  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
-
-  // Avatar Upload State
+  
+  // Avatar Upload State (For list view)
   const [uploadingAvatarId, setUploadingAvatarId] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [targetedAvatarStudent, setTargetedAvatarStudent] = useState<string | null>(null);
@@ -104,14 +97,8 @@ export default function BehaviorLayer({
   // Load history & summary when a student is selected
   useEffect(() => {
     if (selectedStudent) {
-      fetchStudentLogs(selectedStudent.id);
-      fetchStudentSummary(selectedStudent.student_name);
-      setActiveModalTab('HISTORY'); // Default to history when opening modal
       document.body.classList.add('hide-mobile-header');
     } else {
-      setStudentLogs([]);
-      setStudentSummary(null);
-      setEditingLogId(null);
       document.body.classList.remove('hide-mobile-header');
     }
     return () => document.body.classList.remove('hide-mobile-header');
@@ -135,7 +122,8 @@ export default function BehaviorLayer({
           const changedStudentId = (payload.new as any)?.student_id || (payload.old as any)?.student_id;
           
           if (selectedStudent && selectedStudent.id === changedStudentId) {
-            fetchStudentLogs(changedStudentId);
+            // Log changes will be handled inside the StudentProfileLayer via its own subscriptions or props if needed
+            // For now, the parent only needs to refresh the student list to update points.
           }
           
           // Always refresh students to update total points across cards
@@ -167,31 +155,7 @@ export default function BehaviorLayer({
     }
   };
 
-  const fetchStudentSummary = async (name: string) => {
-    setIsLoadingSummary(true);
-    try {
-      const res = await fetch(`/api/grademaster/students/summary?name=${encodeURIComponent(name)}&year=${encodeURIComponent(academicYear)}`);
-      const data = await res.json();
-      if (res.ok) {
-        setStudentSummary(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch student summary", err);
-    } finally {
-      setIsLoadingSummary(false);
-    }
-  };
 
-  const fetchStudentLogs = async (studentId: string) => {
-    setIsLoadingLogs(true);
-    const result = await getBehaviorLogsAction(studentId);
-    if (result.success) {
-      setStudentLogs(result.logs || []);
-    } else {
-      setToast({ message: "Gagal memuat riwayat", type: "error" });
-    }
-    setIsLoadingLogs(false);
-  };
 
   const fetchAvailableClasses = async () => {
     setIsLoadingClasses(true);
@@ -243,81 +207,7 @@ export default function BehaviorLayer({
 
   // --- CRUD ACTIONS ---
 
-  const handleAddBehavior = async (pointsDelta: number, reason: string, date?: string) => {
-    if (!selectedStudent || isUpdatingPoints) return;
-    setIsUpdatingPoints(true);
-    
-    // Use provided date or fallback to selectedDate state
-    const violationDate = date || selectedDate;
-    
-    // Optimistic Update (Total Points on card) -> Demerit system (Accumulate)
-    const pointsToAdd = Math.abs(pointsDelta);
-    
-    const result = await addBehaviorAction({
-      studentId: selectedStudent.id,
-      pointsDelta: pointsToAdd,
-      reason,
-      violationDate
-    });
 
-    if (result.success) {
-      setToast({ message: `Catatan "${reason}" ditambahkan`, type: "success" });
-      // Update local state for total points in the list
-      const newPts = result.data?.new_total ?? 0;
-      setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, total_points: newPts } : s));
-      // Update the selected student's total point in the modal header
-      setSelectedStudent(prev => prev ? { ...prev, total_points: newPts } : null);
-      // Refresh logs
-      fetchStudentLogs(selectedStudent.id);
-      
-      // On mobile, switch to history tab after adding to show the change
-      if (window.innerWidth < 1024) setActiveModalTab('HISTORY');
-    } else {
-      setToast({ message: result.error || "Gagal menambah catatan", type: "error" });
-    }
-    setIsUpdatingPoints(false);
-  };
-
-  const handleUpdateLog = async (logId: string) => {
-    if (!selectedStudent || isUpdatingPoints) return;
-    setIsUpdatingPoints(true);
-
-    const result = await updateBehaviorAction(logId, {
-      pointsDelta: editForm.points,
-      reason: editForm.reason,
-      studentId: selectedStudent.id,
-      violationDate: editForm.date
-    });
-
-    if (result.success) {
-      setToast({ message: "Catatan berhasil diperbarui", type: "success" });
-      setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, total_points: result.newTotal ?? 0 } : s));
-      setSelectedStudent(prev => prev ? { ...prev, total_points: result.newTotal ?? 0 } : null);
-      setEditingLogId(null);
-      fetchStudentLogs(selectedStudent.id);
-    } else {
-      setToast({ message: result.error || "Gagal memperbarui", type: "error" });
-    }
-    setIsUpdatingPoints(false);
-  };
-
-  const handleDeleteLog = async (logId: string) => {
-    if (!selectedStudent || isUpdatingPoints) return;
-    if (!confirm("Hapus catatan ini? Poin akan otomatis dikembalikan.")) return;
-    
-    setIsUpdatingPoints(true);
-    const result = await deleteBehaviorAction(logId, selectedStudent.id);
-
-    if (result.success) {
-      setToast({ message: "Catatan dihapus", type: "success" });
-      setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, total_points: result.newTotal ?? 0 } : s));
-      setSelectedStudent(prev => prev ? { ...prev, total_points: result.newTotal ?? 0 } : null);
-      fetchStudentLogs(selectedStudent.id);
-    } else {
-      setToast({ message: result.error || "Gagal menghapus", type: "error" });
-    }
-    setIsUpdatingPoints(false);
-  };
 
   const saveBehaviorSettings = async (updatedReasons: { text: string, weight: number }[]) => {
     try {
@@ -584,405 +474,21 @@ export default function BehaviorLayer({
 
     {/* COMPACT & TABBED DETAIL MODAL (CENTERED OPSI B) — rendered via Portal */}
     {selectedStudent && createPortal(
-        <div className="fixed inset-0 bg-surface/95 backdrop-blur-2xl z-[1000] flex flex-col animate-in fade-in duration-300 overflow-y-auto no-scrollbar">
-          {/* Top Navigation Bar */}
-          <header className="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl flex items-center justify-between px-4 h-16 max-w-md mx-auto left-1/2 -translate-x-1/2 border-b border-outline-variant">
-            <button 
-              onClick={() => setSelectedStudent(null)}
-              className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[#19191c] active:scale-95 transition-all duration-200"
-            >
-              <ArrowLeft className="text-primary" size={24} />
-            </button>
-            <h1 className="font-headline font-semibold text-lg text-primary">Student Profile</h1>
-            <div className="w-10 h-10"></div> {/* Empty for spacing */}
-          </header>
-
-          <main className="pt-20 pb-44 px-5 max-w-md mx-auto min-h-dvh flex flex-col space-y-6 w-full">
-            {/* Hero Section: Student Identity */}
-            <section className="relative mt-4">
-              <div className="flex flex-col items-center text-center">
-                <div className="relative mb-6">
-                  {/* Profile Frame */}
-                  <div className="w-32 h-32 rounded-3xl overflow-hidden ring-4 ring-white/5 relative z-10 bg-surface-container-high">
-                    {selectedStudent.avatar_url ? (
-                      <Image 
-                        src={selectedStudent.avatar_url} 
-                        alt={selectedStudent.student_name} 
-                        fill 
-                        className="object-cover" 
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-4xl font-black text-on-surface-variant bg-surface-container">
-                        {selectedStudent.student_name.slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  {/* Decorative Glow Behind Image */}
-                  <div className="absolute inset-0 bg-tertiary/10 blur-3xl -z-10 rounded-full"></div>
-                </div>
-                <h2 className="font-headline font-extrabold text-3xl tracking-tight text-primary leading-tight mb-1 uppercase">
-                  {selectedStudent.student_name}
-                </h2>
-                <div className="flex items-center gap-3 mt-2">
-                  <span className="px-3 py-1 bg-surface-container rounded-full text-on-surface-variant font-label text-xs tracking-wider font-medium uppercase">
-                    Kelas {selectedStudent.class_name}
-                  </span>
-                  <span className="px-3 py-1 bg-surface-container rounded-full text-on-surface-variant font-label text-xs tracking-wider font-medium uppercase">
-                    {academicYear}
-                  </span>
-                </div>
-              </div>
-            </section>
-
-            {/* Key Metrics Bento Layout */}
-            <section className="grid grid-cols-2 gap-4">
-              {/* Points Badge */}
-              <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl p-5 flex flex-col items-center justify-center border border-outline-variant shadow-[0_0_25px_rgba(155,255,206,0.1)]">
-                <div className="relative mb-2">
-                  <svg className="w-16 h-16 transform -rotate-90">
-                    <circle className="text-on-surface/5" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" strokeWidth="4"></circle>
-                    <circle 
-                      className={selectedStudent.total_points > 0 ? 'text-error' : 'text-tertiary'} 
-                      cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" 
-                      strokeDasharray="175.9" 
-                      strokeDashoffset={175.9 - (Math.min(selectedStudent.total_points, 100) / 100) * 175.9} 
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                    ></circle>
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className={`font-headline font-bold text-2xl ${selectedStudent.total_points > 0 ? 'text-error' : 'text-tertiary'}`}>
-                      {selectedStudent.total_points}
-                    </span>
-                  </div>
-                </div>
-                <span className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant font-semibold">Poin Demerit</span>
-              </div>
-              
-              {/* Attendance Mini Card */}
-              <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl p-5 flex flex-col items-center justify-center border border-outline-variant shadow-lg">
-                <div className="w-10 h-10 mb-2 flex items-center justify-center">
-                   {isLoadingSummary ? <Loader2 className="animate-spin text-tertiary" size={24} /> : <Activity className="text-primary" size={28} />}
-                </div>
-                <span className="font-headline font-bold text-xl text-primary">
-                  {studentSummary?.attendance?.percentage !== null && studentSummary?.attendance?.percentage !== undefined
-                    ? `${studentSummary.attendance.percentage}%`
-                    : "—"
-                  }
-                </span>
-                <span className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant font-semibold">
-                  {studentSummary?.attendance?.percentage !== null ? "Kehadiran" : "Belum Ada Data"}
-                </span>
-              </div>
-            </section>
-
-            {/* Tab Controls */}
-            <nav className="flex space-x-2 p-1 bg-[#131315] rounded-2xl overflow-x-auto no-scrollbar">
-              <button 
-                onClick={() => setActiveModalTab('HISTORY')}
-                className={`flex-none px-5 py-2.5 rounded-xl font-label text-sm font-semibold transition-all ${
-                  activeModalTab === 'HISTORY' ? 'bg-[#2c2c2f] text-primary' : 'text-on-surface-variant hover:text-primary'
-                }`}
-              >
-                Ringkasan
-              </button>
-              <button 
-                onClick={() => setActiveModalTab('AKADEMIK')}
-                className={`flex-none px-5 py-2.5 rounded-xl font-label text-sm font-semibold transition-all ${
-                  activeModalTab === 'AKADEMIK' ? 'bg-[#2c2c2f] text-primary' : 'text-on-surface-variant hover:text-primary'
-                }`}
-              >
-                Akademik
-              </button>
-              <button 
-                onClick={() => setActiveModalTab('DOKUMEN')}
-                className={`flex-none px-5 py-2.5 rounded-xl font-label text-sm font-semibold transition-all ${
-                  activeModalTab === 'DOKUMEN' ? 'bg-[#2c2c2f] text-primary' : 'text-on-surface-variant hover:text-primary'
-                }`}
-              >
-                Dokumen
-              </button>
-              {isAdmin && (
-                <button 
-                  onClick={() => setActiveModalTab('MANAGE')}
-                  className={`flex-none px-5 py-2.5 rounded-xl font-label text-sm font-semibold transition-all ${
-                    activeModalTab === 'MANAGE' ? 'bg-[#2c2c2f] text-primary' : 'text-on-surface-variant hover:text-primary'
-                  }`}
-                >
-                  Manajemen
-                </button>
-              )}
-            </nav>
-
-            {/* Content Sections */}
-            {activeModalTab === 'HISTORY' && (
-              <section className="flex flex-col space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="flex items-center justify-between px-1">
-                  <h3 className="font-headline font-bold text-lg text-primary">Riwayat Transparansi</h3>
-                  <div className="px-3 py-1 bg-surface-variant rounded-lg text-[9px] font-bold text-on-surface-variant uppercase tracking-widest group">
-                    {studentLogs.length} Entri terpantau
-                  </div>
-                </div>
-
-                {isLoadingLogs ? (
-                   <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-outline-variant p-12 flex flex-col items-center justify-center text-center space-y-4">
-                      <Loader2 size={32} className="animate-spin text-tertiary" />
-                      <p className="font-headline font-semibold text-primary">Sinkronisasi Data...</p>
-                   </div>
-                ) : studentLogs.length === 0 ? (
-                  <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-outline-variant p-12 flex flex-col items-center justify-center text-center space-y-4 shadow-xl">
-                    <div className="w-16 h-16 bg-surface-container rounded-full flex items-center justify-center mb-2">
-                       <History className="text-on-surface-variant" size={40} />
-                    </div>
-                    <div>
-                      <p className="font-headline font-semibold text-primary">Belum Ada Riwayat Perilaku</p>
-                      <p className="font-body text-sm text-on-surface-variant mt-1 max-w-[200px]">Semua aktivitas perilaku dan log harian akan muncul di sini secara transparan.</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {studentLogs.map((log) => (
-                      <div key={log.id} className="bg-[#19191c]/70 backdrop-blur-xl rounded-2xl p-5 border border-outline-variant hover:border-primary/20 transition-all group shadow-sm">
-                        <div className="flex items-start justify-between gap-3">
-                           <div className="flex items-start gap-4 flex-1">
-                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${
-                                log.points_delta > 0 ? 'bg-error/10 text-error border-error/20' : 'bg-tertiary/10 text-tertiary border-tertiary/20'
-                              }`}>
-                                 {log.points_delta > 0 ? <MinusCircle size={20} /> : <ThumbsUp size={20} />}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                    <span className={`text-base font-black ${log.points_delta > 0 ? 'text-error' : 'text-tertiary'}`}>
-                                       {log.points_delta > 0 ? '+' : ''}{log.points_delta} Poin
-                                    </span>
-                                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest bg-surface-variant px-2 py-0.5 rounded-full">
-                                       {formatDate(log.violation_date || log.created_at)}
-                                    </span>
-                                 </div>
-                                 <h4 className="text-on-surface font-bold text-sm leading-relaxed">{log.reason}</h4>
-                              </div>
-                           </div>
-
-                           {isAdmin && (
-                             <div className="flex flex-col gap-1">
-                                <button 
-                                  onClick={() => {
-                                    setEditingLogId(log.id);
-                                    setEditForm({ 
-                                      reason: log.reason, 
-                                      points: log.points_delta,
-                                      date: (log.violation_date || log.created_at).split('T')[0]
-                                    });
-                                  }}
-                                  className="w-8 h-8 flex items-center justify-center bg-surface-variant text-on-surface-variant hover:text-primary rounded-lg transition-colors"
-                                >
-                                  <Pencil size={14} />
-                                </button>
-                                <button 
-                                  onClick={() => handleDeleteLog(log.id)}
-                                  className="w-8 h-8 flex items-center justify-center bg-surface-variant text-on-surface-variant hover:text-error rounded-lg transition-colors"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                             </div>
-                           )}
-                        </div>
-
-                        {/* Inline Edit UI */}
-                        {isAdmin && editingLogId === log.id && (
-                          <div className="mt-4 pt-4 border-t border-outline-variant space-y-4 animate-in slide-in-from-top-2">
-                             <div className="grid grid-cols-1 gap-3">
-                                <div className="space-y-1">
-                                  <label className="text-[8px] font-black text-on-surface-variant uppercase ml-1">Tanggal</label>
-                                  <input 
-                                    type="date" 
-                                    value={editForm.date} 
-                                    onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
-                                    className="w-full bg-surface border border-outline-variant rounded-xl px-4 py-2 text-xs font-bold text-on-surface outline-none focus:border-primary"
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="text-[8px] font-black text-on-surface-variant uppercase ml-1">Keterangan</label>
-                                  <input 
-                                    type="text" 
-                                    value={editForm.reason} 
-                                    onChange={(e) => setEditForm(prev => ({ ...prev, reason: e.target.value }))}
-                                    className="w-full bg-surface border border-outline-variant rounded-xl px-4 py-2 text-xs font-bold text-on-surface outline-none focus:border-primary"
-                                  />
-                                </div>
-                             </div>
-                             <div className="flex gap-2">
-                                <button onClick={() => handleUpdateLog(log.id)} className="flex-1 py-2.5 bg-primary text-[#0e0e10] rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all">Simpan</button>
-                                <button onClick={() => setEditingLogId(null)} className="px-5 py-2.5 bg-surface-variant text-on-surface-variant rounded-xl text-xs font-black uppercase tracking-widest">Batal</button>
-                             </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            )}
-
-            {activeModalTab === 'AKADEMIK' && (
-              <section className="flex flex-col space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
-                <div className="flex items-center justify-between px-1">
-                  <h3 className="font-headline font-bold text-lg text-primary">Rekam Jejak Akademik</h3>
-                  <div className="px-2 py-0.5 bg-tertiary/10 rounded-md text-[9px] font-black text-tertiary uppercase tracking-widest border border-tertiary/20">
-                    Live Data
-                  </div>
-                </div>
-
-                {isLoadingSummary ? (
-                   <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-outline-variant p-12 flex flex-col items-center justify-center text-center space-y-4">
-                      <Loader2 size={32} className="animate-spin text-tertiary" />
-                      <p className="font-headline font-semibold text-primary">Menarik Data Nilai...</p>
-                   </div>
-                ) : !studentSummary?.academicHistory || studentSummary.academicHistory.length === 0 ? (
-                  <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-outline-variant p-12 flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-16 h-16 bg-surface-container rounded-full flex items-center justify-center mb-2">
-                       <BarChart3 className="text-on-surface-variant" size={40} />
-                    </div>
-                    <div>
-                      <p className="font-headline font-semibold text-primary">Belum Ada Riwayat Nilai</p>
-                      <p className="font-body text-sm text-on-surface-variant mt-1">Data nilai akan muncul secara otomatis setelah ujian dikoreksi oleh admin.</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {studentSummary.academicHistory.map((grade: any, idx: number) => (
-                      <div key={idx} className="bg-[#19191c]/70 backdrop-blur-xl rounded-2xl p-5 border border-outline-variant flex items-center justify-between group shadow-sm">
-                        <div className="flex flex-col gap-1 overflow-hidden">
-                           <h4 className="text-on-surface font-bold text-sm uppercase tracking-tight truncate leading-tight">{grade.sessionName}</h4>
-                           <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{grade.subject}</span>
-                              <span className="text-[10px] font-bold text-on-surface-variant/40">•</span>
-                              <span className="text-[10px] font-bold text-on-surface-variant/70 italic uppercase">{formatDate(grade.date)}</span>
-                           </div>
-                        </div>
-                        <div className="flex items-center gap-4 ml-4">
-                           <div className="text-right">
-                              <span className={`text-2xl font-black font-headline ${grade.isPassing ? 'text-tertiary' : 'text-error'}`}>{grade.score}</span>
-                              <div className={`text-[8px] font-black uppercase tracking-tighter ${grade.isPassing ? 'text-tertiary/60' : 'text-error/60'}`}>
-                                 KKM: {grade.kkm}
-                              </div>
-                           </div>
-                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-on-surface ${grade.isPassing ? 'bg-tertiary/10 text-tertiary' : 'bg-error/10 text-error'}`}>
-                              {grade.isPassing ? <Check size={16} /> : <X size={16} />}
-                           </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            )}
-
-            {activeModalTab === 'DOKUMEN' && (
-              <section className="flex flex-col space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
-                <div className="flex items-center justify-between px-1">
-                  <h3 className="font-headline font-bold text-lg text-primary">Pusat Dokumen</h3>
-                  <div className="px-2 py-0.5 bg-primary/10 rounded-md text-[9px] font-black text-primary-container uppercase tracking-widest border border-primary/20">
-                    Siap Unduh
-                  </div>
-                </div>
-
-                {isLoadingSummary ? (
-                   <div className="bg-[#19191c]/70 backdrop-blur-xl rounded-xl border border-outline-variant p-12 flex flex-col items-center justify-center text-center space-y-4">
-                      <Loader2 size={32} className="animate-spin text-tertiary" />
-                      <p className="font-headline font-semibold text-primary">Menyiapkan Dokumen...</p>
-                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {studentSummary?.documents?.map((doc: any) => (
-                      <div key={doc.id} className={`bg-[#19191c]/70 backdrop-blur-xl rounded-2xl p-5 border border-outline-variant flex items-center justify-between group shadow-sm ${!doc.ready ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
-                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant">
-                               <FileText size={24} />
-                            </div>
-                            <div className="flex flex-col">
-                               <h4 className="text-on-surface font-bold text-sm leading-tight">{doc.name}</h4>
-                               <p className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wider">{doc.type} • {doc.size}</p>
-                            </div>
-                         </div>
-                         <button className="w-10 h-10 bg-primary/10 text-primary-container rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all active:scale-95 shadow-lg border border-primary/20">
-                            <DownloadCloud size={18} />
-                         </button>
-                      </div>
-                    ))}
-                    <div className="p-6 bg-surface-container rounded-3xl border border-outline-variant flex flex-col items-center gap-2 text-center mt-4">
-                       <ShieldCheck className="text-on-surface-variant opacity-20" size={40} />
-                       <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest leading-relaxed">Seluruh dokumen telah ditanda tangani secara digital oleh GradeMaster Trust Verification.</p>
-                    </div>
-                  </div>
-                )}
-              </section>
-            )}
-
-            {activeModalTab === 'MANAGE' && (
-              <section className="flex flex-col space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
-                 <div className="p-5 bg-[#19191c]/70 backdrop-blur-xl border border-outline-variant rounded-2xl space-y-3">
-                    <label className="text-[10px] font-black text-on-surface-variant uppercase flex items-center gap-2 px-1 tracking-widest">
-                       <Calendar size={12} className="text-tertiary" /> Tanggal Peristiwa
-                    </label>
-                    <input 
-                      type="date" 
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      className="w-full bg-surface border border-outline-variant rounded-xl p-3 text-sm font-bold text-on-surface outline-none focus:border-tertiary transition-all"
-                    />
-                 </div>
-
-                 <div className="space-y-4">
-                    <h4 className="text-[10px] font-black text-error uppercase tracking-[0.2em] flex items-center gap-2 px-1">
-                       <MinusCircle size={14} className="opacity-70" /> Daftar Pelanggaran
-                    </h4>
-                    <div className="grid grid-cols-1 gap-3">
-                       {behaviorReasons.map(r => (
-                         <button 
-                           key={r.text} 
-                           disabled={isUpdatingPoints}
-                           onClick={() => handleAddBehavior(r.weight, r.text)} 
-                           className="p-5 bg-error/5 hover:bg-error/10 border border-error/10 hover:border-error/30 rounded-2xl text-left transition-all active:scale-95 flex items-center justify-between group shadow-sm"
-                         >
-                            <div className="flex flex-col gap-1">
-                               <span className="text-[11px] font-black text-on-surface uppercase tracking-wider">{r.text}</span>
-                               <span className="text-[9px] text-on-surface-variant font-bold">Resiko: Akumulatif Demerit</span>
-                            </div>
-                            <span className="text-xs font-black text-error bg-error/10 px-3 py-1 rounded-lg border border-error/20">
-                               + {r.weight} Pts
-                            </span>
-                         </button>
-                       ))}
-                    </div>
-                 </div>
-
-                 {/* Information Banner */}
-                 <div className="p-6 bg-surface rounded-3xl border border-outline-variant relative overflow-hidden group shadow-sm">
-                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                       <ShieldCheck size={80} className="text-primary" />
-                    </div>
-                    <h4 className="text-xs font-black text-on-surface uppercase tracking-tight mb-1">Integritas Riwayat</h4>
-                    <p className="text-[10px] text-on-surface-variant font-medium leading-relaxed uppercase tracking-wider">Laporan ini bersifat transparan dan dapat dipantau langsung oleh wali murid melalui dashboard siswa.</p>
-                 </div>
-              </section>
-            )}
-
-            {/* Bottom Action CTA for Admin (Quick Scroll to Management) */}
-            {isAdmin && activeModalTab === 'HISTORY' && (
-              <section className="pt-4">
-                <button 
-                  onClick={() => setActiveModalTab('MANAGE')}
-                  className="w-full py-4 bg-gradient-to-r from-primary to-[#a0a1a1] rounded-xl text-[#0e0e10] font-headline font-extrabold text-sm tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-white/5"
-                >
-                  <PlusCircle size={20} />
-                  TAMBAH CATATAN
-                </button>
-              </section>
-            )}
-          </main>
-        </div>
-      , document.body)}
+      <StudentProfileLayer 
+        isAdmin={isAdmin}
+        studentId={selectedStudent.id}
+        studentName={selectedStudent.student_name}
+        className={selectedStudent.class_name}
+        academicYear={academicYear}
+        initialPoints={selectedStudent.total_points}
+        avatarUrl={selectedStudent.avatar_url}
+        canEditPhoto={isAdmin}
+        setToast={setToast}
+        onBack={() => setSelectedStudent(null)}
+        onAvatarUpdate={(url) => setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, avatar_url: url } : s))}
+        onPointsUpdate={(pts) => setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, total_points: pts } : s))}
+      />
+    , document.body)}
 
     {/* REASONS MANAGEMENT MODAL — rendered via Portal */}
     {isManagingReasons && createPortal(

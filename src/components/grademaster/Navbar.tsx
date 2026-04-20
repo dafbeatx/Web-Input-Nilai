@@ -14,7 +14,9 @@ import {
   LogIn,
   RefreshCcw,
   Calendar,
-  Loader2
+  Loader2,
+  User,
+  Activity
 } from 'lucide-react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import { usePathname, useRouter } from 'next/navigation';
@@ -190,14 +192,14 @@ export default function Navbar() {
                       </button>
                       <button 
                         onClick={() => {
-                           alert('Fitur Orang Tua akan segera hadir (Coming Soon).');
+                           onNavigate('student_profile');
                            setIsProfileDropdownOpen(false);
                         }}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-500/10 hover:text-blue-500 text-on-surface-variant transition-colors text-sm font-bold text-left mt-1"
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 text-on-surface-variant transition-colors text-sm font-bold text-left mt-1"
                       >
-                        <Users size={16} /> Orang Tua / Wali
+                        <User size={16} /> Profil Saya
                       </button>
-                      
+
                       <div className="border-t border-outline-variant mt-2 pt-2">
                         <button 
                           onClick={() => { onLogout(); setIsProfileDropdownOpen(false); }}
