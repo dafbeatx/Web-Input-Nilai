@@ -964,7 +964,9 @@ export default function GradeMaster() {
         <LessonManagementLayer 
           onBack={() => setLayer("home")} 
           setToast={setToast}
-          activeClass={studentClass} 
+          activeClass={studentClass}
+          academicYear={academicYear}
+          schoolLevel={schoolLevel}
         />
       )}
 

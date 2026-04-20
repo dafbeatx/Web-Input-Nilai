@@ -26,6 +26,8 @@ interface LessonManagementLayerProps {
   onBack: () => void;
   setToast: (t: ToastType) => void;
   activeClass?: string;
+  academicYear?: string;
+  schoolLevel?: string;
 }
 
 type TabType = 'daily' | 'exams' | 'ai_materials';
@@ -33,11 +35,18 @@ type TabType = 'daily' | 'exams' | 'ai_materials';
 export default function LessonManagementLayer({
   onBack,
   setToast,
-  activeClass = '7B'
+  activeClass = '7B',
+  academicYear = '2025/2026',
+  schoolLevel = 'SMA'
 }: LessonManagementLayerProps) {
   const [activeTab, setActiveTab] = useState<TabType>('daily');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Class State
+  const [selectedClass, setSelectedClass] = useState(activeClass);
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  const [isLoadingClasses, setIsLoadingClasses] = useState(false);
   
   // Lesson Form State
   const [subject, setSubject] = useState('');
@@ -55,6 +64,35 @@ export default function LessonManagementLayer({
     'Matematika', 'Bahasa Indonesia', 'IPA', 'IPS', 
     'Bahasa Inggris', 'PAI', 'PJOK', 'Seni Budaya', 'Informatika'
   ];
+  
+  const smpClasses = ['7A', '7B', '7C', '8A', '8B', '8C', '9A', '9B', '9C'];
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      if (schoolLevel === 'SMP') {
+        setAvailableClasses(smpClasses);
+        return;
+      }
+      
+      setIsLoadingClasses(true);
+      try {
+        const res = await fetch(`/api/grademaster/behaviors?year=${encodeURIComponent(academicYear)}`);
+        const data = await res.json();
+        if (data.classes && data.classes.length > 0) {
+          setAvailableClasses(data.classes);
+        } else {
+          setAvailableClasses(['SMA']);
+        }
+      } catch (err) {
+        console.error("Failed to fetch classes:", err);
+        setAvailableClasses(['SMA']);
+      } finally {
+        setIsLoadingClasses(false);
+      }
+    };
+    
+    fetchClasses();
+  }, [schoolLevel, academicYear]);
 
   // Placeholder AI Function
   const generateAILesson = async (content: string) => {
@@ -86,7 +124,7 @@ export default function LessonManagementLayer({
     setIsSaving(true);
     try {
       await createLesson({
-        class_name: activeClass,
+        class_name: selectedClass,
         subject,
         date,
         content: material,
@@ -149,10 +187,16 @@ export default function LessonManagementLayer({
             </p>
           </div>
           <div className="bg-slate-50 self-start md:self-auto p-2 rounded-2xl border border-slate-100 flex items-center gap-3">
-             <span className="text-xs font-bold text-slate-400 px-3 uppercase tracking-widest">Kelas</span>
-             <div className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-lg font-black text-slate-900 shadow-sm min-w-[80px] text-center">
-               {activeClass}
-             </div>
+             <span className="text-xs font-bold text-slate-400 px-3 uppercase tracking-widest hidden sm:inline">Kelas</span>
+             <select 
+               value={selectedClass}
+               onChange={(e) => setSelectedClass(e.target.value)}
+               className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-lg font-black text-slate-900 shadow-sm min-w-[100px] text-center outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer appearance-none"
+             >
+               {availableClasses.map(cls => (
+                 <option key={cls} value={cls}>{cls}</option>
+               ))}
+             </select>
           </div>
         </div>
       </header>
