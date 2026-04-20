@@ -149,16 +149,6 @@ export default function Navbar() {
                   <BookOpen size={14} /> Pelajaran
                 </button>
               )}
-              {isAdmin && (
-                <button
-                  onClick={() => onNavigate('student_accounts')}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
-                    layer === 'student_accounts' ? 'bg-primary/20 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-white border border-transparent'
-                  }`}
-                >
-                  <ListChecks size={14} /> Daftar Maulana
-                </button>
-              )}
             </div>
 
             {/* Right: User/Auth */}
@@ -426,18 +416,6 @@ export default function Navbar() {
                     </div>
                   </button>
 
-                  <button 
-                    onClick={() => { onNavigate('student_accounts'); setIsMobileMenuOpen(false); }} 
-                    className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-primary-container/15 flex items-center justify-center">
-                      <ListChecks size={18} className="text-on-primary-fixed" />
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-bold text-on-surface block leading-tight">Daftar Maulana</span>
-                      <span className="text-[9px] font-medium text-on-surface-variant">Data akun & profil Maulana</span>
-                    </div>
-                  </button>
                   
                   <button 
                     onClick={() => { onOpenSettings(); setIsMobileMenuOpen(false); }} 

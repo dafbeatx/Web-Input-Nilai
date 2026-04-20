@@ -28,7 +28,7 @@ import StudentRemedialLayer from "./grademaster/StudentRemedialLayer";
 import BehaviorLayer from "./grademaster/BehaviorLayer";
 import RemedialDashboardLayer from "./grademaster/RemedialDashboardLayer";
 import AttendanceLayer from "./grademaster/AttendanceLayer";
-import StudentAccountsLayer from "./grademaster/StudentAccountsLayer";
+import AttendanceLayer from "./grademaster/AttendanceLayer";
 import StudentLoginLayer from "./grademaster/StudentLoginLayer";
 import StudentProfileLayer from "./grademaster/StudentProfileLayer";
 import StudentClaimLayer from "./grademaster/StudentClaimLayer";
@@ -969,14 +969,6 @@ export default function GradeMaster() {
         />
       )}
 
-      {layer === "student_accounts" && (
-        <StudentAccountsLayer
-          onBack={() => setLayer("home")}
-          setToast={setToast}
-          activeClass={studentClass}
-          activeYear={academicYear}
-        />
-      )}
 
       {layer === "student_login" && (
         <StudentLoginLayer
