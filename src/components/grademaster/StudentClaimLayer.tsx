@@ -208,7 +208,7 @@ export default function StudentClaimLayer({
             <label className="text-xs font-black uppercase tracking-widest text-slate-500 ml-1">Kelas</label>
             <div className="relative">
               <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400">
-                <MapPin size={20} />
+                <GraduationCap size={20} />
               </div>
               <input
                 type="text"

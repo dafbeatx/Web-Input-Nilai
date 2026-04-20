@@ -955,9 +955,10 @@ export default function GradeMaster() {
         <StudentLoginLayer
           onBack={() => setLayer("home")}
           setToast={setToast}
-          onSuccess={(data) => {
+          onSuccess={async (data) => {
             setIsStudent(true);
             setStudentData(data);
+            await checkAdmin();
             setLayer("home");
           }}
           onSwitchToAdmin={() => setLayer("login")}
@@ -971,9 +972,10 @@ export default function GradeMaster() {
             email: studentData.email,
             photo_url: studentData.photo_url || studentData.avatar_url
           }}
-          onSuccess={(data) => {
+          onSuccess={async (data) => {
             setIsStudent(true);
             setStudentData(data);
+            await checkAdmin();
             setLayer("home");
           }}
           onLogout={() => {
