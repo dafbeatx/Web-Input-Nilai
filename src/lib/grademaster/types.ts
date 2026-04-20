@@ -165,6 +165,28 @@ export interface ExamsLog {
   created_at: string;
 }
 
+export interface DailyLesson {
+  id: string;
+  class_name: string;
+  subject: string;
+  date: string;
+  content: string;
+  ai_reading_preview?: string;
+  ai_chat_prompt?: string;
+  is_published: boolean;
+  created_at: string;
+}
+
+export interface Quiz {
+  id: string;
+  lesson_id: string;
+  title: string;
+  quiz_type: 'DAILY' | 'ASTS' | 'ASAJ';
+  duration_minutes: number;
+  questions: any[];
+  created_at: string;
+}
+
 export type ModalType = 'save' | 'load' | 'delete' | 'about' | 'error' | 'adminSettings' | null;
 export type ToastType = { message: string; type: 'success' | 'error' } | null;
-export type Layer = 'home' | 'setup' | 'dashboard' | 'grading' | 'login' | 'remedial' | 'behavior' | 'remedial_dashboard' | 'attendance' | 'student_accounts' | 'student_login' | 'student_profile' | 'student_claim';
+export type Layer = 'home' | 'setup' | 'dashboard' | 'grading' | 'login' | 'remedial' | 'behavior' | 'remedial_dashboard' | 'attendance' | 'student_accounts' | 'student_login' | 'student_profile' | 'student_claim' | 'lesson_management';

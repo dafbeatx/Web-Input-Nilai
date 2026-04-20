@@ -32,6 +32,7 @@ import StudentAccountsLayer from "./grademaster/StudentAccountsLayer";
 import StudentLoginLayer from "./grademaster/StudentLoginLayer";
 import StudentProfileLayer from "./grademaster/StudentProfileLayer";
 import StudentClaimLayer from "./grademaster/StudentClaimLayer";
+import LessonManagementLayer from "./grademaster/LessonManagementLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 
 const ESSAY_COUNT = 5;
@@ -957,6 +958,14 @@ export default function GradeMaster() {
           setToast={setToast}
           onLogout={handleAdminLogout}
           onAvatarUpdate={(url) => setStudentData({ ...studentData, avatar_url: url })}
+        />
+      )}
+
+      {layer === "lesson_management" && (
+        <LessonManagementLayer 
+          onBack={() => setLayer("home")} 
+          setToast={setToast}
+          activeClass={studentClass} 
         />
       )}
 
