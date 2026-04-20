@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Layer, ToastType, ModalType } from '@/lib/grademaster/types';
+import { supabase } from '@/lib/supabase/client';
 
 interface GradeMasterContextType {
   layer: Layer;
@@ -169,9 +170,12 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('gm_studentData');
     }
 
-    setLayer("home");
-    localStorage.setItem("gm_layer", "home");
-    window.history.pushState({ layer: 'home' }, '', '#home');
+    // 3. Global Sign Out (Supabase/Google)
+    await supabase.auth.signOut();
+
+    setLayer("student_login");
+    localStorage.setItem("gm_layer", "student_login");
+    window.history.pushState({ layer: 'student_login' }, '', '#student_login');
   };
 
   return (
