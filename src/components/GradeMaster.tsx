@@ -195,7 +195,7 @@ export default function GradeMaster() {
         setIsStudent(true);
         setStudentData({ ...studentCheckData.student, isGoogleLinked: true });
         // Navigate away from login page if session is already active
-        if (layer === 'student_login') {
+        if (layer === 'student_login' || layer === 'student_claim' || layer === 'login') {
           setLayer('home');
         }
         return;
@@ -207,16 +207,18 @@ export default function GradeMaster() {
       
       if (data.authenticated && data.role === 'admin') {
         setIsAdmin(true);
+        setIsStudent(false); // Mutual exclusivity
         setAdminUser(data.username || null);
         
-        if (layer === 'student_login' || layer === 'login') {
+        // Admins should never be stuck on student entry layers
+        if (layer === 'student_login' || layer === 'login' || layer === 'student_claim') {
           setLayer('home');
         }
       } else if (data.authenticated && data.role === 'student') {
         setIsAdmin(false);
         setIsStudent(true);
         setStudentData(data.student);
-        if (layer === 'student_login') {
+        if (layer === 'student_login' || layer === 'student_claim') {
           setLayer('home');
         }
       } else if (data.role === 'student_google') {
@@ -976,8 +978,7 @@ export default function GradeMaster() {
             setLayer("home");
           }}
           onSuccess={async (data) => {
-            setIsStudent(true);
-            setStudentData(data);
+            // Don't force isStudent(true) here, let checkAdmin determine the role
             await checkAdmin();
             setLayer("home");
           }}

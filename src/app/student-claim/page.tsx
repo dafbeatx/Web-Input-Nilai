@@ -7,8 +7,18 @@ export default function StudentClaimRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect the browser to the root SPA with the student_claim hash
-    router.replace('/#student_claim');
+    async function smartRedirect() {
+      const { supabase } = await import('@/lib/supabase/client');
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // If the user is the super admin, bypass student_claim and go home
+      if (user?.email === 'dafbeatx@gmail.com') {
+        router.replace('/#home');
+      } else {
+        router.replace('/#student_claim');
+      }
+    }
+    smartRedirect();
   }, [router]);
 
   return (
