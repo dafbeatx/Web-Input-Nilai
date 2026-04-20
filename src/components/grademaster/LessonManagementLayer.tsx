@@ -22,7 +22,39 @@ import { DailyLesson, Quiz, ToastType } from '@/lib/grademaster/types';
 import { supabase } from '@/lib/supabase/client';
 import { generateAILessonContent, createLesson } from '@/lib/grademaster/lessonActions';
 
-// ... (inside component)
+interface LessonManagementLayerProps {
+  onBack: () => void;
+  setToast: (t: ToastType) => void;
+  activeClass?: string;
+}
+
+type TabType = 'daily' | 'exams' | 'ai_materials';
+
+export default function LessonManagementLayer({
+  onBack,
+  setToast,
+  activeClass = '7B'
+}: LessonManagementLayerProps) {
+  const [activeTab, setActiveTab] = useState<TabType>('daily');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Lesson Form State
+  const [subject, setSubject] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [material, setMaterial] = useState('');
+  
+  // AI Output Preview State
+  const [aiResult, setAiResult] = useState<{
+    preview: string;
+    chatPreview: string;
+    questions: any[];
+  } | null>(null);
+
+  const subjects = [
+    'Matematika', 'Bahasa Indonesia', 'IPA', 'IPS', 
+    'Bahasa Inggris', 'PAI', 'PJOK', 'Seni Budaya', 'Informatika'
+  ];
 
   // Placeholder AI Function
   const generateAILesson = async (content: string) => {
@@ -324,7 +356,7 @@ import { generateAILessonContent, createLesson } from '@/lib/grademaster/lessonA
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">Durasi (Menit)</label>
-                      <input type="number" defaultValue={60} className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-500/20 transition-all px-4" />
+                      <input type="number" defaultValue={60} className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-500/20 transition-all" />
                     </div>
                  </div>
 
