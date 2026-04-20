@@ -229,14 +229,34 @@ export default function Navbar() {
         className="md:hidden fixed top-0 left-0 right-0 z-[100] bg-white/85 backdrop-blur-2xl border-b border-surface-container-high/60 flex items-center justify-between px-5 transition-all duration-300"
         style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingBottom: '0.75rem' }}
       >
-        <div className="flex items-center gap-3">
-           <div className="w-9 h-9 bg-primary-container rounded-xl flex items-center justify-center shadow-sm">
-             <NeonGraduationCap size={18} />
-           </div>
-           <div className="flex flex-col">
-             <span className="text-[13px] font-extrabold text-on-surface tracking-tight leading-none">GradeMaster</span>
-             <span className="text-[9px] font-bold text-on-surface-variant/60 tracking-wider uppercase leading-tight">Education OS</span>
-           </div>
+        <div className="flex items-center gap-3 overflow-hidden">
+           {!isAdmin && isStudent && studentData?.class_name ? (
+             <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500 overflow-hidden">
+               <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-md flex-shrink-0">
+                 {studentData.photo_url ? (
+                   <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" />
+                 ) : (
+                   <div className="w-full h-full bg-[#0F172A] text-white flex items-center justify-center font-bold text-xs">
+                     {studentData.name?.[0] || 'U'}
+                   </div>
+                 )}
+               </div>
+               <div className="flex flex-col min-w-0">
+                 <span className="text-xs font-black text-[#0F172A] tracking-tight leading-none truncate uppercase">{studentData.name}</span>
+                 <span className="text-[9px] font-black text-[#7C3AED] tracking-widest uppercase leading-tight mt-0.5">Kelas {studentData.class_name}</span>
+               </div>
+             </div>
+           ) : (
+             <>
+               <div className="w-9 h-9 bg-[#0F172A] rounded-xl flex items-center justify-center shadow-sm">
+                 <NeonGraduationCap size={18} />
+               </div>
+               <div className="flex flex-col">
+                 <span className="text-[13px] font-extrabold text-on-surface tracking-tight leading-none">GradeMaster</span>
+                 <span className="text-[9px] font-bold text-on-surface-variant/60 tracking-wider uppercase leading-tight">Education OS</span>
+               </div>
+             </>
+           )}
         </div>
         <div className="flex items-center gap-2">
           {isAdmin && (
@@ -244,18 +264,12 @@ export default function Navbar() {
                <Settings size={16} />
              </button>
           )}
-          {!isAdmin && isStudent && studentData?.isGoogleLinked && (
+          {!isAdmin && isStudent && (
              <button 
                onClick={() => onNavigate('student_profile')} 
-               className="w-9 h-9 rounded-full overflow-hidden border-2 border-surface-container-high shadow-sm active:scale-95 transition-transform"
+               className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-colors active:scale-95"
              >
-               {studentData.photo_url ? (
-                 <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" />
-               ) : (
-                 <div className="w-full h-full bg-primary-container text-white flex items-center justify-center font-bold text-xs">
-                   {studentData.name?.[0] || 'U'}
-                 </div>
-               )}
+               <User size={18} />
              </button>
           )}
         </div>
