@@ -953,8 +953,12 @@ export default function GradeMaster() {
 
       {layer === "student_login" && (
         <StudentLoginLayer
-          onBack={() => setLayer("home")}
           setToast={setToast}
+          isLoggedIn={isStudent}
+          onLogout={() => {
+            logout();
+            setLayer("home");
+          }}
           onSuccess={async (data) => {
             setIsStudent(true);
             setStudentData(data);
