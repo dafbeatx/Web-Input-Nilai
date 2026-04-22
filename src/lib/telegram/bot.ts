@@ -114,6 +114,26 @@ export async function sendPhoto(
   return res.json();
 }
 
+export async function sendDocument(
+  chatId: number | string,
+  doc: Blob,
+  filename: string,
+  caption?: string
+) {
+  const formData = new FormData();
+  formData.append('chat_id', String(chatId));
+  formData.append('document', doc, filename);
+  if (caption) {
+    formData.append('caption', caption);
+    formData.append('parse_mode', 'HTML');
+  }
+  const res = await fetch(`${API_BASE}/sendDocument`, {
+    method: 'POST',
+    body: formData,
+  });
+  return res.json();
+}
+
 export async function sendAdminNotification(text: string, photo?: string | Blob) {
   if (!ADMIN_CHAT_ID) return;
   if (photo) {

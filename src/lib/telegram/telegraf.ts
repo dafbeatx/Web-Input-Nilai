@@ -19,7 +19,9 @@ if (process.env.NODE_ENV !== 'production') globalForTelegraf.bot = bot;
 
 // Register Handlers
 import { behaviorHandler } from './behavior-handler';
+import { attendanceHandler } from './attendance-handler';
 bot.use(behaviorHandler);
+bot.use(attendanceHandler);
 
 // Export supabase for use in handlers
 export { supabase };

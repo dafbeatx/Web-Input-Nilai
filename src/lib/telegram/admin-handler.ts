@@ -1,7 +1,7 @@
-import { sendMessage, sendInlineKeyboard, editMessageText, isAdmin, supabase } from './bot';
+import { sendMessage, sendInlineKeyboard, editMessageText, isAdmin, supabase, sendDocument } from './bot';
 import { hashPassword } from '@/lib/grademaster/security';
 import { parseAnswerKey } from '@/lib/grademaster/parser';
-import { buildPaginationKeyboard, compressUUID, decompressUUID } from './menu-builder';
+import { buildPaginationKeyboard, compressUUID, decompressUUID, buildBarChart } from './menu-builder';
 import { TelegramUpdate } from './bot';
 
 const adminConversations = new Map<number, { step: string; data: Record<string, unknown> }>();
@@ -9,6 +9,7 @@ const adminConversations = new Map<number, { step: string; data: Record<string, 
 const MAIN_MENU = `🎓 <b>GradeMaster Admin Panel</b>\n\nPilih aksi:`;
 const MAIN_KEYBOARD = [
   [{ text: '📊 ✨ KELOLA PERILAKU SISWA', callback_data: 'nav:cat:behaviour' }],
+  [{ text: '📅 KEHADIRAN / ABSENSI', callback_data: 'nav:cat:attendance' }],
   [
     { text: '📁 LIHAT SESI', callback_data: 'nav:cat:sessions' },
     { text: '👥 KELOLA SISWA', callback_data: 'nav:cat:students' }
@@ -17,6 +18,11 @@ const MAIN_KEYBOARD = [
     { text: '🚨 PELANGGARAN', callback_data: 'nav:cat:violations' },
     { text: '📈 STATISTIK NILAI', callback_data: 'nav:cat:grades' }
   ],
+  [
+    { text: '🔁 REMEDIAL OVERVIEW', callback_data: 'nav:cat:remedial' },
+    { text: '📤 EXPORT DATA', callback_data: 'nav:cat:export' }
+  ],
+  [{ text: '📚 PELAJARAN', callback_data: 'nav:cat:lessons' }],
   [{ text: '⚙️ PENGATURAN SISTEM', callback_data: 'nav:cat:system' }]
 ];
 
@@ -200,6 +206,72 @@ async function handleConversationStep(
     adminConversations.delete(chatId);
     return;
   }
+
+  // Custom Behavior: Step 1 — Reason text
+  if (conv.step === 'custom_beh_reason') {
+    conv.data.reason = text.trim();
+    conv.step = 'custom_beh_points';
+    await sendMessage(chatId, '🔢 Masukkan <b>jumlah poin</b> (positif atau negatif, contoh: 10 atau -15):');
+    return;
+  }
+
+  // Custom Behavior: Step 2 — Points value
+  if (conv.step === 'custom_beh_points') {
+    const points = parseInt(text.trim());
+    if (isNaN(points) || points === 0) {
+      await sendMessage(chatId, '⚠️ Masukkan angka valid (bukan 0). Contoh: 10 atau -15');
+      return;
+    }
+    const studentId = conv.data.studentId as string;
+    const reason = conv.data.reason as string;
+    const { error } = await supabase.rpc('add_behavior_log_entry', {
+      p_student_id: studentId,
+      p_category_id: null,
+      p_points_delta: points,
+      p_reason: reason,
+      p_teacher_id: `Telegram:Admin`
+    });
+    if (error) {
+      await sendMessage(chatId, `❌ Gagal: ${error.message}`);
+    } else {
+      await sendInlineKeyboard(chatId, `✅ Berhasil mencatat:\n📝 ${reason}\n🔢 Poin: <b>${points > 0 ? '+' : ''}${points}</b>`, [
+        [{ text: '🏠 Menu Utama', callback_data: 'nav:main' }]
+      ]);
+    }
+    adminConversations.delete(chatId);
+    return;
+  }
+
+  // Edit Session Field
+  if (conv.step === 'edit_field') {
+    const field = conv.data.field as string;
+    const sessionId = conv.data.sessionId as string;
+    let updateData: Record<string, unknown> = {};
+    const val = text.trim();
+
+    if (field === 'kkm') {
+      const n = parseInt(val);
+      if (isNaN(n) || n < 0 || n > 100) { await sendMessage(chatId, '⚠️ KKM harus 0-100'); return; }
+      updateData = { kkm: n };
+    } else if (field === 'remedial_timer') {
+      const n = parseInt(val);
+      if (isNaN(n) || n < 1) { await sendMessage(chatId, '⚠️ Timer harus > 0 menit'); return; }
+      updateData = { remedial_timer: n };
+    } else if (field === 'session_name') {
+      updateData = { session_name: val };
+    }
+
+    const { error } = await supabase.from('gm_sessions').update({ ...updateData, updated_at: new Date().toISOString() }).eq('id', sessionId);
+    if (error) {
+      await sendMessage(chatId, `❌ Gagal: ${error.message}`);
+    } else {
+      await sendInlineKeyboard(chatId, `✅ <b>${field}</b> berhasil diubah menjadi: <b>${val}</b>`, [
+        [{ text: '🏠 Menu Utama', callback_data: 'nav:main' }]
+      ]);
+    }
+    adminConversations.delete(chatId);
+    return;
+  }
 }
 
 export async function handleAdminCallback(chatId: number, callbackData: string, messageId?: number, update?: TelegramUpdate) {
@@ -296,10 +368,16 @@ export async function handleAdminCallback(chatId: number, callbackData: string, 
           adminConversations.set(chatId, { step: 'sys_addstu', data: { sessionId } });
           await editOrSend(chatId, messageId, '👥 Masukkan nama siswa (satu per baris):', [[{ text: '❌ Batal', callback_data: 'nav:cat:system' }]]);
         } else if (type === 'delses') {
-          // Direct delete confirm
           await editOrSend(chatId, messageId, '⚠️ <b>MENGHAPUS SESI?</b>\nTindakan ini permanen.', [
             [{ text: '✅ YA, HAPUS', callback_data: `act:delses_ok:${parts[2]}` }],
             [{ text: '❌ BATAL', callback_data: 'nav:cat:system' }]
+          ]);
+        } else if (type === 'editses') {
+          await editOrSend(chatId, messageId, '✏️ <b>Edit Sesi</b>\n\nPilih field yang ingin diubah:', [
+            [{ text: '📛 Nama Sesi', callback_data: `act:edtfld:session_name:${parts[2]}` }],
+            [{ text: '🎯 KKM', callback_data: `act:edtfld:kkm:${parts[2]}` }, { text: '⏱ Timer', callback_data: `act:edtfld:remedial_timer:${parts[2]}` }],
+            [{ text: '🌐 Toggle Publik', callback_data: `act:togpub:${parts[2]}` }],
+            [{ text: '🔙 Kembali', callback_data: 'nav:cat:system' }]
           ]);
         }
         return;
@@ -372,6 +450,74 @@ export async function handleAdminCallback(chatId: number, callbackData: string, 
         ]);
         return;
       }
+
+      // Delete Student
+      if (type === 'delstu') {
+        await editOrSend(chatId, messageId, '⚠️ <b>MENGHAPUS SISWA?</b>\nData nilai akan dihapus permanen.', [
+          [{ text: '✅ YA, HAPUS', callback_data: `act:delstu_ok:${parts[2]}` }],
+          [{ text: '❌ BATAL', callback_data: `nav:stu:${parts[2]}:students` }]
+        ]);
+        return;
+      }
+
+      if (type === 'delstu_ok') {
+        await supabase.from('gm_students').update({ is_deleted: true }).eq('id', targetId);
+        await editOrSend(chatId, messageId, '✅ Siswa berhasil dihapus.', [[{ text: '🏠 Menu', callback_data: 'nav:main' }]]);
+        return;
+      }
+
+      // Custom Behavior trigger
+      if (type === 'custbeh') {
+        adminConversations.set(chatId, { step: 'custom_beh_reason', data: { studentId: targetId } });
+        await editOrSend(chatId, messageId, '📝 Ketik <b>alasan/deskripsi</b> perilaku:', [[{ text: '❌ Batal', callback_data: 'nav:main' }]]);
+        return;
+      }
+
+      // Edit Session Fields
+      if (type === 'editses') {
+        const sesId = parts[2];
+        await editOrSend(chatId, messageId, '✏️ <b>Edit Sesi</b>\n\nPilih field yang ingin diubah:', [
+          [{ text: '📛 Nama Sesi', callback_data: `act:edtfld:session_name:${sesId}` }],
+          [{ text: '🎯 KKM', callback_data: `act:edtfld:kkm:${sesId}` }, { text: '⏱ Timer Remedial', callback_data: `act:edtfld:remedial_timer:${sesId}` }],
+          [{ text: '🌐 Toggle Publik', callback_data: `act:togpub:${sesId}` }],
+          [{ text: '🔙 Kembali', callback_data: 'nav:cat:system' }]
+        ]);
+        return;
+      }
+
+      if (type === 'edtfld') {
+        const field = parts[2];
+        const sesId = decompressUUID(parts[3]);
+        const labels: Record<string, string> = { session_name: 'nama sesi', kkm: 'KKM (0-100)', remedial_timer: 'timer remedial (menit)' };
+        adminConversations.set(chatId, { step: 'edit_field', data: { field, sessionId: sesId } });
+        await editOrSend(chatId, messageId, `✏️ Masukkan <b>${labels[field] || field}</b> baru:`, [[{ text: '❌ Batal', callback_data: 'nav:cat:system' }]]);
+        return;
+      }
+
+      if (type === 'togpub') {
+        const sesId = decompressUUID(parts[2]);
+        const { data: ses } = await supabase.from('gm_sessions').select('is_public').eq('id', sesId).single();
+        const newVal = !(ses?.is_public ?? true);
+        await supabase.from('gm_sessions').update({ is_public: newVal }).eq('id', sesId);
+        await editOrSend(chatId, messageId, `✅ Sesi sekarang <b>${newVal ? 'PUBLIK' : 'PRIVAT'}</b>.`, [[{ text: '🏠 Menu', callback_data: 'nav:main' }]]);
+        return;
+      }
+
+      // Export XML
+      if (type === 'export') {
+        const sesId = decompressUUID(parts[2]);
+        const { data: session } = await supabase.from('gm_sessions').select('session_name, teacher, subject, class_name').eq('id', sesId).single();
+        const { data: students } = await supabase.from('gm_students').select('name, final_score, mcq_score, essay_score, correct, wrong').eq('session_id', sesId).eq('is_deleted', false).order('name');
+        if (!session || !students) { await editOrSend(chatId, messageId, '❌ Gagal memuat data.', [[{ text: '🏠 Menu', callback_data: 'nav:main' }]]); return; }
+
+        let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<Report>\n  <Session>${session.session_name}</Session>\n  <Teacher>${session.teacher}</Teacher>\n  <Subject>${session.subject}</Subject>\n  <Class>${session.class_name}</Class>\n  <Students>\n`;
+        students.forEach((s: any) => { xml += `    <Student><Name>${s.name}</Name><Score>${s.final_score}</Score><MCQ>${s.mcq_score}</MCQ><Essay>${s.essay_score}</Essay><Correct>${s.correct}</Correct><Wrong>${s.wrong}</Wrong></Student>\n`; });
+        xml += `  </Students>\n</Report>`;
+
+        const blob = new Blob([xml], { type: 'text/xml' });
+        await sendDocument(chatId, blob, `Nilai_${session.class_name}_${session.subject}.xml`, `📤 <b>Export Nilai</b>\n${session.session_name}`);
+        return;
+      }
     }
   } catch (err: any) {
     console.error(err);
@@ -396,6 +542,7 @@ async function handleCategorySelection(chatId: number, messageId: number | undef
       [{ text: '➕ Buat Sesi Baru', callback_data: 'sys:newses' }],
       [{ text: '🔑 Input Kunci Jawaban', callback_data: 'nav:sespage:sys_addkey:1' }],
       [{ text: '👥 Tambah Daftar Siswa', callback_data: 'nav:sespage:sys_addstu:1' }],
+      [{ text: '✏️ Edit Sesi', callback_data: 'nav:sespage:sys_editses:1' }],
       [{ text: '🗑 Hapus Sesi', callback_data: 'nav:sespage:sys_delses:1' }],
       [{ text: '🏠 Menu Utama', callback_data: 'nav:main' }]
     ];
@@ -404,7 +551,6 @@ async function handleCategorySelection(chatId: number, messageId: number | undef
   }
 
   if (category === 'behaviour') {
-    // Start with Class Selection
     const { bot } = await import('./telegraf');
     await bot.handleUpdate({
       update_id: 0,
@@ -415,6 +561,35 @@ async function handleCategorySelection(chatId: number, messageId: number | undef
         data: 'stubeh:start'
       }
     } as any);
+    return;
+  }
+
+  if (category === 'attendance') {
+    const { bot } = await import('./telegraf');
+    await bot.handleUpdate({
+      update_id: 0,
+      callback_query: {
+        id: 'start',
+        from: { id: chatId, first_name: 'Admin' },
+        message: { message_id: messageId || 0, chat: { id: chatId } },
+        data: 'statt:start'
+      }
+    } as any);
+    return;
+  }
+
+  if (category === 'remedial') {
+    await renderRemedialOverview(chatId, messageId);
+    return;
+  }
+
+  if (category === 'export') {
+    await renderSessionList(chatId, messageId, 'export', 1);
+    return;
+  }
+
+  if (category === 'lessons') {
+    await renderLessonsList(chatId, messageId);
     return;
   }
 
@@ -443,9 +618,11 @@ async function renderSessionList(chatId: number, messageId: number | undefined, 
     'students': '👥 <b>Kelola Siswa</b>',
     'violations': '🚨 <b>Pelanggaran</b>',
     'grades': '📈 <b>Statistik Nilai</b>',
+    'export': '📤 <b>Pilih Sesi untuk Export</b>',
     'sys_addkey': '🔑 <b>Pilih Sesi untuk Kunci</b>',
     'sys_addstu': '👥 <b>Pilih Sesi untuk Siswa</b>',
     'sys_delses': '🗑 <b>Pilih Sesi untuk Dihapus</b>',
+    'sys_editses': '✏️ <b>Pilih Sesi untuk Edit</b>',
   };
 
   await editOrSend(chatId, messageId, `${titles[category] || '📋 Sesi Kelas'}\n\nPilih sesi di bawah:`, keyboard);
@@ -466,14 +643,51 @@ async function handleSessionSelection(chatId: number, messageId: number | undefi
   }
 
   if (category === 'grades') {
-    // Generate Dashboard
-    const { data: students } = await supabase.from('gm_students').select('final_score').eq('session_id', sessionId).eq('is_deleted', false);
-    const kkm = 70;
+    const { data: session2 } = await supabase.from('gm_sessions').select('kkm').eq('id', sessionId).single();
+    const { data: students } = await supabase.from('gm_students').select('name, final_score').eq('session_id', sessionId).eq('is_deleted', false).order('final_score', { ascending: false });
+    const kkm = session2?.kkm || 70;
     const scores = students?.map((s: any) => s.final_score || 0) || [];
-    const avg = scores.length ? Math.round(scores.reduce((a: any,b: any)=>a+b,0)/scores.length) : 0;
-    const tuntas = scores.filter((s: any) => s >= kkm).length;
-    const msg = `📈 <b>Dashboard Sesi</b>\n\nSesi: ${session.session_name}\n\n👥 Total Siswa: ${scores.length}\n✅ Tuntas (>=${kkm}): ${tuntas}\n❌ Belum: ${scores.length - tuntas}\n📊 Rata-rata: ${avg}`;
+    const avg = scores.length ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : 0;
+    const tuntas = scores.filter((s: number) => s >= kkm).length;
+    const maxS = scores.length ? Math.max(...scores) : 0;
+    const minS = scores.length ? Math.min(...scores) : 0;
+
+    // Distribution
+    const dist = [
+      { label: '0-20', value: scores.filter((s: number) => s <= 20).length },
+      { label: '21-40', value: scores.filter((s: number) => s > 20 && s <= 40).length },
+      { label: '41-60', value: scores.filter((s: number) => s > 40 && s <= 60).length },
+      { label: '61-80', value: scores.filter((s: number) => s > 60 && s <= 80).length },
+      { label: '81-100', value: scores.filter((s: number) => s > 80).length },
+    ];
+    const chart = buildBarChart(dist);
+
+    // Top 3 & Bottom 3
+    const top3 = (students || []).slice(0, 3).map((s: any, i: number) => `${['🥇', '🥈', '🥉'][i]} ${s.name}: ${s.final_score}`).join('\n');
+    const bot3 = (students || []).slice(-3).reverse().map((s: any) => `⚠️ ${s.name}: ${s.final_score}`).join('\n');
+
+    const msg = `📈 <b>STATISTIK NILAI</b>\n\n` +
+      `📋 ${session.session_name}\n` +
+      `━━━━━━━━━━━━━━━━\n` +
+      `👥 Total: <b>${scores.length}</b>\n` +
+      `✅ Tuntas (≥${kkm}): <b>${tuntas}</b>\n` +
+      `❌ Belum: <b>${scores.length - tuntas}</b>\n` +
+      `📊 Rata-rata: <b>${avg}</b>\n` +
+      `🔺 Tertinggi: <b>${maxS}</b> | 🔻 Terendah: <b>${minS}</b>\n\n` +
+      `📊 <b>DISTRIBUSI NILAI:</b>\n<code>${chart}</code>\n\n` +
+      `🏆 <b>TOP 3:</b>\n${top3 || '-'}\n\n` +
+      `⚠️ <b>BOTTOM 3:</b>\n${bot3 || '-'}`;
+
     await editOrSend(chatId, messageId, msg, [[{ text: '🔙 Kembali', callback_data: 'nav:sespage:grades:1' }]]);
+    return;
+  }
+
+  if (category === 'export') {
+    await editOrSend(chatId, messageId, `📤 <b>Export</b>: ${session.session_name}\n\nKlik untuk mengunduh:`, [
+      [{ text: '📄 Download XML', callback_data: `act:export:${compressUUID(sessionId)}` }],
+      [{ text: '🔙 Sesi Lain', callback_data: 'nav:sespage:export:1' }],
+      [{ text: '🏠 Menu', callback_data: 'nav:main' }]
+    ]);
     return;
   }
 
@@ -569,8 +783,71 @@ async function renderStudentDetails(chatId: number, messageId: number | undefine
     [{ text: '✏️ Ubah Nilai', callback_data: `act:setnil:${cmpId}` }, { text: '🔄 Reset Ujian', callback_data: `act:rstexm:${cmpId}` }],
     [{ text: '✅ Set Lulus', callback_data: `act:setsts:${cmpId}:COMPLETED` }, { text: '🚨 Set Curang', callback_data: `act:setsts:${cmpId}:CHEATED` }],
     [{ text: '🚫 Blokir', callback_data: `act:setsts:${cmpId}:BLOCKED` }, { text: '🔄 Bersihkan', callback_data: `act:setsts:${cmpId}:NONE` }],
+    [{ text: '📝 Custom Perilaku', callback_data: `act:custbeh:${cmpId}` }],
+    [{ text: '🗑️ Hapus Siswa', callback_data: `act:delstu:${cmpId}` }],
     [{ text: '🔙 List Siswa', callback_data: `nav:stupage:${backCategory}:${sesId}:1` }]
   ];
 
   await editOrSend(chatId, messageId, msg, keyboard);
+}
+
+// ── Remedial Overview ──
+async function renderRemedialOverview(chatId: number, messageId: number | undefined) {
+  const { data: sessions } = await supabase.from('gm_sessions').select('id, session_name, kkm').order('updated_at', { ascending: false }).limit(10);
+  if (!sessions || sessions.length === 0) {
+    await editOrSend(chatId, messageId, '📭 Belum ada sesi.', [[{ text: '🏠 Menu', callback_data: 'nav:main' }]]);
+    return;
+  }
+
+  let overview = '🔁 <b>REMEDIAL OVERVIEW</b>\n━━━━━━━━━━━━━━━━\n\n';
+
+  for (const ses of sessions) {
+    const kkm = ses.kkm || 70;
+    const { data: students } = await supabase
+      .from('gm_students')
+      .select('final_score, remedial_status, is_cheated, is_blocked')
+      .eq('session_id', ses.id)
+      .eq('is_deleted', false);
+
+    if (!students || students.length === 0) continue;
+
+    const needRemedial = students.filter((s: any) => (s.final_score || 0) < kkm);
+    if (needRemedial.length === 0) continue;
+
+    const completed = needRemedial.filter((s: any) => s.remedial_status === 'COMPLETED').length;
+    const cheated = needRemedial.filter((s: any) => s.is_cheated || s.remedial_status === 'CHEATED').length;
+    const blocked = needRemedial.filter((s: any) => s.is_blocked).length;
+    const pending = needRemedial.length - completed - cheated - blocked;
+
+    overview += `📋 <b>${ses.session_name}</b>\n`;
+    overview += `   Total Remedial: ${needRemedial.length}\n`;
+    overview += `   ✅ Selesai: ${completed} | ⏳ Pending: ${pending}\n`;
+    overview += `   🚨 Curang: ${cheated} | 🚫 Blokir: ${blocked}\n\n`;
+  }
+
+  await editOrSend(chatId, messageId, overview, [[{ text: '🏠 Menu Utama', callback_data: 'nav:main' }]]);
+}
+
+// ── Lessons List ──
+async function renderLessonsList(chatId: number, messageId: number | undefined) {
+  const { data: lessons } = await supabase
+    .from('daily_lessons')
+    .select('id, title, class_name, date, is_published')
+    .order('date', { ascending: false })
+    .limit(20);
+
+  if (!lessons || lessons.length === 0) {
+    await editOrSend(chatId, messageId, '📭 Belum ada pelajaran.', [[{ text: '🏠 Menu', callback_data: 'nav:main' }]]);
+    return;
+  }
+
+  let msg = '📚 <b>DAFTAR PELAJARAN</b>\n━━━━━━━━━━━━━━━━\n\n';
+
+  for (const l of lessons) {
+    const pub = l.is_published ? '✅' : '📝';
+    const dateStr = new Date(l.date + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    msg += `${pub} <b>${l.title || 'Untitled'}</b>\n   🏫 ${l.class_name} | 📆 ${dateStr}\n\n`;
+  }
+
+  await editOrSend(chatId, messageId, msg, [[{ text: '🏠 Menu Utama', callback_data: 'nav:main' }]]);
 }

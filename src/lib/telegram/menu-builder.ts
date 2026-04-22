@@ -86,3 +86,48 @@ export function buildPaginationKeyboard(
   
   return keyboard;
 }
+
+/**
+ * Build a simple date picker keyboard showing ±N days from today.
+ */
+export function buildDateKeyboard(
+  actionPrefix: string,
+  daysRange: number = 3
+): { text: string; callback_data: string }[][] {
+  const keyboard: { text: string; callback_data: string }[][] = [];
+  const today = new Date();
+
+  for (let offset = -daysRange; offset <= 0; offset += 4) {
+    const row: { text: string; callback_data: string }[] = [];
+    for (let j = offset; j < offset + 4 && j <= 0; j++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() + j);
+      const iso = d.toISOString().split('T')[0];
+      const dayName = d.toLocaleDateString('id-ID', { weekday: 'short' });
+      const dateNum = d.getDate();
+      const label = j === 0 ? `📅 Hari Ini` : `${dayName} ${dateNum}`;
+      row.push({ text: label, callback_data: `${actionPrefix}:${iso}` });
+    }
+    keyboard.push(row);
+  }
+
+  return keyboard;
+}
+
+/**
+ * Build a text-based horizontal bar chart.
+ */
+export function buildBarChart(
+  data: { label: string; value: number }[],
+  maxBarLength: number = 10
+): string {
+  if (data.length === 0) return '(Tidak ada data)';
+  const maxVal = Math.max(...data.map(d => d.value), 1);
+
+  return data.map(d => {
+    const filled = Math.round((d.value / maxVal) * maxBarLength);
+    const empty = maxBarLength - filled;
+    const bar = '█'.repeat(filled) + '░'.repeat(empty);
+    return `${d.label.padEnd(7)} ${bar} ${d.value}`;
+  }).join('\n');
+}
