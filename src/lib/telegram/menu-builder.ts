@@ -5,7 +5,7 @@
 export function compressUUID(uuid: string): string {
   if (!uuid || uuid.length !== 36) return uuid; // Fallback
   const hex = uuid.replace(/-/g, '');
-  const bytes = [];
+  const bytes: number[] = [];
   for (let i = 0; i < hex.length; i += 2) {
     bytes.push(parseInt(hex.substr(i, 2), 16));
   }
@@ -47,7 +47,7 @@ export function buildPaginationKeyboard(
   pageAction: string,   // e.g. "page_ses" -> page_ses:2
   backAction?: string   // e.g. "menu_main"
 ) {
-  const keyboard = [];
+  const keyboard: { text: string; callback_data: string }[][] = [];
   
   // Slice items for current page
   const startIdx = (currentPage - 1) * pageSize;
@@ -63,7 +63,7 @@ export function buildPaginationKeyboard(
   }
   
   // Navigation row
-  const navRow = [];
+  const navRow: { text: string; callback_data: string }[] = [];
   const totalPages = Math.ceil(items.length / pageSize) || 1;
   
   if (currentPage > 1) {

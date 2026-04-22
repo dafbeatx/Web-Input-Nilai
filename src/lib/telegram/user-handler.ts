@@ -57,7 +57,7 @@ export async function handleUserCommand(chatId: number, text: string) {
       return;
     }
 
-    const keyboard = [];
+    const keyboard: { text: string; callback_data: string }[][] = [];
     for (let i = 0; i < uniqueClasses.length; i += 3) {
       const row = uniqueClasses.slice(i, i + 3).map(c => ({
         text: `📍 Kelas ${c}`,
@@ -181,7 +181,7 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
       return;
     }
 
-    const keyboard = [];
+    const keyboard: { text: string; callback_data: string }[][] = [];
     for (let i = 0; i < students.length; i += 2) {
       const row = students.slice(i, i + 2).map((s: any) => ({
         text: `👤 ${s.name}`,

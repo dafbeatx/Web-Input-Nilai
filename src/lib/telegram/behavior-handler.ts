@@ -37,7 +37,7 @@ async function renderClassSelection(ctx: Context) {
   }
 
   // Create keyboard with classes in 2-column layout (Large buttons style)
-  const buttons = [];
+  const buttons: any[][] = [];
   for (let i = 0; i < uniqueClasses.length; i += 2) {
     const row = [
       Markup.button.callback(`🏫 Kelas ${uniqueClasses[i]}`, `stubeh:cls:${uniqueClasses[i]}`)
@@ -80,7 +80,7 @@ async function renderStudentSelection(ctx: Context, className: string, page: num
   const totalPages = Math.ceil(students.length / PAGE_SIZE);
 
   // Keypad style (2 per row)
-  const buttons = [];
+  const buttons: any[][] = [];
   for (let i = 0; i < pageItems.length; i += 2) {
     const row = [
       Markup.button.callback(`${startIdx + i + 1}. ${pageItems[i].student_name}`, `stubeh:view:${className}:${page}:${compressUUID(pageItems[i].id)}`)
@@ -92,7 +92,7 @@ async function renderStudentSelection(ctx: Context, className: string, page: num
   }
 
   // Navigation
-  const navRow = [];
+  const navRow: any[] = [];
   if (page > 1) navRow.push(Markup.button.callback('⬅️ Prev', `stubeh:page:${className}:${page - 1}`));
   navRow.push(Markup.button.callback(`${page}/${totalPages}`, 'noop'));
   if (page < totalPages) navRow.push(Markup.button.callback('Next ➡️', `stubeh:page:${className}:${page + 1}`));
