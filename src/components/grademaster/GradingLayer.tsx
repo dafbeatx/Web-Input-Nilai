@@ -286,69 +286,85 @@ export default function GradingLayer(props: GradingLayerProps) {
               </label>
             </div>
             <div className="relative" ref={dropdownRef}>
-              <input
-                type="text"
-                value={studentName}
-                onChange={(e) => {
-                  setStudentName(e.target.value);
-                  setIsDropdownOpen(true);
-                }}
-                onFocus={() => {
-                  if (!isNewStudent) setIsDropdownOpen(true);
-                }}
-                onClick={() => {
-                  if (!isNewStudent) setIsDropdownOpen(true);
-                }}
-                placeholder="Cari atau ketik nama siswa..."
-                className="w-full bg-surface-variant border border-outline-variant rounded-xl p-3 text-xs md:text-sm font-bold text-on-surface outline-none focus:border-primary transition-all placeholder:text-on-surface-variant"
-              />
-              
-              {isDropdownOpen && !isNewStudent && (
-                <div className="absolute z-50 w-full mt-2 bg-slate-900 border border-outline-variant premium-shadow rounded-xl max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2">
-                  {filteredStudents.length > 0 ? (
-                    <ul className="p-2 space-y-1">
-                      {filteredStudents.map(s => (
-                        <li key={s.id}>
-                          <button
-                            type="button"
-                            onClick={() => selectStudent(s.id, s.name)}
-                            className="w-full text-left px-3 py-2 text-xs md:text-sm font-bold text-on-surface-variant hover:bg-primary/20 hover:text-primary rounded-lg transition-colors flex items-center justify-between"
-                          >
-                            <span>{s.name}</span>
-                          </button>
-                        </li>
-                      ))}
-                      <div className="h-px bg-surface-variant my-1" />
-                      <li>
+                <div className="relative flex items-center group">
+                  <User size={16} className="absolute left-4 text-on-surface-variant/50 group-focus-within:text-primary transition-colors" />
+                  <input
+                    type="text"
+                    value={studentName}
+                    onChange={(e) => {
+                      setStudentName(e.target.value);
+                      setIsDropdownOpen(true);
+                    }}
+                    onFocus={() => {
+                      if (!isNewStudent) setIsDropdownOpen(true);
+                    }}
+                    onClick={() => {
+                      if (!isNewStudent) setIsDropdownOpen(true);
+                    }}
+                    placeholder="Cari atau ketik nama siswa..."
+                    className="w-full bg-white border border-surface-container-high rounded-xl py-3.5 pl-11 pr-4 text-sm font-bold text-on-surface outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all placeholder:text-on-surface-variant/40 shadow-sm"
+                  />
+                </div>
+                
+                {isDropdownOpen && !isNewStudent && (
+                  <div className="absolute z-[100] w-full mt-2 bg-white/90 backdrop-blur-xl border border-surface-container-high shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-2xl max-h-[280px] overflow-y-auto animate-in fade-in slide-in-from-top-2 overflow-hidden">
+                    {filteredStudents.length > 0 ? (
+                      <div className="p-2">
+                        <div className="px-3 py-2 mb-1">
+                          <span className="text-[10px] font-black uppercase tracking-[0.1em] text-on-surface-variant/50">Hasil Pencarian</span>
+                        </div>
+                        <ul className="space-y-0.5">
+                          {filteredStudents.map(s => (
+                            <li key={s.id}>
+                              <button
+                                type="button"
+                                onClick={() => selectStudent(s.id, s.name)}
+                                className="w-full text-left px-4 py-3 text-sm font-bold text-on-surface-variant hover:bg-primary/5 hover:text-primary rounded-xl transition-all flex items-center justify-between group/item"
+                              >
+                                <span>{s.name}</span>
+                                <CheckCircle2 size={14} className="opacity-0 group-hover/item:opacity-100 transition-opacity text-primary" />
+                              </button>
+                            </li>
+                          ))}
+                          <div className="h-px bg-surface-container-high my-2 mx-2" />
+                          <li>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsNewStudent(true);
+                                setIsDropdownOpen(false);
+                              }}
+                              className="w-full text-left px-4 py-3 text-sm font-black text-primary hover:bg-primary/10 rounded-xl transition-all flex items-center gap-3"
+                            >
+                              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                                <AlertCircle size={14} />
+                              </div>
+                              Tambah "{studentName || 'baru'}"
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center">
+                        <div className="w-12 h-12 bg-surface-container rounded-full flex items-center justify-center mx-auto mb-3">
+                          <User size={20} className="text-on-surface-variant/30" />
+                        </div>
+                        <p className="text-xs font-bold text-on-surface-variant mb-4">Siswa tidak ditemukan</p>
                         <button
                           type="button"
                           onClick={() => {
                             setIsNewStudent(true);
                             setIsDropdownOpen(false);
                           }}
-                          className="w-full text-left px-3 py-2 text-xs md:text-sm font-bold text-primary hover:bg-primary/10 rounded-lg transition-colors flex items-center gap-2"
+                          className="w-full py-3 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20"
                         >
-                          <User size={14} /> Tambah "{studentName || 'baru'}" sebagai siswa baru
+                          Tambah Sebagai Siswa Baru
                         </button>
-                      </li>
-                    </ul>
-                  ) : (
-                    <div className="p-4 text-center">
-                      <p className="text-xs font-bold text-on-surface-variant mb-2">Siswa tidak ditemukan</p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsNewStudent(true);
-                          setIsDropdownOpen(false);
-                        }}
-                        className="px-4 py-2 bg-primary/10 text-primary text-xs font-bold rounded-lg hover:bg-primary/20 transition-colors border border-primary/20"
-                      >
-                        Tambah siswa baru
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             {isNewStudent && (
               <p className="text-[10px] mt-2 font-bold text-amber-500 flex items-center gap-1.5 animate-in fade-in pl-1">
