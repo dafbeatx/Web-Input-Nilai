@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { supabase } from '@/lib/supabase/client';
+import { supabaseAdmin as supabase } from '@/lib/supabase/admin';
 import { randomBytes } from 'crypto';
 
 const SESSION_COOKIE = 'gm_student_token';

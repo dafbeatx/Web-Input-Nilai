@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { checkRateLimit } from '@/lib/grademaster/security';
 import { compressAndConvertToWebP } from '@/lib/grademaster/image-utils';
@@ -7,6 +7,7 @@ import { compressAndConvertToWebP } from '@/lib/grademaster/image-utils';
 export async function POST(req: NextRequest) {
   try {
     // 1. Otorisasi - Hanya admin yang boleh unggah
+    const supabase = await createClient();
     const adminSession = await getAdminSession();
     if (!adminSession) {
       return NextResponse.json({ error: 'Unauthorized: Only admin can upload avatars' }, { status: 403 });

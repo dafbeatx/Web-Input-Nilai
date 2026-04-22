@@ -1,6 +1,6 @@
 'use server';
 
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 
@@ -30,7 +30,6 @@ async function recomputePoints(studentId: string): Promise<number> {
 
 /**
  * Adds a new behavior log entry and updates the student's total points.
- * Demerit System: bypasses legacy RPC, calculates directly.
  */
 export async function addBehaviorAction(formData: {
   studentId: string;
@@ -41,7 +40,7 @@ export async function addBehaviorAction(formData: {
   violationDate?: string;
 }) {
   try {
-    // Insert log directly (bypass RPC)
+    const supabase = await createClient();
     const { error: insertError } = await supabase
       .from('gm_behavior_logs')
       .insert({
@@ -55,7 +54,6 @@ export async function addBehaviorAction(formData: {
 
     if (insertError) throw insertError;
 
-    // Recompute from scratch (base 0 + sum all logs)
     const newTotal = await recomputePoints(formData.studentId);
 
     revalidatePath('/behavior');
@@ -76,6 +74,7 @@ export async function updateBehaviorAction(logId: string, formData: {
   violationDate?: string;
 }) {
   try {
+    const supabase = await createClient();
     const { error: updateError } = await supabase
       .from('gm_behavior_logs')
       .update({
@@ -102,6 +101,7 @@ export async function updateBehaviorAction(logId: string, formData: {
  */
 export async function deleteBehaviorAction(logId: string, studentId: string) {
   try {
+    const supabase = await createClient();
     const { error: deleteError } = await supabase
       .from('gm_behavior_logs')
       .delete()
@@ -124,6 +124,7 @@ export async function deleteBehaviorAction(logId: string, studentId: string) {
  */
 export async function getBehaviorLogsAction(studentId: string) {
   try {
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from('gm_behavior_logs')
       .select('*')

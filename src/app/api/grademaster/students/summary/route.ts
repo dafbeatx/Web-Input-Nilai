@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(req: NextRequest) {
   try {
+    const supabase = await createClient();
     const { searchParams } = new URL(req.url);
     const studentName = searchParams.get('name');
     const academicYear = searchParams.get('year') || '2025/2026';

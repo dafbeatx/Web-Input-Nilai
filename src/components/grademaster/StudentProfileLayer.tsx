@@ -98,8 +98,10 @@ export default function StudentProfileLayer({
     setIsLoadingSummary(true);
     try {
       const res = await fetch(`/api/grademaster/students/summary?name=${encodeURIComponent(studentName)}&year=${encodeURIComponent(academicYear)}`);
-      const data = await res.json();
-      if (res.ok) setStudentSummary(data);
+      if (res.ok) {
+        const data = await res.json();
+        setStudentSummary(data);
+      }
     } catch (err) {
       console.error("Failed to fetch student summary", err);
     } finally {
@@ -109,9 +111,18 @@ export default function StudentProfileLayer({
 
   const fetchStudentLogs = async () => {
     setIsLoadingLogs(true);
-    const result = await getBehaviorLogsAction(studentId);
-    if (result.success) setStudentLogs(result.logs || []);
-    setIsLoadingLogs(false);
+    try {
+      const result = await getBehaviorLogsAction(studentId);
+      if (result.success) {
+        setStudentLogs(result.logs || []);
+      } else {
+        console.error("Server action error:", result.error);
+      }
+    } catch (err) {
+      console.error("Failed to fetch student logs", err);
+    } finally {
+      setIsLoadingLogs(false);
+    }
   };
 
   const handleAddBehavior = async (pointsDelta: number, reason: string) => {

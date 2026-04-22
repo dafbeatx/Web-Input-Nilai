@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { hashPassword, verifyPassword, validateSessionInput, checkRateLimit } from '@/lib/grademaster/security';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { getStudentSession } from '@/lib/grademaster/studentAuth';
@@ -9,6 +9,7 @@ import { calculateStudentResult } from '@/lib/grademaster/scoring';
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = await createClient();
     const adminSession = await getAdminSession();
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(ip)) {
@@ -190,6 +191,7 @@ export async function POST(req: NextRequest) {
 
   export async function GET(req: NextRequest) {
     try {
+      const supabase = await createClient();
       const adminSession = await getAdminSession();
       const studentSession = await getStudentSession();
       const { searchParams } = new URL(req.url);
@@ -347,6 +349,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const supabase = await createClient();
     const adminSession = await getAdminSession();
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`del:${ip}`)) {
