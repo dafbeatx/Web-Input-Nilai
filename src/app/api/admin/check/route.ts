@@ -27,11 +27,17 @@ export async function GET() {
     const adminDomains = ['@guru.smp.belajar.id', '@guru.belajar.id', '@smp.belajar.id', '@admin.belajar.id'];
     const isWhitelisted = adminDomains.some(domain => email.toLowerCase().endsWith(domain)) || email === 'dafbeatx@gmail.com';
     
-    if (role === 'user' && isWhitelisted) {
+    if (role !== 'admin' && isWhitelisted) {
+      // Use upsert instead of update to handle cases where profile row doesn't exist yet
       const { error: upgradeError } = await supabase
         .from('profiles')
-        .update({ role: 'admin' })
-        .eq('id', user.id);
+        .upsert({
+          id: user.id,
+          email: user.email,
+          role: 'admin',
+          full_name: username,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
       
       if (!upgradeError) {
         console.log(`Auto-upgraded ${email} to admin`);

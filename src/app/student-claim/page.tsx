@@ -11,8 +11,12 @@ export default function StudentClaimRedirect() {
       const { supabase } = await import('@/lib/supabase/client');
       const { data: { user } } = await supabase.auth.getUser();
       
-      // If the user is the super admin, bypass student_claim and go home
-      if (user?.email === 'dafbeatx@gmail.com') {
+      const email = user?.email?.toLowerCase() || '';
+      const adminDomains = ['@guru.smp.belajar.id', '@guru.belajar.id', '@smp.belajar.id', '@admin.belajar.id'];
+      const isAdmin = adminDomains.some(domain => email.endsWith(domain)) || email === 'dafbeatx@gmail.com';
+
+      // If the user is an admin/teacher, bypass student_claim and go home
+      if (isAdmin) {
         router.replace('/#home');
       } else {
         router.replace('/#student_claim');
