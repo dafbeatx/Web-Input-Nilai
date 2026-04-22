@@ -213,14 +213,19 @@ export async function POST(req: NextRequest) {
   
         if (error) throw error;
 
-      // Attach student count per session
+      // Attach student count per session with fail-safe
       const sessionsWithCounts = await Promise.all(
         (data || []).map(async (s) => {
-          const { count } = await supabase
-            .from('gm_students')
-            .select('*', { count: 'exact', head: true })
-            .eq('session_id', s.id);
-          return { ...s, student_count: count || 0 };
+          try {
+            const { count } = await supabase
+              .from('gm_students')
+              .select('*', { count: 'exact', head: true })
+              .eq('session_id', s.id);
+            return { ...s, student_count: count || 0 };
+          } catch (err) {
+            console.error(`Error fetching student count for session ${s.id}:`, err);
+            return { ...s, student_count: 0 };
+          }
         })
       );
 

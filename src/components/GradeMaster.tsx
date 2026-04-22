@@ -217,6 +217,8 @@ export default function GradeMaster() {
           if (layer === 'student_login' || layer === 'login' || layer === 'student_claim' || layer === 'teacher_claim') {
             setLayer('home');
           }
+          // SYNC: Re-fetch sessions now that we are confirmed as admin
+          await fetchSessions();
         } else {
           // Admin exists but hasn't set up their profile yet
           setAdminUser(data.username);
