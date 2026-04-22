@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRemainingStudents } from '@/lib/grademaster/services/remedial.service';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+      const supabase = await createClient();
     const { id: sessionId } = await params;
     if (!sessionId) {
       return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });

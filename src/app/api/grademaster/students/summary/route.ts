@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     if (attError) throw attError;
 
     const totalAttendance = attData?.length || 0;
-    const presentCount = attData?.filter(a => a.status === 'Hadir').length || 0;
+    const presentCount = attData?.filter((a: any) => a.status === 'Hadir').length || 0;
     const attendancePercent = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : null;
 
     // 2. Fetch Academic History

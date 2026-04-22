@@ -156,8 +156,8 @@ export async function POST(req: NextRequest) {
       console.error('[POST Student Accounts] Error checking existing accounts:', existingError);
     }
 
-    const existingNames = new Set((existingAccounts || []).map(a => a.student_name));
-    const newStudents = behaviorStudents.filter(s => !existingNames.has(s.student_name));
+    const existingNames = new Set((existingAccounts || []).map((a: any) => a.student_name));
+    const newStudents = behaviorStudents.filter((s: any) => !existingNames.has(s.student_name));
 
     if (newStudents.length === 0) {
       return NextResponse.json({ message: 'Semua siswa di kelas ini sudah memiliki akun', created: 0 });
@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
       .from('gm_student_accounts')
       .select('username');
 
-    const usedUsernames = new Set((allUsernames || []).map(a => a.username));
+    const usedUsernames = new Set((allUsernames || []).map((a: any) => a.username));
     const accountRows = [];
 
     for (const student of newStudents) {

@@ -19,8 +19,27 @@ export async function GET(request: Request) {
     // Role assignment and profile upsert
     const { data: { user } } = await supabase.auth.getUser()
     if (user && user.email) {
-      const isGuru = user.email.endsWith('@guru.smp.belajar.id') || user.email === 'dafbeatx@gmail.com'
-      const role = isGuru ? 'admin' : 'user'
+      const email = user.email.toLowerCase();
+      const adminDomains = ['@guru.smp.belajar.id', '@guru.belajar.id', '@smp.belajar.id', '@admin.belajar.id'];
+      const isWhitelisted = adminDomains.some(domain => email.endsWith(domain)) || email === 'dafbeatx@gmail.com';
+      
+      // Get existing profile to avoid overwriting a manually set admin role
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      // Priority: 
+      // 1. If existing profile is 'admin', keep it 'admin'.
+      // 2. If email is whitelisted, make 'admin'.
+      // 3. Otherwise 'user'.
+      let finalRole = 'user';
+      if (existingProfile?.role === 'admin') {
+        finalRole = 'admin';
+      } else if (isWhitelisted) {
+        finalRole = 'admin';
+      }
       
       const identityData = user.user_metadata || {}
       const fullName = identityData.full_name || user.email
@@ -33,11 +52,14 @@ export async function GET(request: Request) {
           email: user.email,
           full_name: fullName,
           avatar_url: avatarUrl,
-          role: role
+          role: finalRole,
+          updated_at: new Date().toISOString()
         }, { onConflict: 'id' })
         
       if (upsertError) {
         console.error('Error upserting profile:', upsertError.message)
+      } else {
+        console.log(`Profile synced for ${email} with role: ${finalRole}`);
       }
     }
   }

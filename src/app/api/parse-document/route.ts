@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     // Split text into lines, clean up, and filter out empty or very short lines
     const lines = rawText
       .split(/\r?\n/)
-      .map(line => line.trim().replace(/^[\d\.\-\*]+\s*/, '')) // Remove leading numbers/bullets
+      .map((line: string) => line.trim().replace(/^[\d\.\-\*]+\s*/, '')) // Remove leading numbers/bullets
       .filter(line => line.length > 2 && line.length < 50); // Valid name length heuristic
 
     // Remove duplicates keeping original order

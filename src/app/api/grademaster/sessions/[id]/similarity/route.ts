@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { analyzeSessionSimilarity } from '@/lib/grademaster/services/similarity.service';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+      const supabase = await createClient();
     const { id: sessionId } = await params;
 
     if (!sessionId) {
@@ -28,6 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+      const supabase = await createClient();
     const { id: sessionId } = await params;
 
     if (!sessionId) {

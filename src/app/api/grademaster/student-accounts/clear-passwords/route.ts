@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { getAdminSession } from '@/lib/grademaster/admin';
 
 export async function POST(req: NextRequest) {
   try {
+      const supabase = await createClient();
     const adminSession = await getAdminSession();
     if (!adminSession) {
       return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });

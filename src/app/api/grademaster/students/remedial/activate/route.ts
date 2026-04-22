@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/grademaster/security';
 import { activateRemedialAttempt, markRemedialFailed } from '@/lib/grademaster/services/remedial.service';
 
 export async function POST(req: NextRequest) {
   let body: Record<string, any> | null = null;
   try {
+      const supabase = await createClient();
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`remedial-activate:${ip}`)) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan' }, { status: 429 });

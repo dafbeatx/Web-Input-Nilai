@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/grademaster/security';
 
 import { submitRemedial } from '@/lib/grademaster/services/remedial.service';
 
 export async function GET(req: NextRequest) {
   try {
+      const supabase = await createClient();
     const { searchParams } = new URL(req.url);
     const sessionId = searchParams.get('sessionId');
     const studentName = searchParams.get('studentName');
@@ -45,6 +46,7 @@ export async function GET(req: NextRequest) {
           console.log(`Auto-recovering stuck INITIATED attempt for ${studentName}`);
           const { markRemedialFailed } = await import('@/lib/grademaster/services/remedial.service');
           try {
+              const supabase = await createClient();
             await markRemedialFailed(attempt.id, student.id);
             currentStatus = 'FAILED';
           } catch (e) {
@@ -72,6 +74,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   let body: Record<string, any> | null = null;
   try {
+      const supabase = await createClient();
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`remedial:${ip}`)) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan' }, { status: 429 });
@@ -155,6 +158,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+      const supabase = await createClient();
     const { searchParams } = new URL(req.url);
     const studentId = searchParams.get('studentId');
 

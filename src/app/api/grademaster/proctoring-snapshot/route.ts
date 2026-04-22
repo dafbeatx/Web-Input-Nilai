@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/grademaster/security';
 
 export async function POST(req: NextRequest) {
   try {
+      const supabase = await createClient();
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     // Strict rate limit: max 2 snapshots per 30 seconds
     if (!checkRateLimit(`snapshot:${ip}`)) {

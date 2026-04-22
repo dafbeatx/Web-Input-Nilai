@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { hashPassword } from '@/lib/grademaster/security';
 
 export async function PUT(req: NextRequest) {
   try {
+      const supabase = await createClient();
     const session = await getAdminSession();
     if (!session) {
       return NextResponse.json({ error: 'Tidak ada akses (Unauthorized)' }, { status: 401 });

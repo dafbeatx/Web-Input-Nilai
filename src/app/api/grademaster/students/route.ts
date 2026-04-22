@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error;
 
-    const students = (data || []).map(s => ({
+    const students = (data || []).map((s: any) => ({
       id: s.id,
       name: s.name,
       answers: s.mcq_answers,

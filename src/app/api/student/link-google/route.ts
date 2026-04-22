@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/grademaster/security';
 import { createStudentSession } from '@/lib/grademaster/studentAuth';
 
 export async function POST(req: NextRequest) {
   try {
+      const supabase = await createClient();
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     // Gunakan batasan laju untuk mengamankan endpoint dari brute-force linkage attempt
     if (!checkRateLimit(`google_link:${ip}`)) {

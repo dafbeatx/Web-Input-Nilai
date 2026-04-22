@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/grademaster/security';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { analyzeExploits, ExploitAnalysisInput, SessionLogAction } from '@/lib/grademaster/services/exploit-analyzer.service';
 
 export async function POST(req: NextRequest) {
   try {
+      const supabase = await createClient();
     const adminSession = await getAdminSession();
     if (!adminSession) {
       return NextResponse.json({ error: 'Akses ditolak: Hanya admin yang diizinkan.' }, { status: 401 });
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Gagal mengambil log sistem.' }, { status: 500 });
       }
 
-      logsInput = (rawLogs || []).map(l => ({
+      logsInput = (rawLogs || []).map((l: any) => ({
         action: l.event_type,
         timestamp: new Date(l.created_at).getTime(),
         metadata: l.metadata

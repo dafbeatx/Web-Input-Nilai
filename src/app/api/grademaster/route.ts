@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       if (stuError || !students) return NextResponse.json({ error: 'Students not found' }, { status: 404 });
       
       // 3. Re-calculate and update each student
-      const updates = students.map(s => {
+      const updates = students.map((s: any) => {
         const result = calculateStudentResult(
           session.answer_key, 
           s.mcq_answers, 
@@ -275,7 +275,7 @@ export async function POST(req: NextRequest) {
       .eq('session_id', session.id)
       .order('created_at', { ascending: true });
 
-    const gradedStudents: GradedStudent[] = (students || []).map(s => ({
+    const gradedStudents: GradedStudent[] = (students || []).map((s: any) => ({
       id: s.id,
       name: s.name,
       answers: isReadOnly ? {} : s.mcq_answers,

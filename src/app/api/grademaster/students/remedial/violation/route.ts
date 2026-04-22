@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/grademaster/security';
 
 const MAX_VIOLATIONS = 3;
 
 export async function POST(req: NextRequest) {
   try {
+      const supabase = await createClient();
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`violation:${ip}`)) {
       return NextResponse.json({ error: 'Terlalu banyak request' }, { status: 429 });

@@ -216,7 +216,14 @@ export default function Navbar() {
                     </div>
                   )}
                 </>
-              ) : null}
+              ) : (
+                <button 
+                  onClick={() => onNavigate('student_login')}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20"
+                >
+                  <LogIn size={14} /> Login
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -497,7 +504,22 @@ export default function Navbar() {
                     </button>
                   </div>
                 </>
-              ) : null}
+              ) : (
+                <div className="pt-2">
+                  <button 
+                    onClick={() => { onNavigate('student_login'); setIsMobileMenuOpen(false); }} 
+                    className="w-full p-4 bg-primary text-white rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] shadow-lg shadow-primary/20"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                      <LogIn size={18} className="text-white" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold block leading-tight">Masuk ke GradeMaster</span>
+                      <span className="text-[9px] font-medium opacity-80">Akses fitur penuh guru & siswa</span>
+                    </div>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

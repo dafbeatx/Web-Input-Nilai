@@ -21,7 +21,23 @@ export async function GET() {
       .eq('id', user.id)
       .single();
 
-    const role = profile?.role || 'user';
+    let role = profile?.role || 'user';
+
+    // AUTO-UPGRADE: If user is in admin whitelist but role is 'user', upgrade them!
+    const adminDomains = ['@guru.smp.belajar.id', '@guru.belajar.id', '@smp.belajar.id', '@admin.belajar.id'];
+    const isWhitelisted = adminDomains.some(domain => email.toLowerCase().endsWith(domain)) || email === 'dafbeatx@gmail.com';
+    
+    if (role === 'user' && isWhitelisted) {
+      const { error: upgradeError } = await supabase
+        .from('profiles')
+        .update({ role: 'admin' })
+        .eq('id', user.id);
+      
+      if (!upgradeError) {
+        console.log(`Auto-upgraded ${email} to admin`);
+        role = 'admin';
+      }
+    }
 
     if (role === 'admin') {
       return NextResponse.json({
@@ -43,6 +59,14 @@ export async function GET() {
       .single();
 
     if (boundAccount && !boundError) {
+      // Find the corresponding behavior record ID to link logs
+      const { data: behaviorRecord } = await supabase
+        .from('gm_behaviors')
+        .select('id, total_points')
+        .eq('student_name', boundAccount.student_name)
+        .eq('class_name', boundAccount.class_name)
+        .single();
+
       // Yes! This email is permanently linked to a student.
       // Let's create the internal application session cookie for them.
       const { createStudentSession } = await import('@/lib/grademaster/studentAuth');
@@ -53,6 +77,8 @@ export async function GET() {
         role: 'student',
         student: {
           id: boundAccount.id,
+          student_id: behaviorRecord?.id, // LINK TO BEHAVIOR LOGS
+          total_points: behaviorRecord?.total_points || 0,
           name: boundAccount.student_name,
           class_name: boundAccount.class_name,
           academic_year: boundAccount.academic_year,
