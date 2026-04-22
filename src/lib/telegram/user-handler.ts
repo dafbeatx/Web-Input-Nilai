@@ -51,7 +51,7 @@ export async function handleUserCommand(chatId: number, text: string) {
       return;
     }
 
-    const uniqueClasses = [...new Set(sessions.map(s => s.class_name).filter(Boolean))];
+    const uniqueClasses = [...new Set(sessions.map((s: any) => s.class_name).filter(Boolean))];
     if (uniqueClasses.length === 0) {
       await sendMessage(chatId, '📭 <b>Maaf,</b> saat ini belum ada data kelas yang tersedia di sistem.');
       return;
@@ -90,7 +90,7 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
       .eq('class_name', value)
       .eq('is_demo', false);
 
-    const uniqueSubjects = [...new Set((sessions || []).map(s => s.subject).filter(Boolean))];
+    const uniqueSubjects = [...new Set((sessions || []).map((s: any) => s.subject).filter(Boolean))];
     if (uniqueSubjects.length === 0) {
       await sendMessage(chatId, `📭 Tidak ada data mata pelajaran untuk <b>Kelas ${value}</b>.`);
       userConversations.delete(chatId);
@@ -112,7 +112,7 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
       .eq('subject', value)
       .eq('is_demo', false);
 
-    const uniqueExamTypes = [...new Set((sessions || []).map(s => s.exam_type).filter(Boolean))];
+    const uniqueExamTypes = [...new Set((sessions || []).map((s: any) => s.exam_type).filter(Boolean))];
     if (uniqueExamTypes.length === 0) {
       await sendMessage(chatId, '📭 Data ujian tidak ditemukan.');
       userConversations.delete(chatId);
@@ -135,7 +135,7 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
       .eq('exam_type', value)
       .eq('is_demo', false);
 
-    const uniqueYears = [...new Set((sessions || []).map(s => s.academic_year).filter(Boolean))];
+    const uniqueYears = [...new Set((sessions || []).map((s: any) => s.academic_year).filter(Boolean))];
     if (uniqueYears.length === 0) {
       await sendMessage(chatId, '📭 Data tahun ajaran tidak dtemukan.');
       userConversations.delete(chatId);
@@ -183,7 +183,7 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
 
     const keyboard = [];
     for (let i = 0; i < students.length; i += 2) {
-      const row = students.slice(i, i + 2).map(s => ({
+      const row = students.slice(i, i + 2).map((s: any) => ({
         text: `👤 ${s.name}`,
         callback_data: `user_student::${s.id}`,
       }));
@@ -235,11 +235,11 @@ export async function handleUserCallback(chatId: number, callbackData: string) {
       return;
     }
 
-    const rank = students.findIndex(s => s.id === match.id) + 1;
+    const rank = students.findIndex((s: any) => s.id === match.id) + 1;
     const totalStudents = students.length;
-    const scores = students.map(s => Number(s.final_score));
-    const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-    const sorted = [...scores].sort((a, b) => a - b);
+    const scores = students.map((s: any) => Number(s.final_score));
+    const avg = Math.round(scores.reduce((a: any, b: any) => a + b, 0) / scores.length);
+    const sorted = [...scores].sort((a: any, b: any) => a - b);
     const median = sorted.length % 2 === 0
       ? Math.round((sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2)
       : sorted[Math.floor(sorted.length / 2)];

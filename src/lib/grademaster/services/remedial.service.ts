@@ -238,7 +238,7 @@ export async function submitRemedial(
 
     const serverRisk = assessServerRisk(
       answers,
-      (allStudents || []).map(s => ({
+      (allStudents || []).map((s: any) => ({
         id: s.id,
         name: s.name,
         remedialAnswers: s.remedial_answers || [],

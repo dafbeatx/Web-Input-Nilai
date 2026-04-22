@@ -27,7 +27,7 @@ async function renderClassSelection(ctx: Context) {
 
   if (error) return ctx.answerCbQuery(`❌ Gagal: ${error.message}`);
   
-  const uniqueClasses = Array.from(new Set(data?.map(d => d.class_name) || [])).sort();
+  const uniqueClasses = Array.from(new Set(data?.map((d: any) => d.class_name) || [])).sort();
 
   if (uniqueClasses.length === 0) {
     return ctx.editMessageText('📭 <b>Belum ada data kelas.</b>', {
@@ -128,7 +128,7 @@ async function renderStudentDashboard(ctx: Context, className: string, page: str
 
   let logText = '';
   if (logs && logs.length > 0) {
-    logText = logs.map(l => {
+    logText = logs.map((l: any) => {
       const icon = l.points_delta > 0 ? '👍' : '👎';
       return `${icon} ${new Date(l.created_at).toLocaleDateString()} | <b>${l.points_delta > 0 ? '+' : ''}${l.points_delta}</b> | ${l.reason}`;
     }).join('\n');
@@ -252,7 +252,7 @@ behaviorHandler.action(/^stubeh:logs:(.+)$/, async (ctx: MatchContext) => {
     return ctx.answerCbQuery('📭 Tidak ada log untuk dikelola.');
   }
 
-  const buttons = logs.map(l => {
+  const buttons = logs.map((l: any) => {
     const icon = l.points_delta > 0 ? '👍' : '👎';
     const dateStr = new Date(l.created_at).toLocaleDateString();
     return [Markup.button.callback(`${icon} ${dateStr} - ${l.reason}`, `stubeh:log_detail:${compressUUID(studentId)}:${compressUUID(l.id)}`)];

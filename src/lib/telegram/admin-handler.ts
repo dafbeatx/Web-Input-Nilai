@@ -433,7 +433,7 @@ async function renderSessionList(chatId: number, messageId: number | undefined, 
     return;
   }
 
-  const items = sessions.map(s => ({ id: s.id, text: s.session_name }));
+  const items = sessions.map((s: any) => ({ id: s.id, text: s.session_name }));
   const prefix = category.startsWith('sys_') ? 'sys:' + category.split('_')[1] : `nav:ses:${category}`;
   
   const keyboard = buildPaginationKeyboard(items, page, 5, prefix, `nav:sespage:${category}`, category.startsWith('sys_') ? 'nav:cat:system' : 'nav:main');
@@ -469,9 +469,9 @@ async function handleSessionSelection(chatId: number, messageId: number | undefi
     // Generate Dashboard
     const { data: students } = await supabase.from('gm_students').select('final_score').eq('session_id', sessionId).eq('is_deleted', false);
     const kkm = 70;
-    const scores = students?.map(s => s.final_score || 0) || [];
-    const avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : 0;
-    const tuntas = scores.filter(s => s >= kkm).length;
+    const scores = students?.map((s: any) => s.final_score || 0) || [];
+    const avg = scores.length ? Math.round(scores.reduce((a: any,b: any)=>a+b,0)/scores.length) : 0;
+    const tuntas = scores.filter((s: any) => s >= kkm).length;
     const msg = `📈 <b>Dashboard Sesi</b>\n\nSesi: ${session.session_name}\n\n👥 Total Siswa: ${scores.length}\n✅ Tuntas (>=${kkm}): ${tuntas}\n❌ Belum: ${scores.length - tuntas}\n📊 Rata-rata: ${avg}`;
     await editOrSend(chatId, messageId, msg, [[{ text: '🔙 Kembali', callback_data: 'nav:sespage:grades:1' }]]);
     return;
@@ -496,7 +496,7 @@ async function renderStudentList(chatId: number, messageId: number | undefined, 
     return;
   }
 
-  const items = students.map(s => {
+  const items = students.map((s: any) => {
     let icon = '';
     if (s.is_cheated || s.remedial_status === 'CHEATED') icon = '🚨 ';
     else if (s.final_score && s.final_score >= 70) icon = '✅ ';
