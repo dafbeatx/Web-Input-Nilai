@@ -117,7 +117,7 @@ export default function BehaviorLayer({
           schema: 'public',
           table: 'gm_behavior_logs'
         },
-        async (payload) => {
+        async (payload: any) => {
           // If a modal is open for the changed student, refresh their logs
           const changedStudentId = (payload.new as any)?.student_id || (payload.old as any)?.student_id;
           

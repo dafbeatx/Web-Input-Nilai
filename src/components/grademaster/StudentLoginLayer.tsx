@@ -51,7 +51,7 @@ export default function StudentLoginLayer({
     }
 
     // 3. Listen for Auth State Changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       console.log(`[AuthListener] Event: ${event}`);
       if (event === 'SIGNED_IN' && session) {
         handleSessionActive();
