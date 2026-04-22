@@ -975,7 +975,7 @@ export default function GradeMaster() {
         />
       )}
 
-      {layer === "student_profile" && isStudent && studentData && (
+      {layer === "student_profile" && isStudent && studentData && studentData.isGoogleLinked && (
         <StudentProfileLayer 
           studentId={studentData.student_id || studentData.id}
           studentName={studentData.name}
