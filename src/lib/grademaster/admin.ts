@@ -19,7 +19,7 @@ export async function getAdminSession() {
 
   return {
     user_id: user.id,
-    admin_users: { username: user.email }, // Mock old structure to avoid breaking dependent APIs
+    admin_users: { username: user.email || '' }, // Mock old structure to avoid breaking dependent APIs
   };
 }
 
