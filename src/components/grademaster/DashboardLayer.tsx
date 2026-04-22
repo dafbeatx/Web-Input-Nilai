@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  LayoutGrid, ArrowRight, ArrowLeft, Plus, User, Download, RefreshCcw,
-  Trash2, Bell, AlertCircle, Eye, AlertOctagon, Users, Timer, Clock,
+  ArrowRight, Plus, User, Download, RefreshCcw,
+  Trash2, AlertCircle, Eye, AlertOctagon, Users, Timer, Clock,
   Send, MonitorOff, Cpu, Edit2, Loader2, Globe, CheckCircle2, XCircle,
   MoreVertical, Check, Target, Trophy, TrendingUp, Info, BarChart3,
   ClipboardList, ShieldCheck, DownloadCloud, FileText, Filter, ChevronRight
@@ -130,26 +130,27 @@ export default function DashboardLayer({
   const passRate = gradedStudents.length > 0 ? Math.round((passCount / gradedStudents.length) * 100) : 0;
 
   return (
-    <div className="font-body text-on-surface min-h-dvh flex flex-col pb-32 bg-surface">
-      {/* Top Navigation */}
-      <nav className="fixed top-0 w-full z-40 bg-surface/80 backdrop-blur-xl flex justify-between items-center px-6 h-16 border-b border-outline-variant">
-        <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-1 px-2 bg-surface-variant rounded-lg border border-outline-variant active:scale-90 transition-all">
-            <ArrowLeft className="text-primary" size={20} />
-          </button>
-          <span className="text-xl font-black text-primary tracking-tighter font-headline">GradeMaster OS</span>
-        </div>
-        <div className="flex items-center gap-3">
-           {isAdmin && (
-             <button onClick={onGradeStudent} className="px-4 py-2 bg-tertiary text-on-tertiary rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 active:scale-95 transition-all shadow-[0_0_20px_rgba(155,255,206,0.3)]">
-                <Plus size={14} /> <span className="hidden sm:inline">Koreksi LJK</span>
-             </button>
-           )}
-        </div>
-      </nav>
+    <div className="font-body text-on-surface min-h-dvh flex flex-col bg-surface">
+      {/* Main Content — padded for global Navbar top & bottom */}
+      <main className="flex-1 px-4 sm:px-6 pt-6 pb-28 overflow-x-hidden max-w-4xl mx-auto w-full page-pt">
+        {/* Admin Quick-Action Strip (Mobile) */}
+        {isAdmin && (
+          <div className="md:hidden flex items-center justify-between mb-4 p-3 bg-emerald-500/5 border border-emerald-500/15 rounded-2xl">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 bg-emerald-500/15 rounded-lg flex items-center justify-center">
+                <CheckCircle2 size={14} className="text-emerald-500" />
+              </div>
+              <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Mode Admin</span>
+            </div>
+            <button
+              onClick={onGradeStudent}
+              className="flex items-center gap-1.5 px-3 py-2 bg-tertiary text-on-tertiary rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-md shadow-tertiary/20"
+            >
+              <Plus size={12} /> Koreksi
+            </button>
+          </div>
+        )}
 
-      {/* Main Content */}
-      <main className="flex-1 mt-16 px-6 pt-6 pb-40 overflow-x-hidden max-w-4xl mx-auto w-full">
         {/* Header Section */}
         <header className="mb-8">
           <div className="flex items-center gap-2 text-on-surface-variant text-[10px] font-bold uppercase tracking-[0.2em] mb-2">
@@ -157,7 +158,7 @@ export default function DashboardLayer({
             <span>•</span>
             <span>{subject}</span>
           </div>
-          <h1 className="font-headline font-extrabold text-3xl text-primary tracking-tight leading-none mb-2 uppercase">{sessionName || "HASIL ANALISIS NILAI"}</h1>
+          <h1 className="font-headline font-extrabold text-2xl sm:text-3xl text-primary tracking-tight leading-none mb-2 uppercase">{sessionName || "HASIL ANALISIS NILAI"}</h1>
           <p className="text-on-surface-variant font-medium text-sm max-w-[80%]">Analisis Performa Siswa & Statistik Ujian Terpadu</p>
         </header>
 
@@ -375,11 +376,11 @@ export default function DashboardLayer({
         )}
       </main>
 
-      {/* Floating Action Button for Admin */}
+      {/* Floating Action Button for Admin — positioned above global bottom nav */}
       {isAdmin && (
         <button 
           onClick={onGradeStudent}
-          className="fixed bottom-10 right-8 w-16 h-16 bg-tertiary text-on-tertiary rounded-2xl flex items-center justify-center z-40 active:scale-90 transition-transform shadow-[0_10px_30px_rgba(40,230,150,0.4)]"
+          className="hidden md:flex fixed bottom-8 right-8 w-16 h-16 bg-tertiary text-on-tertiary rounded-2xl items-center justify-center z-[1000] active:scale-90 transition-transform shadow-[0_10px_30px_rgba(40,230,150,0.4)]"
           title="Input Nilai Baru"
         >
           <div className="relative">
@@ -387,24 +388,6 @@ export default function DashboardLayer({
              <div className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full animate-ping opacity-50"></div>
           </div>
         </button>
-      )}
-
-      {/* Bottom Nav Placeholder UI */}
-      {!isPublicView && (
-        <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 bg-[#19191c]/80 backdrop-blur-xl z-50 pb-[env(safe-area-inset-bottom)] border-t border-outline-variant">
-          <button onClick={onBack} className="flex flex-col items-center justify-center text-[#adaaad] px-4 py-1.5 active:scale-90 duration-300">
-            <LayoutGrid size={24} />
-            <span className="font-['Inter'] text-[10px] font-medium uppercase tracking-[0.05em] mt-1">Sesi</span>
-          </button>
-          <button className="flex flex-col items-center justify-center bg-[#2c2c2f] text-[#f9f9f9] rounded-xl px-4 py-1.5 transition-all active:scale-90 duration-300">
-            <TrendingUp size={24} />
-            <span className="font-['Inter'] text-[10px] font-medium uppercase tracking-[0.05em] mt-1">Nilai</span>
-          </button>
-          <button className="flex flex-col items-center justify-center text-[#adaaad] px-4 py-1.5 active:scale-90 duration-300">
-            <Bell size={24} />
-            <span className="font-['Inter'] text-[10px] font-medium uppercase tracking-[0.05em] mt-1">Alert</span>
-          </button>
-        </nav>
       )}
     </div>
   );
