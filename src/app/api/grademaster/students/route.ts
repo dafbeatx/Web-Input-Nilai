@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/grademaster/security';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { getStudentSession } from '@/lib/grademaster/studentAuth';
@@ -7,6 +7,7 @@ import { logActivity } from '@/lib/grademaster/audit';
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = await createClient();
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`student:${ip}`)) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan' }, { status: 429 });
@@ -123,6 +124,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    const supabase = await createClient();
     const { searchParams } = new URL(req.url);
     const sessionId = searchParams.get('sessionId');
 
@@ -185,6 +187,7 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const supabase = await createClient();
     const body = await req.json();
     const { studentId } = body;
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { checkRateLimit } from '@/lib/grademaster/security';
 import { hashPassword } from '@/lib/grademaster/security';
@@ -29,6 +29,7 @@ function generatePassword(): string {
 
 export async function GET(req: NextRequest) {
   try {
+    const supabase = await createClient();
     const { searchParams } = new URL(req.url);
     const className = searchParams.get('class');
     const academicYear = searchParams.get('year') || '2025/2026';
@@ -109,6 +110,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = await createClient();
     const adminSession = await getAdminSession();
     if (!adminSession) {
       return NextResponse.json({ error: 'Akses ditolak: Hanya admin yang dapat membuat akun siswa' }, { status: 403 });
@@ -216,6 +218,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const supabase = await createClient();
     const adminSession = await getAdminSession();
     if (!adminSession) {
       return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { checkRateLimit } from '@/lib/grademaster/security';
 import { logActivity } from '@/lib/grademaster/audit';
 
 export async function GET(req: NextRequest) {
   try {
+    const supabase = await createClient();
     const { searchParams } = new URL(req.url);
     const className = searchParams.get('class');
     const academicYear = searchParams.get('year');
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
         console.error('[GET Behaviors - Classes] DB Error:', error);
         throw error;
       }
-      const classes = Array.from(new Set(data?.map(d => d.class_name) || []));
+      const classes = Array.from(new Set((data as { class_name: string }[])?.map(d => d.class_name) || []));
       return NextResponse.json({ classes });
     }
 
@@ -55,6 +56,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = await createClient();
     const adminSession = await getAdminSession();
     if (!adminSession) {
       return NextResponse.json({ error: 'Unauthorized: Only admin can initialize student data' }, { status: 403 });
@@ -119,6 +121,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const supabase = await createClient();
     const adminSession = await getAdminSession();
     if (!adminSession) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
@@ -179,6 +182,7 @@ export async function DELETE(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const supabase = await createClient();
     const adminSession = await getAdminSession();
     if (!adminSession) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
