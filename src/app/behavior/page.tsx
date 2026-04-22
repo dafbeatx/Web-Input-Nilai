@@ -79,7 +79,7 @@ export default function BehaviorPage() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'gm_behavior_logs' },
-        (payload) => {
+        (payload: any) => {
           const changedId = (payload.new as any)?.student_id || (payload.old as any)?.student_id;
           if (selectedStudent && selectedStudent.id === changedId) {
             fetchLogs(changedId);
