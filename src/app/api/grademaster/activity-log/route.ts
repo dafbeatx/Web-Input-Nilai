@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/grademaster/security';
 import { getStudentSession } from '@/lib/grademaster/studentAuth';
 import { getAdminSession } from '@/lib/grademaster/admin';
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = await createClient();
     const studentSession = await getStudentSession();
     const adminSession = await getAdminSession();
 
