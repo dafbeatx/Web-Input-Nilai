@@ -44,7 +44,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return;
 
     const hash = window.location.hash.replace('#', '');
-    const validLayers: Layer[] = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login', 'attendance', 'student_accounts', 'student_login'];
+    const validLayers: Layer[] = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login', 'attendance', 'student_accounts', 'student_login', 'student_claim', 'teacher_claim'];
     
     // 1. Restore Admin State
     const savedAdmin = localStorage.getItem('gm_isAdmin') === 'true';
@@ -121,9 +121,17 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   // Sync state to LocalStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
+    localStorage.setItem("gm_isAdmin", isAdmin.toString());
+    if (adminUser) localStorage.setItem("gm_adminUser", adminUser);
+    else localStorage.removeItem("gm_adminUser");
+    
+    localStorage.setItem("gm_isStudent", isStudent.toString());
+    if (studentData) localStorage.setItem("gm_studentData", JSON.stringify(studentData));
+    else localStorage.removeItem("gm_studentData");
+
     localStorage.setItem("gm_studentClass", studentClass);
     localStorage.setItem("gm_academicYear", academicYear);
-  }, [studentClass, academicYear]);
+  }, [isAdmin, adminUser, isStudent, studentData, studentClass, academicYear]);
 
   // Update URL and LocalStorage on Layer change
   const navigate = (newLayer: Layer) => {

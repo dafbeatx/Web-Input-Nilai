@@ -189,4 +189,4 @@ export interface Quiz {
 
 export type ModalType = 'save' | 'load' | 'delete' | 'about' | 'error' | 'adminSettings' | null;
 export type ToastType = { message: string; type: 'success' | 'error' } | null;
-export type Layer = 'home' | 'setup' | 'dashboard' | 'grading' | 'login' | 'remedial' | 'behavior' | 'remedial_dashboard' | 'attendance' | 'student_accounts' | 'student_login' | 'student_profile' | 'student_claim' | 'lesson_management';
+export type Layer = 'home' | 'setup' | 'dashboard' | 'grading' | 'login' | 'remedial' | 'behavior' | 'remedial_dashboard' | 'attendance' | 'student_accounts' | 'student_login' | 'student_profile' | 'student_claim' | 'teacher_claim' | 'lesson_management';

@@ -17,7 +17,7 @@ export async function GET() {
     // Fetch role from profiles
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, display_name, subject')
       .eq('id', user.id)
       .single();
 
@@ -28,6 +28,8 @@ export async function GET() {
         authenticated: true,
         role: 'admin',
         username: username,
+        displayName: profile?.display_name,
+        subject: profile?.subject,
         email: email,
         avatar_url: identityData.avatar_url
       });

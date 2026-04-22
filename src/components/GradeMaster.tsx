@@ -31,6 +31,7 @@ import AttendanceLayer from "./grademaster/AttendanceLayer";
 import StudentLoginLayer from "./grademaster/StudentLoginLayer";
 import StudentProfileLayer from "./grademaster/StudentProfileLayer";
 import StudentClaimLayer from "./grademaster/StudentClaimLayer";
+import TeacherClaimLayer from "./grademaster/TeacherClaimLayer";
 import LessonManagementLayer from "./grademaster/LessonManagementLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 
@@ -208,11 +209,18 @@ export default function GradeMaster() {
       if (data.authenticated && data.role === 'admin') {
         setIsAdmin(true);
         setIsStudent(false); // Mutual exclusivity
-        setAdminUser(data.username || null);
-        
-        // Admins should never be stuck on student entry layers
-        if (layer === 'student_login' || layer === 'login' || layer === 'student_claim') {
-          setLayer('home');
+        if (data.displayName && data.subject) {
+          setAdminUser(data.displayName);
+          setTeacherName(data.displayName);
+          setSubject(data.subject);
+          
+          if (layer === 'student_login' || layer === 'login' || layer === 'student_claim' || layer === 'teacher_claim') {
+            setLayer('home');
+          }
+        } else {
+          // Admin exists but hasn't set up their profile yet
+          setAdminUser(data.username);
+          setLayer('teacher_claim');
         }
       } else if (data.authenticated && data.role === 'student') {
         setIsAdmin(false);
@@ -764,6 +772,12 @@ export default function GradeMaster() {
           onLoginClick={() => setLayer("student_login")}
           onLogout={handleAdminLogout}
           onOpenSettings={() => setModal("adminSettings")}
+          userData={{
+            name: isAdmin ? adminUser : studentData?.name,
+            class_name: studentData?.class_name,
+            subject: isAdmin ? subject : undefined
+          }}
+          isStudent={isStudent}
         />
         )}
 
@@ -776,6 +790,24 @@ export default function GradeMaster() {
             saveAdminSession(user);
             setLayer("setup");
           }}
+          setToast={setToast}
+        />
+      )}
+
+      {layer === "teacher_claim" && (
+        <TeacherClaimLayer
+          googleUser={{
+            name: adminUser || '',
+            email: studentData?.email || '',
+            photo_url: studentData?.photo_url
+          }}
+          onSuccess={(displayName, sub) => {
+            setAdminUser(displayName);
+            setTeacherName(displayName);
+            setSubject(sub);
+            setLayer('home');
+          }}
+          onLogout={handleAdminLogout}
           setToast={setToast}
         />
       )}

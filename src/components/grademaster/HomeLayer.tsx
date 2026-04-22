@@ -15,6 +15,8 @@ interface HomeLayerProps {
   onLoginClick: () => void;
   onLogout: () => void;
   onOpenSettings: () => void;
+  userData: { name?: string; class_name?: string; subject?: string };
+  isStudent: boolean;
 }
 
 interface ClassGroup {
@@ -24,15 +26,18 @@ interface ClassGroup {
   sessions: SessionMeta[];
 }
 
-export default function HomeLayer({
-  sessions,
-  isLoading,
-  onCreateNew,
-  onSessionClick,
-  onDeleteSession,
-  onOpenAbout,
-  isAdmin,
-}: HomeLayerProps) {
+export default function HomeLayer(props: HomeLayerProps) {
+  const {
+    sessions,
+    isLoading,
+    onCreateNew,
+    onSessionClick,
+    onDeleteSession,
+    isAdmin,
+    userData,
+    isStudent
+  } = props;
+
   const [expandedClass, setExpandedClass] = useState<string | null>(null);
   const [behaviorSummary, setBehaviorSummary] = useState<Record<string, { count: number; avgPoints: number }>>({});
 
@@ -54,7 +59,6 @@ export default function HomeLayer({
   }, [sessions]);
 
   useEffect(() => {
-    const uniqueKeys = classGroups.map(g => `${g.className}__${g.academicYear}`);
     const fetchAll = async () => {
       const summaryMap: Record<string, { count: number; avgPoints: number }> = {};
       await Promise.all(
@@ -80,7 +84,41 @@ export default function HomeLayer({
   const expandedGroup = expandedClass ? classGroups.find(g => `${g.className}__${g.academicYear}` === expandedClass) : null;
 
   return (
-    <main className="min-h-screen pt-[env(safe-area-inset-top,20px)] mt-24 pb-32 px-6 flex flex-col gap-10 max-w-md mx-auto animate-in fade-in transition-all duration-300">
+    <main className="min-h-screen pt-[env(safe-area-inset-top,20px)] mt-24 pb-32 px-6 flex flex-col gap-8 max-w-md mx-auto animate-in fade-in transition-all duration-300">
+      
+      {/* Personalized Identity Section */}
+      {!expandedGroup && (
+        <section className="mb-2 animate-in slide-in-from-top-4 duration-700">
+          <div className="bg-surface-container-low p-5 rounded-[2rem] border border-outline-variant/10 flex items-center gap-4 relative overflow-hidden premium-shadow">
+             <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
+               {isAdmin ? (
+                 <span className="material-symbols-outlined text-2xl">shield_person</span>
+               ) : (
+                 <span className="material-symbols-outlined text-2xl">person_pin</span>
+               )}
+             </div>
+             <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant/60 leading-none mb-1.5">
+                  {isAdmin ? 'Admin / Guru' : 'Siswa Terverifikasi'}
+                </p>
+                <h2 className="text-lg font-black text-on-surface truncate tracking-tight leading-none">
+                  {userData.name || (isAdmin ? 'Guru GradeMaster' : 'Siswa')}
+                </h2>
+                <div className="flex items-center gap-2 mt-2">
+                   <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 bg-surface-container text-on-surface-variant rounded-md">
+                     {isAdmin ? (userData.subject || 'Sistem') : (`Kelas ${userData.class_name || '-'}`)}
+                   </span>
+                   {isStudent && (
+                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                   )}
+                </div>
+             </div>
+             {/* Abstract Decor */}
+             <div className="absolute -right-6 -top-6 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
+          </div>
+        </section>
+      )}
+
       {/* Header Section */}
       <header className="flex flex-col">
         {expandedGroup ? (
@@ -101,9 +139,6 @@ export default function HomeLayer({
           </div>
         ) : (
           <div className="flex flex-col">
-            <p className="text-xs font-semibold tracking-widest text-on-surface-variant uppercase mb-4 border-t border-surface-container-high pt-4 inline-block">
-              Tahun Ajaran 2025/2026
-            </p>
             <div className="flex items-start justify-between mb-3">
               <h1 className="text-4xl font-headline font-bold text-on-primary-fixed tracking-[-0.04em]">Daftar Kelas</h1>
               {isAdmin && (

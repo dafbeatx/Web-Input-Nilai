@@ -48,7 +48,7 @@ export default function Navbar() {
 
   // Hidden in behavior page (uses its own nav), exam, and auth layers
   if (pathname?.startsWith('/behavior')) return null;
-  if (['login', 'student_login', 'student_claim', 'remedial'].includes(layer)) return null;
+  if (['login', 'student_login', 'student_claim', 'teacher_claim', 'remedial'].includes(layer)) return null;
 
   const onOpenSettings = () => setModal("adminSettings");
   const onLoginClick = () => onNavigate("login");

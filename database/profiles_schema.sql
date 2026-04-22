@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   email TEXT UNIQUE NOT NULL,
   full_name TEXT,
   avatar_url TEXT,
+  display_name TEXT,
+  subject TEXT,
   role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user', 'student_google')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
