@@ -28,9 +28,8 @@ export async function GET() {
     const isWhitelisted = adminDomains.some(domain => email.toLowerCase().endsWith(domain)) || email === 'dafbeatx@gmail.com';
     
     if (role !== 'admin' && isWhitelisted) {
-      // Use admin client to bypass RLS just to be absolutely sure the upgrade works
-      const { supabaseAdmin } = await import('@/lib/supabase/admin');
-      const { error: upgradeError } = await supabaseAdmin
+      // Use upsert instead of update to handle cases where profile row doesn't exist yet
+      const { error: upgradeError } = await supabase
         .from('profiles')
         .upsert({
           id: user.id,
@@ -42,11 +41,12 @@ export async function GET() {
       
       if (!upgradeError) {
         console.log(`Auto-upgraded ${email} to admin`);
+        role = 'admin';
       } else {
         console.error(`Auto-upgrade failed for ${email}:`, upgradeError);
+        // Fallback to admin locally to prevent getting stuck
+        role = 'admin';
       }
-      // Force role to admin locally so they don't get stuck in student loop
-      role = 'admin';
     }
 
     if (role === 'admin') {
