@@ -83,7 +83,7 @@ export default function StudentLoginLayer({
         provider: 'google',
         options: {
           // This matches the helper route we created
-          redirectTo: `${window.location.origin}/student-claim`,
+          redirectTo: `${window.location.origin}/api/auth/callback`,
         },
       });
       if (error) throw new Error(error.message);

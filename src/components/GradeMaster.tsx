@@ -742,7 +742,7 @@ export default function GradeMaster() {
               setGradedStudents([]);
               setIsSessionPublic(true);
             } else {
-              setLayer("login");
+              setLayer("student_login");
             }
           }}
           onSessionClick={(session: SessionMeta) => {
@@ -761,7 +761,7 @@ export default function GradeMaster() {
           }}
           onOpenAbout={() => setModal("about")}
           isAdmin={isAdmin}
-          onLoginClick={() => setLayer("login")}
+          onLoginClick={() => setLayer("student_login")}
           onLogout={handleAdminLogout}
           onOpenSettings={() => setModal("adminSettings")}
         />

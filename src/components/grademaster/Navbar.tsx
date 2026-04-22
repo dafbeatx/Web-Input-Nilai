@@ -216,11 +216,7 @@ export default function Navbar() {
                     </div>
                   )}
                 </>
-              ) : (
-                <button onClick={onLoginClick} className="px-4 py-2 text-on-surface-variant hover:text-primary hover:bg-surface-variant rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
-                  <LogIn size={14} className="inline mr-2" /> Login
-                </button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -501,14 +497,7 @@ export default function Navbar() {
                     </button>
                   </div>
                 </>
-              ) : (
-                <button 
-                  onClick={() => { onLoginClick(); setIsMobileMenuOpen(false); }} 
-                  className="w-full p-5 bg-primary-container text-white rounded-2xl text-sm font-extrabold uppercase tracking-widest shadow-lg shadow-primary-container/30 flex items-center justify-center gap-3 active:scale-[0.97] transition-transform"
-                >
-                  <LogIn size={20} /> Login
-                </button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
