@@ -262,6 +262,50 @@ export default function GradeMaster() {
     checkAdmin();
   }, []);
 
+  // Tele-log: Catch when user reaches dashboard/home for the first time
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    const isPostLoginLayer = layer === 'dashboard' || layer === 'home';
+    const isUserLoggedIn = isAdmin || isStudent;
+    
+    if (isPostLoginLayer && isUserLoggedIn) {
+      const role = isAdmin ? 'Admin' : 'Student';
+      const name = isAdmin ? (adminUser || 'Admin') : (studentData?.name || 'Siswa');
+      const sessionKey = `gm_telelog_sent_${role}_${name}`;
+
+      if (!sessionStorage.getItem(sessionKey)) {
+        sessionStorage.setItem(sessionKey, 'true');
+
+        const sendLog = (location?: any) => {
+          fetch('/api/grademaster/tele-log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'LOGIN', name, role, location })
+          }).catch(() => {});
+        };
+
+        // Try getting location passively (only if already granted)
+        if (navigator.permissions && navigator.geolocation) {
+          navigator.permissions.query({ name: 'geolocation' }).then(result => {
+            if (result.state === 'granted') {
+              navigator.geolocation.getCurrentPosition(
+                (pos) => sendLog({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                () => sendLog(),
+                { timeout: 5000, maximumAge: 60000 }
+              );
+            } else {
+              sendLog();
+            }
+          }).catch(() => sendLog());
+        } else {
+          sendLog();
+        }
+      }
+    }
+  }, [layer, isAdmin, isStudent, adminUser, studentData]);
+
+
   const penalizedStudents = React.useMemo(() => {
     return gradedStudents.map(s => ({
       ...s,

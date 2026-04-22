@@ -23,6 +23,7 @@ export const metadata: Metadata = {
 import { GradeMasterProvider } from '@/context/GradeMasterContext';
 import Navbar from '@/components/grademaster/Navbar';
 import StarBackground from '@/components/grademaster/ui/StarBackground';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 
 export default function RootLayout({
@@ -39,12 +40,14 @@ export default function RootLayout({
       <body className={`${inter.variable} ${outfit.variable} ${amiri.variable} ${manrope.variable} font-sans text-slate-900 antialiased selection:bg-primary/30 flex flex-col min-h-dvh`}>
         <StarBackground />
 
-        <GradeMasterProvider>
-          <Navbar />
-          <main className="relative flex-1">
-            {children}
-          </main>
-        </GradeMasterProvider>
+        <ErrorBoundary>
+          <GradeMasterProvider>
+            <Navbar />
+            <main className="relative flex-1">
+              {children}
+            </main>
+          </GradeMasterProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
