@@ -364,7 +364,6 @@ export default function GradingLayer(props: GradingLayerProps) {
                     )}
                   </div>
                 )}
-              </div>
             </div>
             {isNewStudent && (
               <p className="text-[10px] mt-2 font-bold text-amber-500 flex items-center gap-1.5 animate-in fade-in pl-1">
