@@ -1,59 +1,28 @@
-import { cookies } from 'next/headers';
-import { supabase } from '@/lib/supabase/client';
-import { randomBytes } from 'crypto';
-
-const SESSION_COOKIE = 'gm_admin_token';
-const SESSION_EXPIRY_DAYS = 7;
-
-export async function createAdminSession(userId: string) {
-  const token = randomBytes(32).toString('hex');
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + SESSION_EXPIRY_DAYS);
-
-  const { error } = await supabase.rpc('create_admin_session', {
-    p_user_id: userId,
-    p_token: token,
-    p_expires_at: expiresAt.toISOString(),
-  });
-
-  if (error) throw error;
-
-  (await cookies()).set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    path: '/',
-    maxAge: 60 * 60 * 24 * SESSION_EXPIRY_DAYS,
-  });
-
-  return token;
-}
+import { createClient } from '@/lib/supabase/server';
 
 export async function getAdminSession() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!token) return null;
+  if (!user) return null;
 
-  const { data: sessionData, error } = await supabase.rpc('get_admin_session_data', {
-    p_token: token,
-  });
+  // Verify they are actually an admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
 
-  if (error || !sessionData || sessionData.length === 0) return null;
+  if (profile?.role !== 'admin') {
+    return null;
+  }
 
   return {
-    user_id: sessionData[0].user_id,
-    admin_users: { username: sessionData[0].username },
+    user_id: user.id,
+    admin_users: { username: user.email }, // Mock old structure to avoid breaking dependent APIs
   };
 }
 
-export async function clearAdminSession() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
-
-  if (token) {
-    await supabase.rpc('delete_admin_session', { p_token: token });
-  }
-
-  cookieStore.delete(SESSION_COOKIE);
-}
+// These are now obsolete due to Supabase Auth, kept as no-ops to prevent immediate crashes
+export async function createAdminSession(userId: string) { return null; }
+export async function clearAdminSession() { }
