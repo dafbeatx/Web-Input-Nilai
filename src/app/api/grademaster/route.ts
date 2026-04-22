@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     } = body;
 
     // Determine if we are updating or creating
-    let existing = null;
+    let existing: { id: string; session_name: string; password_hash: string; } | null = null;
     if (sessionId) {
       const { data } = await supabase.from('gm_sessions').select('id, session_name, password_hash').eq('id', sessionId).single();
       existing = data;
@@ -359,7 +359,7 @@ export async function DELETE(req: NextRequest) {
     const body = await req.json();
     const { sessionId, sessionName, password } = body;
 
-    let existing = null;
+    let existing: { id: string; session_name: string; password_hash: string; } | null = null;
     if (sessionId) {
       const { data } = await supabase.from('gm_sessions').select('id, session_name, password_hash').eq('id', sessionId).single();
       existing = data;

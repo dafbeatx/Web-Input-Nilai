@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
       .select('username');
 
     const usedUsernames = new Set((allUsernames || []).map((a: any) => a.username));
-    const accountRows = [];
+    const accountRows: any[] = [];
 
     for (const student of newStudents) {
       let baseUsername = generateUsername(student.student_name, student.class_name);

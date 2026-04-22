@@ -147,7 +147,7 @@ export default function GradingLayer(props: GradingLayerProps) {
 
       if (data.studentName) setStudentName(data.studentName);
       
-      const warnings = [];
+      const warnings: string[] = [];
       if (data.studentClass && !data.studentClass.toLowerCase().includes(studentClass.toLowerCase()) && !studentClass.toLowerCase().includes(data.studentClass.toLowerCase())) {
         warnings.push(`Kelas (${data.studentClass}) berbeda dari target sesi (${studentClass}).`);
       }
