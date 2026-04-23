@@ -442,13 +442,13 @@ export default function GradingLayer(props: GradingLayerProps) {
             <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1.5">Skor Akhir</p>
             <div className="flex items-end gap-2 mb-1">
               <span className="text-5xl md:text-7xl font-black text-on-surface leading-none">
-                {result.finalScore < kkm ? 0 : result.finalScore}
+                {result.finalScore}
               </span>
               <span className="text-slate-600 font-bold mb-1">/ 100</span>
             </div>
             {result.finalScore < kkm ? (
               <p className="text-[10px] font-black text-rose-500 mb-4 uppercase tracking-widest flex items-center gap-1.5 animate-pulse">
-                <AlertOctagon size={12} /> REMEDIAL (PENALTY: 0)
+                <AlertOctagon size={12} /> BELUM TUNTAS (REMEDIAL)
               </p>
             ) : (
               <p className="text-xs font-bold text-primary mb-4">{getScoreLabel(result.finalScore)}</p>

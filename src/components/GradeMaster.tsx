@@ -309,9 +309,9 @@ export default function GradeMaster() {
   const penalizedStudents = React.useMemo(() => {
     return gradedStudents.map(s => ({
       ...s,
-      finalScore: s.finalScore < kkm ? 0 : s.finalScore
+      finalScore: s.finalScore
     }));
-  }, [gradedStudents, kkm]);
+  }, [gradedStudents]);
 
   const analytics = React.useMemo(() => {
     const base = generateAnalytics(penalizedStudents, answerKey);
@@ -669,9 +669,6 @@ export default function GradeMaster() {
   const handleSaveStudent = async (student: GradedStudent) => {
     setGradedStudents((prev) => [...prev, student]);
 
-    // ENFORCE POLICY: If score < KKM, set to 0
-    const finalScore = student.finalScore < kkm ? 0 : student.finalScore;
-
     // Persist to DB if we have a session ID
     if (sessionId) {
       try {
@@ -685,7 +682,7 @@ export default function GradeMaster() {
             essayScores: student.essayScores,
             mcqScore: student.mcqScore,
             essayScore: student.essayScore,
-            finalScore: finalScore,
+            finalScore: student.finalScore,
             csi: student.csi,
             lps: student.lps,
             correct: student.correct,

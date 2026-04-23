@@ -147,17 +147,36 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error;
 
-    const students = (data || []).map((s: any) => ({
+    const { data: sessionData } = await supabase
+      .from('gm_sessions')
+      .select('scoring_config')
+      .eq('id', sessionId)
+      .single();
+
+    const config = sessionData?.scoring_config || { pgWeight: 0.7, essayWeight: 0.3 };
+
+    const students = (data || []).map((s: any) => {
+      let finalScore = Number(s.final_score);
+      const mcqScore = Number(s.mcq_score);
+      const essayScore = Number(s.essay_score);
+      
+      // Auto-heal logic: If final_score was forcefully set to 0 by the previous bug, 
+      // but mcq_score or essay_score exists, recalculate it.
+      if (finalScore === 0 && (mcqScore > 0 || essayScore > 0)) {
+        finalScore = Math.round((mcqScore * (config.pgWeight || 0.7)) + (essayScore * (config.essayWeight || 0.3)));
+      }
+
+      return {
       id: s.id,
       name: s.name,
       answers: s.mcq_answers,
       essayScores: s.essay_scores,
       correct: s.correct,
       wrong: s.wrong,
-      mcqScore: Number(s.mcq_score),
-      essayScore: Number(s.essay_score),
-      finalScore: Number(s.final_score),
-      percentage: Number(s.final_score),
+      mcqScore,
+      essayScore,
+      finalScore,
+      percentage: finalScore,
       csi: s.csi,
       lps: s.lps,
       remedialStatus: s.remedial_status,
@@ -175,7 +194,8 @@ export async function GET(req: NextRequest) {
       essayScoreManual: s.essay_score_manual,
       essayScoreFinal: s.essay_score_final,
       essayAutoDetails: s.essay_auto_details,
-    }));
+      };
+    });
 
     return NextResponse.json({ students });
   } catch (err: unknown) {
