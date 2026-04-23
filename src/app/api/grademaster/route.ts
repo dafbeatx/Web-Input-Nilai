@@ -280,17 +280,29 @@ export async function POST(req: NextRequest) {
       .eq('session_id', session.id)
       .order('created_at', { ascending: true });
 
-    const gradedStudents: GradedStudent[] = (students || []).map((s: any) => ({
+    const config = session.scoring_config || { pgWeight: 0.7, essayWeight: 0.3 };
+
+    const gradedStudents: GradedStudent[] = (students || []).map((s: any) => {
+      let finalScore = Number(s.final_score);
+      const mcqScore = Number(s.mcq_score);
+      const essayScore = Number(s.essay_score);
+      
+      // Auto-heal logic
+      if (finalScore === 0 && (mcqScore > 0 || essayScore > 0)) {
+        finalScore = Math.round((mcqScore * (config.pgWeight || 0.7)) + (essayScore * (config.essayWeight || 0.3)));
+      }
+
+      return {
       id: s.id,
       name: s.name,
       answers: isReadOnly ? {} : s.mcq_answers,
       essayScores: isReadOnly ? [] : s.essay_scores,
       correct: s.correct,
       wrong: s.wrong,
-      mcqScore: Number(s.mcq_score),
-      essayScore: Number(s.essay_score),
-      finalScore: Number(s.final_score),
-      percentage: Number(s.final_score),
+      mcqScore,
+      essayScore,
+      finalScore,
+      percentage: finalScore,
       csi: s.csi,
       lps: s.lps,
       remedialStatus: s.remedial_status,
@@ -309,7 +321,8 @@ export async function POST(req: NextRequest) {
       essayScoreManual: s.essay_score_manual ? Number(s.essay_score_manual) : undefined,
       essayScoreFinal: s.essay_score_final ? Number(s.essay_score_final) : undefined,
       essayAutoDetails: isReadOnly ? undefined : s.essay_auto_details,
-    }));
+      };
+    });
 
     // Calculate difficulties on server before hiding answerKey
     const questionDifficulties = generateQuestionDifficulties(gradedStudents, session.answer_key);
