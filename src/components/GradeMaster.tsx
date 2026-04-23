@@ -915,6 +915,8 @@ export default function GradeMaster() {
           semester={semester}
           isAdmin={isAdmin}
           showRemedialButton={showRemedialButton}
+          isStudent={isStudent}
+          currentStudentName={isStudent ? (studentData?.name || '') : ''}
           onGradeStudent={() => {
             resetGrading();
             setLayer("grading");

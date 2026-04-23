@@ -45,6 +45,8 @@ interface DashboardLayerProps {
   sessionId?: string;
   isAdmin?: boolean;
   showRemedialButton?: boolean;
+  isStudent?: boolean;
+  currentStudentName?: string;
 }
 
 const PIE_COLORS = ['#9bffce', '#ff6e84'];
@@ -53,7 +55,8 @@ export default function DashboardLayer({
   teacherName, subject, studentClass, schoolLevel, gradedStudents,
   analytics, isPublicView, sessionName, kkm, remedialEssayCount,
   onGradeStudent, onStudentRemedial, onBack, onReSync, academicYear,
-  semester, examType, isDemo, sessionId, isAdmin = false, showRemedialButton = false
+  semester, examType, isDemo, sessionId, isAdmin = false, showRemedialButton = false,
+  isStudent = false, currentStudentName = ''
 }: DashboardLayerProps) {
   const [activeTab, setActiveTab] = useState<'ikhtisar' | 'analisis' | 'laporan'>('ikhtisar');
   const [behaviorMap, setBehaviorMap] = useState<Record<string, BehaviorRecord>>({});
@@ -129,6 +132,13 @@ export default function DashboardLayer({
   const remCount = gradedStudents.length - passCount;
   const passRate = gradedStudents.length > 0 ? Math.round((passCount / gradedStudents.length) * 100) : 0;
 
+  // Student Remedial Detection
+  const myStudentRecord = isStudent && currentStudentName
+    ? gradedStudents.find(s => s.name.toLowerCase() === currentStudentName.toLowerCase())
+    : null;
+  const needsRemedial = myStudentRecord ? myStudentRecord.finalScore < kkm : false;
+  const canStartRemedial = needsRemedial && showRemedialButton && onStudentRemedial;
+
   return (
     <div className="font-body text-on-surface min-h-dvh flex flex-col bg-surface">
       {/* Main Content — padded for global Navbar top & bottom */}
@@ -148,6 +158,60 @@ export default function DashboardLayer({
             >
               <Plus size={12} /> Koreksi
             </button>
+          </div>
+        )}
+
+        {/* Student Remedial CTA Banner — Mobile-optimized */}
+        {isStudent && myStudentRecord && needsRemedial && canStartRemedial && (
+          <div className="mb-6 animate-in slide-in-from-top-4 duration-500">
+            <div className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-rose-600/90 via-rose-500/80 to-orange-500/70 p-5 shadow-xl shadow-rose-600/20">
+              {/* Background decoration */}
+              <div className="absolute -right-8 -top-8 w-28 h-28 bg-white/5 rounded-full blur-xl" />
+              <div className="absolute -left-4 -bottom-4 w-20 h-20 bg-white/5 rounded-full blur-lg" />
+              
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-sm">
+                    <AlertCircle size={16} className="text-white" />
+                  </div>
+                  <span className="text-[10px] font-black text-white/80 uppercase tracking-[0.2em]">Remedial Tersedia</span>
+                </div>
+                
+                <h3 className="text-white font-headline font-extrabold text-lg leading-tight mb-1">
+                  Nilai Anda: {myStudentRecord.finalScore} <span className="text-white/60 text-sm font-bold">(KKM {kkm})</span>
+                </h3>
+                <p className="text-white/70 text-xs font-medium mb-4 leading-relaxed">
+                  Anda belum mencapai KKM. Ikuti remedial untuk memperbaiki nilai Anda.
+                </p>
+                
+                <button
+                  onClick={() => onStudentRemedial!(currentStudentName)}
+                  className="w-full py-3.5 bg-white text-rose-600 font-black text-sm uppercase tracking-widest rounded-2xl active:scale-[0.97] transition-all duration-200 shadow-lg shadow-black/10 flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'wght' 700" }}>edit_note</span>
+                  Mulai Remedial Sekarang
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Student Score Highlight — when student is logged in */}
+        {isStudent && myStudentRecord && !needsRemedial && (
+          <div className="mb-6 animate-in slide-in-from-top-4 duration-500">
+            <div className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-emerald-600/90 via-emerald-500/80 to-teal-500/70 p-5 shadow-xl shadow-emerald-600/20">
+              <div className="absolute -right-8 -top-8 w-28 h-28 bg-white/5 rounded-full blur-xl" />
+              <div className="relative z-10 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-black text-white/70 uppercase tracking-[0.2em]">Nilai Anda</span>
+                  <h3 className="text-white font-headline font-extrabold text-2xl leading-none mt-1">{myStudentRecord.finalScore}</h3>
+                </div>
+                <div className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center backdrop-blur-sm">
+                  <CheckCircle2 size={28} className="text-white" />
+                </div>
+              </div>
+              <p className="relative z-10 text-white/60 text-[10px] font-bold uppercase tracking-widest mt-2">Selamat! Anda lulus KKM {kkm}</p>
+            </div>
           </div>
         )}
 
@@ -252,6 +316,17 @@ export default function DashboardLayer({
                       {isAdmin && (
                         <button onClick={() => handleEditScore(s.id, s.finalScore)} className="p-2 bg-surface-bright rounded-xl text-on-surface-variant hover:text-primary transition-all active:scale-90">
                            <MoreVertical size={18} />
+                        </button>
+                      )}
+                      {/* Student Remedial Button — on their own card */}
+                      {isStudent && !isPassing && canStartRemedial && currentStudentName && 
+                       s.name.toLowerCase() === currentStudentName.toLowerCase() && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); onStudentRemedial!(s.name); }}
+                          className="px-3 py-2 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all shadow-md shadow-rose-500/20 flex items-center gap-1.5 whitespace-nowrap"
+                        >
+                          <span className="material-symbols-outlined text-sm">edit_note</span>
+                          Remedial
                         </button>
                       )}
                     </div>
