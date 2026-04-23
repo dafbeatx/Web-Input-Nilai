@@ -1,0 +1,372 @@
+{
+  "timestamp": "2026-04-23T19:13:38.254Z",
+  "target_class": "ASAJ B.INGGRIS KELAS 9A",
+  "behaviors": [
+    {
+      "id": "114198da-e96b-4a1d-a98b-032b18de5aae",
+      "student_name": "ADZKIYA MAULIDA SUDRAJAT",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_114198da-e96b-4a1d-a98b-032b18de5aae_1776189790548.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "ed5840e3-218d-4019-a183-5fbd59f191b6",
+      "student_name": "APRILLA QISTI",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_ed5840e3-218d-4019-a183-5fbd59f191b6_1776189806352.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "8672bd8d-7a24-492f-b3af-c898e8ceaefc",
+      "student_name": "AZKIA AJIMA HUMMAIRA",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_8672bd8d-7a24-492f-b3af-c898e8ceaefc_1776189823480.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "ab2c5448-fee6-4a6f-a868-7a5f34743db1",
+      "student_name": "BUNGA MAISYI MAULIHATUNNISA",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_ab2c5448-fee6-4a6f-a868-7a5f34743db1_1776189834269.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "4beb9faf-b3c2-44f9-809b-9775c90b368d",
+      "student_name": "CITRA AULIA",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_4beb9faf-b3c2-44f9-809b-9775c90b368d_1776189842536.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "f24e6764-97fb-41e2-8914-c105de2c164c",
+      "student_name": "DEA ANANDA MAULIDA",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_f24e6764-97fb-41e2-8914-c105de2c164c_1776189992095.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "d63a046d-d7cf-4b60-9a9f-b9b45bcf03b1",
+      "student_name": "KEISYA ADELIA PUTRI",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_d63a046d-d7cf-4b60-9a9f-b9b45bcf03b1_1776190023190.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "e353b13c-95fe-4719-bf08-8d84f5e798f6",
+      "student_name": "KEYSA KANAYA PUTRI",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_e353b13c-95fe-4719-bf08-8d84f5e798f6_1776190135806.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "34640fcd-840c-4ccf-9961-b2daae6b7cc3",
+      "student_name": "LIDYA PUTRI JAELANI",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_34640fcd-840c-4ccf-9961-b2daae6b7cc3_1776190148906.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "60651af5-7056-45e7-a349-1afb6a1ef106",
+      "student_name": "LIVIA HAURA HASNA",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_60651af5-7056-45e7-a349-1afb6a1ef106_1776190153142.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "0447d94b-0a0a-4803-ac86-2e17406db7c3",
+      "student_name": "MUTIARA AULIA ANDINI",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_0447d94b-0a0a-4803-ac86-2e17406db7c3_1776190166941.webp",
+      "academic_year": "2025/2026",
+      "total_points": 30
+    },
+    {
+      "id": "1cd3ecc8-54e5-43ff-b3d2-3cd5f8196161",
+      "student_name": "NAFISAH ADE LESTARI",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_1cd3ecc8-54e5-43ff-b3d2-3cd5f8196161_1776190175784.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "99423410-2eb7-44d7-bd8e-b9218559bca3",
+      "student_name": "QUEENESA SABANIAH HARYANI",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_99423410-2eb7-44d7-bd8e-b9218559bca3_1776190189231.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "66b1569d-9c20-43ef-a55a-7a62fef633d9",
+      "student_name": "SEPTIANA AULIA",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_66b1569d-9c20-43ef-a55a-7a62fef633d9_1776190208953.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "31886719-89c7-4544-93e8-f9e558a67129",
+      "student_name": "SITI NURAMINAH",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_31886719-89c7-4544-93e8-f9e558a67129_1776190239124.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "127cd479-355f-46a2-bdf0-cfdf9bc4783c",
+      "student_name": "SITI NURASIAH",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_127cd479-355f-46a2-bdf0-cfdf9bc4783c_1776190246670.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "d35bd081-1f1f-4a0b-b35f-0927883f42ee",
+      "student_name": "SITI NURLAELATUL ALIYAH",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_d35bd081-1f1f-4a0b-b35f-0927883f42ee_1776190255016.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "dddc55ad-6bd7-42c3-8c2c-4357a587d5f3",
+      "student_name": "SYAHNA NAJWAH NURAHIMAT",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_dddc55ad-6bd7-42c3-8c2c-4357a587d5f3_1776190261501.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    },
+    {
+      "id": "77fe6621-f632-43bd-8d07-fed96a98b7e0",
+      "student_name": "VIRGIA ASYAVIAN REGINA",
+      "class_name": "9A",
+      "avatar_url": "https://fwhdjqvtjzesbdcqorsn.supabase.co/storage/v1/object/public/avatars/behavior_77fe6621-f632-43bd-8d07-fed96a98b7e0_1776190269395.webp",
+      "academic_year": "2025/2026",
+      "total_points": 0
+    }
+  ],
+  "accounts": [],
+  "attendance_count": 19,
+  "exam_students": [
+    {
+      "id": "4b752278-9d94-4132-95c8-7f3d0147eca5",
+      "name": "AZKIA AJIMA HUMMAIRA",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "1fb91eb3-497a-473b-81d4-c23eed6d51bf",
+      "name": "APRILLA QISTI",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "85b1a1d3-b355-4ec8-a120-377e6bdc881f",
+      "name": "LIVIA HAURA HASNA",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "611ba0f5-ed31-488e-b5a6-08c22553d119",
+      "name": "CITRA AULIA",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "e5a5cfe0-2929-497f-8cc3-33c77d2b28d1",
+      "name": "SITI NURASIAH",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "6da7bb45-89dc-4205-a764-491485e5b1e1",
+      "name": "KEYSA KANAYA PUTRI",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "ffbd110c-a38e-4ee5-bfd6-46af200fc523",
+      "name": "MUTIARA AULIA ANDINI",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "7e26aefb-7371-4cd5-8c3f-70da72e9cd21",
+      "name": "NAFISAH ADE LESTARI",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "254dde7f-3dc2-49a1-b019-bebcd6412c97",
+      "name": "LIDYA PUTRI JAELANI",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "f25f35c5-8137-4233-b2b2-ac2085641c9a",
+      "name": "ADZKIYA MAULIDA SUDRAJAT",
+      "session_id": "47d5fa88-5f93-42ff-8ae8-e7a1a42da705"
+    },
+    {
+      "id": "82fdf465-023d-4cfc-b2c9-048bcabde25f",
+      "name": "CITRA AULIA",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "74b7f3ab-ffc3-403f-b0cd-20ed078c06f4",
+      "name": "VIRGIA ASYAVIAN REGINA",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "a6950eb8-f793-4150-a0a5-2db5d1dae65a",
+      "name": "SITI NURAMINAH",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "00ba3adc-6c97-43d5-84e4-0d1ba8636573",
+      "name": "KEYSA KANAYA PUTRI",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "8fb8c8f8-75d2-4f01-b399-3446b6da08d9",
+      "name": "CITRA AULIA",
+      "session_id": "47d5fa88-5f93-42ff-8ae8-e7a1a42da705"
+    },
+    {
+      "id": "7b164d6e-5fb0-42d5-ab98-b7072d71abb2",
+      "name": "KEISYA ADELIA PUTRI",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "3a4848e3-8715-4f94-86b3-1dc6ee17aa8e",
+      "name": "APRILLA QISTI",
+      "session_id": "47d5fa88-5f93-42ff-8ae8-e7a1a42da705"
+    },
+    {
+      "id": "021e3627-ce02-48bf-8c34-d3c94ba813a7",
+      "name": "SYAHNA NAJWAH NURAHIMAT",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "3fa6c927-ab93-4946-bda0-ffb5d1968fc2",
+      "name": "ADZKIYA MAULIDA SUDRAJAT",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "ee28316e-3899-48c1-8e26-c71faef6a2ac",
+      "name": "SITI NURAMINAH",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "fb9918ba-1fba-4f5a-af9a-37b2cbef84fb",
+      "name": "DEA ANANDA MAULIDA",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "f4169c2b-1c75-468d-83fa-e3b3c6982f8d",
+      "name": "KEISYA ADELIA PUTRI",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "d13d699a-7691-4bec-9eeb-8b6f30a0e273",
+      "name": "LIDYA PUTRI JAELANI",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "abc4adb8-504c-4abb-8955-0a7c193f76a2",
+      "name": "SITI NURLAELATUL ALIYAH",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "4e0c1843-3d6a-4e47-904f-ab7152d839ef",
+      "name": "LIVIA HAURA HASNA",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "9d9e3afe-9b1e-4d8a-a012-9dee9ca8b6de",
+      "name": "NAFISAH ADE LESTARI",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "35fcc239-989b-4dad-8400-5d51805c576c",
+      "name": "KEISYA ADELIA PUTRI",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "f2598296-2597-42ee-a294-4a1ac8fd224d",
+      "name": "APRILLA QISTI",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "e76e9513-e181-42dd-8630-dc122072d9d0",
+      "name": "ADZKIYA MAULIDA SUDRAJAT",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "48c984db-6e61-4432-8e73-1abd3600df78",
+      "name": "SYAHNA NAJWAH NURAHIMAT",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "684346cc-95c3-47f4-880d-3adb85eafa02",
+      "name": "AZKIA AJIMA HUMMAIRA",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "3beb02b9-59e5-4ade-8d12-8afe85cc750e",
+      "name": "SEPTIANA AULIA",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "d5e5fd15-c1eb-45b5-8b26-2bfd099809e2",
+      "name": "DEA ANANDA MAULIDA",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "841217cf-89cb-42f9-ae48-d79a5b78b808",
+      "name": "MUTIARA AULIA ANDINI",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "a7007162-57c3-417c-a665-c6d2ee3ed131",
+      "name": "SEPTIANA AULIA",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "1b3e47f4-7a93-4277-a8b7-f45dcf676f97",
+      "name": "SITI NURASIAH",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "93126542-5f20-461c-955b-051a3462417d",
+      "name": "QUEENESA SABANIAH HARYANI",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "11bd8f59-19e3-457a-8a90-de8dc05dcca5",
+      "name": "BUNGA MAISYI MAULIHATUNNISA",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "38296609-8f94-4413-b9fc-feae8ae34793",
+      "name": "QUEENESA SABANIAH HARYANI",
+      "session_id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35"
+    },
+    {
+      "id": "b5f0a496-fd1b-4bea-8688-fc56fa2bf862",
+      "name": "SITI NURLAELATUL ALIYAH",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "00b5ff6f-8539-488d-ae37-85733582b64d",
+      "name": "BUNGA MAISYI MAULIHATUNNISA",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    },
+    {
+      "id": "7911c086-b1cd-4c9f-843b-129f8cd488a3",
+      "name": "VIRGIA ASYAVIAN REGINA",
+      "session_id": "842f158e-b391-498c-89e1-6597b1348f23"
+    }
+  ]
+}
