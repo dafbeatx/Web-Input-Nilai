@@ -24,6 +24,7 @@ import { GradeMasterProvider } from '@/context/GradeMasterContext';
 import Navbar from '@/components/grademaster/Navbar';
 import StarBackground from '@/components/grademaster/ui/StarBackground';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import SafeStorageScript from '@/components/SafeStorageScript';
 
 
 export default function RootLayout({
@@ -38,6 +39,7 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
       </head>
       <body className={`${inter.variable} ${outfit.variable} ${amiri.variable} ${manrope.variable} font-sans text-slate-900 antialiased selection:bg-primary/30 flex flex-col min-h-dvh`}>
+        <SafeStorageScript />
         <StarBackground />
 
         <ErrorBoundary>
