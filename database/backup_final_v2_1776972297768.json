@@ -1,0 +1,339 @@
+{
+  "empty_session_original": {
+    "id": "311098f9-ba47-4239-9d3c-e8cdfe8eedad",
+    "session_name": "ASAJ INFORMATIKA KELAS 9",
+    "class_name": "9A",
+    "subject": "Informatika",
+    "teacher": "DAFA MAULANA"
+  },
+  "source_session": {
+    "id": "4a9c3a37-3d96-45ec-a51e-57f805b7ff35",
+    "session_name": "ASAJ B. INGGRIS",
+    "teacher": "ADI PRASETYO",
+    "subject": "Bahasa Inggris",
+    "class_name": "9B",
+    "school_level": "SMP",
+    "answer_key": [
+      "A",
+      "C",
+      "A",
+      "A",
+      "B",
+      "B",
+      "B",
+      "D",
+      "A",
+      "C",
+      "D",
+      "D",
+      "B",
+      "C",
+      "A",
+      "A",
+      "D",
+      "B",
+      "D",
+      "B",
+      "B",
+      "A",
+      "D",
+      "B",
+      "C",
+      "C",
+      "B",
+      "B",
+      "A",
+      "C",
+      "A",
+      "C",
+      "A",
+      "B",
+      "A",
+      "B",
+      "A",
+      "A",
+      "A",
+      "B"
+    ],
+    "student_list": [],
+    "password_hash": "$2b$10$xdszafpCKzhGS5dNpDYyeOAfakF3MXVCExhDDsmqW66XeYCm8fpr6",
+    "scoring_config": {
+      "pgWeight": 0.7,
+      "essayCount": 5,
+      "essayWeight": 0.3,
+      "essayMaxScore": 20
+    },
+    "created_at": "2026-04-23T02:37:24.909609+00:00",
+    "updated_at": "2026-04-23T04:07:26.633+00:00",
+    "exam_type": "PAT",
+    "academic_year": "2025/2026",
+    "kkm": 75,
+    "remedial_essay_count": 5,
+    "remedial_timer": 30,
+    "is_public": false,
+    "is_demo": false,
+    "semester": "Ganjil"
+  },
+  "students_moving": [
+    {
+      "id": "e76e9513-e181-42dd-8630-dc122072d9d0",
+      "name": "ADZKIYA MAULIDA SUDRAJAT",
+      "final_score": 0,
+      "mcq_score": 25
+    },
+    {
+      "id": "f2598296-2597-42ee-a294-4a1ac8fd224d",
+      "name": "APRILLA QISTI",
+      "final_score": 0,
+      "mcq_score": 57
+    },
+    {
+      "id": "684346cc-95c3-47f4-880d-3adb85eafa02",
+      "name": "AZKIA AJIMA HUMMAIRA",
+      "final_score": 0,
+      "mcq_score": 25
+    },
+    {
+      "id": "11bd8f59-19e3-457a-8a90-de8dc05dcca5",
+      "name": "BUNGA MAISYI MAULIHATUNNISA",
+      "final_score": 0,
+      "mcq_score": 45
+    },
+    {
+      "id": "82fdf465-023d-4cfc-b2c9-048bcabde25f",
+      "name": "CITRA AULIA",
+      "final_score": 0,
+      "mcq_score": 30
+    },
+    {
+      "id": "fb9918ba-1fba-4f5a-af9a-37b2cbef84fb",
+      "name": "DEA ANANDA MAULIDA",
+      "final_score": 0,
+      "mcq_score": 33
+    },
+    {
+      "id": "35fcc239-989b-4dad-8400-5d51805c576c",
+      "name": "KEISYA ADELIA PUTRI",
+      "final_score": 0,
+      "mcq_score": 33
+    },
+    {
+      "id": "00ba3adc-6c97-43d5-84e4-0d1ba8636573",
+      "name": "KEYSA KANAYA PUTRI",
+      "final_score": 0,
+      "mcq_score": 38
+    },
+    {
+      "id": "d13d699a-7691-4bec-9eeb-8b6f30a0e273",
+      "name": "LIDYA PUTRI JAELANI",
+      "final_score": 0,
+      "mcq_score": 28
+    },
+    {
+      "id": "4e0c1843-3d6a-4e47-904f-ab7152d839ef",
+      "name": "LIVIA HAURA HASNA",
+      "final_score": 0,
+      "mcq_score": 63
+    },
+    {
+      "id": "841217cf-89cb-42f9-ae48-d79a5b78b808",
+      "name": "MUTIARA AULIA ANDINI",
+      "final_score": 0,
+      "mcq_score": 30
+    },
+    {
+      "id": "9d9e3afe-9b1e-4d8a-a012-9dee9ca8b6de",
+      "name": "NAFISAH ADE LESTARI",
+      "final_score": 0,
+      "mcq_score": 23
+    },
+    {
+      "id": "38296609-8f94-4413-b9fc-feae8ae34793",
+      "name": "QUEENESA SABANIAH HARYANI",
+      "final_score": 0,
+      "mcq_score": 25
+    },
+    {
+      "id": "a7007162-57c3-417c-a665-c6d2ee3ed131",
+      "name": "SEPTIANA AULIA",
+      "final_score": 0,
+      "mcq_score": 33
+    },
+    {
+      "id": "a6950eb8-f793-4150-a0a5-2db5d1dae65a",
+      "name": "SITI NURAMINAH",
+      "final_score": 0,
+      "mcq_score": 45
+    },
+    {
+      "id": "1b3e47f4-7a93-4277-a8b7-f45dcf676f97",
+      "name": "SITI NURASIAH",
+      "final_score": 0,
+      "mcq_score": 28
+    },
+    {
+      "id": "abc4adb8-504c-4abb-8955-0a7c193f76a2",
+      "name": "SITI NURLAELATUL ALIYAH",
+      "final_score": 0,
+      "mcq_score": 55
+    },
+    {
+      "id": "48c984db-6e61-4432-8e73-1abd3600df78",
+      "name": "SYAHNA NAJWAH NURAHIMAT",
+      "final_score": 0,
+      "mcq_score": 40
+    },
+    {
+      "id": "74b7f3ab-ffc3-403f-b0cd-20ed078c06f4",
+      "name": "VIRGIA ASYAVIAN REGINA",
+      "final_score": 0,
+      "mcq_score": 45
+    }
+  ],
+  "students_staying": [
+    {
+      "id": "66259d97-23ca-45ff-b254-2ec5ae941c73",
+      "name": "AUFAR DANAN JAYA",
+      "final_score": 27,
+      "mcq_score": 28
+    },
+    {
+      "id": "620b34f5-8123-47c1-a6b9-f49db8a540a5",
+      "name": "DIKA SEPTIAN",
+      "final_score": 23,
+      "mcq_score": 23
+    },
+    {
+      "id": "d51628a2-e82f-4221-bf6d-788ac65e90f8",
+      "name": "FARIZ KHAIRUZZAMAN",
+      "final_score": 78,
+      "mcq_score": 78
+    },
+    {
+      "id": "7d72ed42-c7da-43f2-ae34-ec68fc830c18",
+      "name": "GILANG PUTRA NUGRAHA",
+      "final_score": 40,
+      "mcq_score": 38
+    },
+    {
+      "id": "d96937fe-1b7e-4ed0-8850-67875be8f9be",
+      "name": "ILHAM MAULANA",
+      "final_score": 35,
+      "mcq_score": 33
+    },
+    {
+      "id": "c1629838-e8ea-4a81-bc5d-4bf59f48831d",
+      "name": "JULIANDRA PRATAMA",
+      "final_score": 29,
+      "mcq_score": 30
+    },
+    {
+      "id": "ac205329-e7e8-4760-b62c-a4500cac23b5",
+      "name": "JUNAEDI",
+      "final_score": 40,
+      "mcq_score": 35
+    },
+    {
+      "id": "a98874c6-0630-4c57-9474-d44de2efb88a",
+      "name": "M KAIFA NAZIR MAULIDI",
+      "final_score": 30,
+      "mcq_score": 33
+    },
+    {
+      "id": "1c63e0bb-f1c8-4b8e-89dd-e65a14d3d17e",
+      "name": "M. GALANG PRATAMA",
+      "final_score": 44,
+      "mcq_score": 38
+    },
+    {
+      "id": "9c408d43-9f50-4ba9-ab33-73a1a8170d11",
+      "name": "MUHAMAD AJRIL",
+      "final_score": 27,
+      "mcq_score": 28
+    },
+    {
+      "id": "65fad0fd-4b86-4180-84ac-00cfbe416ca7",
+      "name": "MUHAMAD FAHIRULLOH ASSABIL",
+      "final_score": 51,
+      "mcq_score": 48
+    },
+    {
+      "id": "a5f3b428-0e09-4ae1-a8ee-d88ea5dc78ce",
+      "name": "MUHAMAD FAISAL RAMDANI",
+      "final_score": 35,
+      "mcq_score": 35
+    },
+    {
+      "id": "b696c233-9cba-440e-989a-c46d407a1242",
+      "name": "MUHAMAD MAULANA AZHAM",
+      "final_score": 46,
+      "mcq_score": 55
+    },
+    {
+      "id": "11dd7bc3-bd5b-4b25-a3dc-c2591e4d6b4f",
+      "name": "MUHAMAD MUJIB MAULANA",
+      "final_score": 38,
+      "mcq_score": 38
+    },
+    {
+      "id": "446985a5-2663-46b5-a963-acfbee4f71e0",
+      "name": "MUHAMAD RESKI REVANDI",
+      "final_score": 46,
+      "mcq_score": 43
+    },
+    {
+      "id": "420f05e2-d765-4616-9eb7-693094bb21f0",
+      "name": "MUHAMMAD  FAIQ AUTHAR",
+      "final_score": 43,
+      "mcq_score": 35
+    },
+    {
+      "id": "105adb51-e974-49d2-9c6f-bcc91a9b2600",
+      "name": "MUHAMMAD FABIAN ALMUZHAQI",
+      "final_score": 34,
+      "mcq_score": 35
+    },
+    {
+      "id": "613cd82f-11eb-4d4b-a5d0-7dd01a80aea7",
+      "name": "MUHAMMAD FAJRI",
+      "final_score": 34,
+      "mcq_score": 38
+    },
+    {
+      "id": "c38c756d-4ac9-4f61-94aa-b964d891874d",
+      "name": "MUHAMMAD HAFIZ ARYASATYA",
+      "final_score": 33,
+      "mcq_score": 33
+    },
+    {
+      "id": "d878eb19-3e87-42d5-a135-cd61db1839d2",
+      "name": "MUHAMMAD IBNU AL FATAH",
+      "final_score": 47,
+      "mcq_score": 48
+    },
+    {
+      "id": "9d916b86-87dc-4a66-ae38-1b485db528c3",
+      "name": "MUHAMMAD IRGI RAMADHAN",
+      "final_score": 30,
+      "mcq_score": 30
+    },
+    {
+      "id": "872a4187-a594-4c13-8288-c433a3919bbb",
+      "name": "MUHAMMAD PIKHAL LUJMA",
+      "final_score": 37,
+      "mcq_score": 43
+    },
+    {
+      "id": "ce287a33-bd11-486b-8de8-16a801b70ee5",
+      "name": "MUHAMMAD RAFKY SABILA ROSYAD",
+      "final_score": 25,
+      "mcq_score": 20
+    },
+    {
+      "id": "93d06c32-1a3b-4dce-8df9-36c194900f6f",
+      "name": "MUHIDIN AL AROBIA PURKON",
+      "final_score": 34,
+      "mcq_score": 38
+    }
+  ]
+}
