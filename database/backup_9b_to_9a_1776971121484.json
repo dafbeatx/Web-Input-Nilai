@@ -1,0 +1,22 @@
+[
+  {
+    "id": "c1cf9f28-deb1-4634-9ff3-5f1e04f0117b",
+    "student_name": "KELPIN ALPIANDI",
+    "old_class": "9B",
+    "new_class": "9A",
+    "avatar_url": null,
+    "academic_year": "2025/2026",
+    "total_points": 0,
+    "migrated_at": "2026-04-23T19:05:21.484Z"
+  },
+  {
+    "id": "cbcb0015-e9fa-41d9-8754-06c1fa3043d2",
+    "student_name": "MUHAMAD HADATUL ZIDAN",
+    "old_class": "9B",
+    "new_class": "9A",
+    "avatar_url": null,
+    "academic_year": "2025/2026",
+    "total_points": 0,
+    "migrated_at": "2026-04-23T19:05:21.484Z"
+  }
+]
