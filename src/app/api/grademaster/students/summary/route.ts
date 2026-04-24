@@ -48,20 +48,24 @@ export async function GET(req: NextRequest) {
     if (gradeError) throw gradeError;
 
     const academicHistory = gradeData?.map((g: any) => {
-      const isPassing = g.final_score >= (g.gm_sessions?.kkm || 70);
+      const sessionData = Array.isArray(g.gm_sessions) ? g.gm_sessions[0] : g.gm_sessions;
+      const kkm = Number(sessionData?.kkm || 70);
+      const finalScore = Number(g.final_score);
+      const isPassing = finalScore >= kkm;
+      
       const showRemedialButton = true;
-      let config = g.gm_sessions?.scoring_config;
+      let config = sessionData?.scoring_config;
       if (typeof config === 'string') {
         try { config = JSON.parse(config); } catch(e) {}
       }
       const hasQuestions = Array.isArray(config?.remedialQuestions) && config.remedialQuestions.length > 0;
       
       return {
-        sessionName: g.gm_sessions?.session_name || 'Ujian Tanpa Nama',
-        subject: g.gm_sessions?.subject || 'Umum',
-        score: g.final_score,
-        kkm: g.gm_sessions?.kkm || 70,
-        date: g.gm_sessions?.updated_at,
+        sessionName: sessionData?.session_name || 'Ujian Tanpa Nama',
+        subject: sessionData?.subject || 'Umum',
+        score: finalScore,
+        kkm: kkm,
+        date: sessionData?.updated_at,
         isPassing,
         hasRemedialAvailable: !isPassing && showRemedialButton && hasQuestions
       };
