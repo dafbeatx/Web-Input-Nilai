@@ -1968,7 +1968,8 @@ export default function StudentRemedialLayer({
   // RENDER: RULES SCREEN (Pre-exam instruction popup)
   if (step === 'RULES') {
     return (
-      <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4 overflow-y-auto">
+      <div className="fixed inset-0 z-[100] bg-transparent overflow-y-auto">
+        <div className="flex min-h-full flex-col items-center justify-center p-4">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#3b82f615,transparent)]"></div>
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-30"></div>
         
@@ -2022,6 +2023,7 @@ export default function StudentRemedialLayer({
              Mulai Verifikasi Sistem <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
            </button>
         </div>
+        </div>
       </div>
     );
   }
@@ -2031,7 +2033,8 @@ export default function StudentRemedialLayer({
     const allPermsOk = examMode === 'LIMITED' || cameraOk;
 
     return (
-      <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4 pt-safe">
+      <div className="fixed inset-0 z-[100] bg-transparent overflow-y-auto pt-safe">
+        <div className="flex min-h-full flex-col items-center justify-center p-4">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#3b82f610,transparent)]"></div>
         <div className="w-full max-w-lg relative bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant rounded-[2.5rem] premium-shadow p-6 md:p-10 animate-in zoom-in duration-500">
            <button onClick={() => setStep('RULES')} className="flex items-center gap-2 text-on-surface-variant hover:text-white font-black text-[10px] uppercase tracking-widest transition-all mb-8 group">
@@ -2102,13 +2105,15 @@ export default function StudentRemedialLayer({
           </button>
         </div>
       </div>
+    </div>
     );
   }
 
   // RENDER: GUIDE SCREEN (Educational instructions for proctoring camera)
   if (step === 'GUIDE') {
     return (
-      <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4 pt-safe">
+      <div className="fixed inset-0 z-[100] bg-transparent overflow-y-auto pt-safe">
+        <div className="flex min-h-full flex-col items-center justify-center p-4">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,#3b82f610,transparent)]"></div>
         <div className="w-full max-w-xl relative bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant rounded-[2.5rem] premium-shadow p-6 md:p-10 animate-in slide-in-from-bottom-8 duration-700">
           <button onClick={() => setStep('INFO')} className="flex items-center gap-2 text-on-surface-variant hover:text-white font-black text-[10px] uppercase tracking-widest transition-all mb-8 group">
