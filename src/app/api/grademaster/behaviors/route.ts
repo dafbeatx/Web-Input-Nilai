@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       student_name: name.trim(),
       class_name: className,
       academic_year: academicYear,
-      total_points: 100,
+      total_points: 0,
       behavior_logs: []
     }));
 
