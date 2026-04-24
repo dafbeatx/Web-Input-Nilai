@@ -346,7 +346,7 @@ export async function POST(req: NextRequest) {
       className: session.class_name,
       schoolLevel: session.school_level,
       studentList: session.student_list,
-      scoringConfig: session.scoring_config,
+      scoringConfig: parsedConfig || session.scoring_config,
       examType: session.exam_type || 'UTS',
       academicYear: session.academic_year || '2025/2026',
       semester: session.semester || 'Ganjil',

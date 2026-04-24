@@ -505,6 +505,7 @@ export default function GradeMaster() {
       setApiQuestionDifficulties(data.questionDifficulties || []);
       setIsSessionPublic(data.isPublic);
       setIsDemo(data.isDemo === true);
+      setShowRemedialButton(!!data.showRemedialButton);
       setIsPublicView(true);
       setLayer("dashboard");
       closeModal();
@@ -598,6 +599,7 @@ export default function GradeMaster() {
       setApiQuestionDifficulties(data.questionDifficulties || []);
       setIsSessionPublic(data.isPublic);
       setIsPublicView(false); // Admin/Teacher view
+      setShowRemedialButton(!!data.showRemedialButton);
       
       // Reconstruct keyInput for display
       const key = data.answerKey as string[];
