@@ -12,7 +12,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan.' }, { status: 429 });
     }
 
-    const { google_name, studentId, student_name, class_name, email } = await req.json();
+    const body = await req.json();
+    console.log('API INPUT:', body);
+    const { google_name, studentId, student_name, class_name, email } = body;
 
     if (!google_name && !studentId) {
       return NextResponse.json({ error: 'Data identifikasi tidak lengkap' }, { status: 400 });
@@ -45,22 +47,29 @@ export async function POST(req: NextRequest) {
         const suffix = Math.floor(Math.random() * 1000).toString();
         const username = `${baseUsername}${suffix}`;
         
+        const insertPayload = {
+          student_name,
+          class_name,
+          academic_year: '2025/2026',
+          username: username,
+          password_hash: 'google_sso_auto', 
+          google_email: email
+        };
+
+        console.log('INSERT DATA:', insertPayload);
+
         const { data: newAccount, error: insertError } = await supabase
           .from('gm_student_accounts')
-          .insert({
-            student_name,
-            class_name,
-            academic_year: '2025/2026',
-            username: username,
-            password_hash: 'google_sso_auto', // No password login for this account unless reset by admin
-            google_email: email
-          })
+          .insert(insertPayload)
           .select('id, student_name, class_name, academic_year, username, profile_photo_url, google_email')
           .single();
           
+        console.log('SUPABASE ERROR:', insertError);
+        console.log('SUPABASE DATA:', newAccount);
+
         if (insertError || !newAccount) {
           console.error('Failed to auto-create gm_student_accounts:', insertError);
-          return NextResponse.json({ error: 'Gagal membuat profil siswa baru di sistem' }, { status: 500 });
+          return NextResponse.json({ error: insertError?.message || 'Gagal membuat profil siswa baru di sistem' }, { status: 500 });
         }
         
         account = newAccount;
@@ -126,8 +135,8 @@ export async function POST(req: NextRequest) {
         photo_url: account.profile_photo_url,
       },
     });
-  } catch (err) {
-    console.error('Google Student Link error:', err);
-    return NextResponse.json({ error: 'Terjadi kesalahan sistem pengikatan profil' }, { status: 500 });
+  } catch (err: any) {
+    console.error('API CRASH:', err);
+    return NextResponse.json({ error: err.message || 'Terjadi kesalahan sistem pengikatan profil' }, { status: 500 });
   }
 }
