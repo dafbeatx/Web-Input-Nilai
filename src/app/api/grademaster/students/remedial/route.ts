@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
       .from('gm_students')
       .select('id, name, final_score, remedial_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed, violation_count, is_blocked')
       .eq('session_id', sessionId)
-      .eq('name', studentName)
+      .ilike('name', studentName.trim())
       .eq('is_deleted', false)
       .single();
 
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
       .from('gm_students')
       .select('id')
       .eq('session_id', sessionId)
-      .eq('name', studentName)
+      .ilike('name', studentName.trim())
       .single();
         
       if (!student) return NextResponse.json({ error: 'RESET_REQUIRED', message: 'Siswa tidak ditemukan' }, { status: 400 });
