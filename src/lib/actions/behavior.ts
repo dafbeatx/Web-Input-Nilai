@@ -16,7 +16,7 @@ async function recomputePoints(studentId: string): Promise<number> {
 
   if (error) throw error;
 
-  const total = (logs || []).reduce((sum: number, log: any) => sum + (log.points_delta || 0), 0);
+  const total = (logs || []).reduce((sum: number, log: any) => sum + (log.points_delta || 0), 100);
 
   const { error: updateError } = await supabaseAdmin
     .from('gm_behaviors')
