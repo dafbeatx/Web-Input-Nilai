@@ -135,7 +135,7 @@ export default function DashboardLayer({
 
   // Student Remedial Detection
   const myStudentRecord = isStudent && currentStudentName
-    ? gradedStudents.find(s => s.name.toLowerCase() === currentStudentName.toLowerCase())
+    ? gradedStudents.find(s => s.name.trim().toLowerCase() === currentStudentName.trim().toLowerCase())
     : null;
   const needsRemedial = myStudentRecord ? myStudentRecord.finalScore < kkm : false;
   const canStartRemedial = needsRemedial && showRemedialButton && onStudentRemedial;
@@ -334,7 +334,7 @@ export default function DashboardLayer({
                       )}
                       {/* Student Remedial Button — on their own card */}
                       {isStudent && !isPassing && canStartRemedial && currentStudentName && 
-                       s.name.toLowerCase() === currentStudentName.toLowerCase() && (
+                       s.name.trim().toLowerCase() === currentStudentName.trim().toLowerCase() && (
                         <button 
                           onClick={(e) => { e.stopPropagation(); onStudentRemedial!(s.name); }}
                           className="px-3 py-2 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all shadow-md shadow-rose-500/20 flex items-center gap-1.5 whitespace-nowrap"

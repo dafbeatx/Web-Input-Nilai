@@ -330,7 +330,11 @@ export async function POST(req: NextRequest) {
     const questionDifficulties = generateQuestionDifficulties(gradedStudents, session.answer_key);
 
     // Menampilkan tombol remedial jika guru sudah mengatur soal remedial
-    const hasQuestions = session.scoring_config?.remedialQuestions?.length > 0;
+    let parsedConfig = session.scoring_config;
+    if (typeof parsedConfig === 'string') {
+      try { parsedConfig = JSON.parse(parsedConfig); } catch(e) {}
+    }
+    const hasQuestions = Array.isArray(parsedConfig?.remedialQuestions) && parsedConfig.remedialQuestions.length > 0;
     const showRemedialButton = hasQuestions;
 
     return NextResponse.json({

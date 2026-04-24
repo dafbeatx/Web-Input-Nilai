@@ -50,7 +50,11 @@ export async function GET(req: NextRequest) {
     const academicHistory = gradeData?.map((g: any) => {
       const isPassing = g.final_score >= (g.gm_sessions?.kkm || 70);
       const showRemedialButton = true;
-      const hasQuestions = g.gm_sessions?.scoring_config?.remedialQuestions?.length > 0;
+      let config = g.gm_sessions?.scoring_config;
+      if (typeof config === 'string') {
+        try { config = JSON.parse(config); } catch(e) {}
+      }
+      const hasQuestions = Array.isArray(config?.remedialQuestions) && config.remedialQuestions.length > 0;
       
       return {
         sessionName: g.gm_sessions?.session_name || 'Ujian Tanpa Nama',
