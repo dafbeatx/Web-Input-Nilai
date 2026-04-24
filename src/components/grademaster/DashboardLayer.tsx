@@ -134,11 +134,29 @@ export default function DashboardLayer({
   const passRate = gradedStudents.length > 0 ? Math.round((passCount / gradedStudents.length) * 100) : 0;
 
   // Student Remedial Detection
+  const normalizeName = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase();
+  
   const myStudentRecord = isStudent && currentStudentName
-    ? gradedStudents.find(s => s.name.trim().toLowerCase() === currentStudentName.trim().toLowerCase())
+    ? gradedStudents.find(s => normalizeName(s.name) === normalizeName(currentStudentName))
     : null;
   const needsRemedial = myStudentRecord ? myStudentRecord.finalScore < kkm : false;
   const canStartRemedial = needsRemedial && showRemedialButton && onStudentRemedial;
+
+  // Debugging logs requested by user
+  useEffect(() => {
+    if (isStudent) {
+      console.log("[REMEDIAL DEBUG] State Analysis:", {
+        currentStudentName,
+        isStudent,
+        kkm,
+        myStudentRecord: myStudentRecord ? { name: myStudentRecord.name, score: myStudentRecord.finalScore } : 'Not Found in This Session',
+        needsRemedial,
+        showRemedialButton,
+        canStartRemedial,
+        totalGradedStudents: gradedStudents.length
+      });
+    }
+  }, [isStudent, currentStudentName, kkm, myStudentRecord, needsRemedial, showRemedialButton, canStartRemedial, gradedStudents.length]);
 
   return (
     <div className="font-body text-on-surface min-h-dvh flex flex-col bg-surface">
@@ -334,7 +352,7 @@ export default function DashboardLayer({
                       )}
                       {/* Student Remedial Button — on their own card */}
                       {isStudent && !isPassing && canStartRemedial && currentStudentName && 
-                       s.name.trim().toLowerCase() === currentStudentName.trim().toLowerCase() && (
+                       normalizeName(s.name) === normalizeName(currentStudentName) && (
                         <button 
                           onClick={(e) => { e.stopPropagation(); onStudentRemedial!(s.name); }}
                           className="px-3 py-2 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all shadow-md shadow-rose-500/20 flex items-center gap-1.5 whitespace-nowrap"
