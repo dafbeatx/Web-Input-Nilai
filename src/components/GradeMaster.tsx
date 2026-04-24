@@ -1045,8 +1045,6 @@ export default function GradeMaster() {
           onUpdateRemedial={handleUpdateRemedialQuestions}
           onRemedialInputChange={handleRemedialInputChange}
           isSaving={isUpdatingQuestions}
-          isAdmin={isAdmin}
-          sessionPassword={isAdmin ? sessionPassword : undefined}
         />
       )}
 
