@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
     // mode: claim - Public directory for student identification (limited fields)
     if (mode === 'claim') {
       const { data, error } = await supabase
-        .from('gm_student_accounts')
+        .from('gm_behaviors')
         .select('id, student_name, class_name')
         .order('student_name', { ascending: true });
 

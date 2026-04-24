@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan.' }, { status: 429 });
     }
 
-    const { google_name, studentId, email } = await req.json();
+    const { google_name, studentId, student_name, class_name, email } = await req.json();
 
     if (!google_name && !studentId) {
       return NextResponse.json({ error: 'Data identifikasi tidak lengkap' }, { status: 400 });
@@ -24,8 +24,49 @@ export async function POST(req: NextRequest) {
 
     let account;
 
-    if (studentId) {
-      // Explicit identification via student_id (New flow)
+    if (student_name && class_name) {
+      // 1. Look up student by exact name and class (since studentId is from gm_behaviors)
+      const { data, error } = await supabase
+        .from('gm_student_accounts')
+        .select('id, student_name, class_name, academic_year, username, profile_photo_url, google_email')
+        .eq('student_name', student_name)
+        .eq('class_name', class_name)
+        .single();
+      
+      if (!error && data) {
+        account = data;
+      } else {
+        // 2. Auto-create the student account because it doesn't exist yet
+        const cleanName = student_name.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '.');
+        const cleanClass = class_name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const baseUsername = `${cleanName}.${cleanClass}`;
+        
+        // Random suffix to avoid username conflicts without complex logic
+        const suffix = Math.floor(Math.random() * 1000).toString();
+        const username = `${baseUsername}${suffix}`;
+        
+        const { data: newAccount, error: insertError } = await supabase
+          .from('gm_student_accounts')
+          .insert({
+            student_name,
+            class_name,
+            academic_year: '2025/2026',
+            username: username,
+            password_hash: 'google_sso_auto', // No password login for this account unless reset by admin
+            google_email: email
+          })
+          .select('id, student_name, class_name, academic_year, username, profile_photo_url, google_email')
+          .single();
+          
+        if (insertError || !newAccount) {
+          console.error('Failed to auto-create gm_student_accounts:', insertError);
+          return NextResponse.json({ error: 'Gagal membuat profil siswa baru di sistem' }, { status: 500 });
+        }
+        
+        account = newAccount;
+      }
+    } else if (studentId) {
+      // Legacy flow: Explicit identification via student_id (if studentId was from gm_student_accounts)
       const { data, error } = await supabase
         .from('gm_student_accounts')
         .select('id, student_name, class_name, academic_year, username, profile_photo_url, google_email')
@@ -37,7 +78,7 @@ export async function POST(req: NextRequest) {
       }
       account = data;
     } else {
-      // Fallback: Fuzzy name matching (Old flow)
+      // Legacy Fallback: Fuzzy name matching
       const { data: accounts, error } = await supabase
         .from('gm_student_accounts')
         .select('id, student_name, class_name, academic_year, username, profile_photo_url, google_email')

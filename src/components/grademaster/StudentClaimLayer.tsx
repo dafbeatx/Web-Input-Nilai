@@ -82,6 +82,8 @@ export default function StudentClaimLayer({
         body: JSON.stringify({ 
           google_name: googleUser.name,
           studentId: selectedStudent.id,
+          student_name: selectedStudent.student_name,
+          class_name: selectedStudent.class_name,
           email: googleUser.email
         })
       });
