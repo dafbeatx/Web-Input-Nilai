@@ -1047,7 +1047,14 @@ export default function GradeMaster() {
           isSaving={isUpdatingQuestions}
           sessions={sessions}
           activeSessionId={sessionId}
-          onSessionSelect={handleSessionClick}
+          onSessionSelect={(session) => {
+            if (isAdmin) {
+              setSessionName(session.session_name);
+              setModal("load");
+            } else {
+              handleLoadPublicSession(session.session_name);
+            }
+          }}
         />
       )}
 
