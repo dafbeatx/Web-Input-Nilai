@@ -194,17 +194,29 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { oldClassName, newClassName, academicYear } = body;
+    const { studentId, oldClassName, newClassName, academicYear } = body;
 
-    if (!oldClassName || !newClassName || !academicYear) {
-      return NextResponse.json({ error: 'Data kelas lama, baru, dan tahun ajaran wajib diisi' }, { status: 400 });
+    if (!newClassName || !academicYear) {
+      return NextResponse.json({ error: 'Data kelas baru dan tahun ajaran wajib diisi' }, { status: 400 });
     }
 
-    const { error } = await supabase
+    if (!studentId && !oldClassName) {
+      return NextResponse.json({ error: 'Data studentId (untuk pindah kelas) atau oldClassName (untuk ganti nama kelas) wajib diisi' }, { status: 400 });
+    }
+
+    let query = supabase
       .from('gm_behaviors')
-      .update({ class_name: newClassName })
-      .eq('class_name', oldClassName)
-      .eq('academic_year', academicYear);
+      .update({ class_name: newClassName });
+
+    // FILTER SPECIFIC: Mencegah perpindahan massal secara tidak sengaja
+    if (studentId) {
+      query = query.eq('id', studentId);
+    } else {
+      // Fallback untuk bulk rename kelas murni, hanya dijalankan jika studentId tidak diberikan
+      query = query.eq('class_name', oldClassName).eq('academic_year', academicYear);
+    }
+
+    const { error } = await query;
 
     if (error) {
       console.error('[PATCH Behaviors] Class update error:', error);
