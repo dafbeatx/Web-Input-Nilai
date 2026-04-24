@@ -49,9 +49,7 @@ export async function GET(req: NextRequest) {
 
     const academicHistory = gradeData?.map((g: any) => {
       const isPassing = g.final_score >= (g.gm_sessions?.kkm || 70);
-      const sessionDate = new Date(g.gm_sessions?.created_at).getTime();
-      const REMEDIAL_DEADLINE_DATE = new Date('2026-03-30T07:00:00+07:00').getTime();
-      const showRemedialButton = (sessionDate > REMEDIAL_DEADLINE_DATE) || (Date.now() <= REMEDIAL_DEADLINE_DATE);
+      const showRemedialButton = true;
       const hasQuestions = g.gm_sessions?.scoring_config?.remedialQuestions?.length > 0;
       
       return {

@@ -329,15 +329,9 @@ export async function POST(req: NextRequest) {
     // Calculate difficulties on server before hiding answerKey
     const questionDifficulties = generateQuestionDifficulties(gradedStudents, session.answer_key);
 
-    // Calculate dynamic visibility of the remedial button based on "future session" logic.
-    // If the session was created AFTER the old hardcoded deadline, it qualifies as the "next exam session"
-    // Alternatively, if the exact current time hasn't passed the deadline yet, show the button.
-    const REMEDIAL_DEADLINE_DATE = new Date('2026-03-30T07:00:00+07:00').getTime();
-    const sessionDate = new Date(session.created_at).getTime();
-    const now = Date.now();
-    const isDateValid = (sessionDate > REMEDIAL_DEADLINE_DATE) || (now <= REMEDIAL_DEADLINE_DATE);
+    // Menampilkan tombol remedial jika guru sudah mengatur soal remedial
     const hasQuestions = session.scoring_config?.remedialQuestions?.length > 0;
-    const showRemedialButton = isDateValid && hasQuestions;
+    const showRemedialButton = hasQuestions;
 
     return NextResponse.json({
       sessionId: session.id,
