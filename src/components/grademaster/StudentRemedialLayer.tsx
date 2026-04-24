@@ -1512,10 +1512,8 @@ export default function StudentRemedialLayer({
         lastUpdated: Date.now()
       });
       
-      // If penalty is already applied, we don't show the modal again, just let them finish
-      if (!isPenaltyApplied) {
-        setShowTimeUpModal(true);
-      }
+      // Waktu habis — langsung finalisasi TIMEOUT, tidak ada opsi tambah waktu
+      handleStatusUpdate('TIMEOUT');
       return;
     }
 
@@ -2164,59 +2162,6 @@ export default function StudentRemedialLayer({
     );
   }
 
-  // RENDER: TIME UP MODAL (Extension points feature)
-  if (step === 'EXAM' && showTimeUpModal) {
-    return (
-      <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-surface/80 backdrop-blur-xl animate-in fade-in duration-300">
-        <div className="bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant max-w-lg w-full rounded-[2.5rem] p-8 md:p-10 premium-shadow flex flex-col items-center text-center relative overflow-hidden">
-          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-rose-500/50 to-transparent"></div>
-          <div className="w-20 h-20 rounded-[2rem] flex items-center justify-center mb-6 bg-rose-500/10 text-rose-400 border border-rose-500/20 animate-pulse">
-            <Clock size={40} />
-          </div>
-          <h2 className="text-2xl font-black text-on-surface mb-2 tracking-tight uppercase font-outfit">Waktu Habis!</h2>
-          <p className="text-[12px] font-bold text-on-surface-variant mb-8 leading-relaxed uppercase tracking-wider">
-            Sistem mendeteksi durasi ujian Anda telah berakhir.
-          </p>
-          
-          <div className="bg-surface-variant border border-outline-variant rounded-2xl w-full p-6 mb-8 space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Saldo Poin Disiplin</span>
-              <span className="text-sm font-black text-primary">{pointsBal ? pointsBal.total : '...'} Poin</span>
-            </div>
-            <div className="flex justify-between items-center text-rose-400">
-              <span className="text-[10px] font-black uppercase tracking-widest">Biaya Perpanjangan</span>
-              <span className="text-sm font-black">-10 Poin</span>
-            </div>
-          </div>
-          
-          <div className="w-full flex flex-col gap-4 pt-safe">
-            <button
-              onClick={() => {
-                setPointsToSpend(10);
-                setTimeout(handleExtendTime, 0);
-              }}
-              disabled={extendLoading || !pointsBal || pointsBal.total < 10 || pointsBal.usedToday >= 10}
-              className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all border border-outline-variant disabled:opacity-30 disabled:grayscale"
-            >
-              {extendLoading ? 'Sinkronisasi...' : 'Gunakan 10 Poin (+10 Menit)'}
-            </button>
-            <button
-              onClick={() => handleStatusUpdate('TIMEOUT')}
-              disabled={extendLoading || isSubmitting}
-              className="w-full py-3 bg-surface-variant text-rose-400 border border-outline-variant rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] hover:bg-rose-500/10 transition-all"
-            >
-              Akhiri Sesi (Gagal)
-            </button>
-            {(!pointsBal || pointsBal.total < 10 || pointsBal.usedToday >= 10) && pointsBal !== null && (
-              <p className="text-[9px] text-rose-500/60 font-black uppercase tracking-widest mt-2">
-                Poin Tidak Mencukupi atau Limit Tercapai
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // RENDER: SECOND CHANCE SCREEN
   if (step === 'SECOND_CHANCE') {

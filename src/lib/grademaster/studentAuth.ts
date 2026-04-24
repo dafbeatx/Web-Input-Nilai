@@ -73,7 +73,7 @@ export async function getStudentSession() {
     student: {
       id: accountData.id,
       behavior_id: behaviorData?.id ?? null,
-      total_points: behaviorData?.total_points ?? 100,
+      total_points: behaviorData?.total_points ?? 0,
       name: accountData.student_name,
       class_name: accountData.class_name,
       academic_year: accountData.academic_year,

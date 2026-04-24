@@ -70,13 +70,7 @@ export default function BehaviorLayer({
 
   // Settings State
   const [isManagingReasons, setIsManagingReasons] = useState(false);
-  const [behaviorReasons, setBehaviorReasons] = useState<{ text: string, weight: number }[]>([
-    { text: "Bolos PBM", weight: 20 },
-    { text: "Berbicara Kasar", weight: 15 },
-    { text: "Merokok/Vaping", weight: 50 },
-    { text: "Membantah Guru", weight: 25 },
-    { text: "Terlambat Parah", weight: 10 }
-  ]);
+  const [behaviorReasons, setBehaviorReasons] = useState<{ text: string, weight: number }[]>([]);
   const [newReasonInput, setNewReasonInput] = useState('');
   const [newReasonWeight, setNewReasonWeight] = useState(10);
 
@@ -141,17 +135,14 @@ export default function BehaviorLayer({
     try {
       const res = await fetch(`/api/grademaster/behaviors/settings?year=${encodeURIComponent(academicYear)}`);
       const data = await res.json();
-      if (res.ok && data.settings) {
-        // Handle migration gracefully if previous structure `{ good, bad }` or flat strings exist.
-        if (Array.isArray(data.settings.reasons) && typeof data.settings.reasons[0] === 'object') {
-           setBehaviorReasons(data.settings.reasons);
-        } else {
-           // Skip applying old schema, stick to new default.
-           console.log("Old behavior schema detected, using default until saved.");
-        }
+      if (res.ok && data.settings && Array.isArray(data.settings.reasons)) {
+        setBehaviorReasons(data.settings.reasons);
+      } else {
+        setBehaviorReasons([]);
       }
     } catch (err) {
       console.error("Failed to load behavior settings", err);
+      setBehaviorReasons([]);
     }
   };
 

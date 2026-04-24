@@ -87,7 +87,7 @@ export default function StudentProfileLayer({
   useEffect(() => {
     fetchStudentLogs();
     fetchStudentSummary();
-    if (isAdmin && (!behaviorReasons || behaviorReasons.length === 0)) {
+    if (isAdmin) {
       fetchBehaviorSettings();
     }
     setTotalPoints(initialPoints);
