@@ -2164,6 +2164,7 @@ export default function StudentRemedialLayer({
           </button>
         </div>
       </div>
+    </div>
     );
   }
 
