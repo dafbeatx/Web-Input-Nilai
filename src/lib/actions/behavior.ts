@@ -5,10 +5,12 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 
 /**
- * Internal helper: recalculates total_points from ALL logs (Demerit System: base 0, sum all deltas).
- * Uses admin client to bypass RLS.
+ * Pure calculator: returns computed total_points from gm_behavior_logs.
+ * Formula: 100 (base) + SUM(all points_delta in logs).
+ * Negative deltas = pelanggaran, positive deltas = apresiasi.
+ * Does NOT write to DB — callers are responsible for persistence.
  */
-async function recomputePoints(studentId: string): Promise<number> {
+async function computePointsFromLogs(studentId: string): Promise<number> {
   const { data: logs, error } = await supabaseAdmin
     .from('gm_behavior_logs')
     .select('points_delta')
@@ -16,7 +18,19 @@ async function recomputePoints(studentId: string): Promise<number> {
 
   if (error) throw error;
 
-  const total = (logs || []).reduce((sum: number, log: any) => sum + (log.points_delta || 0), 100);
+  // Start from 0, not 100. The base 100 is stored in gm_behaviors.total_points at creation.
+  // All mutations go through logs, so total = base(100) + sum(deltas).
+  const deltaSum = (logs || []).reduce((sum: number, log: any) => sum + (log.points_delta || 0), 0);
+  return 100 + deltaSum;
+}
+
+/**
+ * Recomputes and persists total_points for a student based on their log history.
+ * This is the ONLY function that should write total_points to gm_behaviors.
+ * It must only be called after a behavior log INSERT/UPDATE/DELETE event.
+ */
+async function recomputeAndPersistPoints(studentId: string): Promise<number> {
+  const total = await computePointsFromLogs(studentId);
 
   const { error: updateError } = await supabaseAdmin
     .from('gm_behaviors')
@@ -54,7 +68,7 @@ export async function addBehaviorAction(formData: {
 
     if (insertError) throw insertError;
 
-    const newTotal = await recomputePoints(formData.studentId);
+    const newTotal = await recomputeAndPersistPoints(formData.studentId);
 
     revalidatePath('/behavior');
     return { success: true, data: { new_total: newTotal } };
@@ -86,7 +100,7 @@ export async function updateBehaviorAction(logId: string, formData: {
 
     if (updateError) throw updateError;
 
-    const newTotal = await recomputePoints(formData.studentId);
+    const newTotal = await recomputeAndPersistPoints(formData.studentId);
 
     revalidatePath('/behavior');
     return { success: true, newTotal };
@@ -109,7 +123,7 @@ export async function deleteBehaviorAction(logId: string, studentId: string) {
 
     if (deleteError) throw deleteError;
 
-    const newTotal = await recomputePoints(studentId);
+    const newTotal = await recomputeAndPersistPoints(studentId);
 
     revalidatePath('/behavior');
     return { success: true, newTotal };

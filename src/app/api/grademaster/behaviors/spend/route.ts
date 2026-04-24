@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/grademaster/security';
 
 export async function POST(req: NextRequest) {
   try {
-      const supabase = await createClient();
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`behaviors_spend:${ip}`)) {
       return NextResponse.json({ error: 'Terlalu banyak permintaan' }, { status: 429 });
@@ -21,10 +20,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Poin yang ditukar harus berada di antara 1 - 10 poin.' }, { status: 400 });
     }
 
-    // Attempt to lookup student point record
-    const { data: record, error: fetchErr } = await supabase
+    // Lookup student behavior record
+    const { data: record, error: fetchErr } = await supabaseAdmin
       .from('gm_behaviors')
-      .select('id, total_points, behavior_logs, points_used_today, points_date')
+      .select('id, total_points, points_used_today, points_date')
       .eq('student_name', studentName)
       .eq('class_name', className)
       .eq('academic_year', academicYear)
@@ -34,12 +33,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Data histori poin siswa tidak ditemukan' }, { status: 404 });
     }
 
-    // Date logic: Check resetting daily max limit to 0 if a new day has arrived
-    const currentDate = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+    // Daily limit guard
+    const currentDate = new Date().toISOString().split('T')[0];
     let currentUsedToday = record.points_used_today || 0;
-    
     if (record.points_date !== currentDate) {
-      currentUsedToday = 0; // Reset for the new day
+      currentUsedToday = 0;
     }
 
     if (currentUsedToday + pointsToSpend > 10) {
@@ -54,26 +52,35 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // Spend points
-    const newTotalPoints = record.total_points - pointsToSpend;
+    // Insert a spend entry into gm_behavior_logs so the deduction is traceable
+    // and total_points stays consistent with the log-based recompute system.
+    const { error: logInsertErr } = await supabaseAdmin
+      .from('gm_behavior_logs')
+      .insert({
+        student_id: record.id,
+        points_delta: -pointsToSpend,
+        reason: `Tukar poin untuk ekstensi waktu selama ${pointsToSpend} menit pada ujian remedial`,
+        violation_date: new Date().toISOString(),
+      });
+
+    if (logInsertErr) throw logInsertErr;
+
+    // Recompute total_points from all logs as the single source of truth
+    const { data: allLogs } = await supabaseAdmin
+      .from('gm_behavior_logs')
+      .select('points_delta')
+      .eq('student_id', record.id);
+
+    const deltaSum = (allLogs || []).reduce((sum: number, log: any) => sum + (log.points_delta || 0), 0);
+    const newTotalPoints = 100 + deltaSum;
+
     const newUsedToday = currentUsedToday + pointsToSpend;
-    const currentLogs = Array.isArray(record.behavior_logs) ? record.behavior_logs : [];
 
-    const newLogEntry = {
-      type: 'BAD', // Using BAD since it's a deduction logic per the usual point UI
-      points: -pointsToSpend,
-      reason: `Tukar poin untuk ekstensi waktu selama ${pointsToSpend} menit pada ujian remedial`,
-      timestamp: new Date().toISOString()
-    };
-
-    const newLogs = [newLogEntry, ...currentLogs];
-
-    // Atomically Update Request
-    const { error: updateErr } = await supabase
+    // Persist recomputed total + daily tracking
+    const { error: updateErr } = await supabaseAdmin
       .from('gm_behaviors')
       .update({
         total_points: newTotalPoints,
-        behavior_logs: newLogs,
         points_used_today: newUsedToday,
         points_date: currentDate,
         updated_at: new Date().toISOString()
