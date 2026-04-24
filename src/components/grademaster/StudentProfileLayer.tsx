@@ -365,7 +365,7 @@ export default function StudentProfileLayer({
             <section className="space-y-6 pt-4 animate-in fade-in duration-300">
               <div className="flex items-center justify-between">
                 <h3 className="text-on-primary-fixed font-bold text-lg tracking-tight">Riwayat Transparansi</h3>
-                <span className="bg-surface-container-high text-on-surface-variant text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
+                <span className="bg-surface-container-high text-on-surface-variant text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider truncate">
                   {studentLogs.length} ENTRI TERPANTAU
                 </span>
               </div>
@@ -467,11 +467,11 @@ export default function StudentProfileLayer({
                  <div className="space-y-3">
                    {studentSummary.academicHistory.map((grade: any, idx: number) => (
                      <div key={idx} className="bg-white p-4 rounded-xl border border-surface-container flex items-center justify-between shadow-sm">
-                       <div className="flex flex-col gap-0.5">
-                         <h4 className="text-on-primary-fixed font-bold text-sm uppercase leading-tight">{grade.sessionName}</h4>
-                         <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{grade.subject} • {formatDate(grade.date)}</p>
+                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                         <h4 className="text-on-primary-fixed font-bold text-sm uppercase leading-tight truncate">{grade.sessionName}</h4>
+                         <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider truncate">{grade.subject} • {formatDate(grade.date)}</p>
                        </div>
-                       <div className="text-right flex flex-col items-end gap-1">
+                       <div className="text-right flex flex-col items-end gap-1 flex-shrink-0">
                          <p className={`text-xl font-black ${grade.isPassing ? 'text-secondary' : 'text-error'}`}>{grade.score}</p>
                          <p className="text-[8px] font-bold text-on-surface-variant uppercase">KKM: {grade.kkm}</p>
                          {!isAdmin && grade.hasRemedialAvailable && onStartRemedial && (
@@ -506,8 +506,8 @@ export default function StudentProfileLayer({
                        <div className="flex items-center gap-3">
                           <FileText className="text-on-surface-variant" size={20} />
                           <div>
-                            <h4 className="text-on-primary-fixed font-bold text-sm leading-tight">{doc.name}</h4>
-                            <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">{doc.size}</p>
+                            <h4 className="text-on-primary-fixed font-bold text-sm leading-tight truncate">{doc.name}</h4>
+                            <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider truncate">{doc.size}</p>
                           </div>
                        </div>
                        {doc.ready && (
@@ -539,7 +539,7 @@ export default function StudentProfileLayer({
                       onClick={() => handleAddBehavior(r.weight, r.text)} 
                       className="p-4 bg-surface-container-low hover:bg-surface-container border border-surface-container rounded-xl text-left transition-all active:scale-95 flex items-center justify-between group"
                     >
-                      <span className="text-[11px] font-bold text-on-surface uppercase tracking-wider">{r.text}</span>
+                      <span className="text-[11px] font-bold text-on-surface uppercase tracking-wider truncate">{r.text}</span>
                       <span className="text-[10px] font-black text-error">+ {r.weight} Pts</span>
                     </button>
                   ))}
