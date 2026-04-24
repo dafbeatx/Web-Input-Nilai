@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   User, 
   Search, 
@@ -43,6 +43,8 @@ export default function StudentClaimLayer({
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  // Ref-based guard: prevents debounce from re-querying when student is selected
+  const isStudentSelectedRef = useRef(false);
 
   // === DEBUG: Validate supabase client initialization ===
   useEffect(() => {
@@ -65,6 +67,9 @@ export default function StudentClaimLayer({
     console.log('[DEBUG DEBOUNCED VALUE]:', debouncedQuery);
 
     const fetchStudents = async () => {
+      // Skip if a student was just selected (searchQuery changed due to handleSelectStudent)
+      if (isStudentSelectedRef.current) return;
+
       if (!debouncedQuery.trim()) {
         console.log('[DEBUG QUERY] Empty query, clearing students');
         setStudents([]);
@@ -111,6 +116,7 @@ export default function StudentClaimLayer({
   }, [debouncedQuery, setToast]);
 
   const handleSelectStudent = (student: StudentOption) => {
+    isStudentSelectedRef.current = true;
     setSelectedStudent(student);
     setSearchQuery(student.student_name);
     setShowDropdown(false);
@@ -210,6 +216,7 @@ export default function StudentClaimLayer({
                 value={searchQuery}
                 onFocus={() => setShowDropdown(true)}
                 onChange={(e) => {
+                  isStudentSelectedRef.current = false;
                   setSearchQuery(e.target.value);
                   setSelectedStudent(null);
                   setShowDropdown(true);

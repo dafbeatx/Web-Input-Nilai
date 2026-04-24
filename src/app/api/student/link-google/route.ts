@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/grademaster/security';
 import { createStudentSession } from '@/lib/grademaster/studentAuth';
 
 export async function POST(req: NextRequest) {
   try {
-      const supabase = await createClient();
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     // Gunakan batasan laju untuk mengamankan endpoint dari brute-force linkage attempt
     if (!checkRateLimit(`google_link:${ip}`)) {
@@ -35,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     if (student_name && class_name) {
       // 1. Look up student by exact name and class (since studentId is from gm_behaviors)
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('gm_student_accounts')
         .select('id, student_name, class_name, academic_year, username, profile_photo_url, google_email')
         .eq('student_name', student_name)
@@ -65,7 +64,7 @@ export async function POST(req: NextRequest) {
 
         console.log('INSERT PAYLOAD:', insertPayload);
 
-        const { data: newAccount, error: insertError } = await supabase
+        const { data: newAccount, error: insertError } = await supabaseAdmin
           .from('gm_student_accounts')
           .insert(insertPayload)
           .select('id, student_name, class_name, academic_year, username, profile_photo_url, google_email')
@@ -87,7 +86,7 @@ export async function POST(req: NextRequest) {
       }
     } else if (studentId) {
       // Legacy flow: Explicit identification via student_id (if studentId was from gm_student_accounts)
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('gm_student_accounts')
         .select('id, student_name, class_name, academic_year, username, profile_photo_url, google_email')
         .eq('id', studentId)
@@ -99,7 +98,7 @@ export async function POST(req: NextRequest) {
       account = data;
     } else {
       // Legacy Fallback: Fuzzy name matching
-      const { data: accounts, error } = await supabase
+      const { data: accounts, error } = await supabaseAdmin
         .from('gm_student_accounts')
         .select('id, student_name, class_name, academic_year, username, profile_photo_url, google_email')
         .ilike('student_name', `%${google_name.trim()}%`);
@@ -121,7 +120,7 @@ export async function POST(req: NextRequest) {
 
     // Bind the account to this email if it's not bound yet
     if (!account.google_email) {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseAdmin
         .from('gm_student_accounts')
         .update({ google_email: email })
         .eq('id', account.id);
