@@ -93,8 +93,20 @@ export default function RemedialDashboardLayer({
   };
 
   function parseEssayQuestions(input: string): string[] {
-    return input.split(/\d+\./).map(s => s.trim()).filter(Boolean);
+    return input.split('\n').map(s => s.replace(/^\d+\.\s*/, '').trim()).filter(Boolean);
   }
+
+  const handleAutoFormatList = (input: string) => {
+    const lines = input.split('\n');
+    let counter = 1;
+    return lines.map(line => {
+      // If it's an empty line, preserve the line break but don't number it
+      if (!line.trim()) return line;
+      // Remove existing number prefixes to avoid "1. 1. Soal"
+      const cleanLine = line.replace(/^\d+[\.\)]\s*/, '');
+      return `${counter++}. ${cleanLine}`;
+    }).join('\n');
+  };
 
   const handleResetRemedial = async (e: React.MouseEvent, id: string, name: string) => {
     e.stopPropagation();
@@ -518,25 +530,45 @@ export default function RemedialDashboardLayer({
               {/* Editor Fields */}
               <div className="flex flex-col gap-6">
                  {/* Questions */}
-                 <div className="flex flex-col gap-2">
-                    <label className="font-label text-[10px] text-tertiary-dim uppercase font-black tracking-widest pl-1">Pertanyaan Essay (Format: 1. Soal)</label>
+                  <div className="flex flex-col gap-2 relative">
+                    <div className="flex items-center justify-between">
+                      <label className="font-label text-[10px] text-tertiary-dim uppercase font-black tracking-widest pl-1">Pertanyaan Essay (Format: 1. Soal)</label>
+                      <button 
+                        onClick={() => onRemedialInputChange?.(handleAutoFormatList(remedialQuestionsInput))}
+                        className="text-[9px] font-black uppercase tracking-widest text-primary hover:text-tertiary transition-colors flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-[12px]">format_list_numbered</span>
+                        Auto Format
+                      </button>
+                    </div>
                     <textarea 
                       className="w-full bg-surface-container-lowest border-none rounded-3xl p-5 text-sm font-medium text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none resize-none min-h-[160px] disabled:opacity-50"
-                      placeholder="1. Sebutkan... 2. Jelaskan..."
+                      placeholder="Tekan enter untuk soal baru. Nomor akan dibuat otomatis..."
                       value={remedialQuestionsInput}
                       onChange={(e) => onRemedialInputChange?.(e.target.value)}
+                      onBlur={(e) => onRemedialInputChange?.(handleAutoFormatList(e.target.value))}
                       disabled={!isAdmin}
                     />
                  </div>
                  
                  {/* Answer Keys */}
-                 <div className="flex flex-col gap-2">
-                    <label className="font-label text-[10px] text-tertiary uppercase font-black tracking-widest pl-1">Kunci Jawaban (Similarity Matcher)</label>
+                 <div className="flex flex-col gap-2 relative">
+                    <div className="flex items-center justify-between">
+                      <label className="font-label text-[10px] text-tertiary uppercase font-black tracking-widest pl-1">Kunci Jawaban (Similarity Matcher)</label>
+                      <button 
+                        onClick={() => onAnswerKeysInputChange?.(handleAutoFormatList(remedialAnswerKeysInput))}
+                        className="text-[9px] font-black uppercase tracking-widest text-tertiary hover:text-primary transition-colors flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-[12px]">format_list_numbered</span>
+                        Auto Format
+                      </button>
+                    </div>
                     <textarea 
                       className="w-full bg-surface-container-lowest border-none rounded-3xl p-5 text-sm font-medium text-tertiary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none resize-none min-h-[160px] disabled:opacity-50"
-                      placeholder="1. Jawaban kunci... 2. Penjelasan..."
+                      placeholder="Tekan enter untuk jawaban baru..."
                       value={remedialAnswerKeysInput}
                       onChange={(e) => onAnswerKeysInputChange?.(e.target.value)}
+                      onBlur={(e) => onAnswerKeysInputChange?.(handleAutoFormatList(e.target.value))}
                       disabled={!isAdmin}
                     />
                  </div>
