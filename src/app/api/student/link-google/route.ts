@@ -14,7 +14,14 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     console.log('API INPUT:', body);
-    const { google_name, studentId, student_name, class_name, email } = body;
+
+    const { google_name, studentId, student_name, class_name, email, user_id } = body;
+
+    console.log('VALIDATION:', {
+      student_name: body?.student_name,
+      email: body?.email,
+      user_id: body?.user_id,
+    });
 
     if (!google_name && !studentId) {
       return NextResponse.json({ error: 'Data identifikasi tidak lengkap' }, { status: 400 });
@@ -52,24 +59,28 @@ export async function POST(req: NextRequest) {
           class_name,
           academic_year: '2025/2026',
           username: username,
-          password_hash: 'google_sso_auto', 
+          password_hash: 'google_sso_auto',
           google_email: email
         };
 
-        console.log('INSERT DATA:', insertPayload);
+        console.log('INSERT PAYLOAD:', insertPayload);
 
         const { data: newAccount, error: insertError } = await supabase
           .from('gm_student_accounts')
           .insert(insertPayload)
           .select('id, student_name, class_name, academic_year, username, profile_photo_url, google_email')
           .single();
-          
-        console.log('SUPABASE ERROR:', insertError);
-        console.log('SUPABASE DATA:', newAccount);
 
-        if (insertError || !newAccount) {
+        console.log('SUPABASE DATA:', newAccount);
+        console.log('SUPABASE ERROR:', insertError);
+
+        if (insertError) {
           console.error('Failed to auto-create gm_student_accounts:', insertError);
-          return NextResponse.json({ error: insertError?.message || 'Gagal membuat profil siswa baru di sistem' }, { status: 500 });
+          return NextResponse.json({ error: insertError.message }, { status: 500 });
+        }
+
+        if (!newAccount) {
+          return NextResponse.json({ error: 'Gagal membuat profil siswa baru di sistem' }, { status: 500 });
         }
         
         account = newAccount;
