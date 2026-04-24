@@ -38,6 +38,7 @@ interface DashboardLayerProps {
   onStudentRemedial?: (name: string) => void;
   onBack: () => void;
   onReSync?: () => void;
+  onOpenRemedialDashboard?: () => void;
   academicYear?: string;
   semester?: string;
   examType?: string;
@@ -56,7 +57,7 @@ export default function DashboardLayer({
   analytics, isPublicView, sessionName, kkm, remedialEssayCount,
   onGradeStudent, onStudentRemedial, onBack, onReSync, academicYear,
   semester, examType, isDemo, sessionId, isAdmin = false, showRemedialButton = false,
-  isStudent = false, currentStudentName = ''
+  isStudent = false, currentStudentName = '', onOpenRemedialDashboard
 }: DashboardLayerProps) {
   const [activeTab, setActiveTab] = useState<'ikhtisar' | 'analisis' | 'laporan'>('ikhtisar');
   const [behaviorMap, setBehaviorMap] = useState<Record<string, BehaviorRecord>>({});
@@ -216,14 +217,27 @@ export default function DashboardLayer({
         )}
 
         {/* Header Section */}
-        <header className="mb-8">
-          <div className="flex items-center gap-2 text-on-surface-variant text-[10px] font-bold uppercase tracking-[0.2em] mb-2">
-            <span>{studentClass}</span>
-            <span>•</span>
-            <span>{subject}</span>
+        <header className="mb-8 flex justify-between items-start gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-on-surface-variant text-[10px] font-bold uppercase tracking-[0.2em] mb-2">
+              <span>{studentClass}</span>
+              <span>•</span>
+              <span>{subject}</span>
+            </div>
+            <h1 className="font-headline font-extrabold text-2xl sm:text-3xl text-primary tracking-tight leading-none mb-2 uppercase">{sessionName || "HASIL ANALISIS NILAI"}</h1>
+            <p className="text-on-surface-variant font-medium text-sm max-w-[100%] md:max-w-[80%]">Analisis Performa Siswa & Statistik Ujian Terpadu</p>
           </div>
-          <h1 className="font-headline font-extrabold text-2xl sm:text-3xl text-primary tracking-tight leading-none mb-2 uppercase">{sessionName || "HASIL ANALISIS NILAI"}</h1>
-          <p className="text-on-surface-variant font-medium text-sm max-w-[80%]">Analisis Performa Siswa & Statistik Ujian Terpadu</p>
+          
+          {isAdmin && onOpenRemedialDashboard && (
+            <button
+              onClick={onOpenRemedialDashboard}
+              className="shrink-0 px-3 md:px-4 py-2.5 bg-tertiary/10 text-tertiary border border-tertiary/20 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-tertiary hover:text-on-tertiary transition-all flex items-center gap-2 shadow-lg shadow-tertiary/5 active:scale-95"
+            >
+              <Target size={16} />
+              <span className="hidden sm:inline">Siapkan Remedial</span>
+              <span className="sm:hidden">Remedial</span>
+            </button>
+          )}
         </header>
 
         {/* Bento Statistics Grid */}

@@ -967,6 +967,7 @@ export default function GradeMaster() {
             setStudentName(name);
             setLayer("remedial");
           }}
+          onOpenRemedialDashboard={() => setLayer("remedial_dashboard")}
         />
       )}
 
