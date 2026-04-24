@@ -129,8 +129,7 @@ export default function Navbar() {
               >
                 <Calendar size={14} /> Kehadiran
               </button>
-              {isAdmin && (
-                <button
+              <button
                   onClick={() => onNavigate('remedial_dashboard')}
                   className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
                     isActive('remedial') ? 'bg-primary/20 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-white border border-transparent'
@@ -138,7 +137,7 @@ export default function Navbar() {
                 >
                   <RefreshCcw size={14} /> Remedial
                 </button>
-              )}
+
               {isAdmin && (
                 <button
                   onClick={() => onNavigate('lesson_management')}
@@ -333,9 +332,7 @@ export default function Navbar() {
               <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('attendance') ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>Absen</span>
             </button>
 
-            {/* Remedial (Admin only) */}
-            {isAdmin && (
-              <button 
+            <button 
                 onClick={() => onNavigate('remedial_dashboard')}
                 className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
                   isActive('remedial') 
@@ -346,7 +343,6 @@ export default function Navbar() {
                 <RefreshCcw size={20} strokeWidth={isActive('remedial') ? 2.5 : 1.8} />
                 <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('remedial') ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>Remedial</span>
               </button>
-            )}
 
             {/* More Menu / Profile */}
             <button 

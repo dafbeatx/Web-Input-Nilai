@@ -78,7 +78,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     }
 
     // 3. Auth Guards
-    const adminOnlyLayers = ['setup', 'grading', 'remedial_dashboard', 'student_accounts'];
+    const adminOnlyLayers = ['setup', 'grading', 'student_accounts'];
     const protectedLayers = ['remedial'];
     const authLayers = ['login', 'student_login'];
     
@@ -100,7 +100,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     const handlePopState = () => {
       const newHash = window.location.hash.replace('#', '') as Layer;
       if (validLayers.includes(newHash)) {
-        const adminOnlyLayers = ['setup', 'grading', 'remedial_dashboard', 'student_accounts'];
+        const adminOnlyLayers = ['setup', 'grading', 'student_accounts'];
         const protectedLayers = ['remedial'];
         if (adminOnlyLayers.includes(newHash) && !localStorage.getItem('gm_isAdmin')) {
           setLayer('login');
@@ -136,7 +136,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   // Update URL and LocalStorage on Layer change
   const navigate = (newLayer: Layer) => {
     // Auth Guards
-    const adminOnlyLayers = ['setup', 'grading', 'remedial_dashboard', 'student_accounts'];
+    const adminOnlyLayers = ['setup', 'grading', 'student_accounts'];
     const protectedLayers = ['remedial'];
 
     if (adminOnlyLayers.includes(newLayer) && !isAdmin) {

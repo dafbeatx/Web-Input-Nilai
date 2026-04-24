@@ -54,21 +54,10 @@ export default function RemedialDashboardLayer({
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   // Security State
-  const [isLocked, setIsLocked] = useState(true);
-  const [passwordInput, setPasswordInput] = useState('');
-  const [unlockError, setUnlockError] = useState(false);
 
-  const handleUnlock = () => {
-    const savedPass = localStorage.getItem('gm_remedial_password');
-    // If no password is set, we use a default 'master' or just allow if empty (but instructions say it was set in settings)
-    if (!savedPass || passwordInput === savedPass || passwordInput === "admin") {
-      setIsLocked(false);
-      setUnlockError(false);
-    } else {
-      setUnlockError(true);
-      setTimeout(() => setUnlockError(false), 2000);
-    }
-  };
+
+
+
 
   // Stats Logic
   const remedialStudents = useMemo(() => {
@@ -527,56 +516,7 @@ export default function RemedialDashboardLayer({
       {/* Bottom OLED Safe Area Padding */}
       <div className="h-safe bg-surface-container shrink-0" />
       
-      {/* Lock Screen Overlay */}
-      {isLocked && (
-        <div className="fixed inset-0 z-[200] bg-surface flex flex-col items-center justify-center p-8 animate-in fade-in duration-500">
-           <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
-              <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-tertiary/10 blur-[120px] rounded-full" />
-              <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 blur-[120px] rounded-full" />
-           </div>
 
-           <div className="relative flex flex-col items-center text-center max-w-xs animate-in zoom-in-95 slide-in-from-bottom-8 duration-700">
-              <div className={`w-20 h-20 rounded-[2.5rem] bg-surface-container-highest flex items-center justify-center mb-8 border border-outline-variant premium-shadow transition-all duration-300 ${unlockError ? 'shake bg-error/10 border-error/20' : ''}`}>
-                 <span className={`material-symbols-outlined text-4xl ${unlockError ? 'text-error animate-pulse' : 'text-primary'}`}>
-                   {unlockError ? 'lock_reset' : 'shield_person'}
-                 </span>
-              </div>
-
-              <h2 className="font-headline text-2xl font-black text-on-surface uppercase tracking-tight mb-2">Akses Terbatas</h2>
-              <p className="text-[10px] font-black text-on-surface-variant/40 uppercase tracking-[0.2em] mb-8 leading-relaxed italic">
-                 Silakan masukkan password <br/> untuk membuka data graduation.
-              </p>
-
-              <div className="w-full space-y-4">
-                 <div className="relative group">
-                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-tertiary text-lg transition-colors">key</span>
-                    <input 
-                      type="password"
-                      placeholder="Input Password..."
-                      value={passwordInput}
-                      onChange={(e) => setPasswordInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
-                      className={`w-full bg-surface-container-low border-none rounded-2xl py-5 pl-12 pr-4 text-sm text-on-surface font-black placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/20 outline-none transition-all ${unlockError ? 'border-error/20 text-error' : ''}`}
-                    />
-                 </div>
-                 
-                 <button 
-                  onClick={handleUnlock}
-                  className="w-full py-5 bg-primary text-on-primary rounded-2xl font-black text-xs uppercase tracking-[0.2em] premium-shadow active:scale-95 transition-transform"
-                 >
-                    Verifikasi Akses
-                 </button>
-                 
-                 <button 
-                  onClick={onBack}
-                  className="w-full py-2 text-on-surface-variant/40 text-[9px] font-black uppercase tracking-widest"
-                 >
-                    Kembali Ke Menu
-                 </button>
-              </div>
-           </div>
-        </div>
-      )}
 
       {/* Dynamic Styling for Custom Scrollbar */}
       <style jsx global>{`
