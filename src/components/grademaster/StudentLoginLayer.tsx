@@ -26,6 +26,7 @@ export default function StudentLoginLayer({
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isLoginInProgress, setIsLoginInProgress] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [userName, setUserName] = useState('');
   
   const [error, setError] = useState('');
 
@@ -44,7 +45,7 @@ export default function StudentLoginLayer({
       
       if (session) {
         // Session detected - move to redirect phase
-        handleSessionActive();
+        handleSessionActive(session);
       } else {
         if (isMounted) setIsCheckingSession(false);
       }
@@ -54,7 +55,7 @@ export default function StudentLoginLayer({
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       console.log(`[AuthListener] Event: ${event}`);
       if (event === 'SIGNED_IN' && session) {
-        handleSessionActive();
+        handleSessionActive(session);
       }
     });
 
@@ -66,13 +67,18 @@ export default function StudentLoginLayer({
     };
   }, []);
 
-  const handleSessionActive = () => {
+  const handleSessionActive = (session?: any) => {
     setIsRedirecting(true);
     setIsCheckingSession(false);
+    
+    if (session && session.user && session.user.user_metadata) {
+      setUserName(session.user.user_metadata.full_name || session.user.email || '');
+    }
+
     // Give user a moment to see the "Redirecting" state for a premium feel
     setTimeout(() => {
       onSuccess(null); // Trigger parent layer switch to student_claim/home
-    }, 1500);
+    }, 1800);
   };
 
   const handleGoogleLogin = async () => {
@@ -126,9 +132,15 @@ export default function StudentLoginLayer({
           </div>
           <div className="space-y-3">
             <h1 className="text-3xl font-black text-[#0F172A] tracking-tighter uppercase font-outfit">Berhasil Masuk</h1>
-            <p className="text-sm font-medium text-slate-400 leading-relaxed px-4">
-              Menghubungkan Anda ke portal akademik GradeMaster...
-            </p>
+            {userName ? (
+              <p className="text-sm font-black text-emerald-500 uppercase tracking-widest leading-relaxed px-4">
+                {userName}
+              </p>
+            ) : (
+              <p className="text-sm font-medium text-slate-400 leading-relaxed px-4">
+                Menghubungkan Anda ke portal akademik GradeMaster...
+              </p>
+            )}
           </div>
           <div className="flex gap-1.5 justify-center pt-4">
              <div className="w-1.5 h-1.5 rounded-full bg-slate-200 animate-bounce [animation-delay:-0.3s]" />

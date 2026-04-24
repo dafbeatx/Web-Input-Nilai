@@ -1059,7 +1059,6 @@ export default function GradeMaster() {
           onSuccess={async (data) => {
             // Don't force isStudent(true) here, let checkAdmin determine the role
             await checkAdmin();
-            setLayer("home");
           }}
         />
       )}
@@ -1075,7 +1074,6 @@ export default function GradeMaster() {
             setIsStudent(true);
             setStudentData(data);
             await checkAdmin();
-            setLayer("home");
           }}
           onLogout={() => {
             logout();
