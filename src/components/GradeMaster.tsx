@@ -1045,6 +1045,9 @@ export default function GradeMaster() {
           onUpdateRemedial={handleUpdateRemedialQuestions}
           onRemedialInputChange={handleRemedialInputChange}
           isSaving={isUpdatingQuestions}
+          sessions={sessions}
+          activeSessionId={sessionId}
+          onSessionSelect={handleSessionClick}
         />
       )}
 

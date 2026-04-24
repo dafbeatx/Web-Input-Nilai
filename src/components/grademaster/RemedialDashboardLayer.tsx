@@ -6,7 +6,7 @@ import {
   Clock, ShieldAlert, Check, RotateCcw, X, Save, Wand2, 
   MapPin, FileText, ChevronDown, ChevronUp, User, LayoutGrid
 } from 'lucide-react';
-import { GradedStudent, ScoringConfig } from '@/lib/grademaster/types';
+import { GradedStudent, ScoringConfig, SessionMeta } from '@/lib/grademaster/types';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 
 interface RemedialDashboardLayerProps {
@@ -26,6 +26,9 @@ interface RemedialDashboardLayerProps {
   remedialAnswerKeysInput?: string;
   onAnswerKeysInputChange?: (v: string) => void;
   isSaving?: boolean;
+  sessions?: SessionMeta[];
+  activeSessionId?: string;
+  onSessionSelect?: (session: SessionMeta) => void;
 }
 
 export default function RemedialDashboardLayer({
@@ -44,7 +47,10 @@ export default function RemedialDashboardLayer({
   onRemedialInputChange,
   remedialAnswerKeysInput = "",
   onAnswerKeysInputChange,
-  isSaving = false
+  isSaving = false,
+  sessions = [],
+  activeSessionId,
+  onSessionSelect
 }: RemedialDashboardLayerProps) {
   const { isAdmin, studentClass: contextClass, studentData } = useGradeMaster();
   const displayClass = studentClass || contextClass || (studentData && studentData.class_name) || "N/A";
@@ -178,11 +184,40 @@ export default function RemedialDashboardLayer({
       {/* Main Content Area */}
       <main className="flex-1 pt-20 pb-32 px-4 flex flex-col gap-5 max-w-lg mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
         
-        {/* Editorial Header */}
+        {/* Editorial Header & Session Picker */}
         <section className="flex flex-col gap-4">
-          <div className="space-y-1">
+          <div className="space-y-3">
             <span className="font-label text-[10px] uppercase tracking-[0.15em] text-tertiary-dim font-black">Data Management</span>
-            <h2 className="font-headline text-2xl font-black tracking-tight leading-tight">PUSAT DATA REMEDIAL {examType}</h2>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <h2 className="font-headline text-2xl font-black tracking-tight leading-tight uppercase">
+                PUSAT DATA REMEDIAL
+              </h2>
+              
+              {/* Dropdown Pemilihan Sesi */}
+              <div className="relative min-w-[260px] w-full sm:w-auto z-20">
+                <select 
+                  className="w-full bg-surface-container border border-outline-variant/30 text-primary font-bold text-xs py-3.5 px-4 rounded-xl appearance-none outline-none focus:ring-2 focus:ring-primary/20 shadow-sm cursor-pointer transition-all hover:bg-surface-container-high"
+                  onChange={(e) => {
+                    const selected = sessions.find(s => s.id === e.target.value);
+                    if (selected && onSessionSelect) {
+                       // Reset searchQuery and local states if needed
+                       setSearchQuery('');
+                       onSessionSelect(selected);
+                    }
+                  }}
+                  value={activeSessionId || ""}
+                  disabled={!isAdmin}
+                >
+                  <option value="" disabled>-- Pilih Kelas & Sesi --</option>
+                  {sessions.map(s => (
+                    <option key={s.id} value={s.id}>
+                      Kelas {s.class_name || 'Umum'} - {s.session_name}
+                    </option>
+                  ))}
+                </select>
+                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+              </div>
+            </div>
           </div>
           
           {/* Advanced Filters Grid */}
@@ -232,7 +267,17 @@ export default function RemedialDashboardLayer({
 
         {/* Student List Section */}
         <div className="flex flex-col gap-3">
-          {remedialStudents.length === 0 ? (
+          {!activeSessionId ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-outline-variant/30 rounded-3xl bg-surface-container-lowest">
+               <div className="w-16 h-16 rounded-3xl bg-surface-container-high text-on-surface-variant flex items-center justify-center mb-6">
+                 <span className="material-symbols-outlined text-4xl">inventory_2</span>
+               </div>
+               <h3 className="font-headline text-lg font-bold text-on-surface mb-2 uppercase tracking-tight">Pilih Sesi Ujian</h3>
+               <p className="text-on-surface-variant/70 text-[11px] font-bold max-w-[250px] leading-relaxed uppercase tracking-widest">
+                 Pilih kelas dan sesi ujian dari dropdown di atas untuk mengelola data remedial.
+               </p>
+            </div>
+          ) : remedialStudents.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
                <div className="relative mb-6">
                 <div className="absolute inset-0 bg-tertiary/5 blur-[60px] rounded-full scale-150"></div>
@@ -432,7 +477,8 @@ export default function RemedialDashboardLayer({
          <div className="max-w-lg mx-auto flex flex-col gap-3 pointer-events-auto">
             <button 
               onClick={() => setIsEditing(true)}
-              className="w-full h-14 bg-gradient-to-br from-[#f9f9f9] to-[#a0a1a1] text-on-primary-container rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 premium-shadow active:scale-[0.98] transition-all"
+              disabled={!activeSessionId}
+              className="w-full h-14 bg-gradient-to-br from-[#f9f9f9] to-[#a0a1a1] text-on-primary-container rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 premium-shadow active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale"
             >
               <span className="material-symbols-outlined">auto_fix_high</span>
               Atur Soal Remedial
