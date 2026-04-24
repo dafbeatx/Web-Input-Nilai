@@ -350,10 +350,7 @@ export default function GradeMaster() {
 
   const handleAdminLogout = async () => {
     try {
-      await fetch("/api/admin/logout", { method: "POST" });
-      setIsAdmin(false);
-      setAdminUser(null);
-      clearAdminSession();
+      await logout();
       setToast({ message: "Logout berhasil", type: "success" });
     } catch (err) {
       setToast({ message: "Gagal logout", type: "error" });

@@ -23,30 +23,33 @@ export async function GET() {
 
     let role = profile?.role || 'user';
 
-    // AUTO-UPGRADE: If user is in admin whitelist but role is 'user', upgrade them!
-    const adminDomains = ['@guru.smp.belajar.id', '@guru.belajar.id', '@smp.belajar.id', '@admin.belajar.id'];
+    // AUTO-UPGRADE OR DOWNGRADE: Strictly enforce domain-based role
+    const adminDomains = ['@guru.smp.belajar.id'];
     const isWhitelisted = adminDomains.some(domain => email.toLowerCase().endsWith(domain)) || email === 'dafbeatx@gmail.com';
     
-    if (role !== 'admin' && isWhitelisted) {
-      // Use upsert instead of update to handle cases where profile row doesn't exist yet
-      const { error: upgradeError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          email: user.email,
-          role: 'admin',
-          full_name: username,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'id' });
-      
-      if (!upgradeError) {
-        console.log(`Auto-upgraded ${email} to admin`);
-        role = 'admin';
-      } else {
-        console.error(`Auto-upgrade failed for ${email}:`, upgradeError);
-        // Fallback to admin locally to prevent getting stuck
-        role = 'admin';
+    if (isWhitelisted) {
+      if (role !== 'admin') {
+        const { error: upgradeError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            email: user.email,
+            role: 'admin',
+            full_name: username,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' });
+        
+        if (!upgradeError) role = 'admin';
       }
+    } else {
+      // If not whitelisted, STRICTLY enforce student role
+      if (role === 'admin') {
+        await supabase
+          .from('profiles')
+          .update({ role: 'user' })
+          .eq('id', user.id);
+      }
+      role = 'user'; // Treat as regular user (student)
     }
 
     if (role === 'admin') {
