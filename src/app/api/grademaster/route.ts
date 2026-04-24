@@ -209,6 +209,11 @@ export async function POST(req: NextRequest) {
           query = query.eq('is_demo', false);
         }
 
+        // Filter sessions by student's class_name when logged in as student
+        if (studentSession && !adminSession) {
+          query = query.ilike('class_name', studentSession.student.class_name);
+        }
+
         const { data, error } = await query;
   
         if (error) throw error;
