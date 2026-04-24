@@ -88,11 +88,12 @@ export async function POST(req: NextRequest) {
     // Insert per-question answers for analytics
     const returnedStudentId = studentData?.id;
     if (returnedStudentId && mcqAnswers && answerKey && Array.isArray(answerKey)) {
+      const normalize = (val?: string) => val ? val.trim().toUpperCase() : '';
       const answerRows = Object.entries(mcqAnswers as Record<string, string>).map(([qNum, selected]) => ({
         student_id: returnedStudentId,
         question_number: parseInt(qNum),
         selected_answer: selected,
-        is_correct: answerKey[parseInt(qNum) - 1] === selected,
+        is_correct: normalize(answerKey[parseInt(qNum) - 1]) === normalize(selected),
       }));
 
       if (answerRows.length > 0) {

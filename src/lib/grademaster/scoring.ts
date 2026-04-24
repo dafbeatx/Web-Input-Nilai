@@ -12,14 +12,22 @@ export function calculateStudentResult(
   let wrong = 0;
   let unanswered = 0;
 
+  const normalize = (val?: string) => val ? val.trim().toUpperCase() : '';
+
   for (let i = 0; i < totalQuestions; i++) {
     const qNum = i + 1;
     const studentAns = studentAnswers[qNum];
-    const correctAns = answerKey[i];
+    const correctAns = answerKey[i]; // index 0 for soal 1
 
-    if (!studentAns) {
+    console.log({
+      soal: qNum,
+      key: correctAns,
+      answer: studentAns
+    });
+
+    if (!studentAns || studentAns.trim() === '') {
       unanswered++;
-    } else if (studentAns === correctAns) {
+    } else if (normalize(studentAns) === normalize(correctAns)) {
       correct++;
     } else {
       wrong++;

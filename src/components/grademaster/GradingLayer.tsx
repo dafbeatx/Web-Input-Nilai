@@ -393,8 +393,9 @@ export default function GradingLayer(props: GradingLayerProps) {
             {Array.from({ length: totalQuestions }, (_, i) => i + 1).map(qNum => {
               const studentAns = userAnswers[qNum];
               const correctAns = answerKey[qNum - 1];
-              const isAnswered = !!studentAns;
-              const isCorrect = studentAns === correctAns;
+              const normalize = (val?: string) => val ? val.trim().toUpperCase() : '';
+              const isAnswered = !!studentAns && studentAns.trim() !== '';
+              const isCorrect = normalize(studentAns) === normalize(correctAns);
 
               return (
                 <div

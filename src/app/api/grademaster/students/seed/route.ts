@@ -95,12 +95,13 @@ export async function POST(req: NextRequest) {
         original_score: result.finalScore,
       });
 
+      const normalize = (val?: string) => val ? val.trim().toUpperCase() : '';
       Object.entries(studentAnswers).forEach(([qNum, selected]) => {
         allAnswers.push({
           student_id: studentId,
           question_number: parseInt(qNum),
           selected_answer: selected,
-          is_correct: answerKey[parseInt(qNum) - 1] === selected,
+          is_correct: normalize(answerKey[parseInt(qNum) - 1]) === normalize(selected),
         });
       });
     }
