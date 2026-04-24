@@ -546,7 +546,7 @@ export default function GradeMaster() {
       setIsPublicView(true);
       setShowRemedialButton(!!data.showRemedialButton);
 
-      setRemedialStudentName(studentData?.name || "");
+      setStudentName(studentData?.name || "");
       setLayer("remedial");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal memuat sesi remedial";
