@@ -40,6 +40,7 @@ interface StudentProfileLayerProps {
   onAvatarUpdate?: (newUrl: string) => void;
   onPointsUpdate?: (newPoints: number) => void;
   onLogout?: () => void;
+  onStartRemedial?: (sessionName: string) => void;
 }
 
 export default function StudentProfileLayer({ 
@@ -55,7 +56,8 @@ export default function StudentProfileLayer({
   canEditPhoto = false,
   onAvatarUpdate,
   onPointsUpdate,
-  onLogout
+  onLogout,
+  onStartRemedial
 }: StudentProfileLayerProps) {
   const [totalPoints, setTotalPoints] = useState(initialPoints);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(avatarUrl);
@@ -469,9 +471,18 @@ export default function StudentProfileLayer({
                          <h4 className="text-on-primary-fixed font-bold text-sm uppercase leading-tight">{grade.sessionName}</h4>
                          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{grade.subject} • {formatDate(grade.date)}</p>
                        </div>
-                       <div className="text-right">
+                       <div className="text-right flex flex-col items-end gap-1">
                          <p className={`text-xl font-black ${grade.isPassing ? 'text-secondary' : 'text-error'}`}>{grade.score}</p>
                          <p className="text-[8px] font-bold text-on-surface-variant uppercase">KKM: {grade.kkm}</p>
+                         {!isAdmin && grade.hasRemedialAvailable && onStartRemedial && (
+                           <button 
+                             onClick={() => onStartRemedial(grade.sessionName)}
+                             className="mt-1 px-3 py-1.5 bg-rose-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm shadow-rose-500/20"
+                           >
+                             <span className="material-symbols-outlined text-[12px]">edit_note</span>
+                             Remedial
+                           </button>
+                         )}
                        </div>
                      </div>
                    ))}

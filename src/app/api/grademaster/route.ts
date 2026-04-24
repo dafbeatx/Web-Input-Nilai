@@ -335,7 +335,9 @@ export async function POST(req: NextRequest) {
     const REMEDIAL_DEADLINE_DATE = new Date('2026-03-30T07:00:00+07:00').getTime();
     const sessionDate = new Date(session.created_at).getTime();
     const now = Date.now();
-    const showRemedialButton = (sessionDate > REMEDIAL_DEADLINE_DATE) || (now <= REMEDIAL_DEADLINE_DATE);
+    const isDateValid = (sessionDate > REMEDIAL_DEADLINE_DATE) || (now <= REMEDIAL_DEADLINE_DATE);
+    const hasQuestions = session.scoring_config?.remedialQuestions?.length > 0;
+    const showRemedialButton = isDateValid && hasQuestions;
 
     return NextResponse.json({
       sessionId: session.id,

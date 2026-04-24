@@ -517,6 +517,43 @@ export default function GradeMaster() {
     }
   };
 
+  const handleStudentRemedialFromProfile = async (targetSessionName: string) => {
+    try {
+      const res = await fetch(`/api/grademaster?name=${encodeURIComponent(targetSessionName)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setSessionId(data.sessionId || "");
+      setSessionName(data.sessionName);
+      setTeacherName(data.teacher || "");
+      setSubject(data.subject || "");
+      setStudentClass(data.className || "");
+      setSchoolLevel(data.schoolLevel || "SMA");
+      setStudentList(data.studentList || []);
+      setGradedStudents(data.gradedStudents || []);
+      setKkm(data.kkm || 70);
+      setRemedialEssayCount(data.remedialEssayCount || 5);
+      setRemedialTimer(data.remedialTimer || 15);
+      const questions = data.scoringConfig?.remedialQuestions || [];
+      setRemedialQuestions(questions);
+      setRemedialQuestionsInput(formatEssayQuestions(questions));
+      const ansKeys = data.scoringConfig?.remedialAnswerKeys || [];
+      setRemedialAnswerKeys(ansKeys);
+      setRemedialAnswerKeysInput(formatEssayQuestions(ansKeys));
+      setApiQuestionDifficulties(data.questionDifficulties || []);
+      setIsSessionPublic(data.isPublic);
+      setIsDemo(data.isDemo === true);
+      setIsPublicView(true);
+      setShowRemedialButton(!!data.showRemedialButton);
+
+      setRemedialStudentName(studentData?.name || "");
+      setLayer("remedial");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal memuat sesi remedial";
+      setToast({ message: msg, type: "error" });
+    }
+  };
+
   const fetchSessionData = async (name: string, pass: string) => {
     const params = new URLSearchParams({
       name: name.trim(),
@@ -1035,6 +1072,7 @@ export default function GradeMaster() {
           setToast={setToast}
           onLogout={handleAdminLogout}
           onAvatarUpdate={(url) => setStudentData({ ...studentData, avatar_url: url })}
+          onStartRemedial={handleStudentRemedialFromProfile}
         />
       )}
 

@@ -37,7 +37,9 @@ export async function GET(req: NextRequest) {
           subject,
           kkm,
           academic_year,
-          updated_at
+          updated_at,
+          created_at,
+          scoring_config
         )
       `)
       .eq('name', studentName)
@@ -45,14 +47,23 @@ export async function GET(req: NextRequest) {
 
     if (gradeError) throw gradeError;
 
-    const academicHistory = gradeData?.map((g: any) => ({
-      sessionName: g.gm_sessions?.session_name || 'Ujian Tanpa Nama',
-      subject: g.gm_sessions?.subject || 'Umum',
-      score: g.final_score,
-      kkm: g.gm_sessions?.kkm || 70,
-      date: g.gm_sessions?.updated_at,
-      isPassing: g.final_score >= (g.gm_sessions?.kkm || 70)
-    })) || [];
+    const academicHistory = gradeData?.map((g: any) => {
+      const isPassing = g.final_score >= (g.gm_sessions?.kkm || 70);
+      const sessionDate = new Date(g.gm_sessions?.created_at).getTime();
+      const REMEDIAL_DEADLINE_DATE = new Date('2026-03-30T07:00:00+07:00').getTime();
+      const showRemedialButton = (sessionDate > REMEDIAL_DEADLINE_DATE) || (Date.now() <= REMEDIAL_DEADLINE_DATE);
+      const hasQuestions = g.gm_sessions?.scoring_config?.remedialQuestions?.length > 0;
+      
+      return {
+        sessionName: g.gm_sessions?.session_name || 'Ujian Tanpa Nama',
+        subject: g.gm_sessions?.subject || 'Umum',
+        score: g.final_score,
+        kkm: g.gm_sessions?.kkm || 70,
+        date: g.gm_sessions?.updated_at,
+        isPassing,
+        hasRemedialAvailable: !isPassing && showRemedialButton && hasQuestions
+      };
+    }) || [];
 
     // 3. Mock Documents (In real app, this might pull from a storage table)
     const documents = [
