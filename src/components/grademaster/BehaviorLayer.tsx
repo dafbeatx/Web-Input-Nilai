@@ -483,6 +483,7 @@ export default function BehaviorLayer({
         initialPoints={selectedStudent.total_points}
         avatarUrl={selectedStudent.avatar_url}
         canEditPhoto={isAdmin}
+        behaviorReasons={behaviorReasons}
         setToast={setToast}
         onBack={() => setSelectedStudent(null)}
         onAvatarUpdate={(url) => setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, avatar_url: url } : s))}

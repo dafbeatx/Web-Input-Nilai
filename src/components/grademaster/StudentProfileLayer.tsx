@@ -41,6 +41,7 @@ interface StudentProfileLayerProps {
   onPointsUpdate?: (newPoints: number) => void;
   onLogout?: () => void;
   onStartRemedial?: (sessionName: string) => void;
+  behaviorReasons?: { text: string; weight: number }[];
 }
 
 export default function StudentProfileLayer({ 
@@ -57,7 +58,8 @@ export default function StudentProfileLayer({
   onAvatarUpdate,
   onPointsUpdate,
   onLogout,
-  onStartRemedial
+  onStartRemedial,
+  behaviorReasons = []
 }: StudentProfileLayerProps) {
   const [totalPoints, setTotalPoints] = useState(initialPoints);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(avatarUrl);
@@ -73,23 +75,36 @@ export default function StudentProfileLayer({
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [localReasons, setLocalReasons] = useState<{ text: string, weight: number }[]>(behaviorReasons);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Behavior Reasons (Matches BehaviorLayer defaults)
-  const behaviorReasons = [
-    { text: "Bolos PBM", weight: 20 },
-    { text: "Berbicara Kasar", weight: 15 },
-    { text: "Merokok/Vaping", weight: 50 },
-    { text: "Membantah Guru", weight: 25 },
-    { text: "Terlambat Parah", weight: 10 }
-  ];
+
+
+  useEffect(() => {
+    setLocalReasons(behaviorReasons);
+  }, [behaviorReasons]);
 
   useEffect(() => {
     fetchStudentLogs();
     fetchStudentSummary();
+    if (isAdmin && (!behaviorReasons || behaviorReasons.length === 0)) {
+      fetchBehaviorSettings();
+    }
     setTotalPoints(initialPoints);
     setCurrentAvatarUrl(avatarUrl);
-  }, [studentId, initialPoints, avatarUrl]);
+  }, [studentId, initialPoints, avatarUrl, isAdmin]);
+
+  const fetchBehaviorSettings = async () => {
+    try {
+      const res = await fetch(`/api/grademaster/behaviors/settings?year=${encodeURIComponent(academicYear)}`);
+      const data = await res.json();
+      if (res.ok && data.settings && Array.isArray(data.settings.reasons)) {
+        setLocalReasons(data.settings.reasons);
+      }
+    } catch (err) {
+      console.error("Failed to load behavior settings", err);
+    }
+  };
 
   // Sync avatar url prop changes (e.g. from studentData shift)
   useEffect(() => {
@@ -532,7 +547,7 @@ export default function StudentProfileLayer({
                   className="w-full bg-white border border-surface-container rounded-xl p-3 text-sm font-bold text-on-surface outline-none focus:border-on-primary-fixed transition-all"
                 />
                 <div className="grid grid-cols-1 gap-2">
-                  {behaviorReasons.map(r => (
+                  {localReasons.map(r => (
                     <button 
                       key={r.text} 
                       disabled={isUpdatingPoints}

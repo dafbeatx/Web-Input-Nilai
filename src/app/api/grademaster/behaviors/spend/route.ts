@@ -46,41 +46,41 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    if (record.total_points < pointsToSpend) {
+    // Check remaining demerit capacity. Max demerits allowed is 100.
+    // If student has 25 demerits, they have 75 points available to spend.
+    const availableBalance = 100 - record.total_points;
+    if (availableBalance < pointsToSpend) {
       return NextResponse.json({ 
-        error: `Saldo poin tidak mencukupi. (Saldo Anda: ${record.total_points})` 
+        error: `Saldo poin tidak mencukupi. (Saldo tersedia: ${availableBalance})` 
       }, { status: 403 });
     }
 
-    // Insert a spend entry into gm_behavior_logs so the deduction is traceable
-    // and total_points stays consistent with the log-based recompute system.
+    // Insert a spend entry as a POSITIVE delta (increasing demerits/cost)
     const { error: logInsertErr } = await supabaseAdmin
       .from('gm_behavior_logs')
       .insert({
         student_id: record.id,
-        points_delta: -pointsToSpend,
+        points_delta: pointsToSpend,
         reason: `Tukar poin untuk ekstensi waktu selama ${pointsToSpend} menit pada ujian remedial`,
         violation_date: new Date().toISOString(),
       });
 
     if (logInsertErr) throw logInsertErr;
 
-    // Recompute total_points from all logs as the single source of truth
+    // Recompute total_points (demerits) from all logs
     const { data: allLogs } = await supabaseAdmin
       .from('gm_behavior_logs')
       .select('points_delta')
       .eq('student_id', record.id);
 
-    const deltaSum = (allLogs || []).reduce((sum: number, log: any) => sum + (log.points_delta || 0), 0);
-    const newTotalPoints = 100 + deltaSum;
-
+    const newTotalDemerits = (allLogs || []).reduce((sum: number, log: any) => sum + (log.points_delta || 0), 0);
     const newUsedToday = currentUsedToday + pointsToSpend;
 
-    // Persist recomputed total + daily tracking
+    // Persist recomputed total demerits + daily tracking
     const { error: updateErr } = await supabaseAdmin
       .from('gm_behaviors')
       .update({
-        total_points: newTotalPoints,
+        total_points: newTotalDemerits,
         points_used_today: newUsedToday,
         points_date: currentDate,
         updated_at: new Date().toISOString()
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       message: `${pointsToSpend} menit berhasil ditambahkan.`,
-      newPoints: newTotalPoints
+      newPoints: newTotalDemerits
     });
 
   } catch (err: any) {

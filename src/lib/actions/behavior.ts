@@ -6,8 +6,10 @@ import { revalidatePath } from 'next/cache';
 
 /**
  * Pure calculator: returns computed total_points from gm_behavior_logs.
- * Formula: 100 (base) + SUM(all points_delta in logs).
- * Negative deltas = pelanggaran, positive deltas = apresiasi.
+ * Negative deltas = demerits/violations, positive deltas = appreciation.
+ * Formula: sum(deltas). 
+ * Note: If using demerit-only system (where violations are positive), 
+ * this returns the total sum of demerits.
  * Does NOT write to DB — callers are responsible for persistence.
  */
 async function computePointsFromLogs(studentId: string): Promise<number> {
@@ -18,10 +20,8 @@ async function computePointsFromLogs(studentId: string): Promise<number> {
 
   if (error) throw error;
 
-  // Start from 0, not 100. The base 100 is stored in gm_behaviors.total_points at creation.
-  // All mutations go through logs, so total = base(100) + sum(deltas).
   const deltaSum = (logs || []).reduce((sum: number, log: any) => sum + (log.points_delta || 0), 0);
-  return 100 + deltaSum;
+  return deltaSum;
 }
 
 /**
