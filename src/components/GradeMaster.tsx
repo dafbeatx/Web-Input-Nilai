@@ -199,6 +199,8 @@ export default function GradeMaster() {
         if (layer === 'student_login' || layer === 'student_claim' || layer === 'login') {
           setLayer('home');
         }
+        // SYNC: Re-fetch sessions now that student is confirmed (mirrors admin pattern)
+        await fetchSessions();
         return;
       }
 
@@ -231,6 +233,8 @@ export default function GradeMaster() {
         if (layer === 'student_login' || layer === 'student_claim') {
           setLayer('home');
         }
+        // SYNC: Re-fetch sessions for student role
+        await fetchSessions();
       } else if (data.role === 'student_google') {
         setIsAdmin(false);
         setIsStudent(true);

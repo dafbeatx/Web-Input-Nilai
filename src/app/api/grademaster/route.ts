@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { hashPassword, verifyPassword, validateSessionInput, checkRateLimit } from '@/lib/grademaster/security';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { getStudentSession } from '@/lib/grademaster/studentAuth';
@@ -198,20 +199,16 @@ export async function POST(req: NextRequest) {
       const name = searchParams.get('name');
       const password = searchParams.get('password');
   
-      // List all sessions (auth conditionally modifies results)
+      // List all sessions — both admin (write) and student (read-only) see all non-demo sessions
       if (!name && !password) {
-        let query = supabase
+        let query = supabaseAdmin
           .from('gm_sessions')
           .select('id, session_name, teacher, subject, class_name, school_level, exam_type, academic_year, updated_at, kkm, remedial_essay_count, remedial_timer, is_public, is_demo')
           .order('updated_at', { ascending: false });
 
+        // Hide demo sessions from non-admin users (students see real sessions only)
         if (!adminSession) {
           query = query.eq('is_demo', false);
-        }
-
-        // Filter sessions by student's class_name when logged in as student
-        if (studentSession && !adminSession) {
-          query = query.ilike('class_name', studentSession.student.class_name);
         }
 
         const { data, error } = await query;
