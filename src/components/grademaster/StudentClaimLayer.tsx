@@ -11,6 +11,13 @@ import {
 } from 'lucide-react';
 import { ToastType } from '@/lib/grademaster/types';
 import NeonGraduationCap from '@/components/grademaster/ui/NeonGraduationCap';
+import { supabase } from '@/lib/supabase/client';
+
+interface StudentOption {
+  id: string;
+  student_name: string;
+  class_name: string;
+}
 
 interface StudentClaimLayerProps {
   googleUser: {
@@ -37,20 +44,41 @@ export default function StudentClaimLayer({
 }: StudentClaimLayerProps) {
   const [students, setStudents] = useState<StudentOption[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<StudentOption | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  // Debounce the search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  // Execute query on debounced query changes
   useEffect(() => {
     const fetchStudents = async () => {
+      if (!debouncedQuery.trim()) {
+        setStudents([]);
+        return;
+      }
+      setIsLoading(true);
       try {
-        const res = await fetch(`/api/grademaster/student-accounts?mode=claim&t=${Date.now()}`);
-        const data = await res.json();
-        if (res.ok) {
-          setStudents(data.students || []);
+        const { data, error } = await supabase
+          .from('gm_behaviors')
+          .select('id, student_name, class_name')
+          .ilike('student_name', `%${debouncedQuery}%`)
+          .order('student_name', { ascending: true })
+          .limit(10);
+          
+        if (error) {
+          console.error('[Student Claim] Query error:', error);
+          setToast({ message: 'Gagal mencari daftar siswa', type: 'error' });
         } else {
-          setToast({ message: data.error || 'Gagal memuat daftar siswa', type: 'error' });
+          setStudents(data || []);
         }
       } catch (err) {
         setToast({ message: 'Gagal memuat daftar siswa. Periksa koneksi.', type: 'error' });
@@ -58,12 +86,9 @@ export default function StudentClaimLayer({
         setIsLoading(false);
       }
     };
+    
     fetchStudents();
-  }, [setToast]);
-
-  const filteredStudents = students.filter(s => 
-    s.student_name.toLowerCase().includes(searchQuery.toLowerCase())
-  ).slice(0, 10);
+  }, [debouncedQuery, setToast]);
 
   const handleSelectStudent = (student: StudentOption) => {
     setSelectedStudent(student);
@@ -171,16 +196,16 @@ export default function StudentClaimLayer({
               />
 
               {/* Autocomplete Dropdown */}
-              {showDropdown && searchQuery.length > 0 && !selectedStudent && (
-                <div className="absolute top-full left-0 right-0 mt-3 bg-white border border-slate-100 rounded-[2rem] shadow-2xl overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
+              {showDropdown && searchQuery.trim() && (
+                <div className="absolute top-full left-0 right-0 mt-3 bg-white border border-slate-100 rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden z-50 animate-in slide-in-from-top-2 duration-300">
                   {isLoading ? (
-                    <div className="p-8 text-center text-slate-400 animate-pulse flex items-center justify-center gap-3">
-                      <Loader2 size={16} className="animate-spin" />
-                      <span className="text-xs font-bold uppercase tracking-widest">Mencari Data...</span>
+                    <div className="p-8 text-center text-slate-400">
+                      <Loader2 size={24} className="animate-spin mx-auto mb-3 text-slate-300" />
+                      <p className="text-xs font-bold uppercase tracking-widest">Mencari Data...</p>
                     </div>
-                  ) : filteredStudents.length > 0 ? (
-                    <div className="py-2">
-                      {filteredStudents.map((s) => (
+                  ) : students.length > 0 ? (
+                    <ul className="max-h-[300px] overflow-y-auto">
+                      {students.map((s) => (
                         <button
                           key={s.id}
                           onClick={() => handleSelectStudent(s)}
@@ -195,7 +220,7 @@ export default function StudentClaimLayer({
                           </div>
                         </button>
                       ))}
-                    </div>
+                    </ul>
                   ) : (
                     <div className="p-8 text-center text-slate-400 text-xs font-medium">
                       Nama tidak ditemukan. Silakan hubungi operator sekolah.
