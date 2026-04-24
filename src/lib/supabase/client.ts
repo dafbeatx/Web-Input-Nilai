@@ -20,7 +20,7 @@ if (typeof window !== 'undefined') {
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 
 // Only initialize if keys are present to avoid build-time crashes
 export const supabase = (supabaseUrl && supabaseKey) 

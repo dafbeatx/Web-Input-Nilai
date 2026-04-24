@@ -13,12 +13,6 @@ import { ToastType } from '@/lib/grademaster/types';
 import NeonGraduationCap from '@/components/grademaster/ui/NeonGraduationCap';
 import { supabase } from '@/lib/supabase/client';
 
-interface StudentOption {
-  id: string;
-  student_name: string;
-  class_name: string;
-}
-
 interface StudentClaimLayerProps {
   googleUser: {
     name: string;
@@ -50,9 +44,17 @@ export default function StudentClaimLayer({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // Debounce the search input
+  // === DEBUG: Validate supabase client initialization ===
+  useEffect(() => {
+    console.log('[DEBUG INIT] supabase client:', supabase ? 'INITIALIZED' : 'NULL/UNDEFINED');
+    console.log('[DEBUG INIT] supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'MISSING');
+    console.log('[DEBUG INIT] supabase KEY:', process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ? 'SET' : 'MISSING');
+  }, []);
+
+  // Debounce the search input (300ms)
   useEffect(() => {
     const handler = setTimeout(() => {
+      console.log('[DEBUG DEBOUNCE] Input changed, setting debounced value:', searchQuery);
       setDebouncedQuery(searchQuery);
     }, 300);
     return () => clearTimeout(handler);
@@ -60,12 +62,24 @@ export default function StudentClaimLayer({
 
   // Execute query on debounced query changes
   useEffect(() => {
+    console.log('[DEBUG DEBOUNCED VALUE]:', debouncedQuery);
+
     const fetchStudents = async () => {
       if (!debouncedQuery.trim()) {
+        console.log('[DEBUG QUERY] Empty query, clearing students');
         setStudents([]);
         return;
       }
+
+      if (!supabase) {
+        console.error('[DEBUG FATAL] supabase client is NULL. Env mismatch likely.');
+        setToast({ message: 'Koneksi database gagal. Hubungi administrator.', type: 'error' });
+        return;
+      }
+
       setIsLoading(true);
+      console.log('[DEBUG QUERY] Executing ilike query for:', debouncedQuery);
+
       try {
         const { data, error } = await supabase
           .from('gm_behaviors')
@@ -73,20 +87,26 @@ export default function StudentClaimLayer({
           .ilike('student_name', `%${debouncedQuery}%`)
           .order('student_name', { ascending: true })
           .limit(10);
-          
+
+        console.log('[DEBUG QUERY RESULT] data:', data);
+        console.log('[DEBUG QUERY ERROR]:', error);
+        console.log('[DEBUG QUERY COUNT]:', data?.length ?? 0);
+
         if (error) {
           console.error('[Student Claim] Query error:', error);
           setToast({ message: 'Gagal mencari daftar siswa', type: 'error' });
         } else {
           setStudents(data || []);
+          console.log('[DEBUG STATE SET] students updated, count:', (data || []).length);
         }
       } catch (err) {
+        console.error('[DEBUG CATCH] Unexpected error:', err);
         setToast({ message: 'Gagal memuat daftar siswa. Periksa koneksi.', type: 'error' });
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     fetchStudents();
   }, [debouncedQuery, setToast]);
 
@@ -124,6 +144,9 @@ export default function StudentClaimLayer({
       setIsSubmitting(false);
     }
   };
+
+  // === DEBUG: Render-phase tracing ===
+  console.log('[DEBUG RENDER] showDropdown:', showDropdown, '| searchQuery:', searchQuery, '| isLoading:', isLoading, '| students.length:', students.length, '| selectedStudent:', selectedStudent?.student_name ?? 'null');
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-inter animate-in fade-in duration-500">
@@ -196,7 +219,7 @@ export default function StudentClaimLayer({
               />
 
               {/* Autocomplete Dropdown */}
-              {showDropdown && searchQuery.trim() && (
+              {showDropdown && searchQuery.trim() && !selectedStudent && (
                 <div className="absolute top-full left-0 right-0 mt-3 bg-white border border-slate-100 rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden z-50 animate-in slide-in-from-top-2 duration-300">
                   {isLoading ? (
                     <div className="p-8 text-center text-slate-400">
