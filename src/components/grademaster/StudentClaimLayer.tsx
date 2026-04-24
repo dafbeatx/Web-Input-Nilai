@@ -45,7 +45,7 @@ export default function StudentClaimLayer({
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const res = await fetch('/api/grademaster/student-accounts?mode=claim');
+        const res = await fetch(`/api/grademaster/student-accounts?mode=claim&t=${Date.now()}`);
         const data = await res.json();
         if (res.ok) {
           setStudents(data.students || []);

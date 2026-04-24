@@ -4,6 +4,8 @@ import { getAdminSession } from '@/lib/grademaster/admin';
 import { checkRateLimit } from '@/lib/grademaster/security';
 import { hashPassword } from '@/lib/grademaster/security';
 
+export const dynamic = 'force-dynamic';
+
 function generateUsername(name: string, className: string): string {
   const cleanName = name
     .toLowerCase()
