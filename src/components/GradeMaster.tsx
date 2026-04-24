@@ -1023,11 +1023,11 @@ export default function GradeMaster() {
 
       {layer === "student_profile" && isStudent && studentData && studentData.isGoogleLinked && (
         <StudentProfileLayer 
-          studentId={studentData.student_id || studentData.id}
+          studentId={studentData.behavior_id || studentData.id}
           studentName={studentData.name}
           className={studentData.class_name}
           academicYear={academicYear}
-          initialPoints={studentData.total_points || 0}
+          initialPoints={studentData.total_points ?? 0}
           avatarUrl={studentData.avatar_url}
           canEditPhoto={true}
           isAdmin={false}

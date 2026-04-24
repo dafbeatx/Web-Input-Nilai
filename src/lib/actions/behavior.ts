@@ -124,8 +124,7 @@ export async function deleteBehaviorAction(logId: string, studentId: string) {
  */
 export async function getBehaviorLogsAction(studentId: string) {
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('gm_behavior_logs')
       .select('*')
       .eq('student_id', studentId)

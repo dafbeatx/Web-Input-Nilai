@@ -58,11 +58,22 @@ export async function getStudentSession() {
 
   const accountData = data.gm_student_accounts as any;
 
+  // Look up the behavior record to get behavior_id and total_points
+  // gm_behavior_logs uses gm_behaviors.id (not gm_student_accounts.id)
+  const { data: behaviorData } = await supabase
+    .from('gm_behaviors')
+    .select('id, total_points')
+    .eq('student_name', accountData.student_name)
+    .eq('class_name', accountData.class_name)
+    .maybeSingle();
+
   return {
     account_id: data.account_id,
     role: 'student' as const,
     student: {
       id: accountData.id,
+      behavior_id: behaviorData?.id ?? null,
+      total_points: behaviorData?.total_points ?? 0,
       name: accountData.student_name,
       class_name: accountData.class_name,
       academic_year: accountData.academic_year,
