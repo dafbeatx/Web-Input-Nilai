@@ -7,6 +7,7 @@ import {
   MapPin, FileText, ChevronDown, ChevronUp, User, LayoutGrid
 } from 'lucide-react';
 import { GradedStudent, ScoringConfig } from '@/lib/grademaster/types';
+import { useGradeMaster } from '@/context/GradeMasterContext';
 
 interface RemedialDashboardLayerProps {
   gradedStudents: GradedStudent[];
@@ -33,7 +34,7 @@ export default function RemedialDashboardLayer({
   scoringConfig,
   examType = "UTS",
   academicYear = "2025/2026",
-  studentClass = "XII-IPA-1",
+  studentClass,
   subject = "Matematika",
   schoolLevel = "SMA",
   semester = "Ganjil",
@@ -45,6 +46,8 @@ export default function RemedialDashboardLayer({
   onAnswerKeysInputChange,
   isSaving = false
 }: RemedialDashboardLayerProps) {
+  const { isAdmin, studentClass: contextClass, studentData } = useGradeMaster();
+  const displayClass = studentClass || contextClass || (studentData && studentData.class_name) || "N/A";
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -185,7 +188,7 @@ export default function RemedialDashboardLayer({
           {/* Advanced Filters Grid */}
           <div className="grid grid-cols-2 gap-2 relative">
             {[
-              { label: 'Kelas', value: studentClass },
+              { label: 'Kelas', value: displayClass },
               { label: 'Tahun', value: academicYear.replace('20', '') },
               { label: 'Semester', value: semester },
               { label: 'Subjek', value: subject },
@@ -222,7 +225,8 @@ export default function RemedialDashboardLayer({
             placeholder="Cari nama siswa..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-surface-container-low border-none rounded-2xl py-4.5 pl-12 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-tertiary/20 transition-all shadow-sm outline-none" 
+            disabled={!isAdmin}
+            className="w-full bg-surface-container-low border-none rounded-2xl py-4.5 pl-12 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-tertiary/20 transition-all shadow-sm outline-none disabled:opacity-50" 
           />
         </div>
 
@@ -290,8 +294,8 @@ export default function RemedialDashboardLayer({
                          </div>
                          <button 
                           onClick={(e) => handleResetRemedial(e, student.id, student.name)}
-                          disabled={isDeleting === student.id}
-                          className="w-8 h-8 rounded-xl bg-surface-bright flex items-center justify-center text-outline/60 hover:text-error transition-colors"
+                          disabled={!isAdmin || isDeleting === student.id}
+                          className="w-8 h-8 rounded-xl bg-surface-bright flex items-center justify-center text-outline/60 hover:text-error transition-colors disabled:opacity-30"
                          >
                             {isDeleting === student.id ? <Clock size={14} className="animate-spin" /> : <RotateCcw size={16} />}
                          </button>
@@ -349,18 +353,18 @@ export default function RemedialDashboardLayer({
                                      <label className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/40 mb-2 block pl-1">Input Nilai Remedial (0-100)</label>
                                      <input 
                                        type="number"
-                                       className="w-full bg-surface-container-lowest border-none rounded-2xl p-4 text-sm font-black text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/30 outline-none"
+                                       className="w-full bg-surface-container-lowest border-none rounded-2xl p-4 text-sm font-black text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/30 outline-none disabled:opacity-50"
                                        placeholder="Murni..."
                                        value={reviewScore || (student.remedialScore || '')}
                                        onChange={(e) => setReviewScore(e.target.value)}
-                                       disabled={student.remedialStatus === 'COMPLETED' || isSubmitting}
+                                       disabled={!isAdmin || student.remedialStatus === 'COMPLETED' || isSubmitting}
                                      />
                                   </div>
                                   {student.remedialStatus === 'REMEDIAL' && (
                                     <div className="flex gap-2">
                                        <button 
                                          onClick={() => submitReview(student.id, 'review')}
-                                         disabled={isSubmitting || !reviewScore}
+                                         disabled={!isAdmin || isSubmitting || !reviewScore}
                                          className="flex-1 py-3 bg-surface-bright text-primary text-[10px] font-black uppercase tracking-widest rounded-2xl disabled:opacity-30 border border-outline-variant active:scale-95 transition-transform"
                                        >
                                          Update
@@ -368,7 +372,7 @@ export default function RemedialDashboardLayer({
                                        {student.teacherReviewed && (
                                          <button 
                                            onClick={() => submitReview(student.id, 'finalize')}
-                                           disabled={isSubmitting}
+                                           disabled={!isAdmin || isSubmitting}
                                            className="flex-1 py-3 bg-tertiary text-on-tertiary text-[10px] font-black uppercase tracking-widest rounded-2xl disabled:opacity-30 active:scale-95 transition-transform shadow-[0_0_20px_rgba(155,255,206,0.15)]"
                                          >
                                            Finalisasi
@@ -471,10 +475,11 @@ export default function RemedialDashboardLayer({
                  <div className="flex flex-col gap-2">
                     <label className="font-label text-[10px] text-tertiary-dim uppercase font-black tracking-widest pl-1">Pertanyaan Essay (Format: 1. Soal)</label>
                     <textarea 
-                      className="w-full bg-surface-container-lowest border-none rounded-3xl p-5 text-sm font-medium text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none resize-none min-h-[160px]"
+                      className="w-full bg-surface-container-lowest border-none rounded-3xl p-5 text-sm font-medium text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none resize-none min-h-[160px] disabled:opacity-50"
                       placeholder="1. Sebutkan... 2. Jelaskan..."
                       value={remedialQuestionsInput}
                       onChange={(e) => onRemedialInputChange?.(e.target.value)}
+                      disabled={!isAdmin}
                     />
                  </div>
                  
@@ -482,10 +487,11 @@ export default function RemedialDashboardLayer({
                  <div className="flex flex-col gap-2">
                     <label className="font-label text-[10px] text-tertiary uppercase font-black tracking-widest pl-1">Kunci Jawaban (Similarity Matcher)</label>
                     <textarea 
-                      className="w-full bg-surface-container-lowest border-none rounded-3xl p-5 text-sm font-medium text-tertiary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none resize-none min-h-[160px]"
+                      className="w-full bg-surface-container-lowest border-none rounded-3xl p-5 text-sm font-medium text-tertiary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none resize-none min-h-[160px] disabled:opacity-50"
                       placeholder="1. Jawaban kunci... 2. Penjelasan..."
                       value={remedialAnswerKeysInput}
                       onChange={(e) => onAnswerKeysInputChange?.(e.target.value)}
+                      disabled={!isAdmin}
                     />
                  </div>
 
@@ -502,7 +508,7 @@ export default function RemedialDashboardLayer({
               <div className="pt-4 sticky bottom-0 bg-surface-container-highest pb-2">
                 <button 
                   onClick={handleSaveQuestions}
-                  disabled={isSaving}
+                  disabled={!isAdmin || isSaving}
                   className="w-full h-14 bg-tertiary text-on-tertiary rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl active:scale-[0.98] transition-all disabled:opacity-50"
                 >
                   {isSaving ? <Clock size={18} className="animate-spin" /> : <Save size={18} />}
