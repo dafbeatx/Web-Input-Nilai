@@ -243,7 +243,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan' }, { status: 429 });
     }
 
-    const { data: session, error: sessError } = await supabase
+    const { data: session, error: sessError } = await supabaseAdmin
       .from('gm_sessions')
       .select('*, gm_students(*)')
       .eq('session_name', name.trim())
@@ -276,7 +276,7 @@ export async function POST(req: NextRequest) {
       isReadOnly = true;
     }
 
-    const { data: students } = await supabase
+    const { data: students } = await supabaseAdmin
       .from('gm_students')
       .select('*')
       .eq('session_id', session.id)
