@@ -1577,13 +1577,37 @@ export default function StudentRemedialLayer({
     }
   };
 
-  // Timer countdown (depends on timeLeft)
+  // Flag to decouple timeout execution from the fast-updating answers/timeLeft state
+  const [isTimeoutTriggered, setIsTimeoutTriggered] = useState(false);
+
+  // Timer countdown (strictly separated from answers to avoid re-render loops)
   useEffect(() => {
-    if (step !== 'EXAM') return;
-    if (showTimeUpModal) return; // Pause timer physically if modal intercepts
+    if (step !== 'EXAM' || showTimeUpModal || isTimeoutTriggered) return;
     
-    if (timeLeft <= 0) {
-      // EMERGENCY SAVE: Immediate save when time is up to ensure last typed characters are not lost
+    const timerId = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timerId);
+          setIsTimeoutTriggered(true);
+          return 0;
+        }
+        
+        // Trigger 5 minute warning
+        if (prev === 300 && !hasShownFiveMinWarningRef.current) {
+          hasShownFiveMinWarningRef.current = true;
+          setShowFiveMinWarning(true);
+        }
+        
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timerId);
+  }, [step, showTimeUpModal, isTimeoutTriggered]);
+
+  // Execute Timeout logic exactly ONCE when triggered
+  useEffect(() => {
+    if (isTimeoutTriggered && step === 'EXAM') {
       const current = loadRemedialSession();
       saveRemedialSession({
         sessionId,
@@ -1602,26 +1626,9 @@ export default function StudentRemedialLayer({
         isPenaltyApplied,
         lastUpdated: Date.now()
       });
-      
-      // Waktu habis — langsung finalisasi TIMEOUT, tidak ada opsi tambah waktu
       handleStatusUpdate('TIMEOUT');
-      return;
     }
-
-    // Trigger 5 minute warning
-    if (timeLeft === 300 && !hasShownFiveMinWarningRef.current) {
-       hasShownFiveMinWarningRef.current = true;
-       setShowFiveMinWarning(true);
-       // Autosave on warning
-       const s = loadRemedialSession();
-       if (s) {
-         saveRemedialSession({ ...s, answers, note, lastUpdated: Date.now() });
-       }
-    }
-
-    const timerId = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-    return () => clearInterval(timerId);
-  }, [step, timeLeft, showTimeUpModal, pointsBal, answers, note]);
+  }, [isTimeoutTriggered]); // Strictly runs only when isTimeoutTriggered changes
 
   // Proctoring: START photo + 30s auto-snap (depends ONLY on step, NOT timeLeft)
   useEffect(() => {
@@ -2047,9 +2054,11 @@ export default function StudentRemedialLayer({
           
           // STRICT KKM ENFORCEMENT: If status is 'REMEDIAL', it means score < KKM
           if (data.status === 'REMEDIAL') {
-            setToast({ message: "⚠️ NILAI BELUM MENCAPAI KKM (70). Silakan perbaiki jawaban Anda dan kumpulkan lagi!", type: "error" });
+            setToast({ message: "⚠️ NILAI BELUM MENCAPAI KKM (70). Waktu tambahan 5 menit diberikan untuk perbaikan!", type: "error" });
             setIsSubmitting(false);
             hasSubmittedRef.current = false; // Allow re-submission
+            setTimeLeft(300); // Give 5 extra minutes
+            setIsTimeoutTriggered(false); // Reset timeout trigger so timer runs again
             setFinalScore(data.newFinalScore || data.final_score);
             return; // STAY ON EXAM STEP
           }
@@ -2517,11 +2526,23 @@ export default function StudentRemedialLayer({
       
       {/* Dynamic Watermark Overlay */}
       {step === 'EXAM' && (
-        <div className="fixed inset-0 pointer-events-none z-[60] overflow-hidden select-none">
-          <div className="absolute bottom-4 right-4 text-[10px] font-black text-on-surface-variant/20 uppercase tracking-widest whitespace-nowrap select-none pointer-events-none">
-            {studentName} • SECURE SESSION
+        <>
+          <div className="fixed inset-0 pointer-events-none z-[60] overflow-hidden select-none">
+            <div className="absolute bottom-4 right-4 text-[10px] font-black text-on-surface-variant/20 uppercase tracking-widest whitespace-nowrap select-none pointer-events-none">
+              {studentName} • SECURE SESSION
+            </div>
           </div>
-        </div>
+          {/* Subtle Forensic Watermark Overlay (Anti-Screenshot fallback for mobile) */}
+          <div className="fixed inset-0 pointer-events-none z-[59] overflow-hidden select-none opacity-[0.03]">
+            <div className="watermark-grid absolute -inset-[100%] flex flex-wrap justify-center items-center gap-20 transform -rotate-45 pointer-events-none select-none">
+              {Array.from({ length: 50 }).map((_, i) => (
+                <span key={i} className="text-[24px] font-black text-on-surface-variant uppercase tracking-widest whitespace-nowrap">
+                  {studentName} • {studentName}
+                </span>
+              ))}
+            </div>
+          </div>
+        </>
       )}
       
       {/* Screenshot Flash Overlay */}
@@ -2916,6 +2937,13 @@ export default function StudentRemedialLayer({
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.3); }
         .privacy-mode { filter: blur(0px); transition: filter 0.3s; }
         
+        @keyframes slideGrid {
+          0% { transform: rotate(-45deg) translateY(0); }
+          100% { transform: rotate(-45deg) translateY(-50px); }
+        }
+        .watermark-grid {
+          animation: slideGrid 15s linear infinite;
+        }
         @media print {
           body {
             display: none !important;
