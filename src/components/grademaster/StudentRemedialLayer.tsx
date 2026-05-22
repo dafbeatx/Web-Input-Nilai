@@ -1238,9 +1238,15 @@ export default function StudentRemedialLayer({
             });
         }
 
-        // Custom: Show Educational Popup if no face detected (debounce 1 minute)
-        if (type === 'NO_FACE' && Date.now() - lastEducationShownRef.current > 60000) {
-          setShowFaceEducation(true);
+        if ((type === 'NO_FACE' || type === 'MULTIPLE_FACES') && Date.now() - lastEducationShownRef.current > 15000) {
+          setActiveWarning({
+            type: 'CAMERA',
+            count: newCount,
+            limit: 10,
+            message: type === 'NO_FACE' 
+              ? "⚠️ WAJAH TIDAK TERDETEKSI! Pastikan wajah Anda selalu menatap layar selama ujian berlangsung. Menjauh dari layar dianggap indikasi pelanggaran."
+              : "⚠️ MULTI-FACE DETECTED! Sistem mendeteksi lebih dari satu wajah. Ujian harus dikerjakan secara mandiri!"
+          });
           lastEducationShownRef.current = Date.now();
         }
       }
@@ -1721,15 +1727,6 @@ export default function StudentRemedialLayer({
       trackEvent('NETWORK_OFFLINE', 'HIGH', 15, { reason: 'Connection lost' });
     };
 
-    const handleVisibility = () => {
-      if (document.hidden) {
-        trackEvent('VISIBILITY_LOST', 'MEDIUM', 15, { reason: 'Siswa meminimalisir tab / buka aplikasi lain' });
-      } else {
-        trackEvent('VISIBILITY_RESTORED', 'LOW', 0, { reason: 'Siswa kembali fokus ke tab ujian' });
-        syncWithServer();
-      }
-    };
-
     const handleBlur = () => {
       if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
       trackEvent('WINDOW_BLUR', 'HIGH', 15, { reason: 'Window lost focus / popup / third-party overlay' });
@@ -1743,6 +1740,16 @@ export default function StudentRemedialLayer({
         });
         return newCount;
       });
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        trackEvent('VISIBILITY_LOST', 'MEDIUM', 15, { reason: 'Siswa meminimalisir tab / buka aplikasi lain' });
+        handleBlur(); // Bind the exact same penalty for losing app focus
+      } else {
+        trackEvent('VISIBILITY_RESTORED', 'LOW', 0, { reason: 'Siswa kembali fokus ke tab ujian' });
+        syncWithServer();
+      }
     };
 
     window.addEventListener('online', handleOnline);
@@ -2477,9 +2484,13 @@ export default function StudentRemedialLayer({
       
       {/* Dynamic Watermark Overlay */}
       {step === 'EXAM' && (
-        <div className="fixed inset-0 pointer-events-none z-[60] overflow-hidden select-none">
-          <div className="absolute text-[12px] md:text-sm font-black text-on-surface-variant/10 uppercase tracking-[0.25em] whitespace-nowrap floating-watermark select-none pointer-events-none mix-blend-overlay">
-            {studentName} • {subject} • SECURE REMEDIAL SESSION • {new Date().toLocaleDateString('id-ID')}
+        <div className="fixed inset-0 pointer-events-none z-[60] overflow-hidden select-none opacity-20">
+          <div className="watermark-grid absolute -inset-[100%] flex flex-wrap justify-center items-center gap-10 md:gap-16 transform -rotate-45 pointer-events-none select-none">
+            {Array.from({ length: 150 }).map((_, i) => (
+              <span key={i} className="text-[14px] md:text-lg font-black text-on-surface-variant uppercase tracking-widest whitespace-nowrap">
+                {studentName} • SECURE SESSION
+              </span>
+            ))}
           </div>
         </div>
       )}
@@ -2871,15 +2882,12 @@ export default function StudentRemedialLayer({
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.3); }
         .privacy-mode { filter: blur(0px); transition: filter 0.3s; }
         
-        @keyframes floatWatermark {
-          0% { transform: translate(5vw, 5vh) rotate(-15deg); }
-          25% { transform: translate(75vw, 15vh) rotate(-10deg); }
-          50% { transform: translate(15vw, 75vh) rotate(-20deg); }
-          75% { transform: translate(65vw, 60vh) rotate(-12deg); }
-          100% { transform: translate(5vw, 5vh) rotate(-15deg); }
+        @keyframes slideGrid {
+          0% { transform: rotate(-45deg) translateY(0); }
+          100% { transform: rotate(-45deg) translateY(-50px); }
         }
-        .floating-watermark {
-          animation: floatWatermark 35s linear infinite;
+        .watermark-grid {
+          animation: slideGrid 10s linear infinite;
         }
         @media print {
           body {
