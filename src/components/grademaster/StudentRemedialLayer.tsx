@@ -578,14 +578,13 @@ export default function StudentRemedialLayer({
       }
     } catch (err) {
       console.warn('[Pulse] Heartbeat failed');
-      const newFailCount = consecutiveHeartbeatFailures + 1;
-      setConsecutiveHeartbeatFailures(newFailCount);
-      
-      // If heartbeat fails consistently, lock the screen even if the browser thinks it is "online"
-      // (This prevents cases where the network is technically UP but proxy/firewall blocks us)
-      if (newFailCount >= 3) {
-        setIsConnectionLocked(true);
-      }
+      setConsecutiveHeartbeatFailures(prev => {
+        const newFailCount = prev + 1;
+        if (newFailCount >= 3) {
+          setIsConnectionLocked(true);
+        }
+        return newFailCount;
+      });
     }
   };
   const sendActivityLog = async (message: string, photo?: string, eventTypeOverride?: string) => {
@@ -1716,6 +1715,14 @@ export default function StudentRemedialLayer({
     heartbeatTimerRef.current = setInterval(sendHeartbeat, 20000);
     sendHeartbeat(); // Immediate first beat
 
+    // 1.5 Fast Network Polling (2s) for instant offline detection
+    const fastNetworkPoll = setInterval(() => {
+      if (!navigator.onLine) {
+        setIsConnectionLocked(true);
+        setIsOffline(true);
+      }
+    }, 2000);
+
     // 2. Network Listeners
     const handleOnline = () => {
       // Don't auto-unlock immediately, wait for syncWithServer handshake
@@ -1736,7 +1743,7 @@ export default function StudentRemedialLayer({
           type: 'TAB',
           count: newCount,
           limit: 3,
-          message: `⚠️ PERINGATAN PENGALIHAN FOKUS! Sistem mendeteksi Anda keluar dari halaman ujian atau membuka aplikasi/popup lain. Dilarang keras memindahkan fokus layar! (${newCount}/3)`
+          message: `⚠️ INDIKASI KECURANGAN! Sistem mendeteksi Pindah Aplikasi / Perekam Layar (Screen Recorder) / Tarik Notifikasi. Dilarang keras memindahkan fokus layar! (${newCount}/3)`
         });
         return newCount;
       });
@@ -1762,6 +1769,7 @@ export default function StudentRemedialLayer({
       window.removeEventListener('blur', handleBlur);
       document.removeEventListener('visibilitychange', handleVisibility);
       if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
+      clearInterval(fastNetworkPoll);
     };
   }, [step, attemptId]);
 
