@@ -24,7 +24,7 @@ interface StudentRemedialLayerProps {
   setToast: (t: ToastType) => void;
 }
 
-type RemedialStep = 'RULES' | 'INFO' | 'GUIDE' | 'EXAM' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT' | 'SECOND_CHANCE' | 'AI_BOT_DETECTED';
+type RemedialStep = 'RULES' | 'INFO' | 'GUIDE' | 'EXAM' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT' | 'SECOND_CHANCE' | 'AI_BOT_DETECTED' | 'SUBMITTED' | 'FAILED_EFFORT';
 
 const Badge = ({ children, color = 'indigo' }: { children: React.ReactNode; color?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'rose' }) => {
   const colors = {
@@ -826,7 +826,7 @@ export default function StudentRemedialLayer({
                 const res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`, { cache: 'no-store' });
                 if (res.ok) {
                   const data = await res.json();
-                  if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(data.status)) {
+                  if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
                     setStep(data.status as RemedialStep);
                     return;
                   }
@@ -880,7 +880,7 @@ export default function StudentRemedialLayer({
 
         // setToast({ message: "Melanjutkan sesi remedial sebelumnya...", type: "success" });
         saveRemedialSession({ ...saved, refreshCount: (saved.refreshCount || 0) + 1 });
-      } else if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(saved.step)) {
+      } else if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'SUBMITTED', 'FAILED_EFFORT'].includes(saved.step)) {
         setStep(saved.step as RemedialStep);
       }
     }
@@ -915,10 +915,10 @@ export default function StudentRemedialLayer({
           }
 
           // If server says terminal status, override local state
-          if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(data.status)) {
+          if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
             setStep(data.status as RemedialStep);
             
-            if (data.status === 'COMPLETED') {
+            if (['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
               setFinalScore(data.finalScore);
               // Pre-fetch friends list for results screen
               fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`, { cache: 'no-store' })
@@ -1027,9 +1027,9 @@ export default function StudentRemedialLayer({
           const res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`, { cache: 'no-store' });
           if (res.ok) {
             const data = await res.json();
-            if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(data.status)) {
+            if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
               setStep(data.status as RemedialStep);
-              if (data.status === 'COMPLETED') setFinalScore(data.finalScore);
+              if (['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) setFinalScore(data.finalScore);
               return;
             }
             if (data.status === null) {
@@ -1904,7 +1904,7 @@ export default function StudentRemedialLayer({
           clearRemedialSession();
           
           const finalStatus = data.status || status;
-          if (finalStatus === 'COMPLETED') {
+          if (['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT'].includes(finalStatus)) {
             setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Selamat, Anda LULUS KKM!", type: "success" });
             const fScore = data.newFinalScore || data.final_score;
             setFinalScore(fScore);
@@ -1925,6 +1925,7 @@ export default function StudentRemedialLayer({
               sendTelegramNotify(eventType, compressed || photo || undefined, cheatedReason);
             });
           }
+          setStep(finalStatus as RemedialStep);
           setIsSubmitting(false);
           return;
         }
@@ -2225,10 +2226,10 @@ export default function StudentRemedialLayer({
   }
 
   // RENDER: COMPLETED / CHEATED / TIMEOUT
-  if (step === 'CHEATED' || step === 'TIMEOUT' || step === 'COMPLETED') {
+  if (step === 'CHEATED' || step === 'TIMEOUT' || step === 'COMPLETED' || step === 'SUBMITTED' || step === 'FAILED_EFFORT') {
     const isCheat = step === 'CHEATED';
     const isTimeout = step === 'TIMEOUT';
-    const isCompleted = step === 'COMPLETED';
+    const isCompleted = ['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT'].includes(step);
 
     const getRemainingTimeStr = () => {
       const deadline = new Date('2026-03-30T07:00:00+07:00').getTime();
