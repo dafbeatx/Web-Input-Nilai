@@ -64,6 +64,7 @@ export default function StudentRemedialLayer({
   const [currentLocation, setCurrentLocation] = useState<string>('');
   const [note, setNote] = useState("");
   const [shuffledQuestions, setShuffledQuestions] = useState<{text: string, originalIndex: number}[]>([]);
+  const [invalidQuestionIndices, setInvalidQuestionIndices] = useState<number[]>([]);
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [attemptToken, setAttemptToken] = useState<string | null>(null);
   const [currentStudentId, setCurrentStudentId] = useState<string | null>(null);
@@ -1635,11 +1636,14 @@ export default function StudentRemedialLayer({
       }
     };
 
-    if (step !== 'EXAM') return;
-    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
       document.removeEventListener('visibilitychange', handleVisibility);
+      if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
     };
   }, [step, attemptId]);
 
@@ -1791,12 +1795,20 @@ export default function StudentRemedialLayer({
       }).filter(index => index !== -1);
       
       if (invalidIndices.length > 0) {
+        setInvalidQuestionIndices(invalidIndices);
+        const questionNumbers = invalidIndices.map(i => i + 1).join(', ');
         setToast({ 
-          message: `⚠️ JAWABAN TIDAK VALID: Ada ${invalidIndices.length} soal yang belum diisi dengan jawaban yang memadai atau terdeteksi asal-asalan.`, 
+          message: `⚠️ JAWABAN TIDAK VALID: Soal nomor ${questionNumbers} belum diisi dengan jawaban yang memadai atau terdeteksi asal-asalan.`, 
           type: "error" 
         });
+        // Auto-scroll to first invalid question
+        const firstInvalidEl = document.getElementById(`question-card-${invalidIndices[0]}`);
+        if (firstInvalidEl) {
+          firstInvalidEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
         return false;
       }
+      setInvalidQuestionIndices([]);
       return true;
     };
 
@@ -1945,6 +1957,10 @@ export default function StudentRemedialLayer({
     const newAnswers = [...answers];
     newAnswers[index] = val;
     setAnswers(newAnswers);
+    // Clear invalid mark for this question when user edits it
+    if (invalidQuestionIndices.includes(index)) {
+      setInvalidQuestionIndices(prev => prev.filter(i => i !== index));
+    }
   };
 
   const handleSubmit = async () => {
@@ -2449,17 +2465,25 @@ export default function StudentRemedialLayer({
 
         {/* Question Area */}
         <section className="flex-1 space-y-8 animate-in fade-in duration-1000">
-          {answers.map((ans, idx) => (
-            <div key={idx} className="bg-surface premium-shadow backdrop-blur-2xl rounded-[2.5rem] p-8 md:p-12 border border-outline-variant premium-shadow relative overflow-hidden group hover:border-primary/30 transition-all">
-              <div className="absolute top-0 left-0 w-1.5 h-full bg-primary/20 group-hover:bg-primary transition-all duration-500" />
+          {answers.map((ans, idx) => {
+            const isInvalid = invalidQuestionIndices.includes(idx);
+            return (
+            <div key={idx} id={`question-card-${idx}`} className={`bg-surface premium-shadow backdrop-blur-2xl rounded-[2.5rem] p-8 md:p-12 border premium-shadow relative overflow-hidden group transition-all ${isInvalid ? 'border-rose-500/60 ring-2 ring-rose-500/20 shadow-rose-500/10' : 'border-outline-variant hover:border-primary/30'}`}>
+              <div className={`absolute top-0 left-0 w-1.5 h-full transition-all duration-500 ${isInvalid ? 'bg-rose-500' : 'bg-primary/20 group-hover:bg-primary'}`} />
               
               <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black text-lg border border-primary/20 shadow-lg shadow-primary/20">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg border shadow-lg ${isInvalid ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 shadow-rose-500/20' : 'bg-primary/10 text-primary border-primary/20 shadow-primary/20'}`}>
                   {idx + 1}
                 </div>
                 <div>
                   <h3 className="text-xl font-black text-on-surface tracking-tight font-outfit uppercase">Soal Essay {idx + 1}</h3>
-                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em]">Kategori Pengerjaan Mandiri</p>
+                  {isInvalid ? (
+                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-1">
+                      <AlertTriangle size={10} /> Jawaban Tidak Valid — Perbaiki Jawaban Anda
+                    </p>
+                  ) : (
+                    <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em]">Kategori Pengerjaan Mandiri</p>
+                  )}
                 </div>
               </div>
 
@@ -2497,7 +2521,8 @@ export default function StudentRemedialLayer({
                 <span className="bg-surface-variant px-4 py-1.5 rounded-full border border-outline-variant">{ans.length} Karakter</span>
               </div>
             </div>
-          ))}
+          );
+          })}
 
           {/* Bottom Actions */}
           <div className="bg-surface premium-shadow backdrop-blur-2xl p-10 md:p-16 rounded-[3rem] border border-outline-variant flex flex-col items-center text-center relative overflow-hidden">
