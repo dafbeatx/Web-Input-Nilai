@@ -1,13 +1,13 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/grademaster/security';
 
 import { submitRemedial } from '@/lib/grademaster/services/remedial.service';
 
 export async function GET(req: NextRequest) {
   try {
-      const supabase = await createClient();
+      const supabase = supabaseAdmin;
     const { searchParams } = new URL(req.url);
     const sessionId = searchParams.get('sessionId');
     const studentName = searchParams.get('studentName');
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
     // Auto-recovery for stuck INITIATED attempts
     if (currentStatus === 'INITIATED') {
-      const { data: attempt } = await supabase
+      const { data: attempt } = await supabaseAdmin
         .from('gm_remedial_attempts')
         .select('id, created_at')
         .eq('student_id', student.id)
@@ -47,7 +47,6 @@ export async function GET(req: NextRequest) {
           console.log(`Auto-recovering stuck INITIATED attempt for ${studentName}`);
           const { markRemedialFailed } = await import('@/lib/grademaster/services/remedial.service');
           try {
-              const supabase = await createClient();
             await markRemedialFailed(attempt.id, student.id);
             currentStatus = 'FAILED';
           } catch (e) {
@@ -75,7 +74,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   let body: Record<string, any> | null = null;
   try {
-      const supabase = await createClient();
+      const supabase = supabaseAdmin;
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`remedial:${ip}`)) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan' }, { status: 429 });
@@ -159,7 +158,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-      const supabase = await createClient();
+      const supabase = supabaseAdmin;
     const { searchParams } = new URL(req.url);
     const studentId = searchParams.get('studentId');
 

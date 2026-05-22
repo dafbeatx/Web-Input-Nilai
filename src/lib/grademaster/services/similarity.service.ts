@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client';
+import { supabaseAdmin as supabase } from '@/lib/supabase/admin';
 
 export interface SimilarityReport {
   studentAId: string;

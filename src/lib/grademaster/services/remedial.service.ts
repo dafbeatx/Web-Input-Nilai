@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client';
+import { supabaseAdmin as supabase } from '@/lib/supabase/admin';
 import { assessClientRisk, assessServerRisk, mergeRiskAssessments } from './risk-engine.service';
 import { calculateEssayScore } from '../scoring';
 import { generateAttemptToken, verifyAttemptToken } from '../token';

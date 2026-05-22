@@ -1,0 +1,63 @@
+[
+  {
+    id: '1cd0299f-cb25-48c3-9015-b25012b5a872',
+    session_name: 'UTS KELAS 9B',
+    teacher: 'Dafa Maulana, S.Pd',
+    subject: 'Informatika',
+    class_name: '9B',
+    school_level: 'SMP',
+    answer_key: [
+      'B', 'B', 'B', 'B', 'A',
+      'B', 'A', 'B', 'A', 'B',
+      'A', 'B', 'A', 'B', 'A',
+      'B', 'C', 'B', 'A', 'C'
+    ],
+    student_list: [
+      'ANDIKA PRATAMA',
+      'ARIIQ SAFWAAN AL BARRA',
+      'AZFIA MAULUDIN ILHAM',
+      'FAIRUZ PRASETIA',
+      'FARIZ ABQORI MAULANA',
+      'FITRA RAMADHAN',
+      'M RAFQA ADITIA',
+      'M. AZKA PRATAMA',
+      'MUHAMAD AINUL YAQIN',
+      'MUHAMAD ALFIN',
+      'MUHAMAD RAFA',
+      'MUHAMAD SAEPUL AMRI',
+      'MUHAMAD SANDI ALFATIH',
+      'MUHAMMAD AKMALLUDIN MAULANA',
+      'MUHAMMAD AQIEL ARDHABILLY',
+      'MUHAMMAD NURDIN',
+      'MUHAMMAD RAFFA JULYANA RAMADHAN',
+      'MUHAMMAD REVAN AL-ASQOLANI',
+      'MUHAMMAD SYAHRUL ADI PUTRA',
+      'NAZRUL ILHAM',
+      'RIDHO PERMANA',
+      'RIZKY ADITYA PRATAMA',
+      'SONAJI',
+      'SYARIP ALAMSYAH',
+      'WILDAN KHOER BASUKI',
+      'YUGATA RAMADHAN'
+    ],
+    password_hash: '$2b$10$Mh1nFQe.nVjLAcSWqSydkexopnhUWw4SbEHlJOQy0aDeUx6sVmjTa',
+    scoring_config: {
+      pgWeight: 0.7,
+      essayCount: 5,
+      essayWeight: 0.3,
+      essayMaxScore: 20,
+      remedialQuestions: [Array],
+      remedialAnswerKeys: [Array]
+    },
+    created_at: '2026-03-27T18:06:29.210092+00:00',
+    updated_at: '2026-03-28T02:42:06.14+00:00',
+    exam_type: 'UTS',
+    academic_year: '2025/2026',
+    kkm: 70,
+    remedial_essay_count: 10,
+    remedial_timer: 10,
+    is_public: false,
+    is_demo: false,
+    semester: 'Genap'
+  }
+]
