@@ -120,6 +120,9 @@ export default function StudentProfileLayer({
       if (res.ok) {
         const data = await res.json();
         setStudentSummary(data);
+        if (data.total_points !== undefined) {
+          setTotalPoints(data.total_points);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch student summary", err);

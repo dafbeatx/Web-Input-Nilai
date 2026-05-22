@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/admin';
+import { supabaseAdmin } from '../../../../../lib/supabase/admin';
 
 export async function GET(req: NextRequest) {
   try {
@@ -77,6 +77,14 @@ export async function GET(req: NextRequest) {
       { id: 'history-1', name: 'Rekap Nilai Tahunan', type: 'XLSX', size: '0.5 MB', ready: totalAttendance > 0 }
     ];
 
+    // 4. Fetch latest total points to keep UI synced independently of local storage
+    const { data: behaviorData } = await supabaseAdmin
+      .from('gm_behaviors')
+      .select('total_points')
+      .eq('student_name', studentName)
+      .eq('academic_year', academicYear)
+      .single();
+
     return NextResponse.json({
       attendance: {
         percentage: attendancePercent,
@@ -84,7 +92,8 @@ export async function GET(req: NextRequest) {
         present: presentCount
       },
       academicHistory,
-      documents
+      documents,
+      total_points: behaviorData?.total_points ?? 0
     });
   } catch (err: any) {
     console.error('Student summary error:', err);
