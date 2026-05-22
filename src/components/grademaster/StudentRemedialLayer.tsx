@@ -2059,7 +2059,7 @@ export default function StudentRemedialLayer({
             hasSubmittedRef.current = false; // Allow re-submission
             setTimeLeft(300); // Give 5 extra minutes
             setIsTimeoutTriggered(false); // Reset timeout trigger so timer runs again
-            setFinalScore(data.newFinalScore || data.final_score);
+            setFinalScore(data.newFinalScore ?? data.final_score);
             return; // STAY ON EXAM STEP
           }
 
@@ -2068,7 +2068,7 @@ export default function StudentRemedialLayer({
           const finalStatus = data.status || status;
           if (['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT'].includes(finalStatus)) {
             setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Selamat, Anda LULUS KKM!", type: "success" });
-            const fScore = data.newFinalScore || data.final_score;
+            const fScore = data.newFinalScore ?? data.final_score ?? 0;
             setFinalScore(fScore);
             sendTelegramNotify('FINISH', undefined, undefined, fScore);
             
@@ -2086,6 +2086,10 @@ export default function StudentRemedialLayer({
             compressImage(photo || "").then(compressed => {
               sendTelegramNotify(eventType, compressed || photo || undefined, cheatedReason);
             });
+            // Pastikan UI langsung merender 0
+            setFinalScore(0);
+          } else if (finalStatus === 'TIMEOUT' || finalStatus === 'TIME_UP') {
+            setFinalScore(0);
           }
           setStep(finalStatus as RemedialStep);
           setIsSubmitting(false);

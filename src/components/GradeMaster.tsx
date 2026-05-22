@@ -1065,6 +1065,7 @@ export default function GradeMaster() {
               handleLoadPublicSession(session.session_name);
             }
           }}
+          onRefresh={refreshSessionData}
         />
       )}
 

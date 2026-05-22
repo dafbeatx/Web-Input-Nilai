@@ -29,6 +29,7 @@ interface RemedialDashboardLayerProps {
   sessions?: SessionMeta[];
   activeSessionId?: string;
   onSessionSelect?: (session: SessionMeta) => void;
+  onRefresh?: () => void;
 }
 
 export default function RemedialDashboardLayer({
@@ -50,7 +51,8 @@ export default function RemedialDashboardLayer({
   isSaving = false,
   sessions = [],
   activeSessionId,
-  onSessionSelect
+  onSessionSelect,
+  onRefresh
 }: RemedialDashboardLayerProps) {
   const { isAdmin, studentClass: contextClass, studentData } = useGradeMaster();
   const displayClass = studentClass || contextClass || (studentData && studentData.class_name) || "N/A";
@@ -62,11 +64,14 @@ export default function RemedialDashboardLayer({
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
-  // Security State
-
-
-
-
+  // Auto-refresh mechanism
+  React.useEffect(() => {
+    if (!activeSessionId || !onRefresh) return;
+    const interval = setInterval(() => {
+      onRefresh();
+    }, 10000); // 10 seconds
+    return () => clearInterval(interval);
+  }, [activeSessionId, onRefresh]);
 
   // Stats Logic
   const remedialStudents = useMemo(() => {
@@ -153,9 +158,10 @@ export default function RemedialDashboardLayer({
 
   const getStatusBadge = (status: string, teacherReviewed?: boolean) => {
     const config: Record<string, { label: string, color: string, icon: string }> = {
+      'INITIATED': { label: 'MENUNGGU', color: 'text-blue-400 bg-blue-400/10', icon: 'hourglass_empty' },
       'SUBMITTED': { label: 'SELESAI', color: 'text-tertiary bg-tertiary/10', icon: 'check_circle' },
       'COMPLETED': { label: 'SELESAI', color: 'text-tertiary bg-tertiary/10', icon: 'check_circle' },
-      'ACTIVE': { label: 'PROSES', color: 'text-amber-400 bg-amber-400/10', icon: 'clock_loader_40' },
+      'ACTIVE': { label: 'MENGERJAKAN', color: 'text-amber-400 bg-amber-400/10 animate-pulse', icon: 'clock_loader_40' },
       'IN_PROGRESS': { label: 'PROSES', color: 'text-amber-400 bg-amber-400/10', icon: 'clock_loader_40' },
       'CHEATED': { label: 'CURANG', color: 'text-error bg-error/10', icon: 'security_update_warning' },
       'FAILED_EFFORT': { label: 'TIDAK VALID', color: 'text-error bg-error/10', icon: 'report' },
@@ -352,9 +358,11 @@ export default function RemedialDashboardLayer({
                          <button 
                           onClick={(e) => handleResetRemedial(e, student.id, student.name)}
                           disabled={!isAdmin || isDeleting === student.id}
-                          className="w-8 h-8 rounded-xl bg-surface-bright flex items-center justify-center text-outline/60 hover:text-error transition-colors disabled:opacity-30"
+                          className="px-3 py-1.5 rounded-xl bg-error/10 border border-error/20 flex items-center gap-1.5 text-error hover:bg-error hover:text-on-error transition-all disabled:opacity-30 active:scale-95"
+                          title="Berikan kesempatan ulang kepada siswa ini"
                          >
-                            {isDeleting === student.id ? <Clock size={14} className="animate-spin" /> : <RotateCcw size={16} />}
+                            {isDeleting === student.id ? <Clock size={12} className="animate-spin" /> : <RotateCcw size={12} strokeWidth={3} />}
+                            <span className="text-[9px] font-black uppercase tracking-widest leading-none">Set Ulang</span>
                          </button>
                       </div>
                    </div>
