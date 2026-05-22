@@ -40,6 +40,90 @@ const Badge = ({ children, color = 'indigo' }: { children: React.ReactNode; colo
     </span>
   );
 };
+const QuestionCanvas = ({ text }: { text: string }) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [dimensions, setDimensions] = useState({ width: 600, height: 100 });
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const updateSize = () => {
+      if (containerRef.current) {
+        setDimensions({
+          width: containerRef.current.clientWidth,
+          height: 0 
+        });
+      }
+    };
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || dimensions.width <= 0) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const font = 'italic bold 18px Outfit, Inter, sans-serif';
+    ctx.font = font;
+
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+    const maxWidth = dimensions.width - 40; 
+
+    for (let i = 0; i < words.length; i++) {
+      const testLine = currentLine ? currentLine + ' ' + words[i] : words[i];
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && i > 0) {
+        lines.push(currentLine);
+        currentLine = words[i];
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    const lineHeight = 28;
+    const padding = 20;
+    const calculatedHeight = lines.length * lineHeight + padding * 2;
+
+    canvas.width = dimensions.width * dpr;
+    canvas.height = calculatedHeight * dpr;
+    canvas.style.width = `${dimensions.width}px`;
+    canvas.style.height = `${calculatedHeight}px`;
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+
+    let textColor = '#cbd5e1'; 
+    if (containerRef.current) {
+      const computed = window.getComputedStyle(containerRef.current);
+      textColor = computed.color || textColor;
+    }
+
+    ctx.clearRect(0, 0, dimensions.width, calculatedHeight);
+    ctx.font = font;
+    ctx.fillStyle = textColor;
+    ctx.textBaseline = 'top';
+
+    lines.forEach((line, index) => {
+      ctx.fillText(line, padding, padding + index * lineHeight);
+    });
+  }, [text, dimensions.width]);
+
+  return (
+    <div ref={containerRef} className="w-full bg-surface-variant rounded-[2rem] border border-outline-variant shadow-sm overflow-hidden select-none" onContextMenu={(e) => e.preventDefault()}>
+      <canvas ref={canvasRef} className="block select-none pointer-events-none w-full" />
+    </div>
+  );
+};
 
 export default function StudentRemedialLayer({
   studentName,
@@ -157,9 +241,19 @@ export default function StudentRemedialLayer({
       }
     },
     onViolation: (type, message, severity) => {
+      if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
       setWarningCount(prev => prev + 1);
       if (type === 'TAB_SWITCH') {
-        setTabWarningCount(prev => prev + 1);
+        setTabWarningCount(prev => {
+          const newCount = prev + 1;
+          setActiveWarning({
+            type: 'TAB',
+            count: newCount,
+            limit: 3,
+            message: `⚠️ PERINGATAN PENGALIHAN FOKUS! Sistem mendeteksi Anda keluar dari halaman ujian atau membuka aplikasi/popup lain. Dilarang keras memindahkan fokus layar! (${newCount}/3)`
+          });
+          return newCount;
+        });
         setToast({ message: "Peringatan: Jangan pindah tab atau aplikasi!", type: "error" });
       }
       if (type === 'SPLIT_SCREEN') {
@@ -1636,12 +1730,29 @@ export default function StudentRemedialLayer({
       }
     };
 
+    const handleBlur = () => {
+      if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
+      trackEvent('WINDOW_BLUR', 'HIGH', 15, { reason: 'Window lost focus / popup / third-party overlay' });
+      setTabWarningCount(prev => {
+        const newCount = prev + 1;
+        setActiveWarning({
+          type: 'TAB',
+          count: newCount,
+          limit: 3,
+          message: `⚠️ PERINGATAN PENGALIHAN FOKUS! Sistem mendeteksi Anda keluar dari halaman ujian atau membuka aplikasi/popup lain. Dilarang keras memindahkan fokus layar! (${newCount}/3)`
+        });
+        return newCount;
+      });
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('blur', handleBlur);
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('blur', handleBlur);
       document.removeEventListener('visibilitychange', handleVisibility);
       if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
     };
@@ -1962,6 +2073,26 @@ export default function StudentRemedialLayer({
       setInvalidQuestionIndices(prev => prev.filter(i => i !== index));
     }
   };
+
+  // Enforce Tab limits
+  useEffect(() => {
+    if (tabWarningCount >= 3 && step === 'EXAM' && !hasTriggeredCheatingRef.current) {
+      const reason = `Mencapai batas maksimal pengalihan layar (${tabWarningCount} kali)`;
+      setClientCheatingFlags(oldFlags => {
+        if (!oldFlags.includes(reason)) return [...oldFlags, reason];
+        return oldFlags;
+      });
+      if (secondChanceUsed) {
+        hasTriggeredCheatingRef.current = true;
+        setToast({ message: "Batas pengalihan layar terlampaui. Ujian dihentikan.", type: "error" });
+        handleStatusUpdate('CHEATED', reason);
+      } else {
+        setSecondChanceReason(reason);
+        setStep('SECOND_CHANCE');
+        sendTelegramNotify('SECOND_CHANCE', typeof capturePhoto === 'function' ? capturePhoto() || undefined : undefined, reason);
+      }
+    }
+  }, [tabWarningCount, step, secondChanceUsed]);
 
   const handleSubmit = async () => {
     const isAnyEmpty = answers.some(a => !a.trim());
@@ -2344,6 +2475,15 @@ export default function StudentRemedialLayer({
     <div className="relative min-h-screen bg-transparent font-inter text-on-surface selection:bg-primary/30 selection:text-white overflow-x-hidden">
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,#3b82f605,transparent)] pointer-events-none"></div>
       
+      {/* Dynamic Watermark Overlay */}
+      {step === 'EXAM' && (
+        <div className="fixed inset-0 pointer-events-none z-[60] overflow-hidden select-none">
+          <div className="absolute text-[12px] md:text-sm font-black text-on-surface-variant/10 uppercase tracking-[0.25em] whitespace-nowrap floating-watermark select-none pointer-events-none mix-blend-overlay">
+            {studentName} • {subject} • SECURE REMEDIAL SESSION • {new Date().toLocaleDateString('id-ID')}
+          </div>
+        </div>
+      )}
+      
       {/* ── TOP APP BAR (GradeMaster OS Header) ── */}
       <header className="fixed top-0 w-full z-[80] bg-surface premium-shadow backdrop-blur-2xl border-b border-outline-variant px-6 py-4">
         <div className="flex justify-between items-center w-full max-w-7xl mx-auto">
@@ -2488,10 +2628,8 @@ export default function StudentRemedialLayer({
               </div>
 
               {shuffledQuestions[idx] && (
-                <div className="bg-surface-variant p-8 rounded-[2rem] mb-10 border border-outline-variant shadow-sm">
-                  <p className="text-on-surface-variant font-bold leading-relaxed whitespace-pre-wrap text-lg font-outfit italic">
-                    "{shuffledQuestions[idx].text}"
-                  </p>
+                <div className="mb-10">
+                  <QuestionCanvas text={shuffledQuestions[idx].text} />
                 </div>
               )}
 
@@ -2732,6 +2870,22 @@ export default function StudentRemedialLayer({
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.3); }
         .privacy-mode { filter: blur(0px); transition: filter 0.3s; }
+        
+        @keyframes floatWatermark {
+          0% { transform: translate(5vw, 5vh) rotate(-15deg); }
+          25% { transform: translate(75vw, 15vh) rotate(-10deg); }
+          50% { transform: translate(15vw, 75vh) rotate(-20deg); }
+          75% { transform: translate(65vw, 60vh) rotate(-12deg); }
+          100% { transform: translate(5vw, 5vh) rotate(-15deg); }
+        }
+        .floating-watermark {
+          animation: floatWatermark 35s linear infinite;
+        }
+        @media print {
+          body {
+            display: none !important;
+          }
+        }
       `}</style>
       {/* Offline Security Overlay */}
       {(isOffline || isConnectionLocked) && step === 'EXAM' && (
