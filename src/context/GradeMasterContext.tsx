@@ -47,7 +47,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return;
 
     const hash = window.location.hash.replace('#', '');
-    const validLayers: Layer[] = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login', 'attendance', 'student_accounts', 'student_login', 'student_claim', 'teacher_claim'];
+    const validLayers: Layer[] = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login', 'attendance', 'student_accounts', 'student_login', 'student_claim', 'teacher_claim', 'lesson_management', 'remedial_management'];
     
     // 1. Restore Admin State
     const savedAdmin = localStorage.getItem('gm_isAdmin') === 'true';
@@ -83,7 +83,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     }
 
     // 3. Auth Guards
-    const adminOnlyLayers = ['setup', 'grading', 'student_accounts'];
+    const adminOnlyLayers = ['setup', 'grading', 'student_accounts', 'lesson_management', 'remedial_management'];
     const protectedLayers = ['remedial'];
     const authLayers = ['login', 'student_login'];
     

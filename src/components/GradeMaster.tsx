@@ -33,6 +33,7 @@ import StudentProfileLayer from "./grademaster/StudentProfileLayer";
 import StudentClaimLayer from "./grademaster/StudentClaimLayer";
 import TeacherClaimLayer from "./grademaster/TeacherClaimLayer";
 import LessonManagementLayer from "./grademaster/LessonManagementLayer";
+import RemedialManagementLayer from "./grademaster/RemedialManagementLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 
 const ESSAY_COUNT = 5;
@@ -1095,7 +1096,7 @@ export default function GradeMaster() {
         />
       )}
 
-      {layer === "lesson_management" && (
+      {layer === "lesson_management" && isAdmin && (
         <LessonManagementLayer 
           onBack={() => setLayer("home")} 
           setToast={setToast}
@@ -1105,6 +1106,12 @@ export default function GradeMaster() {
         />
       )}
 
+      {layer === "remedial_management" && isAdmin && (
+        <RemedialManagementLayer 
+          academicYear={academicYear}
+          setToast={setToast}
+        />
+      )}
 
       {layer === "student_login" && (
         <StudentLoginLayer

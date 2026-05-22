@@ -132,14 +132,24 @@ export default function Navbar() {
               </button>
 
               {isAdmin && (
-                <button
-                  onClick={() => onNavigate('lesson_management')}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
-                    layer === 'lesson_management' ? 'bg-primary/20 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-white border border-transparent'
-                  }`}
-                >
-                  <BookOpen size={14} /> Pelajaran
-                </button>
+                <>
+                  <button
+                    onClick={() => onNavigate('lesson_management')}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
+                      layer === 'lesson_management' ? 'bg-primary/20 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <BookOpen size={14} /> Pelajaran
+                  </button>
+                  <button
+                    onClick={() => onNavigate('remedial_management')}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
+                      layer === 'remedial_management' ? 'bg-primary/20 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <Settings size={14} /> Remedial
+                  </button>
+                </>
               )}
             </div>
 
@@ -396,6 +406,19 @@ export default function Navbar() {
                     <div>
                       <span className="text-[11px] font-bold text-on-surface block leading-tight">Manajemen Pelajaran</span>
                       <span className="text-[9px] font-medium text-on-surface-variant">Kelola materi AI & harian</span>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => { onNavigate('remedial_management'); setIsMobileMenuOpen(false); }} 
+                    className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-secondary/15 flex items-center justify-center">
+                      <Settings size={18} className="text-secondary" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-on-surface block leading-tight">Manajemen Remedial</span>
+                      <span className="text-[9px] font-medium text-on-surface-variant">Atur sesi & konfigurasi</span>
                     </div>
                   </button>
 
