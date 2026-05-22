@@ -74,6 +74,7 @@ export default function GradeMaster() {
     isAdmin, setIsAdmin, 
     adminUser, setAdminUser, 
     isStudent, setIsStudent,
+    isParent, setIsParent,
     studentData, setStudentData,
     toast, setToast, 
     modal, setModal, 
@@ -186,6 +187,10 @@ export default function GradeMaster() {
   const [isUpdatingQuestions, setIsUpdatingQuestions] = useState(false);
 
   const checkAdmin = async () => {
+    // If logged in as Parent, bypass backend session checks
+    if (localStorage.getItem('gm_isParent') === 'true') {
+      return;
+    }
     try {
       // 1. Check for Student Session first (Authenticated school account)
       const studentRes = await fetch("/api/student/check");
@@ -1072,7 +1077,7 @@ export default function GradeMaster() {
         />
       )}
 
-      {layer === "student_profile" && isStudent && studentData && studentData.isGoogleLinked && (
+      {layer === "student_profile" && ((isStudent && studentData && studentData.isGoogleLinked) || isParent) && (
         <StudentProfileLayer 
           studentId={studentData.behavior_id || studentData.id}
           studentName={studentData.name}

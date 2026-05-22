@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Search, GraduationCap } from 'lucide-react';
+import { useGradeMaster } from '@/context/GradeMasterContext';
 import { Loader2, ShieldCheck, LogOut, CheckCircle2, ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { ToastType } from '@/lib/grademaster/types';
@@ -29,6 +31,61 @@ export default function StudentLoginLayer({
   const [userName, setUserName] = useState('');
   
   const [error, setError] = useState('');
+
+  const { setLayer, setIsParent, setStudentData } = useGradeMaster();
+  const [isParentMode, setIsParentMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [students, setStudents] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [isLoadingSearch, setIsLoadingSearch] = useState(false);
+  const isStudentSelectedRef = React.useRef(false);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      if (isStudentSelectedRef.current) return;
+      if (!debouncedQuery.trim()) {
+        setStudents([]);
+        return;
+      }
+      setIsLoadingSearch(true);
+      try {
+        const { data } = await supabase
+          .from('gm_behaviors')
+          .select('id, student_name, class_name')
+          .ilike('student_name', `%${debouncedQuery}%`)
+          .order('student_name', { ascending: true })
+          .limit(10);
+        setStudents(data || []);
+      } catch (err) {} finally {
+        setIsLoadingSearch(false);
+      }
+    };
+    if (isParentMode) fetchStudents();
+  }, [debouncedQuery, isParentMode]);
+
+  const handleSelectStudent = (s: any) => {
+    isStudentSelectedRef.current = true;
+    setIsParentMode(false);
+    setIsParent(true);
+    setStudentData({ 
+      id: s.id, 
+      name: s.student_name, 
+      class_name: s.class_name, 
+      isGoogleLinked: false,
+      isParentView: true 
+    });
+    setToast({ message: `Masuk sebagai Orang Tua dari ${s.student_name}`, type: 'success' });
+    setLayer('student_profile');
+  };
+
 
   // ── Session & Auth Listeners ────────────────────────────────
   useEffect(() => {
@@ -208,6 +265,8 @@ export default function StudentLoginLayer({
 
           {/* Primary Action Button */}
           <div className="w-full space-y-6">
+            {!isParentMode ? (
+            <>
             <button
                onClick={handleGoogleLogin}
                disabled={isLoginInProgress}
@@ -241,10 +300,86 @@ export default function StudentLoginLayer({
                 </>
               )}
             </button>
+            <button
+               onClick={() => setIsParentMode(true)}
+               className="
+                 w-full py-4 sm:py-5
+                 bg-white text-slate-500 border-2 border-slate-200
+                 rounded-full
+                 font-black uppercase tracking-[0.15em] text-[0.7rem]
+                 hover:bg-slate-50 hover:text-slate-700
+                 hover:border-slate-300
+                 active:scale-[0.98]
+                 transition-all duration-300 ease-out
+                 flex items-center justify-center gap-3
+               "
+            >
+              Masuk Sebagai Orang Tua
+            </button>
+            </>
+            ) : (
+            <div className="w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Cari Nama Siswa</label>
+              <div className="relative group z-50">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0F172A] transition-colors">
+                  <Search size={18} />
+                </div>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onFocus={() => setShowDropdown(true)}
+                  onChange={(e) => {
+                    isStudentSelectedRef.current = false;
+                    setSearchQuery(e.target.value);
+                    setShowDropdown(true);
+                  }}
+                  placeholder="Ketik nama anak..."
+                  className="w-full pl-12 pr-4 py-4 bg-white border-2 border-slate-200 rounded-2xl text-sm font-bold text-[#0F172A] placeholder:text-slate-300 focus:outline-none focus:border-[#0F172A] focus:ring-4 focus:ring-slate-100 transition-all"
+                />
+
+                {showDropdown && searchQuery.trim() && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[100] animate-in slide-in-from-top-2">
+                    {isLoadingSearch ? (
+                      <div className="p-6 text-center">
+                        <Loader2 size={20} className="animate-spin mx-auto text-slate-300" />
+                      </div>
+                    ) : students.length > 0 ? (
+                      <ul className="max-h-[250px] overflow-y-auto">
+                        {students.map((s) => (
+                          <button
+                            key={s.id}
+                            onClick={() => handleSelectStudent(s)}
+                            className="w-full px-5 py-3 text-left hover:bg-slate-50 flex items-center justify-between transition-colors group/btn"
+                          >
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-[#0F172A] group-hover/btn:translate-x-1 transition-transform">{s.student_name}</span>
+                              <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{s.class_name}</span>
+                            </div>
+                            <ArrowRight size={16} className="text-slate-300 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                          </button>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="p-6 text-center text-slate-400 text-xs font-medium">
+                        Nama tidak ditemukan.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <button
+                 onClick={() => setIsParentMode(false)}
+                 className="w-full py-3 text-center text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest"
+              >
+                Kembali
+              </button>
+            </div>
+            )}
             <p className="text-center text-[0.6rem] font-bold text-slate-300 uppercase tracking-[0.4em] leading-relaxed select-none">
               Data Anda terlindungi oleh enkripsi GradeMaster OS
             </p>
           </div>
+
 
         </div>
       </main>

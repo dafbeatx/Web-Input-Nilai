@@ -15,6 +15,7 @@ import {
   getBehaviorLogsAction 
 } from '@/lib/actions/behavior';
 import { supabase } from '@/lib/supabase/client';
+import { useGradeMaster } from '@/context/GradeMasterContext';
 import Image from 'next/image';
 
 interface BehaviorLog {
@@ -61,6 +62,7 @@ export default function StudentProfileLayer({
   onStartRemedial,
   behaviorReasons = []
 }: StudentProfileLayerProps) {
+  const { isParent } = useGradeMaster();
   const [totalPoints, setTotalPoints] = useState(initialPoints);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(avatarUrl);
   const [activeTab, setActiveTab] = useState<'SUMMARY' | 'ACADEMIC' | 'DOCUMENTS' | 'MANAGE'>('SUMMARY');
@@ -490,13 +492,24 @@ export default function StudentProfileLayer({
                          <p className={`text-xl font-black ${grade.isPassing ? 'text-secondary' : 'text-error'}`}>{grade.score}</p>
                          <p className="text-[8px] font-bold text-on-surface-variant uppercase">KKM: {grade.kkm}</p>
                          {!isAdmin && grade.hasRemedialAvailable && onStartRemedial && (
-                           <button 
-                             onClick={() => onStartRemedial(grade.sessionName)}
-                             className="mt-1 px-3 py-1.5 bg-rose-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm shadow-rose-500/20"
-                           >
-                             <span className="material-symbols-outlined text-[12px]">edit_note</span>
-                             Remedial
-                           </button>
+                           isParent ? (
+                             <button 
+                               disabled
+                               title="Remedial hanya dapat dimulai dengan login menggunakan akun Google Siswa"
+                               className="mt-1 px-3 py-1.5 bg-slate-300 text-white rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 cursor-not-allowed opacity-70"
+                             >
+                               <span className="material-symbols-outlined text-[12px]">edit_note</span>
+                               Remedial (Siswa Saja)
+                             </button>
+                           ) : (
+                             <button 
+                               onClick={() => onStartRemedial(grade.sessionName)}
+                               className="mt-1 px-3 py-1.5 bg-rose-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm shadow-rose-500/20"
+                             >
+                               <span className="material-symbols-outlined text-[12px]">edit_note</span>
+                               Remedial
+                             </button>
+                           )
                          )}
                        </div>
                      </div>

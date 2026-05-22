@@ -13,6 +13,8 @@ interface GradeMasterContextType {
   setAdminUser: (name: string | null) => void;
   isStudent: boolean;
   setIsStudent: (isStudent: boolean) => void;
+  isParent: boolean;
+  setIsParent: (isParent: boolean) => void;
   studentData: any | null;
   setStudentData: (data: any | null) => void;
   toast: ToastType | null;
@@ -33,6 +35,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminUser, setAdminUser] = useState<string | null>(null);
   const [isStudent, setIsStudent] = useState(false);
+  const [isParent, setIsParent] = useState(false);
   const [studentData, setStudentData] = useState<any | null>(null);
   const [toast, setToast] = useState<ToastType | null>(null);
   const [modal, setModal] = useState<ModalType>(null);
@@ -50,6 +53,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     const savedAdmin = localStorage.getItem('gm_isAdmin') === 'true';
     const savedUser = localStorage.getItem('gm_adminUser');
     const savedStudent = localStorage.getItem('gm_isStudent') === 'true';
+    const savedParent = localStorage.getItem('gm_isParent') === 'true';
     const savedStudentData = localStorage.getItem('gm_studentData');
     const savedClass = localStorage.getItem('gm_studentClass');
     const savedYear = localStorage.getItem('gm_academicYear') || "2025/2026";
@@ -58,8 +62,9 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       setIsAdmin(true);
       setAdminUser(savedUser);
     }
-    if (savedStudent) {
-      setIsStudent(true);
+    if (savedStudent || savedParent) {
+      setIsStudent(savedStudent);
+      setIsParent(savedParent);
       if (savedStudentData) {
         try { setStudentData(JSON.parse(savedStudentData)); } catch(e) {}
       }
@@ -84,11 +89,11 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     
     if (adminOnlyLayers.includes(initialLayer) && !savedAdmin) {
       initialLayer = 'login';
-    } else if (protectedLayers.includes(initialLayer) && !savedAdmin && !savedStudent) {
+    } else if (protectedLayers.includes(initialLayer) && !savedAdmin && !savedStudent && !savedParent) {
       initialLayer = 'student_login';
-    } else if (authLayers.includes(initialLayer) && (savedAdmin || savedStudent)) {
+    } else if (authLayers.includes(initialLayer) && (savedAdmin || savedStudent || savedParent)) {
       initialLayer = savedAdmin ? 'setup' : 'dashboard';
-    } else if (initialLayer === 'home' && !savedAdmin && !savedStudent) {
+    } else if (initialLayer === 'home' && !savedAdmin && !savedStudent && !savedParent) {
       // Default unauthenticated landing to student_login per user request for shared links
       initialLayer = 'student_login';
     }
@@ -105,7 +110,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         if (adminOnlyLayers.includes(newHash) && !localStorage.getItem('gm_isAdmin')) {
           setLayer('login');
           window.history.replaceState({ layer: 'login' }, '', '#login');
-        } else if (protectedLayers.includes(newHash) && !localStorage.getItem('gm_isAdmin') && !localStorage.getItem('gm_isStudent')) {
+        } else if (protectedLayers.includes(newHash) && !localStorage.getItem('gm_isAdmin') && !localStorage.getItem('gm_isStudent') && !localStorage.getItem('gm_isParent')) {
           setLayer('student_login');
           window.history.replaceState({ layer: 'student_login' }, '', '#student_login');
         } else {
@@ -126,12 +131,13 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     else localStorage.removeItem("gm_adminUser");
     
     localStorage.setItem("gm_isStudent", isStudent.toString());
+    localStorage.setItem("gm_isParent", isParent.toString());
     if (studentData) localStorage.setItem("gm_studentData", JSON.stringify(studentData));
     else localStorage.removeItem("gm_studentData");
 
     localStorage.setItem("gm_studentClass", studentClass);
     localStorage.setItem("gm_academicYear", academicYear);
-  }, [isAdmin, adminUser, isStudent, studentData, studentClass, academicYear]);
+  }, [isAdmin, adminUser, isStudent, isParent, studentData, studentClass, academicYear]);
 
   // Update URL and LocalStorage on Layer change
   const navigate = (newLayer: Layer) => {
@@ -147,8 +153,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (protectedLayers.includes(newLayer) && !isAdmin && !isStudent) {
-      console.warn(`[Guard] Student access required for layer: ${newLayer}`);
+    if (protectedLayers.includes(newLayer) && !isAdmin && !isStudent && !isParent) {
+      console.warn(`[Guard] Student/Parent access required for layer: ${newLayer}`);
       setLayer('student_login');
       window.history.pushState({ layer: 'student_login' }, '', '#student_login');
       localStorage.setItem("gm_layer", 'student_login');
@@ -170,11 +176,13 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       setAdminUser(null);
       localStorage.removeItem('gm_isAdmin');
       localStorage.removeItem('gm_adminUser');
-    } else if (isStudent) {
+    } else if (isStudent || isParent) {
       await fetch('/api/student/logout', { method: 'POST' }).catch(() => {});
       setIsStudent(false);
+      setIsParent(false);
       setStudentData(null);
       localStorage.removeItem('gm_isStudent');
+      localStorage.removeItem('gm_isParent');
       localStorage.removeItem('gm_studentData');
     }
 
@@ -192,6 +200,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       isAdmin, setIsAdmin,
       adminUser, setAdminUser,
       isStudent, setIsStudent,
+      isParent, setIsParent,
       studentData, setStudentData,
       toast, setToast,
       modal, setModal,
