@@ -142,9 +142,9 @@ export default function Navbar() {
                     <BookOpen size={14} /> Pelajaran
                   </button>
                   <button
-                    onClick={() => onNavigate('remedial_management')}
+                    onClick={() => onNavigate('remedial_dashboard')}
                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
-                      layer === 'remedial_management' ? 'bg-primary/20 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-white border border-transparent'
+                      layer === 'remedial_dashboard' ? 'bg-primary/20 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-white border border-transparent'
                     }`}
                   >
                     <Settings size={14} /> Remedial
@@ -410,7 +410,7 @@ export default function Navbar() {
                   </button>
 
                   <button 
-                    onClick={() => { onNavigate('remedial_management'); setIsMobileMenuOpen(false); }} 
+                    onClick={() => { onNavigate('remedial_dashboard'); setIsMobileMenuOpen(false); }} 
                     className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container"
                   >
                     <div className="w-10 h-10 rounded-xl bg-secondary/15 flex items-center justify-center">

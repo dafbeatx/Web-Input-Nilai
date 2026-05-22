@@ -20,11 +20,12 @@ interface RemedialDashboardLayerProps {
   schoolLevel?: string;
   semester?: string;
   onBack: () => void;
-  onUpdateRemedial?: (questions: string[], keys: string[]) => void;
+  onUpdateRemedial?: (questions: string[], keys: string[], timer: number) => void;
   remedialQuestionsInput?: string;
   onRemedialInputChange?: (v: string) => void;
   remedialAnswerKeysInput?: string;
   onAnswerKeysInputChange?: (v: string) => void;
+  remedialTimer?: number;
   isSaving?: boolean;
   sessions?: SessionMeta[];
   activeSessionId?: string;
@@ -48,6 +49,7 @@ export default function RemedialDashboardLayer({
   onRemedialInputChange,
   remedialAnswerKeysInput = "",
   onAnswerKeysInputChange,
+  remedialTimer = 15,
   isSaving = false,
   sessions = [],
   activeSessionId,
@@ -59,6 +61,7 @@ export default function RemedialDashboardLayer({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [localTimer, setLocalTimer] = useState<number>(remedialTimer);
   const [reviewScore, setReviewScore] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
@@ -92,7 +95,8 @@ export default function RemedialDashboardLayer({
   const handleSaveQuestions = () => {
     onUpdateRemedial?.(
       parseEssayQuestions(remedialQuestionsInput),
-      parseEssayQuestions(remedialAnswerKeysInput)
+      parseEssayQuestions(remedialAnswerKeysInput),
+      localTimer
     );
     setIsEditing(false);
   };
@@ -537,6 +541,22 @@ export default function RemedialDashboardLayer({
 
               {/* Editor Fields */}
               <div className="flex flex-col gap-6">
+                 {/* Timer Config */}
+                 <div className="flex flex-col gap-2 relative">
+                    <label className="font-label text-[10px] text-tertiary-dim uppercase font-black tracking-widest pl-1">
+                      <Clock size={12} className="inline mr-1" /> Durasi Remedial (Menit)
+                    </label>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max="180" 
+                      value={localTimer} 
+                      onChange={(e) => setLocalTimer(Number(e.target.value))} 
+                      disabled={!isAdmin}
+                      className="w-full bg-surface-container-lowest border-none rounded-2xl p-5 text-sm font-medium text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none disabled:opacity-50"
+                    />
+                 </div>
+
                  {/* Questions */}
                   <div className="flex flex-col gap-2 relative">
                     <div className="flex items-center justify-between">

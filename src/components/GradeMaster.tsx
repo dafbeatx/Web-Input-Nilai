@@ -436,7 +436,7 @@ export default function GradeMaster() {
     }
   };
 
-  const handleUpdateRemedialQuestions = async (newQuestions: string[], newKeys: string[]) => {
+  const handleUpdateRemedialQuestions = async (newQuestions: string[], newKeys: string[], newTimer: number) => {
     if (!sessionId) {
       setToast({ message: "Sesi belum dimuat. Silakan login ke sesi terlebih dahulu.", type: "error" });
       return;
@@ -461,7 +461,7 @@ export default function GradeMaster() {
           academicYear,
           kkm,
           remedialEssayCount,
-          remedialTimer,
+          remedialTimer: newTimer,
         }),
       });
       const data = await res.json();
@@ -469,7 +469,8 @@ export default function GradeMaster() {
 
       setRemedialQuestions(newQuestions);
       setRemedialAnswerKeys(newKeys);
-      setToast({ message: "Soal & Kunci remedial berhasil diperbarui!", type: "success" });
+      setRemedialTimer(newTimer);
+      setToast({ message: "Soal, Kunci, dan Durasi remedial berhasil diperbarui!", type: "success" });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal menyimpan";
       setToast({ message: msg, type: "error" });
