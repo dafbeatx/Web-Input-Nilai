@@ -70,6 +70,7 @@ export default function RemedialDashboardLayer({
   // Auto-refresh mechanism
   React.useEffect(() => {
     if (!activeSessionId || !onRefresh) return;
+    onRefresh(); // Fetch immediately on mount or session change
     const interval = setInterval(() => {
       onRefresh();
     }, 10000); // 10 seconds
