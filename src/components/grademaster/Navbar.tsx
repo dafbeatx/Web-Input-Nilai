@@ -32,6 +32,7 @@ export default function Navbar() {
     isAdmin, 
     adminUser, 
     isStudent,
+    isParent,
     studentData,
     setStudentData,
     toast,
@@ -156,7 +157,7 @@ export default function Navbar() {
                     <LogOut size={12} />
                   </button>
                 </>
-              ) : isStudent && studentData?.isGoogleLinked ? (
+              ) : (isStudent && studentData?.isGoogleLinked) || isParent ? (
                 <>
                   <button 
                     onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
@@ -178,14 +179,16 @@ export default function Navbar() {
                         <p className="text-sm font-black text-on-surface truncate">{studentData.name}</p>
                       </div>
                       
-                      <button 
-                        onClick={handleLinkGoogleStudent}
-                        disabled={isLinking}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-emerald-500/10 hover:text-emerald-500 text-on-surface-variant transition-colors text-sm font-bold text-left disabled:opacity-50"
-                      >
-                        {isLinking ? <Loader2 size={16} className="animate-spin" /> : <GraduationCap size={16} />} 
-                        Siswa / Mahasiswa
-                      </button>
+                      {!isParent && (
+                        <button 
+                          onClick={handleLinkGoogleStudent}
+                          disabled={isLinking}
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-emerald-500/10 hover:text-emerald-500 text-on-surface-variant transition-colors text-sm font-bold text-left disabled:opacity-50"
+                        >
+                          {isLinking ? <Loader2 size={16} className="animate-spin" /> : <GraduationCap size={16} />} 
+                          Siswa / Mahasiswa
+                        </button>
+                      )}
                       <button 
                         onClick={() => {
                            onNavigate('student_profile');
@@ -193,7 +196,7 @@ export default function Navbar() {
                         }}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 text-on-surface-variant transition-colors text-sm font-bold text-left mt-1"
                       >
-                        <User size={16} /> Profil Saya
+                        <User size={16} /> {isParent ? 'Profil Siswa' : 'Profil Saya'}
                       </button>
 
                       <div className="border-t border-outline-variant mt-2 pt-2">
@@ -229,7 +232,7 @@ export default function Navbar() {
         style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingBottom: '0.75rem' }}
       >
         <div className="flex items-center gap-3 overflow-hidden">
-           {!isAdmin && isStudent && studentData?.class_name ? (
+           {!isAdmin && (isStudent || isParent) && studentData?.class_name ? (
              <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500 overflow-hidden">
                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-md flex-shrink-0">
                  {studentData.photo_url ? (
@@ -263,7 +266,7 @@ export default function Navbar() {
                <Settings size={16} />
              </button>
           )}
-          {!isAdmin && isStudent && (
+          {!isAdmin && (isStudent || isParent) && (
              <button 
                onClick={() => onNavigate('student_profile')} 
                className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-colors active:scale-95"
@@ -336,9 +339,9 @@ export default function Navbar() {
             >
               {isMobileMenuOpen ? (
                 <X size={20} strokeWidth={2.5} />
-              ) : (!isAdmin && isStudent && studentData?.photo_url) ? (
+              ) : (!isAdmin && (isStudent || isParent) && studentData?.photo_url) ? (
                 <img src={studentData.photo_url} alt="Profile" className="w-[20px] h-[20px] rounded-full object-cover border border-outline-variant shadow-sm" />
-              ) : (!isAdmin && isStudent && studentData?.name) ? (
+              ) : (!isAdmin && (isStudent || isParent) && studentData?.name) ? (
                 <div className="w-[20px] h-[20px] rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[10px] border border-primary/20">
                   {studentData.name[0]}
                 </div>
@@ -346,7 +349,7 @@ export default function Navbar() {
                 <Menu size={20} strokeWidth={1.8} />
               )}
               <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>
-                {(!isAdmin && isStudent && studentData) ? 'Profil' : 'Menu'}
+                {(!isAdmin && (isStudent || isParent) && studentData) ? 'Profil' : 'Menu'}
               </span>
             </button>
           </div>
@@ -422,22 +425,22 @@ export default function Navbar() {
                     </button>
                   </div>
                 </>
-              ) : isStudent && studentData?.isGoogleLinked ? (
+              ) : ((isStudent && studentData?.isGoogleLinked) || isParent) ? (
                 <>
                   {/* Student Identity Card */}
                   <div className="bg-surface-container-low p-5 rounded-2xl border border-surface-container flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-surface-container-high shadow-sm flex-shrink-0">
-                      {studentData.photo_url ? (
+                      {studentData?.photo_url ? (
                         <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-primary-container text-white flex items-center justify-center font-bold text-sm">
-                          {studentData.name?.[0] || 'U'}
+                          {studentData?.name?.[0] || 'U'}
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Siswa</p>
-                      <p className="text-sm font-extrabold text-on-surface truncate mt-0.5">{studentData.name}</p>
+                      <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">{isParent ? 'Orang Tua' : 'Siswa'}</p>
+                      <p className="text-sm font-extrabold text-on-surface truncate mt-0.5">{studentData?.name}</p>
                     </div>
                   </div>
 
@@ -450,24 +453,26 @@ export default function Navbar() {
                       <User size={18} className="text-on-primary-fixed" />
                     </div>
                     <div>
-                      <span className="text-[11px] font-bold text-on-surface block leading-tight">Profil Saya</span>
+                      <span className="text-[11px] font-bold text-on-surface block leading-tight">{isParent ? 'Profil Anak' : 'Profil Saya'}</span>
                       <span className="text-[9px] font-medium text-on-surface-variant">Lihat data & performa</span>
                     </div>
                   </button>
 
-                  <button 
-                    onClick={() => { handleLinkGoogleStudent(); setIsMobileMenuOpen(false); }} 
-                    disabled={isLinking}
-                    className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container disabled:opacity-50"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center">
-                      {isLinking ? <Loader2 size={18} className="animate-spin text-secondary" /> : <GraduationCap size={18} className="text-secondary" />}
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-bold text-on-surface block leading-tight">Manajemen Nilai</span>
-                      <span className="text-[9px] font-medium text-on-surface-variant">Sinkronkan data akademik</span>
-                    </div>
-                  </button>
+                  {!isParent && (
+                    <button 
+                      onClick={() => { handleLinkGoogleStudent(); setIsMobileMenuOpen(false); }} 
+                      disabled={isLinking}
+                      className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container disabled:opacity-50"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center">
+                        {isLinking ? <Loader2 size={18} className="animate-spin text-secondary" /> : <GraduationCap size={18} className="text-secondary" />}
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-bold text-on-surface block leading-tight">Manajemen Nilai</span>
+                        <span className="text-[9px] font-medium text-on-surface-variant">Sinkronkan data akademik</span>
+                      </div>
+                    </button>
+                  )}
 
                   <div className="pt-2">
                     <button 
