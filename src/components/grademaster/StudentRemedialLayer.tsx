@@ -1297,16 +1297,6 @@ export default function StudentRemedialLayer({
   };
 
   const startExam = async () => {
-    // DEADLINE CHECK: Senin, 30 Maret 2026 Jam 07:00 WIB
-    const deadline = new Date('2026-03-30T07:00:00+07:00').getTime();
-    if (Date.now() > deadline) {
-      setToast({ 
-        message: "Sesi remedial telah selesai. Nilai pengerjaan Anda sekarang adalah 0. Jika ingin perbaikan, harap hubungi pengawas untuk mendapatkan poin kebaikan.", 
-        type: "error" 
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     const saved = loadRemedialSession();
@@ -2232,19 +2222,7 @@ export default function StudentRemedialLayer({
     const isCompleted = ['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT'].includes(step);
 
     const getRemainingTimeStr = () => {
-      const deadline = new Date('2026-03-30T07:00:00+07:00').getTime();
-      const diff = deadline - Date.now();
-      if (diff <= 0) return "Selesai";
-
-      const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-      const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-      const mins = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
-      
-      let str = "";
-      if (days > 0) str += `${days}d `;
-      if (hours > 0) str += `${hours}h `;
-      str += `${mins}m`;
-      return str;
+      return "Selesai";
     };
 
     const handleShare = () => {
