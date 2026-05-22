@@ -33,7 +33,7 @@ import StudentProfileLayer from "./grademaster/StudentProfileLayer";
 import StudentClaimLayer from "./grademaster/StudentClaimLayer";
 import TeacherClaimLayer from "./grademaster/TeacherClaimLayer";
 import LessonManagementLayer from "./grademaster/LessonManagementLayer";
-import RemedialManagementLayer from "./grademaster/RemedialManagementLayer";
+import RemedialManagementLayer from "@/components/grademaster/RemedialManagementLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 
 const ESSAY_COUNT = 5;
