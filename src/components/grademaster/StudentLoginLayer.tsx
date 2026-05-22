@@ -59,7 +59,7 @@ export default function StudentLoginLayer({
       try {
         const { data } = await supabase
           .from('gm_behaviors')
-          .select('id, student_name, class_name')
+          .select('id, student_name, class_name, total_points')
           .ilike('student_name', `%${debouncedQuery}%`)
           .order('student_name', { ascending: true })
           .limit(10);
@@ -79,6 +79,7 @@ export default function StudentLoginLayer({
       id: s.id, 
       name: s.student_name, 
       class_name: s.class_name, 
+      total_points: s.total_points,
       isGoogleLinked: false,
       isParentView: true 
     });

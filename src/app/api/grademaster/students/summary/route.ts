@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = await createClient();
     const { searchParams } = new URL(req.url);
     const studentName = searchParams.get('name');
     const academicYear = searchParams.get('year') || '2025/2026';
@@ -13,7 +12,7 @@ export async function GET(req: NextRequest) {
     }
 
     // 1. Fetch Attendance Stats
-    const { data: attData, error: attError } = await supabase
+    const { data: attData, error: attError } = await supabaseAdmin
       .from('gm_attendance')
       .select('status')
       .eq('student_name', studentName)
@@ -27,7 +26,7 @@ export async function GET(req: NextRequest) {
 
     // 2. Fetch Academic History
     // We need to join gm_students with gm_sessions to get session names
-    const { data: gradeData, error: gradeError } = await supabase
+    const { data: gradeData, error: gradeError } = await supabaseAdmin
       .from('gm_students')
       .select(`
         final_score,
