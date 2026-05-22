@@ -226,6 +226,7 @@ export default function StudentRemedialLayer({
   // Split Screen Detection
   const [splitScreenViolationCount, setSplitScreenViolationCount] = useState(0);
   const [isSplitLocked, setIsSplitLocked] = useState(false);
+  const [isScreenshotFlash, setIsScreenshotFlash] = useState(false);
 
   // Monitor Hook Integration
   const { sendLog } = useExamMonitor({
@@ -1736,6 +1737,9 @@ export default function StudentRemedialLayer({
 
     const handleBlur = () => {
       if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
+      setIsScreenshotFlash(true); // Instant white screen to block partial OS screenshots
+      setTimeout(() => setIsScreenshotFlash(false), 2000);
+
       trackEvent('WINDOW_BLUR', 'HIGH', 15, { reason: 'Window lost focus / popup / third-party overlay' });
       setTabWarningCount(prev => {
         const newCount = prev + 1;
@@ -1783,12 +1787,33 @@ export default function StudentRemedialLayer({
       sendLog('CLIPBOARD_VIOLATION', 'LOW', { action: e.type });
     };
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Print Screen
+      if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
+        setIsScreenshotFlash(true);
+        setToast({ message: "Tangkapan Layar (Screenshot) Dilarang!", type: "error" });
+        sendLog('SCREENSHOT_ATTEMPT', 'HIGH');
+        e.preventDefault();
+        setTimeout(() => setIsScreenshotFlash(false), 2000);
+      }
+      // Windows/Mac Shift + S / Shift + 3 / Shift + 4
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 's' || e.key === 'S' || e.key === '3' || e.key === '4')) {
+        setIsScreenshotFlash(true);
+        setToast({ message: "Tangkapan Layar (Screenshot) Dilarang!", type: "error" });
+        sendLog('SCREENSHOT_ATTEMPT', 'HIGH');
+        e.preventDefault();
+        setTimeout(() => setIsScreenshotFlash(false), 2000);
+      }
+    };
+
     document.addEventListener("copy", handleCopyPaste);
     document.addEventListener("paste", handleCopyPaste);
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.removeEventListener("copy", handleCopyPaste);
       document.removeEventListener("paste", handleCopyPaste);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [step, setToast, sendLog]);
 
@@ -2492,15 +2517,16 @@ export default function StudentRemedialLayer({
       
       {/* Dynamic Watermark Overlay */}
       {step === 'EXAM' && (
-        <div className="fixed inset-0 pointer-events-none z-[60] overflow-hidden select-none opacity-20">
-          <div className="watermark-grid absolute -inset-[100%] flex flex-wrap justify-center items-center gap-10 md:gap-16 transform -rotate-45 pointer-events-none select-none">
-            {Array.from({ length: 150 }).map((_, i) => (
-              <span key={i} className="text-[14px] md:text-lg font-black text-on-surface-variant uppercase tracking-widest whitespace-nowrap">
-                {studentName} • SECURE SESSION
-              </span>
-            ))}
+        <div className="fixed inset-0 pointer-events-none z-[60] overflow-hidden select-none">
+          <div className="absolute bottom-4 right-4 text-[10px] font-black text-on-surface-variant/20 uppercase tracking-widest whitespace-nowrap select-none pointer-events-none">
+            {studentName} • SECURE SESSION
           </div>
         </div>
+      )}
+      
+      {/* Screenshot Flash Overlay */}
+      {isScreenshotFlash && (
+        <div className="fixed inset-0 z-[9999] bg-white pointer-events-none"></div>
       )}
       
       {/* ── TOP APP BAR (GradeMaster OS Header) ── */}
@@ -2890,13 +2916,6 @@ export default function StudentRemedialLayer({
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.3); }
         .privacy-mode { filter: blur(0px); transition: filter 0.3s; }
         
-        @keyframes slideGrid {
-          0% { transform: rotate(-45deg) translateY(0); }
-          100% { transform: rotate(-45deg) translateY(-50px); }
-        }
-        .watermark-grid {
-          animation: slideGrid 10s linear infinite;
-        }
         @media print {
           body {
             display: none !important;
