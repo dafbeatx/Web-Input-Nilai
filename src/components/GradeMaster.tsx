@@ -526,7 +526,8 @@ export default function GradeMaster() {
 
   const handleStudentRemedialFromProfile = async (targetSessionName: string) => {
     try {
-      const res = await fetch(`/api/grademaster?name=${encodeURIComponent(targetSessionName)}`);
+      const ts = Date.now();
+      const res = await fetch(`/api/grademaster?name=${encodeURIComponent(targetSessionName)}&t=${ts}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
