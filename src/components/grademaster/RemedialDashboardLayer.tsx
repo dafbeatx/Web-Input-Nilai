@@ -67,15 +67,29 @@ export default function RemedialDashboardLayer({
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
+  // Keep track of the latest onRefresh to avoid infinite loops when parent re-renders
+  const onRefreshRef = React.useRef(onRefresh);
+  React.useEffect(() => {
+    onRefreshRef.current = onRefresh;
+  }, [onRefresh]);
+
   // Auto-refresh mechanism
   React.useEffect(() => {
-    if (!activeSessionId || !onRefresh) return;
-    onRefresh(); // Fetch immediately on mount or session change
+    if (!activeSessionId) return;
+    
+    // Initial fetch
+    if (onRefreshRef.current) {
+      onRefreshRef.current();
+    }
+    
     const interval = setInterval(() => {
-      onRefresh();
+      if (onRefreshRef.current) {
+        onRefreshRef.current();
+      }
     }, 10000); // 10 seconds
+    
     return () => clearInterval(interval);
-  }, [activeSessionId, onRefresh]);
+  }, [activeSessionId]);
 
   // Stats Logic
   const remedialStudents = useMemo(() => {
