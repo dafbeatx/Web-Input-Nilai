@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
       const key = `${score.name.trim().toLowerCase()}_`; // class is unknown here, we try to match by name
       
       // Try to find matching account by name
-      let foundAcc = null;
+      let foundAcc: any = null;
       for (const [k, v] of studentsMap.entries()) {
          if (k.startsWith(score.name.trim().toLowerCase() + "_")) {
             foundAcc = v;
@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
 
     // Aggregate behaviors
     for (const log of (behaviors || [])) {
-      const bClass = log.gm_behaviors?.class_name;
+      const bClass = (log.gm_behaviors as any)?.class_name;
       if (!bClass) continue;
       const key = `${log.student_name.trim().toLowerCase()}_${bClass}`;
       if (studentsMap.has(key)) {
