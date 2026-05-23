@@ -343,10 +343,12 @@ export async function submitRemedial(
         studentUpdate.teacher_reviewed = true;
       } else {
         // VALID SUBMISSION
-        // Remove fixed 70/55 scoring. Use actual similarity score.
+        // Kembalikan ke sistem KKM: Siswa yang berhasil menyelesaikan remedial (valid) 
+        // akan langsung mendapatkan nilai KKM.
         const rawScore = essayResult.score;
         const penaltyAmount = isPenaltyApplied ? 15 : 0;
-        const finalScore = Math.max(0, rawScore - penaltyAmount);
+        const kkmScore = session.kkm || 75;
+        const finalScore = Math.max(0, kkmScore - penaltyAmount);
 
         studentUpdate.remedial_score = finalScore;
         studentUpdate.final_score = finalScore;
