@@ -168,7 +168,7 @@ export default function DashboardLayer({
   return (
     <div className="font-body text-on-surface min-h-dvh flex flex-col bg-surface">
       {/* Main Content — padded for global Navbar top & bottom */}
-      <main className="flex-1 px-4 sm:px-6 pt-6 pb-28 overflow-x-hidden max-w-4xl mx-auto w-full page-pt">
+      <main className="flex-1 px-4 sm:px-6 pt-6 pb-28 overflow-x-hidden max-w-7xl mx-auto w-full page-pt">
         {/* Admin Quick-Action Strip (Mobile) */}
         {isAdmin && (
           <div className="md:hidden flex items-center justify-between mb-4 p-3 bg-emerald-500/5 border border-emerald-500/15 rounded-2xl">
