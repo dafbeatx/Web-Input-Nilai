@@ -66,6 +66,34 @@ export default function RemedialDashboardLayer({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const generateAndCopyPendingList = () => {
+    const pendingList = gradedStudents.filter(s => 
+      (s.finalScoreLocked || s.finalScore) < kkm && 
+      (s.remedialStatus === 'NONE' || !s.remedialStatus || s.remedialStatus === 'FAILED' || s.remedialStatus === 'FAILED_EFFORT' || s.remedialStatus === 'CHEATED' || s.remedialStatus === 'TIME_UP')
+    ).sort((a, b) => a.name.localeCompare(b.name));
+
+    if (pendingList.length === 0) {
+      alert('Tidak ada siswa yang tertunggak remedial pada sesi ini.');
+      return;
+    }
+
+    const text = `*DAFTAR TUNGGAKAN REMEDIAL*\n` +
+      `Mata Pelajaran: ${subject}\n` +
+      `Kelas: ${displayClass}\n` +
+      `KKM: ${kkm}\n\n` +
+      `Berikut adalah daftar siswa yang belum menyelesaikan atau belum lulus remedial:\n\n` +
+      pendingList.map((s, i) => `${i + 1}. ${s.name} (Nilai: ${s.originalScore || s.finalScore})`).join('\n') +
+      `\n\nHarap segera mengakses tautan remedial dan menyelesaikannya. Jika dibiarkan, nilai asli akan terkunci permanen secara otomatis.`;
+
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    }).catch(err => {
+      alert('Gagal menyalin teks. Browser Anda mungkin tidak mendukung fitur Clipboard.');
+    });
+  };
 
   // Keep track of the latest onRefresh to avoid infinite loops when parent re-renders
   const onRefreshRef = React.useRef(onRefresh);
@@ -514,14 +542,28 @@ export default function RemedialDashboardLayer({
       {/* Sticky Bottom Actions */}
       <div className="fixed bottom-0 w-full z-40 px-6 pb-6 pt-4 bg-gradient-to-t from-surface via-surface/90 to-transparent pointer-events-none">
          <div className="max-w-lg mx-auto flex flex-col gap-3 pointer-events-auto">
-            <button 
-              onClick={() => setIsEditing(true)}
-              disabled={!activeSessionId}
-              className="w-full h-14 bg-gradient-to-br from-[#f9f9f9] to-[#a0a1a1] text-on-primary-container rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 premium-shadow active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale"
-            >
-              <span className="material-symbols-outlined">auto_fix_high</span>
-              Atur Soal Remedial
-            </button>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setIsEditing(true)}
+                disabled={!activeSessionId}
+                className="flex-1 h-14 bg-gradient-to-br from-[#f9f9f9] to-[#a0a1a1] text-on-primary-container rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 premium-shadow active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale"
+              >
+                <span className="material-symbols-outlined">auto_fix_high</span>
+                Atur Soal
+              </button>
+              <button 
+                onClick={generateAndCopyPendingList}
+                disabled={!activeSessionId || isEditing}
+                className={`flex-1 h-14 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50 premium-shadow ${
+                  copied 
+                    ? 'bg-tertiary text-on-tertiary' 
+                    : 'bg-surface-container border-2 border-error/40 text-error hover:bg-error/10'
+                }`}
+              >
+                <span className="material-symbols-outlined">{copied ? 'check_circle' : 'content_copy'}</span>
+                {copied ? 'Tersalin' : 'Tagih Siswa'}
+              </button>
+            </div>
             <button 
               onClick={onBack}
               className="w-full py-2 text-on-surface-variant/50 hover:text-primary transition-colors text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2"
