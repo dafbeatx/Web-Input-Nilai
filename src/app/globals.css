@@ -141,14 +141,15 @@
 }
 
 /* Page content top padding accounting for fixed header + safe area */
-.page-pt {
-  padding-top: calc(var(--nav-height) + max(0.75rem, env(safe-area-inset-top, 0px)));
-}
-
-/* Mobile-specific: when used with fixed top header, account for both header + safe area */
 @media (max-width: 767px) {
   .page-pt {
     padding-top: calc(var(--nav-height) + max(1rem, env(safe-area-inset-top, 0px)));
+  }
+}
+
+@media (min-width: 768px) {
+  .page-pt {
+    padding-top: max(1.5rem, env(safe-area-inset-top, 0px));
   }
 }
 
@@ -198,4 +199,10 @@ body.hide-mobile-header #mobile-bottom-nav {
   opacity: 0 !important;
   pointer-events: none !important;
   transform: translateY(100%);
+}
+
+@media (min-width: 768px) {
+  body.has-desktop-sidebar main {
+    padding-left: 16rem !important;
+  }
 }

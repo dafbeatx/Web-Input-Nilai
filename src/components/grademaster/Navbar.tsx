@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   GraduationCap,
   Menu,
@@ -49,8 +49,18 @@ export default function Navbar() {
   const [isLinking, setIsLinking] = useState(false);
 
   // Hidden in behavior page (uses its own nav), exam, and auth layers
-  if (pathname?.startsWith('/behavior')) return null;
-  if (['login', 'student_login', 'student_claim', 'teacher_claim', 'remedial'].includes(layer)) return null;
+  const isHidden = pathname?.startsWith('/behavior') || ['login', 'student_login', 'student_claim', 'teacher_claim', 'remedial'].includes(layer);
+
+  useEffect(() => {
+    if (!isHidden) {
+      document.body.classList.add('has-desktop-sidebar');
+    } else {
+      document.body.classList.remove('has-desktop-sidebar');
+    }
+    return () => document.body.classList.remove('has-desktop-sidebar');
+  }, [isHidden]);
+
+  if (isHidden) return null;
 
   const onOpenSettings = () => setModal("adminSettings");
   const onLoginClick = () => onNavigate("login");
@@ -94,116 +104,124 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Desktop Top Navbar */}
-      <nav className="hidden md:block sticky top-0 z-[100] bg-surface/80 backdrop-blur-xl border-b border-outline-variant shadow-lg">
-        <div className="max-w-7xl mx-auto px-5 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Left: Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-primary text-white rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-                <NeonGraduationCap size={20} />
-              </div>
-              <h1 className="text-base font-black text-on-surface tracking-tight font-outfit uppercase">GradeMaster OS</h1>
+      {/* Desktop Left Sidebar */}
+      <nav className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 bg-surface/95 backdrop-blur-xl border-r border-outline-variant shadow-2xl z-[100]">
+        <div className="flex flex-col h-full p-5">
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-10 mt-2">
+            <div className="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 flex-shrink-0">
+              <NeonGraduationCap size={22} />
             </div>
+            <h1 className="text-lg font-black text-on-surface tracking-tight font-outfit uppercase leading-tight">GradeMaster<br/><span className="text-primary">OS</span></h1>
+          </div>
 
-            {/* Center: Navigation */}
-            <div className="flex items-center gap-1">
-              <button
+          {/* Navigation Items */}
+          <div className="flex flex-col gap-2 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+            <button
                 onClick={() => onNavigate('home')}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
-                  isActive('exam') ? 'bg-primary/20 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-white border border-transparent'
+                className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 ${
+                  isActive('exam') ? 'bg-primary/10 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
                 }`}
-              >
-                <ClipboardList size={14} /> Beranda
-              </button>
-              <button
+            >
+                <ClipboardList size={18} /> Beranda
+            </button>
+            <button
                 onClick={() => onNavigate('behavior')}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
-                  isActive('behavior') ? 'bg-primary/20 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-white border border-transparent'
+                className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 ${
+                  isActive('behavior') ? 'bg-primary/10 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
                 }`}
-              >
-                <ShieldCheck size={14} /> Sikap
-              </button>
-              <button
+            >
+                <ShieldCheck size={18} /> Sikap
+            </button>
+            <button
                 onClick={() => onNavigate('attendance')}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
-                  isActive('attendance') ? 'bg-primary/20 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-white border border-transparent'
+                className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 ${
+                  isActive('attendance') ? 'bg-primary/10 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
                 }`}
-              >
-                <Calendar size={14} /> Kehadiran
-              </button>
+            >
+                <Calendar size={18} /> Kehadiran
+            </button>
 
-              {isAdmin && (
+            {isAdmin && (
                 <>
+                  <div className="my-2 border-t border-outline-variant"></div>
+                  <span className="text-[10px] text-on-surface-variant/50 font-bold uppercase tracking-widest px-2 mb-1">Admin Panel</span>
                   <button
                     onClick={() => onNavigate('lesson_management')}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
-                      layer === 'lesson_management' ? 'bg-primary/20 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-white border border-transparent'
+                    className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 ${
+                      layer === 'lesson_management' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
                     }`}
                   >
-                    <BookOpen size={14} /> Pelajaran
+                    <BookOpen size={18} /> Pelajaran
                   </button>
                   <button
                     onClick={() => onNavigate('data_center')}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
-                      layer === 'data_center' ? 'bg-primary/20 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-white border border-transparent'
+                    className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 ${
+                      layer === 'data_center' ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
                     }`}
                   >
-                    <Database size={14} /> Pusat Data
+                    <Database size={18} /> Pusat Data
                   </button>
                   <button
                     onClick={() => onNavigate('remedial_dashboard')}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
-                      layer === 'remedial_dashboard' ? 'bg-primary/20 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-white border border-transparent'
+                    className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 ${
+                      layer === 'remedial_dashboard' ? 'bg-secondary/10 text-secondary border border-secondary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
                     }`}
                   >
-                    <Settings size={14} /> Remedial
+                    <Settings size={18} /> Remedial
                   </button>
                 </>
-              )}
-            </div>
+            )}
+          </div>
 
-            {/* Right: User/Auth */}
-            <div className="flex items-center gap-3 relative">
-              {isAdmin ? (
-                <>
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-emerald-500/20">
-                    <CheckCircle2 size={10} /> {adminUser || 'Admin'}
-                  </span>
-                  <button onClick={onOpenSettings} className="w-8 h-8 rounded-lg bg-surface-variant text-on-surface-variant hover:text-primary hover:bg-surface-container-highest flex items-center justify-center transition-colors border border-outline-variant">
-                    <Settings size={14} />
-                  </button>
-                  <button onClick={onLogout} className="px-3 py-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border border-transparent hover:border-rose-500/20">
-                    <LogOut size={12} />
-                  </button>
-                </>
-              ) : (isStudent && studentData?.isGoogleLinked) || isParent ? (
-                <>
+          {/* User Profile / Auth */}
+          <div className="mt-auto pt-4 border-t border-outline-variant">
+            {isAdmin ? (
+               <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-3 px-3 py-2 bg-surface-container rounded-xl border border-surface-container-high mb-2">
+                     <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center">
+                        <CheckCircle2 size={16} />
+                     </div>
+                     <div className="flex-1 min-w-0">
+                        <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Admin</p>
+                        <p className="text-sm font-black text-on-surface truncate leading-tight">{adminUser || 'Admin'}</p>
+                     </div>
+                  </div>
+                  <div className="flex gap-2">
+                     <button onClick={onOpenSettings} className="flex-1 py-2 rounded-xl bg-surface-variant text-on-surface-variant hover:text-primary hover:bg-surface-container-highest flex items-center justify-center transition-colors border border-outline-variant">
+                       <Settings size={16} />
+                     </button>
+                     <button onClick={onLogout} className="flex-1 py-2 rounded-xl text-rose-500 hover:bg-rose-500/10 flex items-center justify-center transition-colors border border-transparent hover:border-rose-500/20">
+                       <LogOut size={16} />
+                     </button>
+                  </div>
+               </div>
+            ) : (isStudent && studentData?.isGoogleLinked) || isParent ? (
+               <div className="relative">
                   <button 
                     onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                    className="flex items-center gap-2 px-1 py-1 rounded-full hover:bg-surface-variant border border-transparent hover:border-outline-variant transition-all focus:outline-none"
+                    className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-surface-variant border border-transparent hover:border-outline-variant transition-all text-left"
                   >
-                    {studentData.photo_url ? (
-                      <img src={studentData.photo_url} alt="Profile" className="w-8 h-8 rounded-full shadow-md object-cover border border-outline-variant" />
+                    {studentData?.photo_url ? (
+                      <img src={studentData.photo_url} alt="Profile" className="w-10 h-10 rounded-full shadow-md object-cover border border-outline-variant flex-shrink-0" />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
-                        {studentData.name?.[0] || 'U'}
+                      <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold flex-shrink-0">
+                        {studentData?.name?.[0] || 'U'}
                       </div>
                     )}
+                    <div className="flex-1 min-w-0">
+                       <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider truncate">{isParent ? 'Orang Tua' : 'Siswa'}</p>
+                       <p className="text-sm font-black text-on-surface truncate leading-tight">{studentData?.name}</p>
+                    </div>
                   </button>
 
                   {isProfileDropdownOpen && (
-                    <div className="absolute top-14 right-0 w-64 bg-surface premium-shadow border border-outline-variant rounded-2xl p-2 animate-in fade-in zoom-in-95 duration-200 z-50">
-                      <div className="px-4 py-3 border-b border-outline-variant mb-2">
-                        <p className="text-xs text-on-surface-variant font-bold">Masuk Sebagai:</p>
-                        <p className="text-sm font-black text-on-surface truncate">{studentData.name}</p>
-                      </div>
-                      
+                    <div className="absolute bottom-full left-0 w-full mb-2 bg-surface premium-shadow border border-outline-variant rounded-2xl p-2 animate-in fade-in slide-in-from-bottom-2 duration-200 z-50">
                       {!isParent && (
                         <button 
                           onClick={handleLinkGoogleStudent}
                           disabled={isLinking}
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-emerald-500/10 hover:text-emerald-500 text-on-surface-variant transition-colors text-sm font-bold text-left disabled:opacity-50"
+                          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-emerald-500/10 hover:text-emerald-600 text-on-surface-variant transition-colors text-sm font-bold text-left disabled:opacity-50"
                         >
                           {isLinking ? <Loader2 size={16} className="animate-spin" /> : <GraduationCap size={16} />} 
                           Siswa / Mahasiswa
@@ -214,7 +232,7 @@ export default function Navbar() {
                            onNavigate('student_profile');
                            setIsProfileDropdownOpen(false);
                         }}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 text-on-surface-variant transition-colors text-sm font-bold text-left mt-1"
+                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-surface-variant text-on-surface-variant transition-colors text-sm font-bold text-left mt-1"
                       >
                         <User size={16} /> {isParent ? 'Profil Siswa' : 'Profil Saya'}
                       </button>
@@ -222,23 +240,22 @@ export default function Navbar() {
                       <div className="border-t border-outline-variant mt-2 pt-2">
                         <button 
                           onClick={() => { onLogout(); setIsProfileDropdownOpen(false); }}
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-400 hover:bg-rose-500/10 transition-colors text-sm font-bold text-left"
+                          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-colors text-sm font-bold text-left"
                         >
                           <LogOut size={16} /> Logout Global
                         </button>
                       </div>
                     </div>
                   )}
-                </>
-              ) : (
-                <button 
-                  onClick={() => onNavigate('student_login')}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20"
-                >
-                  <LogIn size={14} /> Login
-                </button>
-              )}
-            </div>
+               </div>
+            ) : (
+               <button 
+                 onClick={() => onNavigate('student_login')}
+                 className="w-full py-3 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+               >
+                 <LogIn size={16} /> Login
+               </button>
+            )}
           </div>
         </div>
       </nav>
