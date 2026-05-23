@@ -34,6 +34,7 @@ import StudentClaimLayer from "./grademaster/StudentClaimLayer";
 import TeacherClaimLayer from "./grademaster/TeacherClaimLayer";
 import LessonManagementLayer from "./grademaster/LessonManagementLayer";
 import RemedialManagementLayer from "@/components/grademaster/RemedialManagementLayer";
+import DataCenterLayer from "@/components/grademaster/DataCenterLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 
 const ESSAY_COUNT = 5;
@@ -1116,6 +1117,12 @@ export default function GradeMaster() {
         <RemedialManagementLayer 
           academicYear={academicYear}
           setToast={setToast}
+        />
+      )}
+
+      {layer === "data_center" && isAdmin && (
+        <DataCenterLayer
+          onBack={() => setLayer("home")}
         />
       )}
 

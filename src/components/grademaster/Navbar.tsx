@@ -18,7 +18,8 @@ import {
   User,
   Activity,
   BookOpen,
-  ListChecks
+  ListChecks,
+  Database
 } from 'lucide-react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import { usePathname, useRouter } from 'next/navigation';
@@ -59,6 +60,7 @@ export default function Navbar() {
     if (target === 'behavior') return layer === 'behavior';
     if (target === 'attendance') return layer === 'attendance';
     if (target === 'remedial') return layer === 'remedial_dashboard';
+    if (target === 'data_center') return layer === 'data_center';
     return false;
   };
 
@@ -140,6 +142,14 @@ export default function Navbar() {
                     }`}
                   >
                     <BookOpen size={14} /> Pelajaran
+                  </button>
+                  <button
+                    onClick={() => onNavigate('data_center')}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${
+                      layer === 'data_center' ? 'bg-primary/20 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <Database size={14} /> Pusat Data
                   </button>
                   <button
                     onClick={() => onNavigate('remedial_dashboard')}
@@ -406,6 +416,19 @@ export default function Navbar() {
                     <div>
                       <span className="text-[11px] font-bold text-on-surface block leading-tight">Manajemen Pelajaran</span>
                       <span className="text-[9px] font-medium text-on-surface-variant">Kelola materi AI & harian</span>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => { onNavigate('data_center'); setIsMobileMenuOpen(false); }} 
+                    className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center">
+                      <Database size={18} className="text-amber-500" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-on-surface block leading-tight">Pusat Data</span>
+                      <span className="text-[9px] font-medium text-on-surface-variant">Kelola siswa & nilai manual</span>
                     </div>
                   </button>
 
