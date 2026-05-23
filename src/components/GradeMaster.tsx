@@ -58,6 +58,7 @@ export default function GradeMaster() {
   const [kkm, setKkm] = useState<number>(70);
   const [remedialEssayCount, setRemedialEssayCount] = useState<number>(5);
   const [remedialTimer, setRemedialTimer] = useState<number>(15);
+  const [remedialDeadline, setRemedialDeadline] = useState<string>("");
   const [remedialQuestions, setRemedialQuestions] = useState<string[]>([]);
   const [remedialQuestionsInput, setRemedialQuestionsInput] = useState("");
   const [remedialAnswerKeys, setRemedialAnswerKeys] = useState<string[]>([]);
@@ -436,7 +437,7 @@ export default function GradeMaster() {
     }
   };
 
-  const handleUpdateRemedialQuestions = async (newQuestions: string[], newKeys: string[], newTimer: number) => {
+  const handleUpdateRemedialQuestions = async (newQuestions: string[], newKeys: string[], newTimer: number, newDeadline?: string) => {
     if (!sessionId) {
       setToast({ message: "Sesi belum dimuat. Silakan login ke sesi terlebih dahulu.", type: "error" });
       return;
@@ -456,7 +457,7 @@ export default function GradeMaster() {
           className: studentClass,
           schoolLevel,
           studentList,
-          scoringConfig: { ...scoringConfig, remedialQuestions: newQuestions, remedialAnswerKeys: newKeys },
+          scoringConfig: { ...scoringConfig, remedialQuestions: newQuestions, remedialAnswerKeys: newKeys, remedialDeadline: newDeadline },
           examType,
           academicYear,
           kkm,
@@ -470,7 +471,8 @@ export default function GradeMaster() {
       setRemedialQuestions(newQuestions);
       setRemedialAnswerKeys(newKeys);
       setRemedialTimer(newTimer);
-      setToast({ message: "Soal, Kunci, dan Durasi remedial berhasil diperbarui!", type: "success" });
+      if (newDeadline !== undefined) setRemedialDeadline(newDeadline);
+      setToast({ message: "Konfigurasi remedial berhasil diperbarui!", type: "success" });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal menyimpan";
       setToast({ message: msg, type: "error" });
@@ -959,6 +961,7 @@ export default function GradeMaster() {
           remedialEssayCount={remedialEssayCount}
           isDemo={isDemo}
           sessionId={sessionId}
+          remedialDeadline={remedialDeadline}
           academicYear={academicYear}
           semester={semester}
           isAdmin={isAdmin}
@@ -1048,7 +1051,7 @@ export default function GradeMaster() {
           subject={subject}
           schoolLevel={schoolLevel}
           semester={semester}
-          scoringConfig={{ ...scoringConfig, remedialQuestions, remedialAnswerKeys }}
+          scoringConfig={{ ...scoringConfig, remedialQuestions, remedialAnswerKeys, remedialDeadline }}
           remedialQuestionsInput={remedialQuestionsInput}
           onBack={() => setLayer("home")}
           remedialAnswerKeysInput={remedialAnswerKeysInput}

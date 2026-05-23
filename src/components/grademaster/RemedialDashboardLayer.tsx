@@ -20,7 +20,7 @@ interface RemedialDashboardLayerProps {
   schoolLevel?: string;
   semester?: string;
   onBack: () => void;
-  onUpdateRemedial?: (questions: string[], keys: string[], timer: number) => void;
+  onUpdateRemedial?: (questions: string[], keys: string[], timer: number, deadline?: string) => void;
   remedialQuestionsInput?: string;
   onRemedialInputChange?: (v: string) => void;
   remedialAnswerKeysInput?: string;
@@ -62,6 +62,7 @@ export default function RemedialDashboardLayer({
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [localTimer, setLocalTimer] = useState<number>(remedialTimer);
+  const [localDeadline, setLocalDeadline] = useState<string>(scoringConfig.remedialDeadline || "");
   const [reviewScore, setReviewScore] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
@@ -139,7 +140,8 @@ export default function RemedialDashboardLayer({
     onUpdateRemedial?.(
       parseEssayQuestions(remedialQuestionsInput),
       parseEssayQuestions(remedialAnswerKeysInput),
-      localTimer
+      localTimer,
+      localDeadline
     );
     setIsEditing(false);
   };
@@ -612,6 +614,21 @@ export default function RemedialDashboardLayer({
                       disabled={!isAdmin}
                       className="w-full bg-surface-container-lowest border-none rounded-2xl p-5 text-sm font-medium text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none disabled:opacity-50"
                     />
+                 </div>
+
+                 {/* Deadline Config */}
+                 <div className="flex flex-col gap-2 relative">
+                    <label className="font-label text-[10px] text-error uppercase font-black tracking-widest pl-1">
+                      Tenggat Waktu / Auto-Lock (Opsional)
+                    </label>
+                    <input 
+                      type="datetime-local" 
+                      value={localDeadline} 
+                      onChange={(e) => setLocalDeadline(e.target.value)} 
+                      disabled={!isAdmin}
+                      className="w-full bg-surface-container-lowest border-none rounded-2xl p-5 text-sm font-medium text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-error/40 transition-all outline-none disabled:opacity-50"
+                    />
+                    <p className="text-[10px] text-on-surface-variant/50 px-2 font-medium">Jika diisi, siswa akan otomatis terkunci dan dianggap tidak tuntas jika melewati waktu ini.</p>
                  </div>
 
                  {/* Questions */}

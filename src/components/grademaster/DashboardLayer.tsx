@@ -48,6 +48,7 @@ interface DashboardLayerProps {
   showRemedialButton?: boolean;
   isStudent?: boolean;
   currentStudentName?: string;
+  remedialDeadline?: string;
 }
 
 const PIE_COLORS = ['#9bffce', '#ff6e84'];
@@ -57,7 +58,7 @@ export default function DashboardLayer({
   analytics, isPublicView, sessionName, kkm, remedialEssayCount,
   onGradeStudent, onStudentRemedial, onBack, onReSync, academicYear,
   semester, examType, isDemo, sessionId, isAdmin = false, showRemedialButton = false,
-  isStudent = false, currentStudentName = '', onOpenRemedialDashboard
+  isStudent = false, currentStudentName = '', onOpenRemedialDashboard, remedialDeadline
 }: DashboardLayerProps) {
   const [activeTab, setActiveTab] = useState<'ikhtisar' | 'analisis' | 'laporan'>('ikhtisar');
   const [behaviorMap, setBehaviorMap] = useState<Record<string, BehaviorRecord>>({});
@@ -140,7 +141,13 @@ export default function DashboardLayer({
     ? gradedStudents.find(s => normalizeName(s.name) === normalizeName(currentStudentName))
     : null;
   const needsRemedial = myStudentRecord ? myStudentRecord.finalScore < kkm : false;
-  const canStartRemedial = needsRemedial && showRemedialButton && onStudentRemedial;
+  
+  const isDeadlinePassed = useMemo(() => {
+    if (!remedialDeadline) return false;
+    return new Date() > new Date(remedialDeadline);
+  }, [remedialDeadline]);
+
+  const canStartRemedial = needsRemedial && showRemedialButton && onStudentRemedial && !isDeadlinePassed;
 
   // Debugging logs requested by user
   useEffect(() => {
@@ -194,6 +201,11 @@ export default function DashboardLayer({
                     <AlertCircle size={16} className="text-white" />
                   </div>
                   <span className="text-[10px] font-black text-white/80 uppercase tracking-[0.2em]">Remedial Tersedia</span>
+                  {remedialDeadline && (
+                    <span className="text-[10px] font-bold text-white/90 bg-black/20 px-2 py-1 rounded-md uppercase tracking-wider ml-auto">
+                      Batas: {new Date(remedialDeadline).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
                 </div>
                 
                 <h3 className="text-white font-headline font-extrabold text-lg leading-tight mb-1">
@@ -210,6 +222,28 @@ export default function DashboardLayer({
                   <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'wght' 700" }}>edit_note</span>
                   Mulai Remedial Sekarang
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isStudent && myStudentRecord && needsRemedial && showRemedialButton && isDeadlinePassed && (
+          <div className="mb-6 animate-in slide-in-from-top-4 duration-500">
+            <div className="relative overflow-hidden rounded-[1.5rem] bg-surface-variant p-5 border border-outline-variant">
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 rounded-xl bg-black/5 flex items-center justify-center">
+                    <Timer size={16} className="text-on-surface-variant" />
+                  </div>
+                  <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em]">Batas Waktu Habis</span>
+                </div>
+                
+                <h3 className="text-on-surface font-headline font-extrabold text-lg leading-tight mb-1">
+                  Nilai Anda: {myStudentRecord.finalScore} <span className="text-on-surface-variant text-sm font-bold">(KKM {kkm})</span>
+                </h3>
+                <p className="text-on-surface-variant text-xs font-medium leading-relaxed">
+                  Batas waktu pengerjaan remedial telah lewat. Hubungi guru Anda jika ada kesalahan.
+                </p>
               </div>
             </div>
           </div>

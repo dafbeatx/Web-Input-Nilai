@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { subject, exam_type, academic_year, timer, questions, answer_keys } = body;
+    const { subject, exam_type, academic_year, timer, questions, answer_keys, deadline } = body;
 
     if (!subject || !exam_type || !academic_year || !timer) {
       return NextResponse.json({ error: 'Data tidak lengkap. Subject, jenis ujian, tahun ajaran, dan durasi wajib diisi.' }, { status: 400 });
@@ -41,7 +41,8 @@ export async function POST(req: NextRequest) {
       const newConfig = {
         ...config,
         remedialQuestions: questions,
-        remedialAnswerKeys: answer_keys
+        remedialAnswerKeys: answer_keys,
+        ...(deadline !== undefined ? { remedialDeadline: deadline } : {})
       };
 
       return supabaseAdmin

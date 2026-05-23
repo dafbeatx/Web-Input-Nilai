@@ -144,6 +144,24 @@ export async function submitRemedial(
       validateStateTransition(student.remedial_status, 'INITIATED');
     }
 
+    // Auto-Lock Deadline Validation
+    const deadline = session.scoring_config?.remedialDeadline;
+    if (deadline && new Date() > new Date(deadline)) {
+      // Auto-update student status to TIME_UP and lock score
+      const { error: lockError } = await supabase
+        .from('gm_students')
+        .update({ 
+          remedial_status: 'TIME_UP', 
+          final_score_locked: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', studentId);
+        
+      if (lockError) console.error(`Failed to lock student ${studentName}:`, lockError);
+      
+      throw new Error('DEADLINE_PASSED: Batas waktu untuk mengerjakan remedial sesi ini telah habis.');
+    }
+
     // Defensive Question Check: Ensure session has questions before starting
     const questions = session.scoring_config?.remedialQuestions || [];
     if (questions.length === 0) {
