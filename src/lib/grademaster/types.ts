@@ -5,6 +5,7 @@ export interface ScoringConfig {
   essayCount: number;
   remedialQuestions?: string[];
   remedialAnswerKeys?: string[];
+  remedialDeadline?: string;
 }
 
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
