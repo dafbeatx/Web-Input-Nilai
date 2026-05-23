@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     // Fetch all exam scores
     const { data: scores, error: scoresError } = await supabase
       .from('gm_students')
-      .select('id, name, final_score, is_deleted, gm_sessions(subject, exam_type, is_deleted)')
+      .select('id, name, final_score, is_deleted, gm_sessions(subject, exam_type)')
       .eq('is_deleted', false);
 
     if (scoresError) throw scoresError;
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
     // Add scores
     for (const score of (scores || [])) {
       const session = score.gm_sessions as any;
-      if (!session || session.is_deleted) continue;
+      if (!session) continue;
 
       const key = `${score.name.trim().toLowerCase()}_`; // class is unknown here, we try to match by name
       

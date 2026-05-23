@@ -25,7 +25,6 @@ export async function POST(req: NextRequest) {
       .eq('subject', subject)
       .eq('academic_year', year)
       .like('session_name', '%Input Manual%')
-      .eq('is_deleted', false)
       .single();
 
     if (existingSession) {
