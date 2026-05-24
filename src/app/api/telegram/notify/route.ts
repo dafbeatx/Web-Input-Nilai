@@ -59,6 +59,14 @@ export async function POST(req: NextRequest) {
                `📝 Aktivitas: <b>${message}</b>\n` +
                `⏰ Waktu: ${timestamp}${deviceStr}`;
         break;
+      case 'SECURITY_VIOLATION':
+        text = `🚨 <b>PELANGGARAN KEAMANAN!</b>${contextStr}\n\n` +
+               `👤 Siswa: <b>${fallback(studentName)}</b>\n` +
+               `🏫 Kelas: ${fallback(className)}\n` +
+               `📚 Mapel: ${fallback(subject)}\n` +
+               `⚠️ Detail: <b>${message}</b>\n` +
+               `⏰ Waktu: ${timestamp}${deviceStr}`;
+        break;
       case 'PROCTORING':
         text = `📸 <b>LIVE PROCTORING</b>${contextStr}\n\n` +
                `👤 Siswa: <b>${fallback(studentName)}</b>\n` +
