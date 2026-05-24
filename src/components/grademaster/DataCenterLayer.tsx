@@ -552,24 +552,29 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       doc.text(`:  ${student.name}`, 45, 46);
       doc.text('Kelas', 15, 52);
       doc.text(`:  ${student.className}`, 45, 52);
-      doc.text('Sisa Poin Sikap', 15, 58);
-      doc.text(`:  ${student.behaviorPoints} / 100 Poin`, 45, 58);
+      doc.text('Poin Pelanggaran', 15, 58);
+      doc.text(`:  ${student.behaviorPoints} Poin`, 45, 58);
 
       // Status Badge Indicator
       doc.setFont("Helvetica", "bold");
       doc.text('Status', 15, 64);
       doc.text(':', 45, 64);
       
-      let statusLabel = 'Perlu Perhatian';
-      let badgeColor: [number, number, number] = [234, 179, 8]; // Amber/Yellow
-      if (student.behaviorPoints >= 90) {
+      let statusLabel = 'Sangat Baik';
+      let badgeColor: [number, number, number] = [34, 197, 94]; // Green (Sangat Baik)
+      
+      const pts = student.behaviorPoints;
+      if (pts === 0) {
         statusLabel = 'Sangat Baik';
         badgeColor = [34, 197, 94]; // Green
-      } else if (student.behaviorPoints >= 80) {
-        statusLabel = 'Baik';
-        badgeColor = [34, 197, 94]; // Green
-      } else if (student.behaviorPoints < 70) {
-        statusLabel = 'Perlu Pembinaan Khusus';
+      } else if (pts < 25) {
+        statusLabel = 'Peringatan';
+        badgeColor = [234, 179, 8]; // Yellow
+      } else if (pts < 50) {
+        statusLabel = 'Perlu Perlakuan Khusus';
+        badgeColor = [249, 115, 22]; // Orange
+      } else {
+        statusLabel = 'Perlu Bimbingan Orang Tua';
         badgeColor = [239, 68, 68]; // Red
       }
 
@@ -638,14 +643,20 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       doc.line(15, behaviorTableEndY + 3, 195, behaviorTableEndY + 3);
 
       let evalText = '';
-      if (student.behaviorPoints >= 90) {
-        evalText = `Siswa menunjukkan kepatuhan dan kedisiplinan yang sangat baik selama semester ini. Komitmen terhadap tata tertib sekolah sangat tinggi dan patut menjadi teladan bagi siswa lainnya. Terus pertahankan dan tingkatkan prestasi positif ini.`;
-      } else if (student.behaviorPoints >= 80) {
-        evalText = `Siswa secara umum berperilaku baik dan disiplin dengan sedikit catatan kecil yang tidak signifikan. Sikap hormat dan kepatuhan aturan terlihat konsisten. Disarankan untuk mempertahankan kebiasaan positif ini di lingkungan sekolah.`;
-      } else if (student.behaviorPoints >= 70) {
-        evalText = `Siswa memiliki beberapa catatan pelanggaran ringan yang memerlukan perhatian. Diperlukan sedikit pembinaan dan bimbingan terarah agar perilaku dan kedisiplinan siswa dapat kembali optimal sesuai standar tata tertib sekolah.`;
+      const violations = (student.behaviorLogs || []).filter(log => log.points <= 0 || !log.points);
+      if (violations.length === 0) {
+        evalText = `Siswa menunjukkan kepatuhan dan kedisiplinan yang sangat baik selama semester ini. Catatan perilaku bersih tanpa ada pelanggaran kedisiplinan yang tercatat. Sangat disarankan untuk terus mempertahankan sikap positif ini sebagai teladan bagi siswa lainnya.`;
       } else {
-        evalText = `Tingkat kedisiplinan siswa saat ini memerlukan perhatian serius dan pembinaan intensif karena akumulasi pelanggaran yang tercatat. Sangat penting bagi wali kelas, guru BK, dan orang tua untuk berkoordinasi secara aktif dalam membimbing perilaku siswa agar mengalami peningkatan positif.`;
+        const uniqueViolations = Array.from(new Set(violations.map(v => v.reason.trim()).filter(Boolean)));
+        const violationString = uniqueViolations.join(', ');
+        
+        if (student.behaviorPoints < 25) {
+          evalText = `Siswa memiliki catatan kedisiplinan yang perlu diperhatikan dengan total ${student.behaviorPoints} poin pelanggaran. Pelanggaran yang tercatat meliputi: ${violationString}. Disarankan kepada siswa untuk memperbaiki sikap dan mematuhi seluruh tata tertib sekolah agar tidak terulang di masa mendatang.`;
+        } else if (student.behaviorPoints < 50) {
+          evalText = `Siswa memerlukan perhatian khusus karena telah mengumpulkan akumulasi ${student.behaviorPoints} poin pelanggaran. Berdasarkan catatan, tindakan pelanggaran yang dilakukan meliputi: ${violationString}. Dibutuhkan pembinaan lebih intensif dari wali kelas dan guru BK untuk membantu meningkatkan disiplin diri siswa.`;
+        } else {
+          evalText = `Tingkat kedisiplinan siswa sangat mengkhawatirkan dengan akumulasi ${student.behaviorPoints} poin pelanggaran. Pelanggaran yang dilakukan meliputi: ${violationString}. Sangat penting dan mendesak bagi sekolah untuk berkoordinasi secara aktif dengan orang tua guna memberikan bimbingan orang tua dan pembinaan terpadu agar siswa dapat memperbaiki perilakunya.`;
+        }
       }
 
       doc.setFont("Helvetica", "normal");
@@ -876,24 +887,29 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         doc.text(`:  ${student.name}`, 45, 46);
         doc.text('Kelas', 15, 52);
         doc.text(`:  ${student.className}`, 45, 52);
-        doc.text('Sisa Poin Sikap', 15, 58);
-        doc.text(`:  ${student.behaviorPoints} / 100 Poin`, 45, 58);
+        doc.text('Poin Pelanggaran', 15, 58);
+        doc.text(`:  ${student.behaviorPoints} Poin`, 45, 58);
 
         // Status Badge Indicator
         doc.setFont("Helvetica", "bold");
         doc.text('Status', 15, 64);
         doc.text(':', 45, 64);
         
-        let statusLabel = 'Perlu Perhatian';
-        let badgeColor: [number, number, number] = [234, 179, 8]; // Amber/Yellow
-        if (student.behaviorPoints >= 90) {
+        let statusLabel = 'Sangat Baik';
+        let badgeColor: [number, number, number] = [34, 197, 94]; // Green (Sangat Baik)
+        
+        const pts = student.behaviorPoints;
+        if (pts === 0) {
           statusLabel = 'Sangat Baik';
           badgeColor = [34, 197, 94]; // Green
-        } else if (student.behaviorPoints >= 80) {
-          statusLabel = 'Baik';
-          badgeColor = [34, 197, 94]; // Green
-        } else if (student.behaviorPoints < 70) {
-          statusLabel = 'Perlu Pembinaan Khusus';
+        } else if (pts < 25) {
+          statusLabel = 'Peringatan';
+          badgeColor = [234, 179, 8]; // Yellow
+        } else if (pts < 50) {
+          statusLabel = 'Perlu Perlakuan Khusus';
+          badgeColor = [249, 115, 22]; // Orange
+        } else {
+          statusLabel = 'Perlu Bimbingan Orang Tua';
           badgeColor = [239, 68, 68]; // Red
         }
 
@@ -962,14 +978,20 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         doc.line(15, behaviorTableEndY + 3, 195, behaviorTableEndY + 3);
 
         let evalText = '';
-        if (student.behaviorPoints >= 90) {
-          evalText = `Siswa menunjukkan kepatuhan dan kedisiplinan yang sangat baik selama semester ini. Komitmen terhadap tata tertib sekolah sangat tinggi dan patut menjadi teladan bagi siswa lainnya. Terus pertahankan dan tingkatkan prestasi positif ini.`;
-        } else if (student.behaviorPoints >= 80) {
-          evalText = `Siswa secara umum berperilaku baik dan disiplin dengan sedikit catatan kecil yang tidak signifikan. Sikap hormat dan kepatuhan aturan terlihat konsisten. Disarankan untuk mempertahankan kebiasaan positif ini di lingkungan sekolah.`;
-        } else if (student.behaviorPoints >= 70) {
-          evalText = `Siswa memiliki beberapa catatan pelanggaran ringan yang memerlukan perhatian. Diperlukan sedikit pembinaan dan bimbingan terarah agar perilaku dan kedisiplinan siswa dapat kembali optimal sesuai standar tata tertib sekolah.`;
+        const violations = (student.behaviorLogs || []).filter(log => log.points <= 0 || !log.points);
+        if (violations.length === 0) {
+          evalText = `Siswa menunjukkan kepatuhan dan kedisiplinan yang sangat baik selama semester ini. Catatan perilaku bersih tanpa ada pelanggaran kedisiplinan yang tercatat. Sangat disarankan untuk terus mempertahankan sikap positif ini sebagai teladan bagi siswa lainnya.`;
         } else {
-          evalText = `Tingkat kedisiplinan siswa saat ini memerlukan perhatian serius dan pembinaan intensif karena akumulasi pelanggaran yang tercatat. Sangat penting bagi wali kelas, guru BK, dan orang tua untuk berkoordinasi secara aktif dalam membimbing perilaku siswa agar mengalami peningkatan positif.`;
+          const uniqueViolations = Array.from(new Set(violations.map(v => v.reason.trim()).filter(Boolean)));
+          const violationString = uniqueViolations.join(', ');
+          
+          if (student.behaviorPoints < 25) {
+            evalText = `Siswa memiliki catatan kedisiplinan yang perlu diperhatikan dengan total ${student.behaviorPoints} poin pelanggaran. Pelanggaran yang tercatat meliputi: ${violationString}. Disarankan kepada siswa untuk memperbaiki sikap dan mematuhi seluruh tata tertib sekolah agar tidak terulang di masa mendatang.`;
+          } else if (student.behaviorPoints < 50) {
+            evalText = `Siswa memerlukan perhatian khusus karena telah mengumpulkan akumulasi ${student.behaviorPoints} poin pelanggaran. Berdasarkan catatan, tindakan pelanggaran yang dilakukan meliputi: ${violationString}. Dibutuhkan pembinaan lebih intensif dari wali kelas dan guru BK untuk membantu meningkatkan disiplin diri siswa.`;
+          } else {
+            evalText = `Tingkat kedisiplinan siswa sangat mengkhawatirkan dengan akumulasi ${student.behaviorPoints} poin pelanggaran. Pelanggaran yang dilakukan meliputi: ${violationString}. Sangat penting dan mendesak bagi sekolah untuk berkoordinasi secara aktif dengan orang tua guna memberikan bimbingan orang tua dan pembinaan terpadu agar siswa dapat memperbaiki perilakunya.`;
+          }
         }
 
         doc.setFont("Helvetica", "normal");
