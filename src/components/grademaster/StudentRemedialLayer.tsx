@@ -1601,7 +1601,9 @@ export default function StudentRemedialLayer({
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timerId);
-          setIsTimeoutTriggered(true);
+          // Instead of triggering timeout directly, show the Time Up Modal
+          // so the student can use their behavior points to extend time.
+          setShowTimeUpModal(true);
           return 0;
         }
         

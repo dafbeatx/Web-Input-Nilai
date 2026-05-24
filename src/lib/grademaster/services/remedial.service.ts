@@ -378,11 +378,24 @@ export async function submitRemedial(
         studentUpdate.teacher_reviewed = true;
       } else {
         // VALID SUBMISSION
-        // Kembalikan ke sistem KKM: Siswa yang berhasil menyelesaikan remedial (valid) 
-        // akan langsung mendapatkan nilai KKM.
         const rawScore = essayResult.score;
         const penaltyAmount = isPenaltyApplied ? 15 : 0;
         const kkmScore = session.kkm || 75;
+        
+        if (rawScore < kkmScore) {
+           console.log(`[Remedial] Menolak submission untuk ${studentName} (Skor: ${rawScore} < KKM: ${kkmScore})`);
+           // Kembalikan status REMEDIAL agar frontend memberikan waktu tambahan 5 menit
+           return {
+             ...student,
+             remedial_status: 'REMEDIAL',
+             newFinalScore: rawScore,
+             subject: session.subject,
+             class_name: session.class_name,
+             attempt_id: attempt.id,
+             attempt_token: (attempt as any).attempt_token || null,
+           };
+        }
+
         const finalScore = Math.max(0, kkmScore - penaltyAmount);
 
         studentUpdate.remedial_score = finalScore;
@@ -398,13 +411,23 @@ export async function submitRemedial(
         studentUpdate.cheating_flags = [...(studentUpdate.cheating_flags as string[] || []), 'PENALTY: LATE_SUBMISSION (-15 Poin)'];
       }
     } else if (status === 'TIMEOUT' || status === 'FAILED') {
-      // EXPLOIT PREVENTION: Logout/Timeout yields 0
-      attemptUpdate.status = 'TIME_UP';
-      studentUpdate.remedial_status = 'TIME_UP';
-      studentUpdate.remedial_score = 0;
-      studentUpdate.final_score = 0;
-      studentUpdate.final_score_locked = 0;
-      studentUpdate.teacher_reviewed = true;
+      // Jika TIMEOUT, nilai tetap dihitung dari apa yang sudah dikerjakan
+      if (!hasEnoughEffort && answers.join('').length < 20) {
+        attemptUpdate.status = 'TIME_UP';
+        studentUpdate.remedial_status = 'TIME_UP';
+        studentUpdate.remedial_score = 0;
+        studentUpdate.final_score = 0;
+        studentUpdate.final_score_locked = 0;
+        studentUpdate.teacher_reviewed = true;
+      } else {
+        const rawScore = essayResult.score;
+        studentUpdate.remedial_score = rawScore;
+        studentUpdate.final_score = rawScore;
+        studentUpdate.final_score_locked = rawScore;
+        studentUpdate.remedial_status = 'TIME_UP';
+        studentUpdate.teacher_reviewed = true;
+        attemptUpdate.status = 'TIME_UP';
+      }
     }
   }
 
