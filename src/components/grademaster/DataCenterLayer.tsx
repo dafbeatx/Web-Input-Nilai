@@ -388,12 +388,12 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     try {
       const doc = new jsPDF();
       
-      // Draw photo if available
+      // Draw photo if available (placed in student meta block on the right)
       if (student.avatarUrl) {
         try {
           const img = await loadImage(student.avatarUrl);
-          // Draw avatar photo on the top right
-          doc.addImage(img, 'JPEG', 165, 25, 30, 35);
+          // Draw avatar photo on the right of the meta block, below the header double-line
+          doc.addImage(img, 'JPEG', 160, 45, 26, 33);
         } catch (err) {
           console.error("Failed to load student avatar for PDF:", err);
         }
@@ -404,43 +404,38 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       doc.setLineWidth(0.5);
       doc.rect(10, 10, 190, 277); // Outer page border
 
-      // Formal School Header
+      // Formal School Header (Only School Name, Centered, No Yayasan, No Address)
       doc.setFont("Times", "bold");
-      doc.setFontSize(14);
-      doc.text('YAYASAN AL-ITTIHADIYAH', 105, 20, { align: 'center' });
       doc.setFontSize(16);
-      doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 26, { align: 'center' });
-      doc.setFont("Times", "normal");
-      doc.setFontSize(10);
-      doc.text('Jl. Raya Perjuangan No. 89, Kec. Ciawi, Bogor, Jawa Barat', 105, 31, { align: 'center' });
+      doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 20, { align: 'center' });
       
-      // Double header lines
+      // Double header lines shifted up to Y=24/25.5
       doc.setLineWidth(1);
-      doc.line(14, 35, 196, 35);
+      doc.line(14, 24, 196, 24);
       doc.setLineWidth(0.5);
-      doc.line(14, 36.5, 196, 36.5);
+      doc.line(14, 25.5, 196, 25.5);
 
       // Document Title
       doc.setFont("Times", "bold");
       doc.setFontSize(14);
-      doc.text('LAPORAN HASIL BELAJAR SISWA (RAPOR AKADEMIK)', 105, 47, { align: 'center' });
+      doc.text('LAPORAN HASIL BELAJAR SISWA (RAPOR AKADEMIK)', 105, 36, { align: 'center' });
 
       // Student Meta Block
       doc.setFont("Helvetica", "normal");
       doc.setFontSize(10);
       doc.setTextColor(50, 50, 50);
       
-      doc.text('Nama Siswa', 15, 58);
-      doc.text(`:  ${student.name}`, 45, 58);
-      doc.text('Kelas', 15, 64);
-      doc.text(`:  ${student.className}`, 45, 64);
-      doc.text('Tahun Ajaran', 15, 70);
-      doc.text(`:  ${student.academicYear}`, 45, 70);
+      doc.text('Nama Siswa', 15, 46);
+      doc.text(`:  ${student.name}`, 45, 46);
+      doc.text('Kelas', 15, 52);
+      doc.text(`:  ${student.className}`, 45, 52);
+      doc.text('Tahun Ajaran', 15, 58);
+      doc.text(`:  ${student.academicYear}`, 45, 58);
 
-      doc.text('NISN / ID', 115, 58);
-      doc.text(`:  ${student.id.startsWith('behavior_') ? '-' : student.id.slice(0, 8).toUpperCase()}`, 138, 58);
-      doc.text('Semester', 115, 64);
-      doc.text(':  Genap (2)', 138, 64);
+      doc.text('NISN / ID', 115, 46);
+      doc.text(`:  ${student.id.startsWith('behavior_') ? '-' : student.id.slice(0, 8).toUpperCase()}`, 138, 46);
+      doc.text('Semester', 115, 52);
+      doc.text(':  Genap (2)', 138, 52);
 
       // Draw Academic Scores Table
       const scoreData = student.scores.map((s, idx) => {
@@ -465,7 +460,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       let finalY = 82;
       if (scoreData.length > 0) {
         autoTable(doc, {
-          startY: 78,
+          startY: 80,
           head: [['No', 'Mata Pelajaran', 'Tipe Ujian', 'KKM', 'Nilai Akhir', 'Predikat', 'Keterangan']],
           body: scoreData,
           theme: 'grid',
@@ -481,7 +476,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
             6: { halign: 'center', cellWidth: 25 }
           }
         });
-        finalY = (doc as any).lastAutoTable.finalY + 20;
+        finalY = (doc as any).lastAutoTable.finalY + 12;
       } else {
         doc.setFontSize(10);
         doc.text('Belum ada nilai akademik terdaftar.', 15, 85);
@@ -492,21 +487,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       doc.setFont("Helvetica", "italic");
       doc.setFontSize(8);
       doc.setTextColor(120, 120, 120);
-      doc.text('Catatan: Rapor ini dicetak secara otomatis dan sah menggunakan enkripsi GradeMaster OS.', 15, finalY - 10);
-
-      // Signatures block
-      doc.setFont("Helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      
-      doc.text('Mengetahui,', 25, finalY);
-      doc.text('Orang Tua / Wali Siswa,', 25, finalY + 5);
-      doc.line(25, finalY + 30, 75, finalY + 30);
-      
-      const printDateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-      doc.text(`Bogor, ${printDateStr}`, 130, finalY);
-      doc.text('Wali Kelas,', 130, finalY + 5);
-      doc.line(130, finalY + 30, 180, finalY + 30);
+      doc.text('Catatan: Rapor ini dicetak secara otomatis dan sah menggunakan enkripsi GradeMaster OS.', 15, finalY);
 
       // Footer
       doc.setFontSize(8);
@@ -528,12 +509,12 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     try {
       const doc = new jsPDF();
       
-      // Draw photo if available
+      // Draw photo if available (placed in student meta block on the right)
       if (student.avatarUrl) {
         try {
           const img = await loadImage(student.avatarUrl);
-          // Draw avatar photo on the top right
-          doc.addImage(img, 'JPEG', 165, 25, 30, 35);
+          // Draw avatar photo on the right of the meta block, below the header double-line
+          doc.addImage(img, 'JPEG', 160, 45, 26, 33);
         } catch (err) {
           console.error("Failed to load student avatar for PDF:", err);
         }
@@ -544,53 +525,37 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       doc.setLineWidth(0.5);
       doc.rect(10, 10, 190, 277);
 
-      // School Header
+      // School Header (Only School Name, Centered, No Yayasan, No Address)
       doc.setFont("Times", "bold");
-      doc.setFontSize(14);
-      doc.text('YAYASAN AL-ITTIHADIYAH', 105, 20, { align: 'center' });
       doc.setFontSize(16);
-      doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 26, { align: 'center' });
-      doc.setFont("Times", "normal");
-      doc.setFontSize(10);
-      doc.text('Jl. Raya Perjuangan No. 89, Kec. Ciawi, Bogor, Jawa Barat', 105, 31, { align: 'center' });
+      doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 20, { align: 'center' });
       
+      // Double header lines shifted up to Y=24/25.5
       doc.setLineWidth(1);
-      doc.line(14, 35, 196, 35);
+      doc.line(14, 24, 196, 24);
       doc.setLineWidth(0.5);
-      doc.line(14, 36.5, 196, 36.5);
+      doc.line(14, 25.5, 196, 25.5);
 
       // Title
       doc.setFont("Times", "bold");
       doc.setFontSize(14);
-      doc.text('LAPORAN KEDISIPLINAN & KEPATUHAN PERILAKU SISWA', 105, 47, { align: 'center' });
+      doc.text('LAPORAN KEDISIPLINAN & KEPATUHAN PERILAKU SISWA', 105, 36, { align: 'center' });
 
       // Student Meta Block
       doc.setFont("Helvetica", "normal");
       doc.setFontSize(10);
       doc.setTextColor(50, 50, 50);
       
-      doc.text('Nama Siswa', 15, 58);
-      doc.text(`:  ${student.name}`, 45, 58);
-      doc.text('Kelas', 15, 64);
-      doc.text(`:  ${student.className}`, 45, 64);
-      doc.text('Tahun Ajaran', 15, 70);
-      doc.text(`:  ${student.academicYear}`, 45, 70);
+      doc.text('Nama Siswa', 15, 46);
+      doc.text(`:  ${student.name}`, 45, 46);
+      doc.text('Kelas', 15, 52);
+      doc.text(`:  ${student.className}`, 45, 52);
+      doc.text('Tahun Ajaran', 15, 58);
+      doc.text(`:  ${student.academicYear}`, 45, 58);
 
-      doc.text('Sisa Poin Sikap', 110, 58);
-      
-      // Conduct evaluation
-      let predikatSikap = 'Cukup (C)';
-      if (student.behaviorPoints >= 90) {
-        predikatSikap = 'Sangat Baik (A)';
-      } else if (student.behaviorPoints >= 80) {
-        predikatSikap = 'Baik (B)';
-      } else if (student.behaviorPoints < 70) {
-        predikatSikap = 'Perlu Pembinaan Khusus (D)';
-      }
-
-      doc.text(`:  ${student.behaviorPoints} / 100 Poin`, 142, 58);
-      doc.text('Predikat Perilaku', 110, 64);
-      doc.text(`:  ${predikatSikap}`, 142, 64);
+      doc.text('Sisa Poin Sikap', 110, 46);
+      doc.text(`:  ${student.behaviorPoints} / 100 Poin`, 142, 46);
+      // Predikat Perilaku removed for clean style without behavior predicate
 
       // 1. Behavior logs table (Harian)
       doc.setFont("Helvetica", "bold");
@@ -755,7 +720,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       }
 
       // Check if we are close to bottom on page 1 (if no second page was added)
-      if (proctoringTableEndY > 220 && photosWithData.length === 0) {
+      if (proctoringTableEndY > 265 && photosWithData.length === 0) {
         doc.addPage();
         doc.rect(10, 10, 190, 277);
         proctoringTableEndY = 30;
@@ -765,21 +730,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       doc.setFont("Helvetica", "italic");
       doc.setFontSize(8);
       doc.setTextColor(120, 120, 120);
-      doc.text('Sumber dari OSIS SMP Terpadu Al-Ittihadiyah Masa Bakti 2025/2026', 15, proctoringTableEndY - 10);
-
-      // Signatures
-      doc.setFont("Helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-
-      doc.text('Mengetahui,', 25, proctoringTableEndY);
-      doc.text('Kepala Sekolah,', 25, proctoringTableEndY + 5);
-      doc.line(25, proctoringTableEndY + 30, 75, proctoringTableEndY + 30);
-      
-      const printDateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-      doc.text(`Bogor, ${printDateStr}`, 130, proctoringTableEndY);
-      doc.text('Guru BK / Kesiswaan,', 130, proctoringTableEndY + 5);
-      doc.line(130, proctoringTableEndY + 30, 180, proctoringTableEndY + 30);
+      doc.text('Sumber dari OSIS SMP Terpadu Al-Ittihadiyah Masa Bakti 2025/2026', 15, proctoringTableEndY);
 
       // Footer
       doc.setFontSize(8);
@@ -808,11 +759,11 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         }
         isFirst = false;
 
-        // Draw photo if available
+        // Draw photo if available (placed in student meta block on the right)
         if (student.avatarUrl) {
           try {
             const img = await loadImage(student.avatarUrl);
-            doc.addImage(img, 'JPEG', 165, 25, 30, 35);
+            doc.addImage(img, 'JPEG', 160, 45, 26, 33);
           } catch (err) {
             console.error("Failed to load student avatar for PDF:", err);
           }
@@ -823,42 +774,38 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         doc.setLineWidth(0.5);
         doc.rect(10, 10, 190, 277);
 
-        // Formal School Header
+        // Formal School Header (Only School Name, Centered, No Yayasan, No Address)
         doc.setFont("Times", "bold");
-        doc.setFontSize(14);
-        doc.text('YAYASAN AL-ITTIHADIYAH', 105, 20, { align: 'center' });
         doc.setFontSize(16);
-        doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 26, { align: 'center' });
-        doc.setFont("Times", "normal");
-        doc.setFontSize(10);
-        doc.text('Jl. Raya Perjuangan No. 89, Kec. Ciawi, Bogor, Jawa Barat', 105, 31, { align: 'center' });
+        doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 20, { align: 'center' });
         
+        // Double header lines shifted up to Y=24/25.5
         doc.setLineWidth(1);
-        doc.line(14, 35, 196, 35);
+        doc.line(14, 24, 196, 24);
         doc.setLineWidth(0.5);
-        doc.line(14, 36.5, 196, 36.5);
+        doc.line(14, 25.5, 196, 25.5);
 
         // Document Title
         doc.setFont("Times", "bold");
         doc.setFontSize(14);
-        doc.text('LAPORAN HASIL BELAJAR SISWA (RAPOR AKADEMIK)', 105, 47, { align: 'center' });
+        doc.text('LAPORAN HASIL BELAJAR SISWA (RAPOR AKADEMIK)', 105, 36, { align: 'center' });
 
         // Student Meta Block
         doc.setFont("Helvetica", "normal");
         doc.setFontSize(10);
         doc.setTextColor(50, 50, 50);
         
-        doc.text('Nama Siswa', 15, 58);
-        doc.text(`:  ${student.name}`, 45, 58);
-        doc.text('Kelas', 15, 64);
-        doc.text(`:  ${student.className}`, 45, 64);
-        doc.text('Tahun Ajaran', 15, 70);
-        doc.text(`:  ${student.academicYear}`, 45, 70);
+        doc.text('Nama Siswa', 15, 46);
+        doc.text(`:  ${student.name}`, 45, 46);
+        doc.text('Kelas', 15, 52);
+        doc.text(`:  ${student.className}`, 45, 52);
+        doc.text('Tahun Ajaran', 15, 58);
+        doc.text(`:  ${student.academicYear}`, 45, 58);
 
-        doc.text('NISN / ID', 115, 58);
-        doc.text(`:  ${student.id.startsWith('behavior_') ? '-' : student.id.slice(0, 8).toUpperCase()}`, 138, 58);
-        doc.text('Semester', 115, 64);
-        doc.text(':  Genap (2)', 138, 64);
+        doc.text('NISN / ID', 115, 46);
+        doc.text(`:  ${student.id.startsWith('behavior_') ? '-' : student.id.slice(0, 8).toUpperCase()}`, 138, 46);
+        doc.text('Semester', 115, 52);
+        doc.text(':  Genap (2)', 138, 52);
 
         // Draw Academic Scores Table
         const scoreData = student.scores.map((s, idx) => {
@@ -883,7 +830,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         let finalY = 82;
         if (scoreData.length > 0) {
           autoTable(doc, {
-            startY: 78,
+            startY: 80,
             head: [['No', 'Mata Pelajaran', 'Tipe Ujian', 'KKM', 'Nilai Akhir', 'Predikat', 'Keterangan']],
             body: scoreData,
             theme: 'grid',
@@ -899,7 +846,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
               6: { halign: 'center', cellWidth: 25 }
             }
           });
-          finalY = (doc as any).lastAutoTable.finalY + 20;
+          finalY = (doc as any).lastAutoTable.finalY + 12;
         } else {
           doc.setFontSize(10);
           doc.text('Belum ada nilai akademik terdaftar.', 15, 85);
@@ -910,21 +857,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         doc.setFont("Helvetica", "italic");
         doc.setFontSize(8);
         doc.setTextColor(120, 120, 120);
-        doc.text('Catatan: Rapor ini dicetak secara otomatis dan sah menggunakan enkripsi GradeMaster OS.', 15, finalY - 10);
-
-        // Signatures block
-        doc.setFont("Helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        
-        doc.text('Mengetahui,', 25, finalY);
-        doc.text('Orang Tua / Wali Siswa,', 25, finalY + 5);
-        doc.line(25, finalY + 30, 75, finalY + 30);
-        
-        const printDateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-        doc.text(`Bogor, ${printDateStr}`, 130, finalY);
-        doc.text('Wali Kelas,', 130, finalY + 5);
-        doc.line(130, finalY + 30, 180, finalY + 30);
+        doc.text('Catatan: Rapor ini dicetak secara otomatis dan sah menggunakan enkripsi GradeMaster OS.', 15, finalY);
 
         // Footer
         doc.setFontSize(8);
@@ -953,11 +886,11 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         }
         isFirst = false;
 
-        // Draw photo if available
+        // Draw photo if available (placed in student meta block on the right)
         if (student.avatarUrl) {
           try {
             const img = await loadImage(student.avatarUrl);
-            doc.addImage(img, 'JPEG', 165, 25, 30, 35);
+            doc.addImage(img, 'JPEG', 160, 45, 26, 33);
           } catch (err) {
             console.error("Failed to load student avatar for PDF:", err);
           }
@@ -968,48 +901,37 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         doc.setLineWidth(0.5);
         doc.rect(10, 10, 190, 277);
 
-        // School Header
+        // School Header (Only School Name, Centered, No Yayasan, No Address)
         doc.setFont("Times", "bold");
-        doc.setFontSize(14);
-        doc.text('YAYASAN AL-ITTIHADIYAH', 105, 20, { align: 'center' });
         doc.setFontSize(16);
-        doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 26, { align: 'center' });
-        doc.setFont("Times", "normal");
-        doc.setFontSize(10);
-        doc.text('Jl. Raya Perjuangan No. 89, Kec. Ciawi, Bogor, Jawa Barat', 105, 31, { align: 'center' });
+        doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 20, { align: 'center' });
         
+        // Double header lines shifted up to Y=24/25.5
         doc.setLineWidth(1);
-        doc.line(14, 35, 196, 35);
+        doc.line(14, 24, 196, 24);
         doc.setLineWidth(0.5);
-        doc.line(14, 36.5, 196, 36.5);
+        doc.line(14, 25.5, 196, 25.5);
 
         // Title
         doc.setFont("Times", "bold");
         doc.setFontSize(14);
-        doc.text('LAPORAN KEDISIPLINAN & KEPATUHAN PERILAKU SISWA', 105, 47, { align: 'center' });
+        doc.text('LAPORAN KEDISIPLINAN & KEPATUHAN PERILAKU SISWA', 105, 36, { align: 'center' });
 
         // Student Meta Block
         doc.setFont("Helvetica", "normal");
         doc.setFontSize(10);
         doc.setTextColor(50, 50, 50);
         
-        doc.text('Nama Siswa', 15, 58);
-        doc.text(`:  ${student.name}`, 45, 58);
-        doc.text('Kelas', 15, 64);
-        doc.text(`:  ${student.className}`, 45, 64);
-        doc.text('Tahun Ajaran', 15, 70);
-        doc.text(`:  ${student.academicYear}`, 45, 70);
+        doc.text('Nama Siswa', 15, 46);
+        doc.text(`:  ${student.name}`, 45, 46);
+        doc.text('Kelas', 15, 52);
+        doc.text(`:  ${student.className}`, 45, 52);
+        doc.text('Tahun Ajaran', 15, 58);
+        doc.text(`:  ${student.academicYear}`, 45, 58);
 
-        doc.text('Sisa Poin Sikap', 110, 58);
-        
-        let predikatSikap = 'Cukup (C)';
-        if (student.behaviorPoints >= 90) predikatSikap = 'Sangat Baik (A)';
-        else if (student.behaviorPoints >= 80) predikatSikap = 'Baik (B)';
-        else if (student.behaviorPoints < 70) predikatSikap = 'Perlu Pembinaan Khusus (D)';
-
-        doc.text(`:  ${student.behaviorPoints} / 100 Poin`, 142, 58);
-        doc.text('Predikat Perilaku', 110, 64);
-        doc.text(`:  ${predikatSikap}`, 142, 64);
+        doc.text('Sisa Poin Sikap', 110, 46);
+        doc.text(`:  ${student.behaviorPoints} / 100 Poin`, 142, 46);
+        // Predikat Perilaku removed for clean style without behavior predicate
 
         // 1. Behavior logs table (Harian)
         doc.setFont("Helvetica", "bold");
@@ -1154,7 +1076,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
           proctoringTableEndY = startY + 75;
         }
 
-        if (proctoringTableEndY > 220 && photosWithData.length === 0) {
+        if (proctoringTableEndY > 265 && photosWithData.length === 0) {
           doc.addPage();
           doc.rect(10, 10, 190, 277);
           proctoringTableEndY = 30;
@@ -1163,20 +1085,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         doc.setFont("Helvetica", "italic");
         doc.setFontSize(8);
         doc.setTextColor(120, 120, 120);
-        doc.text('Sumber dari OSIS SMP Terpadu Al-Ittihadiyah Masa Bakti 2025/2026', 15, proctoringTableEndY - 10);
-
-        doc.setFont("Helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-
-        doc.text('Mengetahui,', 25, proctoringTableEndY);
-        doc.text('Kepala Sekolah,', 25, proctoringTableEndY + 5);
-        doc.line(25, proctoringTableEndY + 30, 75, proctoringTableEndY + 30);
-        
-        const printDateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-        doc.text(`Bogor, ${printDateStr}`, 130, proctoringTableEndY);
-        doc.text('Guru BK / Kesiswaan,', 130, proctoringTableEndY + 5);
-        doc.line(130, proctoringTableEndY + 30, 180, proctoringTableEndY + 30);
+        doc.text('Sumber dari OSIS SMP Terpadu Al-Ittihadiyah Masa Bakti 2025/2026', 15, proctoringTableEndY);
 
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
