@@ -253,7 +253,7 @@ export default function StudentProfileLayer({
   return (
     <div className="fixed inset-0 bg-surface/95 backdrop-blur-2xl z-[1000] flex flex-col animate-in fade-in duration-300 overflow-y-auto no-scrollbar bg-surface-container-lowest text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed">
       {/* TopAppBar */}
-      <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-lg flex items-center justify-between px-6 h-16 max-w-md mx-auto left-1/2 -translate-x-1/2 border-b border-surface-container shadow-[0_10px_40px_rgba(15,23,42,0.04)]">
+      <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-lg flex items-center justify-between px-6 h-16 max-w-4xl mx-auto left-1/2 -translate-x-1/2 border-b border-surface-container shadow-[0_10px_40px_rgba(15,23,42,0.04)]">
         <button 
           onClick={onBack}
           className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-container transition-all text-on-surface active:scale-95"
@@ -275,7 +275,7 @@ export default function StudentProfileLayer({
       </header>
 
       {/* Main Content */}
-      <main className="pt-24 px-6 pb-32 max-w-md mx-auto space-y-12 w-full">
+      <main className="pt-24 px-6 pb-32 max-w-4xl mx-auto space-y-12 w-full">
         {/* Profile Header */}
         <section className="flex flex-col items-center text-center space-y-4">
           <div className="relative group">
@@ -309,7 +309,7 @@ export default function StudentProfileLayer({
         </section>
 
         {/* Metric Cards Bento Layout */}
-        <section className="grid grid-cols-1 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Poin Demerit */}
           <div className="bg-surface-container-low p-6 rounded-xl relative overflow-hidden transition-all duration-300 hover:bg-surface-container border border-surface-container">
             <div className="flex justify-between items-center relative z-10">
@@ -342,7 +342,7 @@ export default function StudentProfileLayer({
         </section>
 
         {/* Tabs */}
-        <nav aria-label="Profile Tabs" className="flex border-b border-surface-container overflow-x-auto no-scrollbar">
+        <nav aria-label="Profile Tabs" className="flex border-b border-surface-container overflow-x-auto no-scrollbar sm:justify-center">
           <button 
             onClick={() => setActiveTab('SUMMARY')}
             className={`pb-3 px-4 font-bold text-sm whitespace-nowrap transition-all ${
