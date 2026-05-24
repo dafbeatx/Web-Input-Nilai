@@ -376,7 +376,7 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
       return (
         <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-on-surface gap-2 p-3">
           <CameraOff size={24} className="text-rose-400" />
-          <span className="text-[9px] font-bold text-center leading-tight text-on-surface-variant">
+          <span className="text-[9px] font-bold text-center leading-tight text-on-surface-variant whitespace-pre-line">
             {errorMessage || 'Aktifkan kamera untuk melanjutkan'}
           </span>
           <button
@@ -415,7 +415,7 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
 
 function getHumanError(errName: string): string {
   if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
-    return 'Izin kamera ditolak. Tutup balon chat/overlay, lalu izinkan kamera di pengaturan browser.';
+    return 'Izin Kamera Diblokir!\n\n1. Ketuk ikon gembok di sebelah URL.\n2. Pilih "Reset Izin" / "Setelan Situs".\n3. Ubah Kamera ke Izinkan & refresh.';
   }
   if (errName === 'NotReadableError' || errName === 'TrackStartError') {
     return 'Kamera dipakai aplikasi lain (WhatsApp/Zoom). Tutup aplikasi tersebut.';

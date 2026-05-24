@@ -703,7 +703,7 @@ export default function StudentRemedialLayer({
   const getCameraErrorMessage = (err: any): string => {
     const name = err?.name || '';
     if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-      return 'Izin ditolak atau dihalangi oleh sistem HP Anda (contoh: ada Balon chat/Overlay layar yang sedang aktif). Tutup balon chat/overlay tersebut, Izinkan pengaturan kamera, atau coba salin link ini dan buka langsung di Google Chrome.';
+      return 'Izin Kamera Diblokir! Cara cepat mengaktifkannya:\n\n1. Ketuk ikon gembok kecil / pengaturan di sebelah kiri alamat URL website pada bar atas browser Chrome.\n2. Ketuk "Setelan Situs" (Site Settings) atau "Reset Izin" (Reset permissions) yang langsung muncul.\n3. Ubah izin Kamera menjadi "Izinkan" atau pilih "Hapus & Setel Ulang" (Clear & Reset).\n4. Muat ulang (refresh) halaman ini, lalu ketuk tombol "Aktifkan" kembali.';
     }
     if (name === 'NotReadableError' || name === 'TrackStartError') {
       return 'Kamera sedang dipakai aplikasi lain (misal WhatsApp Video, Zoom, atau HP sedang merekam). Tutup aplikasi tersebut lalu coba lagi.';
@@ -2222,7 +2222,7 @@ export default function StudentRemedialLayer({
               <AlertTriangle className="text-rose-400 shrink-0 mt-0.5" size={16} />
               <div>
                 <p className="text-[10px] font-black text-rose-400 uppercase tracking-wider mb-1">Akses Kamera Ditolak</p>
-                <p className="text-[10px] text-rose-300/80 font-bold leading-relaxed">{cameraErrorDetail}</p>
+                <p className="text-[10px] text-rose-300/80 font-bold leading-relaxed whitespace-pre-line">{cameraErrorDetail}</p>
               </div>
             </div>
           )}
