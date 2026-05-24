@@ -28,10 +28,12 @@ export async function GET(req: NextRequest) {
 
     if (scoresError) throw scoresError;
 
-    // Fetch behavior points
+    // Fetch behavior points directly from gm_behaviors
     const { data: behaviors, error: behaviorError } = await supabase
-      .from('gm_behavior_logs')
-      .select('student_name, points, gm_behaviors(class_name)');
+      .from('gm_behaviors')
+      .select('student_name, class_name, total_points, academic_year');
+
+    if (behaviorError) throw behaviorError;
 
     // Aggregate
     const studentsMap = new Map<string, any>();
@@ -50,26 +52,27 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Aggregate behaviors first so we can map class_name for students without accounts
-    for (const log of (behaviors || [])) {
-      const bClass = (log.gm_behaviors as any)?.class_name;
+    // Process behavior records so we can map class_name and points for students without accounts
+    for (const b of (behaviors || [])) {
+      const bClass = b.class_name;
       if (!bClass) continue;
-      const key = `${log.student_name.trim().toLowerCase()}_${bClass}`;
+      const key = `${b.student_name.trim().toLowerCase()}_${bClass}`;
       
       if (!studentsMap.has(key)) {
-        // Create virtual record for student that only has behavior log
+        // Create virtual record for student that only has behavior data
         studentsMap.set(key, {
-          id: `behavior_${log.student_name}_${bClass}`,
-          name: log.student_name,
+          id: `behavior_${b.student_name}_${bClass}`,
+          name: b.student_name,
           className: bClass,
-          academicYear: 'Unknown',
+          academicYear: b.academic_year || '2025/2026',
           scores: [],
-          behaviorPoints: 0,
+          behaviorPoints: b.total_points || 0,
           isLinked: false
         });
+      } else {
+        // Update behavior points for existing account
+        studentsMap.get(key).behaviorPoints = b.total_points || 0;
       }
-      
-      studentsMap.get(key).behaviorPoints += log.points;
     }
 
     // Add scores
@@ -77,14 +80,18 @@ export async function GET(req: NextRequest) {
       const session = score.gm_sessions as any;
       if (!session) continue;
 
-      const key = `${score.name.trim().toLowerCase()}_`; // class is unknown here, we try to match by name
+      const scoreNameLower = score.name.trim().toLowerCase();
       
-      // Try to find matching account by name
+      // Try to find matching student record in the map by exact name matching
       let foundAcc: any = null;
       for (const [k, v] of studentsMap.entries()) {
-         if (k.startsWith(score.name.trim().toLowerCase() + "_")) {
-            foundAcc = v;
-            break;
+         const lastUnderscore = k.lastIndexOf('_');
+         if (lastUnderscore !== -1) {
+            const mapName = k.substring(0, lastUnderscore);
+            if (mapName === scoreNameLower) {
+               foundAcc = v;
+               break;
+            }
          }
       }
 
@@ -96,18 +103,18 @@ export async function GET(req: NextRequest) {
            id: score.id
          });
       } else {
-         // Create virtual record if not in gm_student_accounts
+         // Create virtual record if not in gm_student_accounts and not in gm_behaviors
          const vKey = `virtual_${score.name}`;
          if (!studentsMap.has(vKey)) {
-           studentsMap.set(vKey, {
-             id: vKey,
-             name: score.name,
-             className: 'Unknown',
-             academicYear: 'Unknown',
-             scores: [],
-             behaviorPoints: 0,
-             isLinked: false
-           });
+            studentsMap.set(vKey, {
+              id: vKey,
+              name: score.name,
+              className: 'Unknown',
+              academicYear: 'Unknown',
+              scores: [],
+              behaviorPoints: 0,
+              isLinked: false
+            });
          }
          studentsMap.get(vKey).scores.push({
            subject: session.subject,
