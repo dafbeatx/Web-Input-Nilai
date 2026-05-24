@@ -36,6 +36,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
   const [manualData, setManualData] = useState({ name: '', className: '', subject: '', score: '' });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDownloadingClassPdf, setIsDownloadingClassPdf] = useState(false);
 
   const fetchStudents = async () => {
     try {
@@ -147,7 +148,9 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
 
     // Header
     doc.setFontSize(20);
+    doc.setFont("Helvetica", "bold");
     doc.text('Laporan Hasil Belajar & Perilaku', 14, 20);
+    doc.setFont("Helvetica", "normal");
     doc.setFontSize(11);
     doc.setTextColor(80, 80, 80);
     doc.text(`Nama: ${student.name}`, 14, 30);
@@ -157,7 +160,9 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
 
     // Score Table
     doc.setFontSize(13);
+    doc.setFont("Helvetica", "bold");
     doc.text('Rincian Nilai Akademik', 14, 55);
+    doc.setFont("Helvetica", "normal");
     
     const scoreData = student.scores.map((s, idx) => [
       idx + 1,
@@ -184,7 +189,9 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
 
     // Behavior Summary Header
     doc.setFontSize(13);
+    doc.setFont("Helvetica", "bold");
     doc.text('Laporan Perilaku (Poin Keaktifan)', 14, finalY);
+    doc.setFont("Helvetica", "normal");
     
     doc.setFontSize(11);
     doc.text(`Total Poin Sikap: ${student.behaviorPoints}`, 14, finalY + 8);
@@ -197,6 +204,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       new Date(log.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
     ]);
 
+    let behaviorTableEndY = finalY + 14;
     if (behaviorData.length > 0) {
       autoTable(doc, {
         startY: finalY + 14,
@@ -205,14 +213,22 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         theme: 'striped',
         headStyles: { fillColor: [225, 29, 72] } // Rose-600 color for demerit table
       });
-      finalY = (doc as any).lastAutoTable.finalY + 15;
+      behaviorTableEndY = (doc as any).lastAutoTable.finalY;
     } else {
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
       doc.text('Bersih — Belum ada catatan perilaku atau pelanggaran.', 14, finalY + 14);
       doc.setTextColor(0, 0, 0);
-      finalY = finalY + 25;
+      behaviorTableEndY = finalY + 20;
     }
+
+    // Footnote source label
+    doc.setFontSize(8);
+    doc.setFont("Helvetica", "italic");
+    doc.setTextColor(120, 120, 120);
+    doc.text('Sumber dari OSIS SMP Terpadu Al-Ittihadiyah Masa Bakti 2025/2026', 14, behaviorTableEndY + 8);
+    doc.setFont("Helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
 
     // Footer
     doc.setFontSize(9);
@@ -220,6 +236,128 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     doc.text(`Dokumen ini dicetak otomatis oleh GradeMaster OS pada ${new Date().toLocaleDateString('id-ID')}`, 105, 280, { align: 'center' });
 
     doc.save(`Rapor_${student.name.replace(/ /g, '_')}_${student.className}.pdf`);
+  };
+
+  const generateClassPdfReport = async (classStudents: StudentData[], className: string) => {
+    try {
+      setIsDownloadingClassPdf(true);
+      const doc = new jsPDF();
+      let isFirst = true;
+
+      for (const student of classStudents) {
+        if (!isFirst) {
+          doc.addPage();
+        }
+        isFirst = false;
+
+        // Draw photo if available
+        if (student.avatarUrl) {
+          try {
+            const img = await loadImage(student.avatarUrl);
+            // Draw avatar photo on the top right
+            doc.addImage(img, 'JPEG', 165, 20, 30, 30);
+          } catch (err) {
+            console.error("Failed to load student avatar for PDF:", err);
+          }
+        }
+
+        // Header
+        doc.setFontSize(20);
+        doc.setFont("Helvetica", "bold");
+        doc.text('Laporan Hasil Belajar & Perilaku', 14, 20);
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(11);
+        doc.setTextColor(80, 80, 80);
+        doc.text(`Nama: ${student.name}`, 14, 30);
+        doc.text(`Kelas: ${student.className}`, 14, 36);
+        doc.text(`Tahun Ajaran: ${student.academicYear}`, 14, 42);
+        doc.setTextColor(0, 0, 0);
+
+        // Score Table
+        doc.setFontSize(13);
+        doc.setFont("Helvetica", "bold");
+        doc.text('Rincian Nilai Akademik', 14, 55);
+        doc.setFont("Helvetica", "normal");
+        
+        const scoreData = student.scores.map((s, idx) => [
+          idx + 1,
+          s.subject,
+          s.type,
+          s.score
+        ]);
+
+        let finalY = 60;
+        if (scoreData.length > 0) {
+          autoTable(doc, {
+            startY: 60,
+            head: [['No', 'Mata Pelajaran', 'Tipe Ujian', 'Nilai Akhir']],
+            body: scoreData,
+            theme: 'striped',
+            headStyles: { fillColor: [40, 230, 150] } // Tertiary color approx
+          });
+          finalY = (doc as any).lastAutoTable.finalY + 12;
+        } else {
+          doc.setFontSize(10);
+          doc.text('Belum ada nilai terdaftar.', 14, 62);
+          finalY = 75;
+        }
+
+        // Behavior Summary Header
+        doc.setFontSize(13);
+        doc.setFont("Helvetica", "bold");
+        doc.text('Laporan Perilaku (Poin Keaktifan)', 14, finalY);
+        doc.setFont("Helvetica", "normal");
+        
+        doc.setFontSize(11);
+        doc.text(`Total Poin Sikap: ${student.behaviorPoints}`, 14, finalY + 8);
+        
+        // Render detailed behavior logs if they exist
+        const behaviorData = (student.behaviorLogs || []).map((log, idx) => [
+          idx + 1,
+          log.reason,
+          `+${log.points} Poin`,
+          new Date(log.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+        ]);
+
+        let behaviorTableEndY = finalY + 14;
+        if (behaviorData.length > 0) {
+          autoTable(doc, {
+            startY: finalY + 14,
+            head: [['No', 'Kategori Pelanggaran / Perilaku', 'Poin', 'Tanggal']],
+            body: behaviorData,
+            theme: 'striped',
+            headStyles: { fillColor: [225, 29, 72] } // Rose-600 color for demerit table
+          });
+          behaviorTableEndY = (doc as any).lastAutoTable.finalY;
+        } else {
+          doc.setFontSize(10);
+          doc.setTextColor(100, 100, 100);
+          doc.text('Bersih — Belum ada catatan perilaku atau pelanggaran.', 14, finalY + 14);
+          doc.setTextColor(0, 0, 0);
+          behaviorTableEndY = finalY + 20;
+        }
+
+        // Footnote source label
+        doc.setFontSize(8);
+        doc.setFont("Helvetica", "italic");
+        doc.setTextColor(120, 120, 120);
+        doc.text('Sumber dari OSIS SMP Terpadu Al-Ittihadiyah Masa Bakti 2025/2026', 14, behaviorTableEndY + 8);
+        doc.setFont("Helvetica", "normal");
+        doc.setTextColor(0, 0, 0);
+
+        // Footer
+        doc.setFontSize(9);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`Dokumen ini dicetak otomatis oleh GradeMaster OS pada ${new Date().toLocaleDateString('id-ID')}`, 105, 280, { align: 'center' });
+      }
+
+      doc.save(`Rapor_Lengkap_Kelas_${className}.pdf`);
+      setToast({ message: `Berhasil mengunduh rapor kelas ${className}!`, type: 'success' });
+    } catch (err: any) {
+      setToast({ message: `Gagal membuat PDF kelas: ${err.message}`, type: 'error' });
+    } finally {
+      setIsDownloadingClassPdf(false);
+    }
   };
 
   const uniqueClasses = ['Semua', ...Array.from(new Set(students.map(s => s.className))).sort()];
@@ -259,18 +397,28 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
              />
            </div>
            <div className="flex gap-2">
-              <button 
-                onClick={() => setIsManualScore(true)}
-                className="px-4 py-3 bg-amber-500/10 text-amber-500 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all flex items-center gap-2 border border-amber-500/20 active:scale-95"
-              >
-                 <Edit2 size={16} /> Input Manual
-              </button>
-              <button 
-                onClick={() => setIsAddingStudent(true)}
-                className="px-4 py-3 bg-primary text-surface-container-lowest rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
-              >
-                 <Plus size={16} strokeWidth={3} /> Tambah Siswa
-              </button>
+               {selectedClass !== 'Semua' && filteredStudents.length > 0 && (
+                  <button 
+                    onClick={() => generateClassPdfReport(filteredStudents, selectedClass)}
+                    disabled={isDownloadingClassPdf}
+                    className="px-4 py-3 bg-emerald-500/10 text-emerald-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-2 border border-emerald-500/20 active:scale-95 disabled:opacity-50"
+                  >
+                     {isDownloadingClassPdf ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
+                     Unduh Rapor {selectedClass}
+                  </button>
+               )}
+               <button 
+                 onClick={() => setIsManualScore(true)}
+                 className="px-4 py-3 bg-amber-500/10 text-amber-500 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all flex items-center gap-2 border border-amber-500/20 active:scale-95"
+               >
+                  <Edit2 size={16} /> Input Manual
+               </button>
+               <button 
+                 onClick={() => setIsAddingStudent(true)}
+                 className="px-4 py-3 bg-primary text-surface-container-lowest rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
+               >
+                  <Plus size={16} strokeWidth={3} /> Tambah Siswa
+               </button>
            </div>
         </section>
 
