@@ -84,7 +84,7 @@ export default function HomeLayer(props: HomeLayerProps) {
   const expandedGroup = expandedClass ? classGroups.find(g => `${g.className}__${g.academicYear}` === expandedClass) : null;
 
   return (
-    <main className="min-h-screen pt-[env(safe-area-inset-top,20px)] mt-24 pb-32 px-6 flex flex-col gap-8 max-w-md mx-auto animate-in fade-in transition-all duration-300">
+    <main className="flex-1 min-h-screen pt-[env(safe-area-inset-top,20px)] mt-24 pb-32 px-4 sm:px-6 flex flex-col gap-8 max-w-7xl mx-auto w-full animate-in fade-in transition-all duration-300">
       
       {/* Personalized Identity Section */}
       {!expandedGroup && (
@@ -181,7 +181,7 @@ export default function HomeLayer(props: HomeLayerProps) {
         </div>
       ) : expandedGroup ? (
         /* --- SESION LIST (Expanded View) --- */
-        <section className="flex flex-col gap-6 animate-in slide-in-from-right-4 duration-300">
+        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in slide-in-from-right-4 duration-300">
           {expandedGroup.sessions.map((s, idx) => (
             <button
               key={s.id}
@@ -241,7 +241,7 @@ export default function HomeLayer(props: HomeLayerProps) {
       ) : (
         /* --- DAFTAR KELAS (Home / Default View) --- */
         <>
-          <section className="flex flex-col gap-6">
+          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {classGroups.map((g, index) => {
               const key = `${g.className}__${g.academicYear}`;
               const bData = behaviorSummary[key] || { count: 0 };
