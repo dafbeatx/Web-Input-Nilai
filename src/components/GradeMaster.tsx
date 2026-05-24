@@ -279,7 +279,8 @@ export default function GradeMaster() {
     if (typeof window === "undefined") return;
     
     const isPostLoginLayer = layer === 'dashboard' || layer === 'home';
-    const isUserLoggedIn = isAdmin || isStudent;
+    // Only consider the user logged in for tele-log purposes if they are admin or a fully linked student
+    const isUserLoggedIn = isAdmin || (isStudent && studentData?.isGoogleLinked !== false);
     
     if (isPostLoginLayer && isUserLoggedIn) {
       const role = isAdmin ? 'Admin' : 'Student';
