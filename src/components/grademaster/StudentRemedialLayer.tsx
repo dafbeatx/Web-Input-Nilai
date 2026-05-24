@@ -1601,9 +1601,7 @@ export default function StudentRemedialLayer({
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timerId);
-          // Instead of triggering timeout directly, show the Time Up Modal
-          // so the student can use their behavior points to extend time.
-          setShowTimeUpModal(true);
+          setIsTimeoutTriggered(true);
           return 0;
         }
         
@@ -1871,77 +1869,7 @@ export default function StudentRemedialLayer({
     return () => clearInterval(timer);
   }, [showAiBotWarning, aiCountdown, overlayViolationCount]);
 
-  const handleExtendTime = async () => {
-    const fixedPoints = 10;
-    
-    // Check if pointsBal is available. If not, we can't extend, but we shouldn't get stuck.
-    if (pointsBal === null) {
-      setToast({ message: "Data poin disiplin Anda tidak tersedia. Harap hubungi Pengawas.", type: "error" });
-      return;
-    }
 
-    if (pointsBal.usedToday + fixedPoints > 10) {
-      setToast({ message: `Sisa kuota harian ekstensi waktu Anda tersisa ${10 - pointsBal.usedToday} menit.`, type: "error" });
-      return;
-    }
-    
-    setExtendLoading(true);
-    try {
-      // ATOMIC PROTECTION: Save answers before extending time
-      const s = loadRemedialSession();
-      if (s) {
-        saveRemedialSession({ ...s, answers, note, lastUpdated: Date.now() });
-      }
-
-      const res = await fetch('/api/grademaster/behaviors/spend', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          studentName, 
-          className, 
-          academicYear, 
-          pointsToSpend: fixedPoints 
-        })
-      });
-      
-      let data: { error?: string; newPoints?: number };
-      try {
-        data = await res.json();
-      } catch (e) {
-        throw new Error("Server tidak merespon dengan benar (JSON Error). Harap hubungi Pengawas.");
-      }
-
-      if (!res.ok) throw new Error(data.error || "Gagal menambah waktu");
-      
-      // Calculate Added Secs
-      const addedSeconds = fixedPoints * 60;
-      
-      // ATOMIC UPDATE: Save to LocalStorage IMMEDIATELY before updating UI state
-      // This ensures if the page is refreshed right now, the time is already added.
-      const updatedS = loadRemedialSession();
-      if (updatedS) {
-        saveRemedialSession({ 
-          ...updatedS, 
-          extendedTime: (updatedS.extendedTime || 0) + addedSeconds,
-          lastUpdated: Date.now()
-        });
-      }
-      
-      // Update UI state
-      setTimeLeft(prev => prev > 0 ? prev + addedSeconds : addedSeconds);
-      setPointsBal(prev => prev ? { total: data.newPoints ?? prev.total, usedToday: prev.usedToday + fixedPoints } : null);
-      
-      // Success - Close modal
-      setShowTimeUpModal(false);
-      setToast({ message: `Waktu berhasil ditambah ${fixedPoints} menit.`, type: "success" });
-      sendActivityLog(`Ekstensi waktu: Menggunakan ${fixedPoints} poin untuk +${fixedPoints} menit.`);
-      
-    } catch(err: any) {
-      setToast({ message: err.message || "Gagal menghubungi server", type: "error" });
-    } finally {
-      setExtendLoading(false);
-    }
-  };
 
     const validateSubmission = () => {
       const minLength = 20;
