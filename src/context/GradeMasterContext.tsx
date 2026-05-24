@@ -92,7 +92,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     } else if (protectedLayers.includes(initialLayer) && !savedAdmin && !savedStudent && !savedParent) {
       initialLayer = 'student_login';
     } else if (authLayers.includes(initialLayer) && (savedAdmin || savedStudent || savedParent)) {
-      initialLayer = savedAdmin ? 'setup' : 'dashboard';
+      initialLayer = savedAdmin ? 'home' : 'dashboard';
     } else if (initialLayer === 'home' && !savedAdmin && !savedStudent && !savedParent) {
       // Default unauthenticated landing to student_login per user request for shared links
       initialLayer = 'student_login';
