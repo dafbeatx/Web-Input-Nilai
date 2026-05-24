@@ -25,6 +25,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [students, setStudents] = useState<StudentData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedClass, setSelectedClass] = useState<string>('Semua');
   
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [newStudent, setNewStudent] = useState({ name: '', className: '', academicYear: '2025/2026' });
@@ -176,10 +177,14 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     doc.save(`Rapor_${student.name.replace(/ /g, '_')}_${student.className}.pdf`);
   };
 
-  const filteredStudents = students.filter(s => 
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    s.className.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const uniqueClasses = ['Semua', ...Array.from(new Set(students.map(s => s.className))).sort()];
+
+  const filteredStudents = students.filter(s => {
+    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          s.className.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesClass = selectedClass === 'Semua' || s.className === selectedClass;
+    return matchesSearch && matchesClass;
+  });
 
   return (
     <div className="font-body text-on-surface selection:bg-tertiary/30 min-h-dvh flex flex-col bg-surface relative overflow-x-hidden">
@@ -223,6 +228,25 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
               </button>
            </div>
         </section>
+
+        {/* Class Filter Buttons */}
+        {students.length > 0 && (
+          <section className="flex flex-wrap gap-2">
+            {uniqueClasses.map((cls) => (
+              <button
+                key={cls}
+                onClick={() => setSelectedClass(cls)}
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
+                  selectedClass === cls
+                    ? 'bg-primary text-white shadow-md shadow-primary/20 scale-105'
+                    : 'bg-surface-container text-on-surface-variant hover:bg-surface-variant hover:text-primary'
+                }`}
+              >
+                {cls === 'Semua' ? 'Semua Kelas' : `Kelas ${cls}`}
+              </button>
+            ))}
+          </section>
+        )}
 
         {/* Data List */}
         <section className="bg-surface-container-low rounded-3xl border border-outline-variant/20 overflow-hidden shadow-sm">
