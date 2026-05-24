@@ -31,9 +31,29 @@ export async function GET(req: NextRequest) {
     // Fetch behavior points directly from gm_behaviors
     const { data: behaviors, error: behaviorError } = await supabase
       .from('gm_behaviors')
-      .select('student_name, class_name, total_points, academic_year');
+      .select('id, student_name, class_name, total_points, academic_year, avatar_url');
 
     if (behaviorError) throw behaviorError;
+
+    // Fetch behavior logs history
+    const { data: behaviorLogs, error: logsError } = await supabase
+      .from('gm_behavior_logs')
+      .select('student_id, points_delta, reason, violation_date, created_at');
+
+    if (logsError) throw logsError;
+
+    // Group logs by student_id
+    const logsMap = new Map<string, any[]>();
+    for (const log of (behaviorLogs || [])) {
+      if (!logsMap.has(log.student_id)) {
+        logsMap.set(log.student_id, []);
+      }
+      logsMap.get(log.student_id)!.push({
+        reason: log.reason,
+        points: log.points_delta,
+        date: log.violation_date || log.created_at
+      });
+    }
 
     // Aggregate
     const studentsMap = new Map<string, any>();
@@ -48,15 +68,18 @@ export async function GET(req: NextRequest) {
         academicYear: acc.academic_year,
         scores: [],
         behaviorPoints: 0,
+        avatarUrl: acc.profile_photo_url || null,
+        behaviorLogs: [],
         isLinked: true
       });
     }
 
-    // Process behavior records so we can map class_name and points for students without accounts
+    // Process behavior records so we can map class_name, points, photo, and logs for students without accounts
     for (const b of (behaviors || [])) {
       const bClass = b.class_name;
       if (!bClass) continue;
       const key = `${b.student_name.trim().toLowerCase()}_${bClass}`;
+      const studentLogs = logsMap.get(b.id) || [];
       
       if (!studentsMap.has(key)) {
         // Create virtual record for student that only has behavior data
@@ -67,11 +90,18 @@ export async function GET(req: NextRequest) {
           academicYear: b.academic_year || '2025/2026',
           scores: [],
           behaviorPoints: b.total_points || 0,
+          avatarUrl: b.avatar_url || null,
+          behaviorLogs: studentLogs,
           isLinked: false
         });
       } else {
-        // Update behavior points for existing account
-        studentsMap.get(key).behaviorPoints = b.total_points || 0;
+        // Update behavior points and photo for existing account
+        const student = studentsMap.get(key);
+        student.behaviorPoints = b.total_points || 0;
+        if (b.avatar_url) {
+          student.avatarUrl = b.avatar_url;
+        }
+        student.behaviorLogs = studentLogs;
       }
     }
 

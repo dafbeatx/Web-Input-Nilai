@@ -17,6 +17,8 @@ interface StudentData {
   academicYear: string;
   scores: { subject: string; type: string; score: number; id: string }[];
   behaviorPoints: number;
+  avatarUrl?: string | null;
+  behaviorLogs?: { reason: string; points: number; date: string }[];
   isLinked: boolean; // true if exists in gm_student_accounts
 }
 
@@ -119,19 +121,42 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     }
   };
 
-  const generatePdfReport = (student: StudentData) => {
+  const loadImage = (url: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = (err) => reject(err);
+      img.src = url;
+    });
+  };
+
+  const generatePdfReport = async (student: StudentData) => {
     const doc = new jsPDF();
     
+    // Draw photo if available
+    if (student.avatarUrl) {
+      try {
+        const img = await loadImage(student.avatarUrl);
+        // Draw avatar photo on the top right
+        doc.addImage(img, 'JPEG', 165, 20, 30, 30);
+      } catch (err) {
+        console.error("Failed to load student avatar for PDF:", err);
+      }
+    }
+
     // Header
     doc.setFontSize(20);
-    doc.text('Laporan Hasil Belajar & Perilaku', 105, 20, { align: 'center' });
-    doc.setFontSize(12);
+    doc.text('Laporan Hasil Belajar & Perilaku', 14, 20);
+    doc.setFontSize(11);
+    doc.setTextColor(80, 80, 80);
     doc.text(`Nama: ${student.name}`, 14, 30);
     doc.text(`Kelas: ${student.className}`, 14, 36);
     doc.text(`Tahun Ajaran: ${student.academicYear}`, 14, 42);
+    doc.setTextColor(0, 0, 0);
 
     // Score Table
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.text('Rincian Nilai Akademik', 14, 55);
     
     const scoreData = student.scores.map((s, idx) => [
@@ -150,27 +175,47 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         theme: 'striped',
         headStyles: { fillColor: [40, 230, 150] } // Tertiary color approx
       });
-      finalY = (doc as any).lastAutoTable.finalY + 10;
+      finalY = (doc as any).lastAutoTable.finalY + 12;
     } else {
       doc.setFontSize(10);
-      doc.text('Belum ada nilai terdaftar.', 14, 60);
-      finalY = 70;
+      doc.text('Belum ada nilai terdaftar.', 14, 62);
+      finalY = 75;
     }
 
-    // Behavior Summary
-    doc.setFontSize(14);
+    // Behavior Summary Header
+    doc.setFontSize(13);
     doc.text('Laporan Perilaku (Poin Keaktifan)', 14, finalY);
     
-    doc.setFontSize(12);
-    doc.text(`Total Poin Sikap: ${student.behaviorPoints}`, 14, finalY + 10);
-    if (student.behaviorPoints < 0) {
-      doc.setTextColor(255, 0, 0);
-      doc.text('Peringatan: Siswa memiliki poin negatif.', 14, finalY + 16);
+    doc.setFontSize(11);
+    doc.text(`Total Poin Sikap: ${student.behaviorPoints}`, 14, finalY + 8);
+    
+    // Render detailed behavior logs if they exist
+    const behaviorData = (student.behaviorLogs || []).map((log, idx) => [
+      idx + 1,
+      log.reason,
+      `+${log.points} Poin`,
+      new Date(log.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+    ]);
+
+    if (behaviorData.length > 0) {
+      autoTable(doc, {
+        startY: finalY + 14,
+        head: [['No', 'Kategori Pelanggaran / Perilaku', 'Poin', 'Tanggal']],
+        body: behaviorData,
+        theme: 'striped',
+        headStyles: { fillColor: [225, 29, 72] } // Rose-600 color for demerit table
+      });
+      finalY = (doc as any).lastAutoTable.finalY + 15;
+    } else {
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text('Bersih — Belum ada catatan perilaku atau pelanggaran.', 14, finalY + 14);
       doc.setTextColor(0, 0, 0);
+      finalY = finalY + 25;
     }
 
     // Footer
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setTextColor(150, 150, 150);
     doc.text(`Dokumen ini dicetak otomatis oleh GradeMaster OS pada ${new Date().toLocaleDateString('id-ID')}`, 105, 280, { align: 'center' });
 
