@@ -101,9 +101,21 @@ export async function GET(req: NextRequest) {
       const bClass = (log.gm_behaviors as any)?.class_name;
       if (!bClass) continue;
       const key = `${log.student_name.trim().toLowerCase()}_${bClass}`;
-      if (studentsMap.has(key)) {
-        studentsMap.get(key).behaviorPoints += log.points;
+      
+      if (!studentsMap.has(key)) {
+        // Create virtual record for student that only has behavior log
+        studentsMap.set(key, {
+          id: `behavior_${log.student_name}_${bClass}`,
+          name: log.student_name,
+          className: bClass,
+          academicYear: 'Unknown',
+          scores: [],
+          behaviorPoints: 0,
+          isLinked: false
+        });
       }
+      
+      studentsMap.get(key).behaviorPoints += log.points;
     }
 
     return NextResponse.json({ 
