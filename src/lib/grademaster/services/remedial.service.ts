@@ -99,12 +99,29 @@ export async function submitRemedial(
       throw new Error('Maksimal kesempatan remedial adalah 2 kali. Status ini sudah bersifat permanen dan tidak bisa mengulang lagi.');
     }
 
-    if (['COMPLETED', 'CHEATED', 'TIMEOUT'].includes(student.remedial_status)) {
+    if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'SUBMITTED', 'FAILED_EFFORT', 'TIME_UP'].includes(student.remedial_status)) {
       console.log(`[Remedial] Idempotent FINALIZATION: student=${studentName}, status is already ${student.remedial_status}`);
       return {
         ...student,
         remedial_status: student.remedial_status,
         newFinalScore: student.final_score,
+        subject: session.subject,
+        class_name: session.class_name,
+        remedialQuestions: session.scoring_config?.remedialQuestions || [],
+      };
+    }
+
+    if (student.remedial_status === 'ACTIVE') {
+      const activeAttempt = await findActiveAttempt(sessionId, studentId, studentName);
+      console.log(`[Remedial] Idempotent ACTIVE (Recovery): student=${studentName}, reusing attempt=${activeAttempt.id}`);
+      return {
+        ...student,
+        remedial_status: 'ACTIVE',
+        remedial_attempts: student.remedial_attempts,
+        remedial_location: location,
+        remedial_photo: photo,
+        attempt_id: activeAttempt.id,
+        attempt_token: activeAttempt.attempt_token,
         subject: session.subject,
         class_name: session.class_name,
         remedialQuestions: session.scoring_config?.remedialQuestions || [],

@@ -132,6 +132,7 @@ export async function POST(req: NextRequest) {
       success: true, 
       attemptId: data.attempt_id,
       attemptToken: data.attempt_token,
+      studentId: data.id,
       newFinalScore: data.newFinalScore,
       status: data.remedial_status,
       subject: data.subject,
