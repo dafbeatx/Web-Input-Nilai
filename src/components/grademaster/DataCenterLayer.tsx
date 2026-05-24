@@ -68,7 +68,10 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
   const [matchFilterStatus, setMatchFilterStatus] = useState<'all' | 'perfect' | 'fuzzy' | 'unmatched'>('all');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDownloadingClassPdf, setIsDownloadingClassPdf] = useState(false);
+  const [isDownloadingClassAcademicPdf, setIsDownloadingClassAcademicPdf] = useState(false);
+  const [isDownloadingClassBehaviorPdf, setIsDownloadingClassBehaviorPdf] = useState(false);
+  const [downloadingAcademicId, setDownloadingAcademicId] = useState<string | null>(null);
+  const [downloadingBehaviorId, setDownloadingBehaviorId] = useState<string | null>(null);
 
   const fetchStudents = async () => {
     try {
@@ -380,115 +383,422 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     });
   };
 
-  const generatePdfReport = async (student: StudentData) => {
-    const doc = new jsPDF();
-    
-    // Draw photo if available
-    if (student.avatarUrl) {
-      try {
-        const img = await loadImage(student.avatarUrl);
-        // Draw avatar photo on the top right
-        doc.addImage(img, 'JPEG', 165, 20, 30, 30);
-      } catch (err) {
-        console.error("Failed to load student avatar for PDF:", err);
+  const generateAcademicPdfReport = async (student: StudentData) => {
+    setDownloadingAcademicId(student.id);
+    try {
+      const doc = new jsPDF();
+      
+      // Draw photo if available
+      if (student.avatarUrl) {
+        try {
+          const img = await loadImage(student.avatarUrl);
+          // Draw avatar photo on the top right
+          doc.addImage(img, 'JPEG', 165, 25, 30, 35);
+        } catch (err) {
+          console.error("Failed to load student avatar for PDF:", err);
+        }
       }
-    }
 
-    // Header
-    doc.setFontSize(20);
-    doc.setFont("Helvetica", "bold");
-    doc.text('Laporan Hasil Belajar & Perilaku', 14, 20);
-    doc.setFont("Helvetica", "normal");
-    doc.setFontSize(11);
-    doc.setTextColor(80, 80, 80);
-    doc.text(`Nama: ${student.name}`, 14, 30);
-    doc.text(`Kelas: ${student.className}`, 14, 36);
-    doc.text(`Tahun Ajaran: ${student.academicYear}`, 14, 42);
-    doc.setTextColor(0, 0, 0);
+      // Border and Header Design
+      doc.setDrawColor(44, 62, 80); // Slate blue border color
+      doc.setLineWidth(0.5);
+      doc.rect(10, 10, 190, 277); // Outer page border
 
-    // Score Table
-    doc.setFontSize(13);
-    doc.setFont("Helvetica", "bold");
-    doc.text('Rincian Nilai Akademik', 14, 55);
-    doc.setFont("Helvetica", "normal");
-    
-    const scoreData = student.scores.map((s, idx) => [
-      idx + 1,
-      s.subject,
-      s.type,
-      s.score
-    ]);
-
-    let finalY = 60;
-    if (scoreData.length > 0) {
-      autoTable(doc, {
-        startY: 60,
-        head: [['No', 'Mata Pelajaran', 'Tipe Ujian', 'Nilai Akhir']],
-        body: scoreData,
-        theme: 'striped',
-        headStyles: { fillColor: [40, 230, 150] } // Tertiary color approx
-      });
-      finalY = (doc as any).lastAutoTable.finalY + 12;
-    } else {
+      // Formal School Header
+      doc.setFont("Times", "bold");
+      doc.setFontSize(14);
+      doc.text('YAYASAN AL-ITTIHADIYAH', 105, 20, { align: 'center' });
+      doc.setFontSize(16);
+      doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 26, { align: 'center' });
+      doc.setFont("Times", "normal");
       doc.setFontSize(10);
-      doc.text('Belum ada nilai terdaftar.', 14, 62);
-      finalY = 75;
-    }
+      doc.text('Jl. Raya Perjuangan No. 89, Kec. Ciawi, Bogor, Jawa Barat', 105, 31, { align: 'center' });
+      
+      // Double header lines
+      doc.setLineWidth(1);
+      doc.line(14, 35, 196, 35);
+      doc.setLineWidth(0.5);
+      doc.line(14, 36.5, 196, 36.5);
 
-    // Behavior Summary Header
-    doc.setFontSize(13);
-    doc.setFont("Helvetica", "bold");
-    doc.text('Laporan Perilaku (Poin Keaktifan)', 14, finalY);
-    doc.setFont("Helvetica", "normal");
-    
-    doc.setFontSize(11);
-    doc.text(`Total Poin Sikap: ${student.behaviorPoints}`, 14, finalY + 8);
-    
-    // Render detailed behavior logs if they exist
-    const behaviorData = (student.behaviorLogs || []).map((log, idx) => [
-      idx + 1,
-      log.reason,
-      `+${log.points} Poin`,
-      new Date(log.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-    ]);
+      // Document Title
+      doc.setFont("Times", "bold");
+      doc.setFontSize(14);
+      doc.text('LAPORAN HASIL BELAJAR SISWA (RAPOR AKADEMIK)', 105, 47, { align: 'center' });
 
-    let behaviorTableEndY = finalY + 14;
-    if (behaviorData.length > 0) {
-      autoTable(doc, {
-        startY: finalY + 14,
-        head: [['No', 'Kategori Pelanggaran / Perilaku', 'Poin', 'Tanggal']],
-        body: behaviorData,
-        theme: 'striped',
-        headStyles: { fillColor: [225, 29, 72] } // Rose-600 color for demerit table
-      });
-      behaviorTableEndY = (doc as any).lastAutoTable.finalY;
-    } else {
+      // Student Meta Block
+      doc.setFont("Helvetica", "normal");
       doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text('Bersih — Belum ada catatan perilaku atau pelanggaran.', 14, finalY + 14);
+      doc.setTextColor(50, 50, 50);
+      
+      doc.text('Nama Siswa', 15, 58);
+      doc.text(`:  ${student.name}`, 45, 58);
+      doc.text('Kelas', 15, 64);
+      doc.text(`:  ${student.className}`, 45, 64);
+      doc.text('Tahun Ajaran', 15, 70);
+      doc.text(`:  ${student.academicYear}`, 45, 70);
+
+      doc.text('NISN / ID', 115, 58);
+      doc.text(`:  ${student.id.startsWith('behavior_') ? '-' : student.id.slice(0, 8).toUpperCase()}`, 138, 58);
+      doc.text('Semester', 115, 64);
+      doc.text(':  Genap (2)', 138, 64);
+
+      // Draw Academic Scores Table
+      const scoreData = student.scores.map((s, idx) => {
+        const kkm = 70;
+        let predikat = 'D';
+        if (s.score >= 90) predikat = 'A';
+        else if (s.score >= 80) predikat = 'B';
+        else if (s.score >= 70) predikat = 'C';
+        
+        const keterangan = s.score >= kkm ? 'TUNTAS' : 'REMEDIAL';
+        return [
+          idx + 1,
+          s.subject,
+          s.type,
+          kkm,
+          s.score,
+          predikat,
+          keterangan
+        ];
+      });
+
+      let finalY = 82;
+      if (scoreData.length > 0) {
+        autoTable(doc, {
+          startY: 78,
+          head: [['No', 'Mata Pelajaran', 'Tipe Ujian', 'KKM', 'Nilai Akhir', 'Predikat', 'Keterangan']],
+          body: scoreData,
+          theme: 'grid',
+          styles: { font: 'Helvetica', fontSize: 9, cellPadding: 3 },
+          headStyles: { fillColor: [44, 62, 80], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+          columnStyles: {
+            0: { halign: 'center', cellWidth: 10 },
+            1: { halign: 'left' },
+            2: { halign: 'center', cellWidth: 25 },
+            3: { halign: 'center', cellWidth: 15 },
+            4: { halign: 'center', cellWidth: 20 },
+            5: { halign: 'center', cellWidth: 18 },
+            6: { halign: 'center', cellWidth: 25 }
+          }
+        });
+        finalY = (doc as any).lastAutoTable.finalY + 20;
+      } else {
+        doc.setFontSize(10);
+        doc.text('Belum ada nilai akademik terdaftar.', 15, 85);
+        finalY = 100;
+      }
+
+      // Footnote
+      doc.setFont("Helvetica", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(120, 120, 120);
+      doc.text('Catatan: Rapor ini dicetak secara otomatis dan sah menggunakan enkripsi GradeMaster OS.', 15, finalY - 10);
+
+      // Signatures block
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
-      behaviorTableEndY = finalY + 20;
+      
+      doc.text('Mengetahui,', 25, finalY);
+      doc.text('Orang Tua / Wali Siswa,', 25, finalY + 5);
+      doc.line(25, finalY + 30, 75, finalY + 30);
+      
+      const printDateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      doc.text(`Bogor, ${printDateStr}`, 130, finalY);
+      doc.text('Wali Kelas,', 130, finalY + 5);
+      doc.line(130, finalY + 30, 180, finalY + 30);
+
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Dicetak oleh GradeMaster OS pada ${new Date().toLocaleString('id-ID')}`, 105, 280, { align: 'center' });
+
+      doc.save(`Rapor_Akademik_${student.name.replace(/ /g, '_')}_${student.className}.pdf`);
+      setToast({ message: `Berhasil mengunduh Rapor Akademik untuk ${student.name}`, type: 'success' });
+    } catch (err: any) {
+      console.error(err);
+      setToast({ message: `Gagal membuat Rapor Akademik: ${err.message}`, type: 'error' });
+    } finally {
+      setDownloadingAcademicId(null);
     }
-
-    // Footnote source label
-    doc.setFontSize(8);
-    doc.setFont("Helvetica", "italic");
-    doc.setTextColor(120, 120, 120);
-    doc.text('Sumber dari OSIS SMP Terpadu Al-Ittihadiyah Masa Bakti 2025/2026', 14, behaviorTableEndY + 8);
-    doc.setFont("Helvetica", "normal");
-    doc.setTextColor(0, 0, 0);
-
-    // Footer
-    doc.setFontSize(9);
-    doc.setTextColor(150, 150, 150);
-    doc.text(`Dokumen ini dicetak otomatis oleh GradeMaster OS pada ${new Date().toLocaleDateString('id-ID')}`, 105, 280, { align: 'center' });
-
-    doc.save(`Rapor_${student.name.replace(/ /g, '_')}_${student.className}.pdf`);
   };
 
-  const generateClassPdfReport = async (classStudents: StudentData[], className: string) => {
+  const generateBehaviorPdfReport = async (student: StudentData) => {
+    setDownloadingBehaviorId(student.id);
     try {
-      setIsDownloadingClassPdf(true);
+      const doc = new jsPDF();
+      
+      // Draw photo if available
+      if (student.avatarUrl) {
+        try {
+          const img = await loadImage(student.avatarUrl);
+          // Draw avatar photo on the top right
+          doc.addImage(img, 'JPEG', 165, 25, 30, 35);
+        } catch (err) {
+          console.error("Failed to load student avatar for PDF:", err);
+        }
+      }
+
+      // Outer border
+      doc.setDrawColor(190, 24, 74); // Rose-700 / crimson border color for disciplinary report
+      doc.setLineWidth(0.5);
+      doc.rect(10, 10, 190, 277);
+
+      // School Header
+      doc.setFont("Times", "bold");
+      doc.setFontSize(14);
+      doc.text('YAYASAN AL-ITTIHADIYAH', 105, 20, { align: 'center' });
+      doc.setFontSize(16);
+      doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 26, { align: 'center' });
+      doc.setFont("Times", "normal");
+      doc.setFontSize(10);
+      doc.text('Jl. Raya Perjuangan No. 89, Kec. Ciawi, Bogor, Jawa Barat', 105, 31, { align: 'center' });
+      
+      doc.setLineWidth(1);
+      doc.line(14, 35, 196, 35);
+      doc.setLineWidth(0.5);
+      doc.line(14, 36.5, 196, 36.5);
+
+      // Title
+      doc.setFont("Times", "bold");
+      doc.setFontSize(14);
+      doc.text('LAPORAN KEDISIPLINAN & KEPATUHAN PERILAKU SISWA', 105, 47, { align: 'center' });
+
+      // Student Meta Block
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(50, 50, 50);
+      
+      doc.text('Nama Siswa', 15, 58);
+      doc.text(`:  ${student.name}`, 45, 58);
+      doc.text('Kelas', 15, 64);
+      doc.text(`:  ${student.className}`, 45, 64);
+      doc.text('Tahun Ajaran', 15, 70);
+      doc.text(`:  ${student.academicYear}`, 45, 70);
+
+      doc.text('Sisa Poin Sikap', 110, 58);
+      
+      // Conduct evaluation
+      let predikatSikap = 'Cukup (C)';
+      if (student.behaviorPoints >= 90) {
+        predikatSikap = 'Sangat Baik (A)';
+      } else if (student.behaviorPoints >= 80) {
+        predikatSikap = 'Baik (B)';
+      } else if (student.behaviorPoints < 70) {
+        predikatSikap = 'Perlu Pembinaan Khusus (D)';
+      }
+
+      doc.text(`:  ${student.behaviorPoints} / 100 Poin`, 142, 58);
+      doc.text('Predikat Perilaku', 110, 64);
+      doc.text(`:  ${predikatSikap}`, 142, 64);
+
+      // 1. Behavior logs table (Harian)
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Catatan Perilaku Harian (Poin Keaktifan & Disiplin)', 15, 80);
+      
+      const behaviorData = (student.behaviorLogs || []).map((log, idx) => [
+        idx + 1,
+        log.reason,
+        log.points > 0 ? `+${log.points}` : `${log.points}`,
+        new Date(log.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+        log.points > 0 ? 'Pujian' : 'Pelanggaran'
+      ]);
+
+      let behaviorTableEndY = 85;
+      if (behaviorData.length > 0) {
+        autoTable(doc, {
+          startY: 84,
+          head: [['No', 'Uraian Perilaku / Pelanggaran', 'Dampak Poin', 'Tanggal', 'Jenis']],
+          body: behaviorData,
+          theme: 'grid',
+          styles: { font: 'Helvetica', fontSize: 9, cellPadding: 3 },
+          headStyles: { fillColor: [190, 24, 74], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+          columnStyles: {
+            0: { halign: 'center', cellWidth: 10 },
+            1: { halign: 'left' },
+            2: { halign: 'center', cellWidth: 25 },
+            3: { halign: 'center', cellWidth: 28 },
+            4: { halign: 'center', cellWidth: 25 }
+          }
+        });
+        behaviorTableEndY = (doc as any).lastAutoTable.finalY + 12;
+      } else {
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Catatan perilaku bersih — Tidak ada pelanggaran kedisiplinan tercatat.', 15, 87);
+        doc.setTextColor(0, 0, 0);
+        behaviorTableEndY = 97;
+      }
+
+      // Fetch proctoring violations & snapshots from DB
+      let proctoringViolations: any[] = [];
+      try {
+        const res = await fetch(`/api/grademaster/data-center/student-violations?name=${encodeURIComponent(student.name)}`);
+        if (res.ok) {
+          const data = await res.json();
+          proctoringViolations = data.violations || [];
+        }
+      } catch (err) {
+        console.error("Failed to fetch proctoring snapshots:", err);
+      }
+
+      // 2. Exam Proctoring Violations Table
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Detail Pelanggaran Ujian Online (AI Proctoring)', 15, behaviorTableEndY);
+
+      let proctoringTableEndY = behaviorTableEndY + 5;
+      if (proctoringViolations.length > 0) {
+        const tableBody = proctoringViolations.map((v, idx) => [
+          idx + 1,
+          v.subject,
+          v.violationType,
+          new Date(v.createdAt).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          v.imageData ? 'Ada Bukti Foto' : 'Log Aktivitas'
+        ]);
+
+        autoTable(doc, {
+          startY: behaviorTableEndY + 4,
+          head: [['No', 'Mata Pelajaran', 'Indikasi Pelanggaran', 'Waktu Kejadian', 'Bukti']],
+          body: tableBody,
+          theme: 'grid',
+          styles: { font: 'Helvetica', fontSize: 9, cellPadding: 3 },
+          headStyles: { fillColor: [44, 62, 80], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+          columnStyles: {
+            0: { halign: 'center', cellWidth: 10 },
+            1: { halign: 'left' },
+            2: { halign: 'left' },
+            3: { halign: 'center', cellWidth: 40 },
+            4: { halign: 'center', cellWidth: 35 }
+          }
+        });
+        proctoringTableEndY = (doc as any).lastAutoTable.finalY + 12;
+      } else {
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Tidak ditemukan indikasi pelanggaran selama ujian remedial berlangsung.', 15, behaviorTableEndY + 7);
+        doc.setTextColor(0, 0, 0);
+        proctoringTableEndY = behaviorTableEndY + 18;
+      }
+
+      // 3. Proctoring Evidence Photos (if any)
+      const photosWithData = proctoringViolations.filter(v => v.imageData);
+      if (photosWithData.length > 0) {
+        // Add a new page for evidence photos
+        doc.addPage();
+        // Draw border on the second page
+        doc.setDrawColor(190, 24, 74);
+        doc.setLineWidth(0.5);
+        doc.rect(10, 10, 190, 277);
+
+        doc.setFont("Times", "bold");
+        doc.setFontSize(14);
+        doc.setTextColor(190, 24, 74);
+        doc.text('LAMPIRAN BUKTI VISUAL PELANGGARAN PROCTORING AI', 105, 20, { align: 'center' });
+        
+        doc.setLineWidth(0.5);
+        doc.line(14, 25, 196, 25);
+        doc.setTextColor(0, 0, 0);
+
+        // Draw photos in grid
+        let startX = 20;
+        let startY = 32;
+        let col = 0;
+
+        for (const photo of photosWithData.slice(0, 6)) { // limit to 6 photos to avoid too many pages
+          try {
+            // Draw thumbnail card
+            doc.setDrawColor(200, 200, 200);
+            doc.rect(startX, startY, 78, 62);
+            doc.addImage(photo.imageData, 'JPEG', startX + 2, startY + 2, 74, 48);
+
+            doc.setFont("Helvetica", "bold");
+            doc.setFontSize(8);
+            doc.text(`${photo.violationType}`, startX + 4, startY + 54);
+            doc.setFont("Helvetica", "normal");
+            doc.setFontSize(7);
+            doc.text(`Mapel: ${photo.subject}`, startX + 4, startY + 57);
+            doc.text(`Waktu: ${new Date(photo.createdAt).toLocaleString('id-ID')}`, startX + 4, startY + 60);
+
+            col++;
+            if (col % 2 === 0) {
+              startX = 20;
+              startY += 70;
+            } else {
+              startX = 112;
+            }
+
+            // check if overflow page
+            if (startY > 230 && col < photosWithData.length) {
+              doc.addPage();
+              doc.rect(10, 10, 190, 277);
+              doc.setFont("Times", "bold");
+              doc.setFontSize(14);
+              doc.setTextColor(190, 24, 74);
+              doc.text('LAMPIRAN BUKTI VISUAL PELANGGARAN PROCTORING AI (LANJUTAN)', 105, 20, { align: 'center' });
+              doc.line(14, 25, 196, 25);
+              doc.setTextColor(0, 0, 0);
+              startX = 20;
+              startY = 32;
+              col = 0;
+            }
+          } catch (err) {
+            console.error("Failed to add violation image to PDF:", err);
+          }
+        }
+        proctoringTableEndY = startY + 75;
+      }
+
+      // Check if we are close to bottom on page 1 (if no second page was added)
+      if (proctoringTableEndY > 220 && photosWithData.length === 0) {
+        doc.addPage();
+        doc.rect(10, 10, 190, 277);
+        proctoringTableEndY = 30;
+      }
+
+      // Footnote source label
+      doc.setFont("Helvetica", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(120, 120, 120);
+      doc.text('Sumber dari OSIS SMP Terpadu Al-Ittihadiyah Masa Bakti 2025/2026', 15, proctoringTableEndY - 10);
+
+      // Signatures
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+
+      doc.text('Mengetahui,', 25, proctoringTableEndY);
+      doc.text('Kepala Sekolah,', 25, proctoringTableEndY + 5);
+      doc.line(25, proctoringTableEndY + 30, 75, proctoringTableEndY + 30);
+      
+      const printDateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      doc.text(`Bogor, ${printDateStr}`, 130, proctoringTableEndY);
+      doc.text('Guru BK / Kesiswaan,', 130, proctoringTableEndY + 5);
+      doc.line(130, proctoringTableEndY + 30, 180, proctoringTableEndY + 30);
+
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Dokumen ini dicetak otomatis oleh GradeMaster OS pada ${new Date().toLocaleDateString('id-ID')}`, 105, 280, { align: 'center' });
+
+      doc.save(`Laporan_Pelanggaran_${student.name.replace(/ /g, '_')}_${student.className}.pdf`);
+      setToast({ message: `Berhasil mengunduh Laporan Kedisiplinan untuk ${student.name}`, type: 'success' });
+    } catch (err: any) {
+      console.error(err);
+      setToast({ message: `Gagal membuat Laporan Kedisiplinan: ${err.message}`, type: 'error' });
+    } finally {
+      setDownloadingBehaviorId(null);
+    }
+  };
+
+  const generateClassAcademicPdfReport = async (classStudents: StudentData[], className: string) => {
+    try {
+      setIsDownloadingClassAcademicPdf(true);
       const doc = new jsPDF();
       let isFirst = true;
 
@@ -502,109 +812,383 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         if (student.avatarUrl) {
           try {
             const img = await loadImage(student.avatarUrl);
-            // Draw avatar photo on the top right
-            doc.addImage(img, 'JPEG', 165, 20, 30, 30);
+            doc.addImage(img, 'JPEG', 165, 25, 30, 35);
           } catch (err) {
             console.error("Failed to load student avatar for PDF:", err);
           }
         }
 
-        // Header
-        doc.setFontSize(20);
-        doc.setFont("Helvetica", "bold");
-        doc.text('Laporan Hasil Belajar & Perilaku', 14, 20);
-        doc.setFont("Helvetica", "normal");
-        doc.setFontSize(11);
-        doc.setTextColor(80, 80, 80);
-        doc.text(`Nama: ${student.name}`, 14, 30);
-        doc.text(`Kelas: ${student.className}`, 14, 36);
-        doc.text(`Tahun Ajaran: ${student.academicYear}`, 14, 42);
-        doc.setTextColor(0, 0, 0);
+        // Border and Header Design
+        doc.setDrawColor(44, 62, 80);
+        doc.setLineWidth(0.5);
+        doc.rect(10, 10, 190, 277);
 
-        // Score Table
-        doc.setFontSize(13);
-        doc.setFont("Helvetica", "bold");
-        doc.text('Rincian Nilai Akademik', 14, 55);
-        doc.setFont("Helvetica", "normal");
+        // Formal School Header
+        doc.setFont("Times", "bold");
+        doc.setFontSize(14);
+        doc.text('YAYASAN AL-ITTIHADIYAH', 105, 20, { align: 'center' });
+        doc.setFontSize(16);
+        doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 26, { align: 'center' });
+        doc.setFont("Times", "normal");
+        doc.setFontSize(10);
+        doc.text('Jl. Raya Perjuangan No. 89, Kec. Ciawi, Bogor, Jawa Barat', 105, 31, { align: 'center' });
         
-        const scoreData = student.scores.map((s, idx) => [
-          idx + 1,
-          s.subject,
-          s.type,
-          s.score
-        ]);
+        doc.setLineWidth(1);
+        doc.line(14, 35, 196, 35);
+        doc.setLineWidth(0.5);
+        doc.line(14, 36.5, 196, 36.5);
 
-        let finalY = 60;
+        // Document Title
+        doc.setFont("Times", "bold");
+        doc.setFontSize(14);
+        doc.text('LAPORAN HASIL BELAJAR SISWA (RAPOR AKADEMIK)', 105, 47, { align: 'center' });
+
+        // Student Meta Block
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(50, 50, 50);
+        
+        doc.text('Nama Siswa', 15, 58);
+        doc.text(`:  ${student.name}`, 45, 58);
+        doc.text('Kelas', 15, 64);
+        doc.text(`:  ${student.className}`, 45, 64);
+        doc.text('Tahun Ajaran', 15, 70);
+        doc.text(`:  ${student.academicYear}`, 45, 70);
+
+        doc.text('NISN / ID', 115, 58);
+        doc.text(`:  ${student.id.startsWith('behavior_') ? '-' : student.id.slice(0, 8).toUpperCase()}`, 138, 58);
+        doc.text('Semester', 115, 64);
+        doc.text(':  Genap (2)', 138, 64);
+
+        // Draw Academic Scores Table
+        const scoreData = student.scores.map((s, idx) => {
+          const kkm = 70;
+          let predikat = 'D';
+          if (s.score >= 90) predikat = 'A';
+          else if (s.score >= 80) predikat = 'B';
+          else if (s.score >= 70) predikat = 'C';
+          
+          const keterangan = s.score >= kkm ? 'TUNTAS' : 'REMEDIAL';
+          return [
+            idx + 1,
+            s.subject,
+            s.type,
+            kkm,
+            s.score,
+            predikat,
+            keterangan
+          ];
+        });
+
+        let finalY = 82;
         if (scoreData.length > 0) {
           autoTable(doc, {
-            startY: 60,
-            head: [['No', 'Mata Pelajaran', 'Tipe Ujian', 'Nilai Akhir']],
+            startY: 78,
+            head: [['No', 'Mata Pelajaran', 'Tipe Ujian', 'KKM', 'Nilai Akhir', 'Predikat', 'Keterangan']],
             body: scoreData,
-            theme: 'striped',
-            headStyles: { fillColor: [40, 230, 150] } // Tertiary color approx
+            theme: 'grid',
+            styles: { font: 'Helvetica', fontSize: 9, cellPadding: 3 },
+            headStyles: { fillColor: [44, 62, 80], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+            columnStyles: {
+              0: { halign: 'center', cellWidth: 10 },
+              1: { halign: 'left' },
+              2: { halign: 'center', cellWidth: 25 },
+              3: { halign: 'center', cellWidth: 15 },
+              4: { halign: 'center', cellWidth: 20 },
+              5: { halign: 'center', cellWidth: 18 },
+              6: { halign: 'center', cellWidth: 25 }
+            }
           });
-          finalY = (doc as any).lastAutoTable.finalY + 12;
+          finalY = (doc as any).lastAutoTable.finalY + 20;
         } else {
           doc.setFontSize(10);
-          doc.text('Belum ada nilai terdaftar.', 14, 62);
-          finalY = 75;
+          doc.text('Belum ada nilai akademik terdaftar.', 15, 85);
+          finalY = 100;
         }
 
-        // Behavior Summary Header
-        doc.setFontSize(13);
-        doc.setFont("Helvetica", "bold");
-        doc.text('Laporan Perilaku (Poin Keaktifan)', 14, finalY);
+        // Footnote
+        doc.setFont("Helvetica", "italic");
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        doc.text('Catatan: Rapor ini dicetak secara otomatis dan sah menggunakan enkripsi GradeMaster OS.', 15, finalY - 10);
+
+        // Signatures block
         doc.setFont("Helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
         
-        doc.setFontSize(11);
-        doc.text(`Total Poin Sikap: ${student.behaviorPoints}`, 14, finalY + 8);
+        doc.text('Mengetahui,', 25, finalY);
+        doc.text('Orang Tua / Wali Siswa,', 25, finalY + 5);
+        doc.line(25, finalY + 30, 75, finalY + 30);
         
-        // Render detailed behavior logs if they exist
+        const printDateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        doc.text(`Bogor, ${printDateStr}`, 130, finalY);
+        doc.text('Wali Kelas,', 130, finalY + 5);
+        doc.line(130, finalY + 30, 180, finalY + 30);
+
+        // Footer
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`Dicetak oleh GradeMaster OS pada ${new Date().toLocaleString('id-ID')}`, 105, 280, { align: 'center' });
+      }
+
+      doc.save(`Rapor_Akademik_Kelas_${className}.pdf`);
+      setToast({ message: `Berhasil mengunduh Rapor Akademik kelas ${className}!`, type: 'success' });
+    } catch (err: any) {
+      setToast({ message: `Gagal membuat PDF kelas: ${err.message}`, type: 'error' });
+    } finally {
+      setIsDownloadingClassAcademicPdf(false);
+    }
+  };
+
+  const generateClassBehaviorPdfReport = async (classStudents: StudentData[], className: string) => {
+    try {
+      setIsDownloadingClassBehaviorPdf(true);
+      const doc = new jsPDF();
+      let isFirst = true;
+
+      for (const student of classStudents) {
+        if (!isFirst) {
+          doc.addPage();
+        }
+        isFirst = false;
+
+        // Draw photo if available
+        if (student.avatarUrl) {
+          try {
+            const img = await loadImage(student.avatarUrl);
+            doc.addImage(img, 'JPEG', 165, 25, 30, 35);
+          } catch (err) {
+            console.error("Failed to load student avatar for PDF:", err);
+          }
+        }
+
+        // Outer border
+        doc.setDrawColor(190, 24, 74);
+        doc.setLineWidth(0.5);
+        doc.rect(10, 10, 190, 277);
+
+        // School Header
+        doc.setFont("Times", "bold");
+        doc.setFontSize(14);
+        doc.text('YAYASAN AL-ITTIHADIYAH', 105, 20, { align: 'center' });
+        doc.setFontSize(16);
+        doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 26, { align: 'center' });
+        doc.setFont("Times", "normal");
+        doc.setFontSize(10);
+        doc.text('Jl. Raya Perjuangan No. 89, Kec. Ciawi, Bogor, Jawa Barat', 105, 31, { align: 'center' });
+        
+        doc.setLineWidth(1);
+        doc.line(14, 35, 196, 35);
+        doc.setLineWidth(0.5);
+        doc.line(14, 36.5, 196, 36.5);
+
+        // Title
+        doc.setFont("Times", "bold");
+        doc.setFontSize(14);
+        doc.text('LAPORAN KEDISIPLINAN & KEPATUHAN PERILAKU SISWA', 105, 47, { align: 'center' });
+
+        // Student Meta Block
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(50, 50, 50);
+        
+        doc.text('Nama Siswa', 15, 58);
+        doc.text(`:  ${student.name}`, 45, 58);
+        doc.text('Kelas', 15, 64);
+        doc.text(`:  ${student.className}`, 45, 64);
+        doc.text('Tahun Ajaran', 15, 70);
+        doc.text(`:  ${student.academicYear}`, 45, 70);
+
+        doc.text('Sisa Poin Sikap', 110, 58);
+        
+        let predikatSikap = 'Cukup (C)';
+        if (student.behaviorPoints >= 90) predikatSikap = 'Sangat Baik (A)';
+        else if (student.behaviorPoints >= 80) predikatSikap = 'Baik (B)';
+        else if (student.behaviorPoints < 70) predikatSikap = 'Perlu Pembinaan Khusus (D)';
+
+        doc.text(`:  ${student.behaviorPoints} / 100 Poin`, 142, 58);
+        doc.text('Predikat Perilaku', 110, 64);
+        doc.text(`:  ${predikatSikap}`, 142, 64);
+
+        // 1. Behavior logs table (Harian)
+        doc.setFont("Helvetica", "bold");
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Catatan Perilaku Harian (Poin Keaktifan & Disiplin)', 15, 80);
+        
         const behaviorData = (student.behaviorLogs || []).map((log, idx) => [
           idx + 1,
           log.reason,
-          `+${log.points} Poin`,
-          new Date(log.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+          log.points > 0 ? `+${log.points}` : `${log.points}`,
+          new Date(log.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+          log.points > 0 ? 'Pujian' : 'Pelanggaran'
         ]);
 
-        let behaviorTableEndY = finalY + 14;
+        let behaviorTableEndY = 85;
         if (behaviorData.length > 0) {
           autoTable(doc, {
-            startY: finalY + 14,
-            head: [['No', 'Kategori Pelanggaran / Perilaku', 'Poin', 'Tanggal']],
+            startY: 84,
+            head: [['No', 'Uraian Perilaku / Pelanggaran', 'Dampak Poin', 'Tanggal', 'Jenis']],
             body: behaviorData,
-            theme: 'striped',
-            headStyles: { fillColor: [225, 29, 72] } // Rose-600 color for demerit table
+            theme: 'grid',
+            styles: { font: 'Helvetica', fontSize: 9, cellPadding: 3 },
+            headStyles: { fillColor: [190, 24, 74], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+            columnStyles: {
+              0: { halign: 'center', cellWidth: 10 },
+              1: { halign: 'left' },
+              2: { halign: 'center', cellWidth: 25 },
+              3: { halign: 'center', cellWidth: 28 },
+              4: { halign: 'center', cellWidth: 25 }
+            }
           });
-          behaviorTableEndY = (doc as any).lastAutoTable.finalY;
+          behaviorTableEndY = (doc as any).lastAutoTable.finalY + 12;
         } else {
+          doc.setFont("Helvetica", "normal");
           doc.setFontSize(10);
           doc.setTextColor(100, 100, 100);
-          doc.text('Bersih — Belum ada catatan perilaku atau pelanggaran.', 14, finalY + 14);
+          doc.text('Catatan perilaku bersih — Tidak ada pelanggaran kedisiplinan tercatat.', 15, 87);
           doc.setTextColor(0, 0, 0);
-          behaviorTableEndY = finalY + 20;
+          behaviorTableEndY = 97;
         }
 
-        // Footnote source label
-        doc.setFontSize(8);
+        // Fetch proctoring violations & snapshots
+        let proctoringViolations: any[] = [];
+        try {
+          const res = await fetch(`/api/grademaster/data-center/student-violations?name=${encodeURIComponent(student.name)}`);
+          if (res.ok) {
+            const data = await res.json();
+            proctoringViolations = data.violations || [];
+          }
+        } catch (err) {
+          console.error("Failed to fetch proctoring snapshots:", err);
+        }
+
+        // 2. Exam Proctoring Violations Table
+        doc.setFont("Helvetica", "bold");
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Detail Pelanggaran Ujian Online (AI Proctoring)', 15, behaviorTableEndY);
+
+        let proctoringTableEndY = behaviorTableEndY + 5;
+        if (proctoringViolations.length > 0) {
+          const tableBody = proctoringViolations.map((v, idx) => [
+            idx + 1,
+            v.subject,
+            v.violationType,
+            new Date(v.createdAt).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            v.imageData ? 'Ada Bukti Foto' : 'Log Aktivitas'
+          ]);
+
+          autoTable(doc, {
+            startY: behaviorTableEndY + 4,
+            head: [['No', 'Mata Pelajaran', 'Indikasi Pelanggaran', 'Waktu Kejadian', 'Bukti']],
+            body: tableBody,
+            theme: 'grid',
+            styles: { font: 'Helvetica', fontSize: 9, cellPadding: 3 },
+            headStyles: { fillColor: [44, 62, 80], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+            columnStyles: {
+              0: { halign: 'center', cellWidth: 10 },
+              1: { halign: 'left' },
+              2: { halign: 'left' },
+              3: { halign: 'center', cellWidth: 40 },
+              4: { halign: 'center', cellWidth: 35 }
+            }
+          });
+          proctoringTableEndY = (doc as any).lastAutoTable.finalY + 12;
+        } else {
+          doc.setFont("Helvetica", "normal");
+          doc.setFontSize(10);
+          doc.setTextColor(100, 100, 100);
+          doc.text('Tidak ditemukan indikasi pelanggaran selama ujian remedial berlangsung.', 15, behaviorTableEndY + 7);
+          doc.setTextColor(0, 0, 0);
+          proctoringTableEndY = behaviorTableEndY + 18;
+        }
+
+        // 3. Proctoring Evidence Photos (if any)
+        const photosWithData = proctoringViolations.filter(v => v.imageData);
+        if (photosWithData.length > 0) {
+          doc.addPage();
+          doc.setDrawColor(190, 24, 74);
+          doc.setLineWidth(0.5);
+          doc.rect(10, 10, 190, 277);
+
+          doc.setFont("Times", "bold");
+          doc.setFontSize(14);
+          doc.setTextColor(190, 24, 74);
+          doc.text('LAMPIRAN BUKTI VISUAL PELANGGARAN PROCTORING AI', 105, 20, { align: 'center' });
+          
+          doc.setLineWidth(0.5);
+          doc.line(14, 25, 196, 25);
+          doc.setTextColor(0, 0, 0);
+
+          let startX = 20;
+          let startY = 32;
+          let col = 0;
+
+          for (const photo of photosWithData.slice(0, 4)) { // limit to 4 photos per student in bulk
+            try {
+              doc.setDrawColor(200, 200, 200);
+              doc.rect(startX, startY, 78, 62);
+              doc.addImage(photo.imageData, 'JPEG', startX + 2, startY + 2, 74, 48);
+
+              doc.setFont("Helvetica", "bold");
+              doc.setFontSize(8);
+              doc.text(`${photo.violationType}`, startX + 4, startY + 54);
+              doc.setFont("Helvetica", "normal");
+              doc.setFontSize(7);
+              doc.text(`Mapel: ${photo.subject}`, startX + 4, startY + 57);
+              doc.text(`Waktu: ${new Date(photo.createdAt).toLocaleString('id-ID')}`, startX + 4, startY + 60);
+
+              col++;
+              if (col % 2 === 0) {
+                startX = 20;
+                startY += 70;
+              } else {
+                startX = 112;
+              }
+            } catch (err) {
+              console.error("Failed to add violation image to PDF:", err);
+            }
+          }
+          proctoringTableEndY = startY + 75;
+        }
+
+        if (proctoringTableEndY > 220 && photosWithData.length === 0) {
+          doc.addPage();
+          doc.rect(10, 10, 190, 277);
+          proctoringTableEndY = 30;
+        }
+
         doc.setFont("Helvetica", "italic");
+        doc.setFontSize(8);
         doc.setTextColor(120, 120, 120);
-        doc.text('Sumber dari OSIS SMP Terpadu Al-Ittihadiyah Masa Bakti 2025/2026', 14, behaviorTableEndY + 8);
+        doc.text('Sumber dari OSIS SMP Terpadu Al-Ittihadiyah Masa Bakti 2025/2026', 15, proctoringTableEndY - 10);
+
         doc.setFont("Helvetica", "normal");
+        doc.setFontSize(10);
         doc.setTextColor(0, 0, 0);
 
-        // Footer
-        doc.setFontSize(9);
+        doc.text('Mengetahui,', 25, proctoringTableEndY);
+        doc.text('Kepala Sekolah,', 25, proctoringTableEndY + 5);
+        doc.line(25, proctoringTableEndY + 30, 75, proctoringTableEndY + 30);
+        
+        const printDateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        doc.text(`Bogor, ${printDateStr}`, 130, proctoringTableEndY);
+        doc.text('Guru BK / Kesiswaan,', 130, proctoringTableEndY + 5);
+        doc.line(130, proctoringTableEndY + 30, 180, proctoringTableEndY + 30);
+
+        doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
         doc.text(`Dokumen ini dicetak otomatis oleh GradeMaster OS pada ${new Date().toLocaleDateString('id-ID')}`, 105, 280, { align: 'center' });
       }
 
-      doc.save(`Rapor_Lengkap_Kelas_${className}.pdf`);
-      setToast({ message: `Berhasil mengunduh rapor kelas ${className}!`, type: 'success' });
+      doc.save(`Laporan_Pelanggaran_Kelas_${className}.pdf`);
+      setToast({ message: `Berhasil mengunduh Laporan Pelanggaran kelas ${className}!`, type: 'success' });
     } catch (err: any) {
       setToast({ message: `Gagal membuat PDF kelas: ${err.message}`, type: 'error' });
     } finally {
-      setIsDownloadingClassPdf(false);
+      setIsDownloadingClassBehaviorPdf(false);
     }
   };
 
@@ -646,14 +1230,26 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
            </div>
            <div className="flex gap-2">
                {selectedClass !== 'Semua' && filteredStudents.length > 0 && (
-                  <button 
-                    onClick={() => generateClassPdfReport(filteredStudents, selectedClass)}
-                    disabled={isDownloadingClassPdf}
-                    className="px-4 py-3 bg-emerald-500/10 text-emerald-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-2 border border-emerald-500/20 active:scale-95 disabled:opacity-50"
-                  >
-                     {isDownloadingClassPdf ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
-                     Unduh Rapor {selectedClass}
-                  </button>
+                 <>
+                   <button 
+                     onClick={() => generateClassAcademicPdfReport(filteredStudents, selectedClass)}
+                     disabled={isDownloadingClassAcademicPdf}
+                     className="px-4 py-3 bg-emerald-500/10 text-emerald-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-2 border border-emerald-500/20 active:scale-95 disabled:opacity-50"
+                     title="Unduh seluruh Rapor Akademik kelas ini"
+                   >
+                      {isDownloadingClassAcademicPdf ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />} 
+                      Rapor Akademik {selectedClass}
+                   </button>
+                   <button 
+                     onClick={() => generateClassBehaviorPdfReport(filteredStudents, selectedClass)}
+                     disabled={isDownloadingClassBehaviorPdf}
+                     className="px-4 py-3 bg-rose-500/10 text-rose-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all flex items-center gap-2 border border-rose-500/20 active:scale-95 disabled:opacity-50"
+                     title="Unduh seluruh Laporan Pelanggaran kelas ini"
+                   >
+                      {isDownloadingClassBehaviorPdf ? <Loader2 size={16} className="animate-spin" /> : <AlertTriangle size={16} />} 
+                      Laporan Pelanggaran {selectedClass}
+                   </button>
+                 </>
                )}
                <button 
                   onClick={() => {
@@ -740,19 +1336,28 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
                            </div>
                            <div className="flex flex-col">
                              <span className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-0.5">Poin Sikap</span>
-                             <span className={`font-bold text-sm flex items-center gap-1 ${s.behaviorPoints < 0 ? 'text-error' : 'text-primary'}`}><ShieldCheck size={14} className={s.behaviorPoints < 0 ? 'text-error' : 'text-emerald-500'} /> {s.behaviorPoints}</span>
+<span className={`font-bold text-sm flex items-center gap-1 ${s.behaviorPoints < 0 ? 'text-error' : 'text-primary'}`}><ShieldCheck size={14} className={s.behaviorPoints < 0 ? 'text-error' : 'text-emerald-500'} /> {s.behaviorPoints}</span>
                            </div>
                          </div>
                        </td>
                        <td className="p-4">
                          <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                           <button 
-                             onClick={() => generatePdfReport(s)}
-                             className="p-2 bg-tertiary/10 text-tertiary hover:bg-tertiary hover:text-on-tertiary rounded-lg transition-colors active:scale-90"
-                             title="Download PDF Rapor"
-                           >
-                             <Download size={18} />
-                           </button>
+                            <button 
+                              onClick={() => generateAcademicPdfReport(s)}
+                              disabled={downloadingAcademicId === s.id}
+                              className="p-2 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg transition-colors active:scale-90 disabled:opacity-50"
+                              title="Unduh Rapor Akademik"
+                            >
+                              {downloadingAcademicId === s.id ? <Loader2 size={18} className="animate-spin" /> : <FileText size={18} />}
+                            </button>
+                            <button 
+                              onClick={() => generateBehaviorPdfReport(s)}
+                              disabled={downloadingBehaviorId === s.id}
+                              className="p-2 bg-rose-500/10 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg transition-colors active:scale-90 disabled:opacity-50"
+                              title="Unduh Laporan Pelanggaran Lengkap"
+                            >
+                              {downloadingBehaviorId === s.id ? <Loader2 size={18} className="animate-spin" /> : <AlertTriangle size={18} />}
+                            </button>
                            <button 
                              onClick={() => handleDeleteStudent(s.name, s.className)}
                              className="p-2 bg-error/10 text-error hover:bg-error hover:text-white rounded-lg transition-colors active:scale-90"
