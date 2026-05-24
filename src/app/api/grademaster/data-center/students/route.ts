@@ -50,6 +50,28 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // Aggregate behaviors first so we can map class_name for students without accounts
+    for (const log of (behaviors || [])) {
+      const bClass = (log.gm_behaviors as any)?.class_name;
+      if (!bClass) continue;
+      const key = `${log.student_name.trim().toLowerCase()}_${bClass}`;
+      
+      if (!studentsMap.has(key)) {
+        // Create virtual record for student that only has behavior log
+        studentsMap.set(key, {
+          id: `behavior_${log.student_name}_${bClass}`,
+          name: log.student_name,
+          className: bClass,
+          academicYear: 'Unknown',
+          scores: [],
+          behaviorPoints: 0,
+          isLinked: false
+        });
+      }
+      
+      studentsMap.get(key).behaviorPoints += log.points;
+    }
+
     // Add scores
     for (const score of (scores || [])) {
       const session = score.gm_sessions as any;
@@ -94,28 +116,6 @@ export async function GET(req: NextRequest) {
            id: score.id
          });
       }
-    }
-
-    // Aggregate behaviors
-    for (const log of (behaviors || [])) {
-      const bClass = (log.gm_behaviors as any)?.class_name;
-      if (!bClass) continue;
-      const key = `${log.student_name.trim().toLowerCase()}_${bClass}`;
-      
-      if (!studentsMap.has(key)) {
-        // Create virtual record for student that only has behavior log
-        studentsMap.set(key, {
-          id: `behavior_${log.student_name}_${bClass}`,
-          name: log.student_name,
-          className: bClass,
-          academicYear: 'Unknown',
-          scores: [],
-          behaviorPoints: 0,
-          isLinked: false
-        });
-      }
-      
-      studentsMap.get(key).behaviorPoints += log.points;
     }
 
     return NextResponse.json({ 
