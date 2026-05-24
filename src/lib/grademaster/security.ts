@@ -88,3 +88,13 @@ export function detectCheating(
     flags: serverRisk.flags.map(f => f.event),
   };
 }
+
+const BLACKLISTED_EMAILS = new Set([
+  'chintiaandini8103@gmail.com'
+]);
+
+export function isEmailBlacklisted(email: string): boolean {
+  if (!email) return false;
+  return BLACKLISTED_EMAILS.has(email.toLowerCase().trim());
+}
+

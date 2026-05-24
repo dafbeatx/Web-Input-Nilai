@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { isEmailBlacklisted } from '@/lib/grademaster/security';
 
 export async function GET() {
   try {
@@ -11,6 +12,10 @@ export async function GET() {
     }
 
     const email = user.email;
+    if (isEmailBlacklisted(email)) {
+      await supabase.auth.signOut();
+      return NextResponse.json({ authenticated: false, role: null, error: 'Email ini telah diblokir/blacklist dari sistem.' }, { status: 403 });
+    }
     const identityData = user.user_metadata || {};
     const username = identityData.full_name || email;
 

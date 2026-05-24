@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { checkRateLimit } from '@/lib/grademaster/security';
+import { checkRateLimit, isEmailBlacklisted } from '@/lib/grademaster/security';
 import { createStudentSession } from '@/lib/grademaster/studentAuth';
 
 export async function POST(req: NextRequest) {
@@ -28,6 +28,10 @@ export async function POST(req: NextRequest) {
 
     if (!email) {
       return NextResponse.json({ error: 'Email Google diperlukan untuk validasi keamanan' }, { status: 400 });
+    }
+
+    if (isEmailBlacklisted(email)) {
+      return NextResponse.json({ error: 'Email ini telah diblokir/blacklist dari sistem.' }, { status: 403 });
     }
 
     let account;

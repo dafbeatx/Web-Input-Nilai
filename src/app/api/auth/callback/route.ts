@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { isEmailBlacklisted } from '@/lib/grademaster/security'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
@@ -20,6 +21,10 @@ export async function GET(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (user && user.email) {
       const email = user.email.toLowerCase();
+      if (isEmailBlacklisted(email)) {
+        await supabase.auth.signOut()
+        return NextResponse.redirect(`${requestUrl.origin}?layer=login&error=${encodeURIComponent('Akses ditolak! Email Anda telah diblokir/blacklist dari sistem.')}`)
+      }
       const adminDomains = ['@guru.smp.belajar.id', '@guru.belajar.id', '@smp.belajar.id', '@admin.belajar.id'];
       const isWhitelisted = adminDomains.some(domain => email.endsWith(domain)) || email === 'dafbeatx@gmail.com';
       
