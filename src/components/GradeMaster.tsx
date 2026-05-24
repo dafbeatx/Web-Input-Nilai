@@ -14,7 +14,7 @@ import {
 } from "@/lib/grademaster/types";
 import { parseAnswerKey, parseEssayQuestions, formatEssayQuestions } from "@/lib/grademaster/parser";
 import { generateAnalytics, generateInsights } from '@/lib/grademaster/analytics';
-import { loadRemedialSession } from '@/lib/grademaster/session';
+import { loadRemedialSession, clearRemedialSession } from '@/lib/grademaster/session';
 import { saveActiveLayer, getActiveLayer } from '@/lib/grademaster/navigation';
 import { saveAdminSession, getAdminSession, clearAdminSession } from '@/lib/grademaster/adminSession';
 
@@ -535,6 +535,13 @@ export default function GradeMaster() {
       const res = await fetch(`/api/grademaster?name=${encodeURIComponent(targetSessionName)}&t=${ts}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+
+      // Clear any stale remedial session from a previous/different exam
+      // so the student always starts fresh at RULES for this new session.
+      const existingSession = loadRemedialSession();
+      if (!existingSession || existingSession.sessionId !== data.sessionId) {
+        clearRemedialSession();
+      }
 
       setSessionId(data.sessionId || "");
       setSessionName(data.sessionName);

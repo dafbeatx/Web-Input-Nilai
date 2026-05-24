@@ -886,6 +886,16 @@ export default function StudentRemedialLayer({
   useEffect(() => {
     const saved = loadRemedialSession();
     if (saved && (saved.studentName === studentName || !studentName)) {
+      // CRITICAL: Validate that the saved session belongs to the SAME session (sessionId).
+      // If a student navigated here from their profile for a DIFFERENT exam session,
+      // the old localStorage data must be discarded to prevent cross-session contamination.
+      if (saved.sessionId && sessionId && saved.sessionId !== sessionId) {
+        console.warn(`[Remedial] Stale session detected: saved=${saved.sessionId}, current=${sessionId}. Clearing.`);
+        clearRemedialSession();
+        setStep('RULES');
+        return;
+      }
+
       if (['EXAM', 'INFO', 'GUIDE'].includes(saved.step)) {
         // Determine if questions are available before restoring EXAM step
         const hasPropsQuestions = remedialQuestions && remedialQuestions.length > 0;
@@ -1311,21 +1321,24 @@ export default function StudentRemedialLayer({
             const errorData = await res.json();
             if (errorData.error === 'RESET_REQUIRED') {
               setToast({ message: "Sesi sebelumnya telah direset oleh guru. Silakan mulai ulang.", type: "error" });
-              setTimeout(() => {
-                clearRemedialSession();
-                window.location.reload();
-              }, 3000);
+              clearRemedialSession();
+              setStep('RULES');
+              hasActivatedRef.current = false;
               return;
             }
-            throw new Error(errorData.error || 'Gagal aktivasi session');
+            // Token expired or attempt mismatch — gracefully restart instead of crash-loop
+            console.warn(`[Remedial] Activation failed: ${errorData.error}. Falling back to RULES.`);
+            setToast({ message: "Sesi sebelumnya tidak valid. Silakan mulai ulang proses remedial.", type: "error" });
+            clearRemedialSession();
+            setStep('RULES');
+            hasActivatedRef.current = false;
+            return;
           }
         } catch (e: any) {
-          console.error(e);
-          setToast({ message: `Gagal memuat soal: ${e.message}. Silakan mulai ulang.`, type: "error" });
-          setTimeout(() => {
-            clearRemedialSession();
-            window.location.reload();
-          }, 3000);
+          console.error('[Remedial] Activation network error:', e);
+          // Network error during activation — don't crash-loop, just let the exam continue
+          // The exam can still work locally and sync on submission
+          setToast({ message: "Koneksi gagal saat aktivasi. Ujian tetap berjalan.", type: "error" });
         }
       };
       activate();
