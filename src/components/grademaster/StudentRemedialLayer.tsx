@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ToastType } from '@/lib/grademaster/types';
-import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, Clock, CheckCircle2, MapPin, User, Star, ShieldCheck, ArrowRight, Cpu, MonitorOff, Play, Monitor, Activity, AppWindow, Wifi, Video, CloudLightning, Info, FileText, CircleHelp, Settings, LayoutTemplate, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, CameraOff, Clock, CheckCircle2, MapPin, User, Star, ShieldCheck, ArrowRight, Cpu, MonitorOff, Play, Monitor, Activity, AppWindow, Wifi, Video, CloudLightning, Info, FileText, CircleHelp, Settings, LayoutTemplate, RefreshCw } from 'lucide-react';
 import ProctoringCamera from './ProctoringCamera';
 import { saveRemedialSession, loadRemedialSession, clearRemedialSession } from '@/lib/grademaster/session';
 import { assessClientRisk } from '@/lib/grademaster/services/risk-engine.service';
@@ -163,6 +163,7 @@ export default function StudentRemedialLayer({
   const [cameraErrorDetail, setCameraErrorDetail] = useState<string | null>(null);
   const [examMode, setExamMode] = useState<'STRICT' | 'LIMITED'>('STRICT');
   const [cameraStatus, setCameraStatus] = useState<'ACTIVE' | 'FAILED'>('ACTIVE');
+  const [isCameraActive, setIsCameraActive] = useState(true);
   const MAX_CAMERA_RETRIES = 5;
   
   const [warningCount, setWarningCount] = useState(0);
@@ -1198,6 +1199,17 @@ export default function StudentRemedialLayer({
       attemptRecovery();
     }
   }, [step, shuffledQuestions.length]);
+
+  const handleCameraErrorDuringExam = useCallback((errorMsg: string) => {
+    console.warn('Camera error during exam:', errorMsg);
+    setIsCameraActive(false);
+    sendTelegramNotify('ACTIVITY', undefined, `⚠️ Kamera Dinonaktifkan/Error saat ujian: ${errorMsg}`);
+  }, [sendTelegramNotify]);
+
+  const handleCameraReadyDuringExam = useCallback(() => {
+    console.log('Camera ready/recovered during exam.');
+    setIsCameraActive(true);
+  }, []);
 
   const handleCameraViolation = useCallback((type: string) => {
     if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
@@ -2786,7 +2798,12 @@ export default function StudentRemedialLayer({
           }}
         >
           <div className="w-full h-full relative pointer-events-none transition-all duration-500 overflow-hidden">
-            <ProctoringCamera ref={videoRef} onViolation={handleCameraViolation} />
+            <ProctoringCamera 
+              ref={videoRef} 
+              onViolation={handleCameraViolation} 
+              onCameraError={handleCameraErrorDuringExam}
+              onCameraReady={handleCameraReadyDuringExam}
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
             <div className="absolute bottom-3 left-3 flex flex-col gap-1">
               <div className="flex items-center gap-1.5">
@@ -2897,6 +2914,49 @@ export default function StudentRemedialLayer({
           }
         }
       `}</style>
+      {/* Camera Blocked Security Overlay */}
+      {!isCameraActive && step === 'EXAM' && (
+        <div className="fixed inset-0 z-[9999] bg-surface/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#f43f5e10,transparent)]"></div>
+           <div className="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center mb-8 border border-rose-500/20 animate-pulse shadow-2xl shadow-rose-500/20">
+              <CameraOff size={48} />
+           </div>
+           <h2 className="text-3xl font-black text-on-surface uppercase tracking-tight mb-4 font-outfit">Sensor Kamera Tidak Aktif</h2>
+           <p className="text-on-surface-variant max-w-sm mb-8 font-bold leading-relaxed text-xs uppercase tracking-wide">
+             Ujian ditangguhkan secara otomatis. Pengawasan visual (AI Proctoring) wajib aktif setiap saat demi integritas pengerjaan ujian.
+           </p>
+
+           <div className="bg-surface-variant border border-outline-variant max-w-sm w-full rounded-2xl p-5 mb-8 text-left space-y-3 text-on-surface/90">
+             <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Cara Mengaktifkan Kembali:</h4>
+             <div className="flex gap-2 items-start text-xs font-bold">
+               <span className="text-primary font-black">1.</span>
+               <p className="text-[11px] leading-relaxed">Ketuk ikon <span className="text-primary font-black">gembok / pengaturan situs</span> di sebelah kiri alamat URL website pada bar atas browser Chrome.</p>
+             </div>
+             <div className="flex gap-2 items-start text-xs font-bold">
+               <span className="text-primary font-black">2.</span>
+               <p className="text-[11px] leading-relaxed">Aktifkan kembali izin <span className="text-rose-400 font-black">Kamera</span> (Ubah dari "Blokir" menjadi "Izinkan").</p>
+             </div>
+             <div className="flex gap-2 items-start text-xs font-bold">
+               <span className="text-primary font-black">3.</span>
+               <p className="text-[11px] leading-relaxed">Ketuk tombol di bawah untuk memuat ulang halaman dan memulihkan sensor kamera.</p>
+             </div>
+           </div>
+           
+           <div className="flex flex-col gap-3 w-full max-w-xs">
+              <button 
+                onClick={() => window.location.reload()}
+                className="w-full py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 border border-outline-variant"
+              >
+                Muat Ulang & Aktifkan Kamera
+              </button>
+           </div>
+           
+           <div className="mt-12">
+              <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">GradeMaster Dynamic Security v2.0</p>
+           </div>
+        </div>
+      )}
+
       {/* Offline Security Overlay */}
       {(isOffline || isConnectionLocked) && step === 'EXAM' && (
         <div className="fixed inset-0 z-[9999] bg-surface/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
