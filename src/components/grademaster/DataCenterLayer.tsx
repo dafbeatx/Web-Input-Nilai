@@ -521,25 +521,27 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       }
 
       // Outer border
-      doc.setDrawColor(190, 24, 74); // Rose-700 / crimson border color for disciplinary report
+      doc.setDrawColor(190, 24, 74); // Crimson border color for behavior report
       doc.setLineWidth(0.5);
       doc.rect(10, 10, 190, 277);
 
-      // School Header (Only School Name, Centered, No Yayasan, No Address)
+      // School Header
       doc.setFont("Times", "bold");
       doc.setFontSize(16);
       doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 20, { align: 'center' });
       
-      // Double header lines shifted up to Y=24/25.5
+      doc.setFontSize(12);
+      doc.text('Laporan Kedisiplinan dan Kepatuhan Perilaku Siswa', 105, 26, { align: 'center' });
+      
+      doc.setFont("Times", "normal");
+      doc.setFontSize(10);
+      doc.text(`Tahun Ajaran ${student.academicYear}`, 105, 31, { align: 'center' });
+      
+      // Double header lines
       doc.setLineWidth(1);
-      doc.line(14, 24, 196, 24);
+      doc.line(14, 35, 196, 35);
       doc.setLineWidth(0.5);
-      doc.line(14, 25.5, 196, 25.5);
-
-      // Title
-      doc.setFont("Times", "bold");
-      doc.setFontSize(14);
-      doc.text('LAPORAN KEDISIPLINAN & KEPATUHAN PERILAKU SISWA', 105, 36, { align: 'center' });
+      doc.line(14, 36.5, 196, 36.5);
 
       // Student Meta Block
       doc.setFont("Helvetica", "normal");
@@ -550,18 +552,44 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       doc.text(`:  ${student.name}`, 45, 46);
       doc.text('Kelas', 15, 52);
       doc.text(`:  ${student.className}`, 45, 52);
-      doc.text('Tahun Ajaran', 15, 58);
-      doc.text(`:  ${student.academicYear}`, 45, 58);
+      doc.text('Sisa Poin Sikap', 15, 58);
+      doc.text(`:  ${student.behaviorPoints} / 100 Poin`, 45, 58);
 
-      doc.text('Sisa Poin Sikap', 110, 46);
-      doc.text(`:  ${student.behaviorPoints} / 100 Poin`, 142, 46);
-      // Predikat Perilaku removed for clean style without behavior predicate
+      // Status Badge Indicator
+      doc.setFont("Helvetica", "bold");
+      doc.text('Status', 15, 64);
+      doc.text(':', 45, 64);
+      
+      let statusLabel = 'Perlu Perhatian';
+      let badgeColor: [number, number, number] = [234, 179, 8]; // Amber/Yellow
+      if (student.behaviorPoints >= 90) {
+        statusLabel = 'Sangat Baik';
+        badgeColor = [34, 197, 94]; // Green
+      } else if (student.behaviorPoints >= 80) {
+        statusLabel = 'Baik';
+        badgeColor = [34, 197, 94]; // Green
+      } else if (student.behaviorPoints < 70) {
+        statusLabel = 'Perlu Pembinaan Khusus';
+        badgeColor = [239, 68, 68]; // Red
+      }
+
+      // Draw colored indicator dot next to colon
+      doc.setFillColor(...badgeColor);
+      doc.circle(49, 63, 1.8, 'F');
+      
+      doc.setTextColor(0, 0, 0);
+      doc.text(statusLabel, 54, 64);
 
       // 1. Behavior logs table (Harian)
       doc.setFont("Helvetica", "bold");
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
-      doc.text('Catatan Perilaku Harian (Poin Keaktifan & Disiplin)', 15, 80);
+      doc.text('Catatan Perilaku Harian', 15, 78);
+      
+      // Horizontal line for section header
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.2);
+      doc.line(15, 81, 195, 81);
       
       const behaviorData = (student.behaviorLogs || []).map((log, idx) => [
         idx + 1,
@@ -571,10 +599,10 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         log.points > 0 ? 'Pujian' : 'Pelanggaran'
       ]);
 
-      let behaviorTableEndY = 85;
+      let behaviorTableEndY = 83;
       if (behaviorData.length > 0) {
         autoTable(doc, {
-          startY: 84,
+          startY: 83,
           head: [['No', 'Uraian Perilaku / Pelanggaran', 'Dampak Poin', 'Tanggal', 'Jenis']],
           body: behaviorData,
           theme: 'grid',
@@ -598,144 +626,64 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         behaviorTableEndY = 97;
       }
 
-      // Fetch proctoring violations & snapshots from DB
-      let proctoringViolations: any[] = [];
-      try {
-        const res = await fetch(`/api/grademaster/data-center/student-violations?name=${encodeURIComponent(student.name)}`);
-        if (res.ok) {
-          const data = await res.json();
-          proctoringViolations = data.violations || [];
-        }
-      } catch (err) {
-        console.error("Failed to fetch proctoring snapshots:", err);
-      }
-
-      // 2. Exam Proctoring Violations Table
+      // 2. Ringkasan Evaluasi
       doc.setFont("Helvetica", "bold");
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
-      doc.text('Detail Pelanggaran Ujian Online (AI Proctoring)', 15, behaviorTableEndY);
+      doc.text('Ringkasan Evaluasi', 15, behaviorTableEndY);
+      
+      // Horizontal separator line
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.2);
+      doc.line(15, behaviorTableEndY + 3, 195, behaviorTableEndY + 3);
 
-      let proctoringTableEndY = behaviorTableEndY + 5;
-      if (proctoringViolations.length > 0) {
-        const tableBody = proctoringViolations.map((v, idx) => [
-          idx + 1,
-          v.subject,
-          v.violationType,
-          new Date(v.createdAt).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-          v.imageData ? 'Ada Bukti Foto' : 'Log Aktivitas'
-        ]);
-
-        autoTable(doc, {
-          startY: behaviorTableEndY + 4,
-          head: [['No', 'Mata Pelajaran', 'Indikasi Pelanggaran', 'Waktu Kejadian', 'Bukti']],
-          body: tableBody,
-          theme: 'grid',
-          styles: { font: 'Helvetica', fontSize: 9, cellPadding: 3 },
-          headStyles: { fillColor: [44, 62, 80], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
-          columnStyles: {
-            0: { halign: 'center', cellWidth: 10 },
-            1: { halign: 'left' },
-            2: { halign: 'left' },
-            3: { halign: 'center', cellWidth: 40 },
-            4: { halign: 'center', cellWidth: 35 }
-          }
-        });
-        proctoringTableEndY = (doc as any).lastAutoTable.finalY + 12;
+      let evalText = '';
+      if (student.behaviorPoints >= 90) {
+        evalText = `Siswa menunjukkan kepatuhan dan kedisiplinan yang sangat baik selama semester ini. Komitmen terhadap tata tertib sekolah sangat tinggi dan patut menjadi teladan bagi siswa lainnya. Terus pertahankan dan tingkatkan prestasi positif ini.`;
+      } else if (student.behaviorPoints >= 80) {
+        evalText = `Siswa secara umum berperilaku baik dan disiplin dengan sedikit catatan kecil yang tidak signifikan. Sikap hormat dan kepatuhan aturan terlihat konsisten. Disarankan untuk mempertahankan kebiasaan positif ini di lingkungan sekolah.`;
+      } else if (student.behaviorPoints >= 70) {
+        evalText = `Siswa memiliki beberapa catatan pelanggaran ringan yang memerlukan perhatian. Diperlukan sedikit pembinaan dan bimbingan terarah agar perilaku dan kedisiplinan siswa dapat kembali optimal sesuai standar tata tertib sekolah.`;
       } else {
-        doc.setFont("Helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
-        doc.text('Tidak ditemukan indikasi pelanggaran selama ujian remedial berlangsung.', 15, behaviorTableEndY + 7);
-        doc.setTextColor(0, 0, 0);
-        proctoringTableEndY = behaviorTableEndY + 18;
+        evalText = `Tingkat kedisiplinan siswa saat ini memerlukan perhatian serius dan pembinaan intensif karena akumulasi pelanggaran yang tercatat. Sangat penting bagi wali kelas, guru BK, dan orang tua untuk berkoordinasi secara aktif dalam membimbing perilaku siswa agar mengalami peningkatan positif.`;
       }
 
-      // 3. Proctoring Evidence Photos (if any)
-      const photosWithData = proctoringViolations.filter(v => v.imageData);
-      if (photosWithData.length > 0) {
-        // Add a new page for evidence photos
-        doc.addPage();
-        // Draw border on the second page
-        doc.setDrawColor(190, 24, 74);
-        doc.setLineWidth(0.5);
-        doc.rect(10, 10, 190, 277);
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(50, 50, 50);
+      
+      const splitEval = doc.splitTextToSize(evalText, 180);
+      doc.text(splitEval, 15, behaviorTableEndY + 8);
+      
+      const evalEndY = behaviorTableEndY + 8 + (splitEval.length * 5) + 12;
 
-        doc.setFont("Times", "bold");
-        doc.setFontSize(14);
-        doc.setTextColor(190, 24, 74);
-        doc.text('LAMPIRAN BUKTI VISUAL PELANGGARAN PROCTORING AI', 105, 20, { align: 'center' });
-        
-        doc.setLineWidth(0.5);
-        doc.line(14, 25, 196, 25);
-        doc.setTextColor(0, 0, 0);
-
-        // Draw photos in grid
-        let startX = 20;
-        let startY = 32;
-        let col = 0;
-
-        for (const photo of photosWithData.slice(0, 6)) { // limit to 6 photos to avoid too many pages
-          try {
-            // Draw thumbnail card
-            doc.setDrawColor(200, 200, 200);
-            doc.rect(startX, startY, 78, 62);
-            doc.addImage(photo.imageData, 'JPEG', startX + 2, startY + 2, 74, 48);
-
-            doc.setFont("Helvetica", "bold");
-            doc.setFontSize(8);
-            doc.text(`${photo.violationType}`, startX + 4, startY + 54);
-            doc.setFont("Helvetica", "normal");
-            doc.setFontSize(7);
-            doc.text(`Mapel: ${photo.subject}`, startX + 4, startY + 57);
-            doc.text(`Waktu: ${new Date(photo.createdAt).toLocaleString('id-ID')}`, startX + 4, startY + 60);
-
-            col++;
-            if (col % 2 === 0) {
-              startX = 20;
-              startY += 70;
-            } else {
-              startX = 112;
-            }
-
-            // check if overflow page
-            if (startY > 230 && col < photosWithData.length) {
-              doc.addPage();
-              doc.rect(10, 10, 190, 277);
-              doc.setFont("Times", "bold");
-              doc.setFontSize(14);
-              doc.setTextColor(190, 24, 74);
-              doc.text('LAMPIRAN BUKTI VISUAL PELANGGARAN PROCTORING AI (LANJUTAN)', 105, 20, { align: 'center' });
-              doc.line(14, 25, 196, 25);
-              doc.setTextColor(0, 0, 0);
-              startX = 20;
-              startY = 32;
-              col = 0;
-            }
-          } catch (err) {
-            console.error("Failed to add violation image to PDF:", err);
-          }
-        }
-        proctoringTableEndY = startY + 75;
-      }
-
-      // Check if we are close to bottom on page 1 (if no second page was added)
-      if (proctoringTableEndY > 265 && photosWithData.length === 0) {
+      // Check page overflow for footer
+      let footerY = evalEndY;
+      if (footerY > 250) {
         doc.addPage();
         doc.rect(10, 10, 190, 277);
-        proctoringTableEndY = 30;
+        footerY = 25;
       }
 
-      // Footnote source label
-      doc.setFont("Helvetica", "italic");
-      doc.setFontSize(8);
+      // Bottom footer section
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.2);
+      doc.line(15, footerY, 195, footerY);
+
+      const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      const now = new Date();
+      const day = now.getDate();
+      const month = months[now.getMonth()];
+      const year = now.getFullYear();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const dateTimeStr = `${day} ${month} ${year} • ${hours}:${minutes} WIB`;
+
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(9);
       doc.setTextColor(120, 120, 120);
-      doc.text('Sumber dari OSIS SMP Terpadu Al-Ittihadiyah Masa Bakti 2025/2026', 15, proctoringTableEndY);
-
-      // Footer
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Dokumen ini dicetak otomatis oleh GradeMaster OS pada ${new Date().toLocaleDateString('id-ID')}`, 105, 280, { align: 'center' });
+      doc.text('Dokumen dihasilkan otomatis oleh GradeMaster OS', 15, footerY + 6);
+      doc.text(dateTimeStr, 15, footerY + 11);
 
       doc.save(`Laporan_Pelanggaran_${student.name.replace(/ /g, '_')}_${student.className}.pdf`);
       setToast({ message: `Berhasil mengunduh Laporan Kedisiplinan untuk ${student.name}`, type: 'success' });
@@ -906,16 +854,18 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         doc.setFontSize(16);
         doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 20, { align: 'center' });
         
-        // Double header lines shifted up to Y=24/25.5
+        doc.setFontSize(12);
+        doc.text('Laporan Kedisiplinan dan Kepatuhan Perilaku Siswa', 105, 26, { align: 'center' });
+        
+        doc.setFont("Times", "normal");
+        doc.setFontSize(10);
+        doc.text(`Tahun Ajaran ${student.academicYear}`, 105, 31, { align: 'center' });
+        
+        // Double header lines
         doc.setLineWidth(1);
-        doc.line(14, 24, 196, 24);
+        doc.line(14, 35, 196, 35);
         doc.setLineWidth(0.5);
-        doc.line(14, 25.5, 196, 25.5);
-
-        // Title
-        doc.setFont("Times", "bold");
-        doc.setFontSize(14);
-        doc.text('LAPORAN KEDISIPLINAN & KEPATUHAN PERILAKU SISWA', 105, 36, { align: 'center' });
+        doc.line(14, 36.5, 196, 36.5);
 
         // Student Meta Block
         doc.setFont("Helvetica", "normal");
@@ -926,18 +876,44 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         doc.text(`:  ${student.name}`, 45, 46);
         doc.text('Kelas', 15, 52);
         doc.text(`:  ${student.className}`, 45, 52);
-        doc.text('Tahun Ajaran', 15, 58);
-        doc.text(`:  ${student.academicYear}`, 45, 58);
+        doc.text('Sisa Poin Sikap', 15, 58);
+        doc.text(`:  ${student.behaviorPoints} / 100 Poin`, 45, 58);
 
-        doc.text('Sisa Poin Sikap', 110, 46);
-        doc.text(`:  ${student.behaviorPoints} / 100 Poin`, 142, 46);
-        // Predikat Perilaku removed for clean style without behavior predicate
+        // Status Badge Indicator
+        doc.setFont("Helvetica", "bold");
+        doc.text('Status', 15, 64);
+        doc.text(':', 45, 64);
+        
+        let statusLabel = 'Perlu Perhatian';
+        let badgeColor: [number, number, number] = [234, 179, 8]; // Amber/Yellow
+        if (student.behaviorPoints >= 90) {
+          statusLabel = 'Sangat Baik';
+          badgeColor = [34, 197, 94]; // Green
+        } else if (student.behaviorPoints >= 80) {
+          statusLabel = 'Baik';
+          badgeColor = [34, 197, 94]; // Green
+        } else if (student.behaviorPoints < 70) {
+          statusLabel = 'Perlu Pembinaan Khusus';
+          badgeColor = [239, 68, 68]; // Red
+        }
+
+        // Draw colored indicator dot next to colon
+        doc.setFillColor(...badgeColor);
+        doc.circle(49, 63, 1.8, 'F');
+        
+        doc.setTextColor(0, 0, 0);
+        doc.text(statusLabel, 54, 64);
 
         // 1. Behavior logs table (Harian)
         doc.setFont("Helvetica", "bold");
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
-        doc.text('Catatan Perilaku Harian (Poin Keaktifan & Disiplin)', 15, 80);
+        doc.text('Catatan Perilaku Harian', 15, 78);
+        
+        // Horizontal line for section header
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.2);
+        doc.line(15, 81, 195, 81);
         
         const behaviorData = (student.behaviorLogs || []).map((log, idx) => [
           idx + 1,
@@ -947,10 +923,10 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
           log.points > 0 ? 'Pujian' : 'Pelanggaran'
         ]);
 
-        let behaviorTableEndY = 85;
+        let behaviorTableEndY = 83;
         if (behaviorData.length > 0) {
           autoTable(doc, {
-            startY: 84,
+            startY: 83,
             head: [['No', 'Uraian Perilaku / Pelanggaran', 'Dampak Poin', 'Tanggal', 'Jenis']],
             body: behaviorData,
             theme: 'grid',
@@ -974,122 +950,64 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
           behaviorTableEndY = 97;
         }
 
-        // Fetch proctoring violations & snapshots
-        let proctoringViolations: any[] = [];
-        try {
-          const res = await fetch(`/api/grademaster/data-center/student-violations?name=${encodeURIComponent(student.name)}`);
-          if (res.ok) {
-            const data = await res.json();
-            proctoringViolations = data.violations || [];
-          }
-        } catch (err) {
-          console.error("Failed to fetch proctoring snapshots:", err);
-        }
-
-        // 2. Exam Proctoring Violations Table
+        // 2. Ringkasan Evaluasi
         doc.setFont("Helvetica", "bold");
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
-        doc.text('Detail Pelanggaran Ujian Online (AI Proctoring)', 15, behaviorTableEndY);
+        doc.text('Ringkasan Evaluasi', 15, behaviorTableEndY);
+        
+        // Horizontal separator line
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.2);
+        doc.line(15, behaviorTableEndY + 3, 195, behaviorTableEndY + 3);
 
-        let proctoringTableEndY = behaviorTableEndY + 5;
-        if (proctoringViolations.length > 0) {
-          const tableBody = proctoringViolations.map((v, idx) => [
-            idx + 1,
-            v.subject,
-            v.violationType,
-            new Date(v.createdAt).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-            v.imageData ? 'Ada Bukti Foto' : 'Log Aktivitas'
-          ]);
-
-          autoTable(doc, {
-            startY: behaviorTableEndY + 4,
-            head: [['No', 'Mata Pelajaran', 'Indikasi Pelanggaran', 'Waktu Kejadian', 'Bukti']],
-            body: tableBody,
-            theme: 'grid',
-            styles: { font: 'Helvetica', fontSize: 9, cellPadding: 3 },
-            headStyles: { fillColor: [44, 62, 80], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
-            columnStyles: {
-              0: { halign: 'center', cellWidth: 10 },
-              1: { halign: 'left' },
-              2: { halign: 'left' },
-              3: { halign: 'center', cellWidth: 40 },
-              4: { halign: 'center', cellWidth: 35 }
-            }
-          });
-          proctoringTableEndY = (doc as any).lastAutoTable.finalY + 12;
+        let evalText = '';
+        if (student.behaviorPoints >= 90) {
+          evalText = `Siswa menunjukkan kepatuhan dan kedisiplinan yang sangat baik selama semester ini. Komitmen terhadap tata tertib sekolah sangat tinggi dan patut menjadi teladan bagi siswa lainnya. Terus pertahankan dan tingkatkan prestasi positif ini.`;
+        } else if (student.behaviorPoints >= 80) {
+          evalText = `Siswa secara umum berperilaku baik dan disiplin dengan sedikit catatan kecil yang tidak signifikan. Sikap hormat dan kepatuhan aturan terlihat konsisten. Disarankan untuk mempertahankan kebiasaan positif ini di lingkungan sekolah.`;
+        } else if (student.behaviorPoints >= 70) {
+          evalText = `Siswa memiliki beberapa catatan pelanggaran ringan yang memerlukan perhatian. Diperlukan sedikit pembinaan dan bimbingan terarah agar perilaku dan kedisiplinan siswa dapat kembali optimal sesuai standar tata tertib sekolah.`;
         } else {
-          doc.setFont("Helvetica", "normal");
-          doc.setFontSize(10);
-          doc.setTextColor(100, 100, 100);
-          doc.text('Tidak ditemukan indikasi pelanggaran selama ujian remedial berlangsung.', 15, behaviorTableEndY + 7);
-          doc.setTextColor(0, 0, 0);
-          proctoringTableEndY = behaviorTableEndY + 18;
+          evalText = `Tingkat kedisiplinan siswa saat ini memerlukan perhatian serius dan pembinaan intensif karena akumulasi pelanggaran yang tercatat. Sangat penting bagi wali kelas, guru BK, dan orang tua untuk berkoordinasi secara aktif dalam membimbing perilaku siswa agar mengalami peningkatan positif.`;
         }
 
-        // 3. Proctoring Evidence Photos (if any)
-        const photosWithData = proctoringViolations.filter(v => v.imageData);
-        if (photosWithData.length > 0) {
-          doc.addPage();
-          doc.setDrawColor(190, 24, 74);
-          doc.setLineWidth(0.5);
-          doc.rect(10, 10, 190, 277);
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(50, 50, 50);
+        
+        const splitEval = doc.splitTextToSize(evalText, 180);
+        doc.text(splitEval, 15, behaviorTableEndY + 8);
+        
+        const evalEndY = behaviorTableEndY + 8 + (splitEval.length * 5) + 12;
 
-          doc.setFont("Times", "bold");
-          doc.setFontSize(14);
-          doc.setTextColor(190, 24, 74);
-          doc.text('LAMPIRAN BUKTI VISUAL PELANGGARAN PROCTORING AI', 105, 20, { align: 'center' });
-          
-          doc.setLineWidth(0.5);
-          doc.line(14, 25, 196, 25);
-          doc.setTextColor(0, 0, 0);
-
-          let startX = 20;
-          let startY = 32;
-          let col = 0;
-
-          for (const photo of photosWithData.slice(0, 4)) { // limit to 4 photos per student in bulk
-            try {
-              doc.setDrawColor(200, 200, 200);
-              doc.rect(startX, startY, 78, 62);
-              doc.addImage(photo.imageData, 'JPEG', startX + 2, startY + 2, 74, 48);
-
-              doc.setFont("Helvetica", "bold");
-              doc.setFontSize(8);
-              doc.text(`${photo.violationType}`, startX + 4, startY + 54);
-              doc.setFont("Helvetica", "normal");
-              doc.setFontSize(7);
-              doc.text(`Mapel: ${photo.subject}`, startX + 4, startY + 57);
-              doc.text(`Waktu: ${new Date(photo.createdAt).toLocaleString('id-ID')}`, startX + 4, startY + 60);
-
-              col++;
-              if (col % 2 === 0) {
-                startX = 20;
-                startY += 70;
-              } else {
-                startX = 112;
-              }
-            } catch (err) {
-              console.error("Failed to add violation image to PDF:", err);
-            }
-          }
-          proctoringTableEndY = startY + 75;
-        }
-
-        if (proctoringTableEndY > 265 && photosWithData.length === 0) {
+        // Check page overflow for footer
+        let footerY = evalEndY;
+        if (footerY > 250) {
           doc.addPage();
           doc.rect(10, 10, 190, 277);
-          proctoringTableEndY = 30;
+          footerY = 25;
         }
 
-        doc.setFont("Helvetica", "italic");
-        doc.setFontSize(8);
+        // Bottom footer section
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.2);
+        doc.line(15, footerY, 195, footerY);
+
+        const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        const now = new Date();
+        const day = now.getDate();
+        const month = months[now.getMonth()];
+        const year = now.getFullYear();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const dateTimeStr = `${day} ${month} ${year} • ${hours}:${minutes} WIB`;
+
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(9);
         doc.setTextColor(120, 120, 120);
-        doc.text('Sumber dari OSIS SMP Terpadu Al-Ittihadiyah Masa Bakti 2025/2026', 15, proctoringTableEndY);
-
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text(`Dokumen ini dicetak otomatis oleh GradeMaster OS pada ${new Date().toLocaleDateString('id-ID')}`, 105, 280, { align: 'center' });
+        doc.text('Dokumen dihasilkan otomatis oleh GradeMaster OS', 15, footerY + 6);
+        doc.text(dateTimeStr, 15, footerY + 11);
       }
 
       doc.save(`Laporan_Pelanggaran_Kelas_${className}.pdf`);
