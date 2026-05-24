@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
-import { Loader2, Search, Plus, Trash2, Download, Database, BookOpen, AlertCircle, Edit2, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Loader2, Search, Plus, Trash2, Download, Database, BookOpen, AlertCircle, Edit2, ShieldCheck, CheckCircle2, AlertTriangle, FileText, Check, ChevronRight, Info, Upload } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface DataCenterLayerProps {
   onBack: () => void;
@@ -32,8 +33,39 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [newStudent, setNewStudent] = useState({ name: '', className: '', academicYear: '2025/2026' });
 
-  const [isManualScore, setIsManualScore] = useState(false);
-  const [manualData, setManualData] = useState({ name: '', className: '', subject: '', score: '' });
+  // Excel Import states
+  const [isExcelImport, setIsExcelImport] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1); // 1: Upload & Meta, 2: Sheet Mapping, 3: Match Students, 4: Summary
+  const [importMeta, setImportMeta] = useState({ subject: '', examType: 'UTS', academicYear: '2025/2026' });
+  const [workbookData, setWorkbookData] = useState<{
+    filename: string;
+    sheets: { name: string; rows: any[][] }[];
+  } | null>(null);
+
+  interface SheetMapping {
+    sheetName: string;
+    dbClassName: string;
+    headerRow: number;
+    nameCol: number;
+    scoreCol: number;
+    enabled: boolean;
+  }
+  const [sheetMappings, setSheetMappings] = useState<SheetMapping[]>([]);
+
+  interface MatchedRecord {
+    id: string;
+    excelName: string;
+    score: number;
+    sheetName: string;
+    className: string;
+    matchedName: string;
+    action: 'match' | 'create_new' | 'skip';
+    similarity: number;
+    status: 'perfect' | 'fuzzy' | 'unmatched';
+  }
+  const [matchedRecords, setMatchedRecords] = useState<MatchedRecord[]>([]);
+  const [matchSearchQuery, setMatchSearchQuery] = useState('');
+  const [matchFilterStatus, setMatchFilterStatus] = useState<'all' | 'perfect' | 'fuzzy' | 'unmatched'>('all');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDownloadingClassPdf, setIsDownloadingClassPdf] = useState(false);
@@ -78,25 +110,241 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     }
   };
 
-  const handleManualScore = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Heuristic column detection
+  const detectColumns = (rows: any[][]) => {
+    let headerRowIndex = 0;
+    let nameColIndex = -1;
+    let scoreColIndex = -1;
+
+    for (let i = 0; i < Math.min(rows.length, 10); i++) {
+      const row = rows[i];
+      if (!row || !Array.isArray(row)) continue;
+      
+      for (let j = 0; j < row.length; j++) {
+        const cell = String(row[j] || '').trim().toLowerCase();
+        if (cell.match(/nama|siswa|student|name|peserta/i) && nameColIndex === -1) {
+          nameColIndex = j;
+          headerRowIndex = i;
+        }
+        if (cell.match(/nilai|score|uts|uas|pat|pas|akhir|angka|grade/i) && scoreColIndex === -1) {
+          scoreColIndex = j;
+          headerRowIndex = i;
+        }
+      }
+      if (nameColIndex !== -1 && scoreColIndex !== -1) {
+        break;
+      }
+    }
+
+    if (nameColIndex === -1) nameColIndex = 0;
+    if (scoreColIndex === -1) scoreColIndex = 1;
+
+    return { headerRowIndex, nameColIndex, scoreColIndex };
+  };
+
+  // Dice's Coefficient String Similarity
+  const getStringSimilarity = (str1: string, str2: string): number => {
+    const s1 = str1.replace(/\s+/g, '').toLowerCase().trim();
+    const s2 = str2.replace(/\s+/g, '').toLowerCase().trim();
+    if (s1 === s2) return 1.0;
+    if (s1.length < 2 || s2.length < 2) return 0.0;
+
+    const getBigrams = (str: string) => {
+      const bigrams = new Set<string>();
+      for (let i = 0; i < str.length - 1; i++) {
+        bigrams.add(str.slice(i, i + 2));
+      }
+      return bigrams;
+    };
+
+    const b1 = getBigrams(s1);
+    const b2 = getBigrams(s2);
+    
+    let intersection = 0;
+    b1.forEach(b => {
+      if (b2.has(b)) intersection++;
+    });
+
+    return (2 * intersection) / (b1.size + b2.size);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        const parsedSheets = workbook.SheetNames.map(name => {
+          const sheet = workbook.Sheets[name];
+          const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
+          return { name, rows };
+        });
+
+        setWorkbookData({ filename: file.name, sheets: parsedSheets });
+        setWizardStep(2);
+      } catch (error: any) {
+        setToast({ message: `Gagal membaca file Excel: ${error.message}`, type: 'error' });
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  // Auto-map sheet names to database classes when workbook data changes
+  useEffect(() => {
+    if (!workbookData) return;
+
+    const uniqueDbClasses = Array.from(new Set(students.map(s => s.className).filter(c => c && c !== 'Unknown'))).sort();
+
+    const initialMappings: SheetMapping[] = workbookData.sheets.map(sheet => {
+      const normalizedSheetName = sheet.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      let bestClassMatch = uniqueDbClasses[0] || '';
+      let bestSimilarity = 0;
+
+      for (const dbClass of uniqueDbClasses) {
+        const normalizedDb = dbClass.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        if (normalizedDb === normalizedSheetName) {
+          bestClassMatch = dbClass;
+          bestSimilarity = 1.0;
+          break;
+        }
+        const sim = getStringSimilarity(normalizedDb, normalizedSheetName);
+        if (sim > bestSimilarity) {
+          bestSimilarity = sim;
+          bestClassMatch = dbClass;
+        }
+      }
+
+      const { headerRowIndex, nameColIndex, scoreColIndex } = detectColumns(sheet.rows);
+
+      return {
+        sheetName: sheet.name,
+        dbClassName: bestClassMatch,
+        headerRow: headerRowIndex,
+        nameCol: nameColIndex,
+        scoreCol: scoreColIndex,
+        enabled: true
+      };
+    });
+
+    setSheetMappings(initialMappings);
+  }, [workbookData, students]);
+
+  const generateStudentMatches = () => {
+    if (!workbookData) return;
+
+    const records: MatchedRecord[] = [];
+
+    sheetMappings.forEach(mapping => {
+      if (!mapping.enabled) return;
+
+      const sheet = workbookData.sheets.find(s => s.name === mapping.sheetName);
+      if (!sheet) return;
+
+      const classStudents = students.filter(s => s.className === mapping.dbClassName);
+
+      for (let i = mapping.headerRow + 1; i < sheet.rows.length; i++) {
+        const row = sheet.rows[i];
+        if (!row || row.length === 0) continue;
+
+        const rawName = String(row[mapping.nameCol] || '').trim();
+        if (!rawName || rawName === 'undefined') continue;
+
+        const rawScoreVal = row[mapping.scoreCol];
+        let score = 0;
+        if (typeof rawScoreVal === 'number') {
+          score = rawScoreVal;
+        } else {
+          score = parseFloat(String(rawScoreVal || '').trim()) || 0;
+        }
+        score = Math.max(0, Math.min(100, score));
+
+        let bestMatchName = '';
+        let maxSim = 0;
+
+        classStudents.forEach(dbStudent => {
+          const sim = getStringSimilarity(rawName, dbStudent.name);
+          if (sim > maxSim) {
+            maxSim = sim;
+            bestMatchName = dbStudent.name;
+          }
+        });
+
+        let status: 'perfect' | 'fuzzy' | 'unmatched' = 'unmatched';
+        let action: 'match' | 'create_new' | 'skip' = 'create_new';
+        let matchedName = '';
+
+        if (maxSim === 1.0 || rawName.toLowerCase() === bestMatchName.toLowerCase()) {
+          status = 'perfect';
+          action = 'match';
+          matchedName = bestMatchName;
+        } else if (maxSim >= 0.70) {
+          status = 'fuzzy';
+          action = 'match';
+          matchedName = bestMatchName;
+        } else {
+          status = 'unmatched';
+          action = 'create_new';
+          matchedName = '';
+        }
+
+        records.push({
+          id: `${mapping.sheetName}_${i}_${rawName}`,
+          excelName: rawName,
+          score,
+          sheetName: mapping.sheetName,
+          className: mapping.dbClassName,
+          matchedName,
+          action,
+          similarity: maxSim,
+          status
+        });
+      }
+    });
+
+    if (records.length === 0) {
+      setToast({ message: 'Tidak ada data siswa yang ditemukan untuk diimport.', type: 'error' });
+      return;
+    }
+
+    setMatchedRecords(records);
+    setWizardStep(3);
+  };
+
+  const handleSaveImport = async () => {
     try {
       setIsSubmitting(true);
-      const res = await fetch('/api/grademaster/data-center/manual-score', {
+      const payload = {
+        subject: importMeta.subject,
+        examType: importMeta.examType,
+        academicYear: importMeta.academicYear,
+        records: matchedRecords.map(r => ({
+          name: r.excelName,
+          matchedName: r.action === 'match' ? r.matchedName : '',
+          className: r.className,
+          score: r.score,
+          action: r.action
+        }))
+      };
+
+      const res = await fetch('/api/grademaster/data-center/import-scores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-           name: manualData.name,
-           className: manualData.className,
-           subject: manualData.subject,
-           score: Number(manualData.score)
-        })
+        body: JSON.stringify(payload)
       });
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error(data.error || 'Gagal menyimpan data import');
+
       setToast({ message: data.message, type: 'success' });
-      setIsManualScore(false);
-      setManualData({ name: '', className: '', subject: '', score: '' });
+      setIsExcelImport(false);
+      setWorkbookData(null);
+      setWizardStep(1);
+      setMatchedRecords([]);
+      setSheetMappings([]);
       fetchStudents();
     } catch (err: any) {
       setToast({ message: err.message, type: 'error' });
@@ -408,11 +656,14 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
                   </button>
                )}
                <button 
-                 onClick={() => setIsManualScore(true)}
-                 className="px-4 py-3 bg-amber-500/10 text-amber-500 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all flex items-center gap-2 border border-amber-500/20 active:scale-95"
-               >
-                  <Edit2 size={16} /> Input Manual
-               </button>
+                  onClick={() => {
+                    setIsExcelImport(true);
+                    setWizardStep(1);
+                  }}
+                  className="px-4 py-3 bg-amber-500/10 text-amber-500 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all flex items-center gap-2 border border-amber-500/20 active:scale-95"
+                >
+                   <Edit2 size={16} /> Import Excel
+                </button>
                <button 
                  onClick={() => setIsAddingStudent(true)}
                  className="px-4 py-3 bg-primary text-surface-container-lowest rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
@@ -546,39 +797,477 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         </div>
       )}
 
-      {/* Manual Score Modal */}
-      {isManualScore && (
+      {/* Excel Score Import Modal Wizard */}
+      {isExcelImport && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isSubmitting && setIsManualScore(false)} />
-          <div className="bg-surface rounded-3xl p-6 w-full max-w-sm relative z-10 border border-outline-variant/20 shadow-2xl animate-in zoom-in-95 duration-200">
-             <h3 className="text-lg font-headline font-bold text-primary mb-4 flex items-center gap-2"><Edit2 size={20} className="text-amber-500" /> Input Nilai Manual</h3>
-             <form onSubmit={handleManualScore} className="space-y-4">
-               <div>
-                 <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1 mb-1 block">Nama Siswa</label>
-                 <input required type="text" value={manualData.name} onChange={e => setManualData({...manualData, name: e.target.value})} className="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-primary focus:ring-1 focus:ring-tertiary/40 outline-none" placeholder="Masukkan nama (harus sama persis)" />
-               </div>
-               <div className="grid grid-cols-2 gap-3">
-                 <div>
-                   <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1 mb-1 block">Kelas</label>
-                   <input required type="text" value={manualData.className} onChange={e => setManualData({...manualData, className: e.target.value})} className="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-primary focus:ring-1 focus:ring-tertiary/40 outline-none" placeholder="Misal: 10 IPA 1" />
-                 </div>
-                 <div>
-                   <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1 mb-1 block">Nilai</label>
-                   <input required type="number" min="0" max="100" value={manualData.score} onChange={e => setManualData({...manualData, score: e.target.value})} className="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-primary focus:ring-1 focus:ring-tertiary/40 outline-none" placeholder="0-100" />
-                 </div>
-               </div>
-               <div>
-                 <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1 mb-1 block">Mata Pelajaran</label>
-                 <input required type="text" value={manualData.subject} onChange={e => setManualData({...manualData, subject: e.target.value})} className="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-primary focus:ring-1 focus:ring-tertiary/40 outline-none" placeholder="Contoh: Matematika" />
-               </div>
-               
-               <div className="flex gap-3 pt-2">
-                 <button type="button" onClick={() => setIsManualScore(false)} className="flex-1 py-3 bg-surface-container text-on-surface-variant rounded-xl text-xs font-bold uppercase tracking-widest">Batal</button>
-                 <button type="submit" disabled={isSubmitting} className="flex-1 py-3 bg-amber-500 text-white rounded-xl text-xs font-bold uppercase tracking-widest flex justify-center items-center">
-                   {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Inject Nilai'}
-                 </button>
-               </div>
-             </form>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isSubmitting && wizardStep === 1 && setIsExcelImport(false)} />
+          <div className={`bg-surface rounded-3xl p-6 w-full relative z-10 border border-outline-variant/20 shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] transition-all duration-300 ${
+            wizardStep === 3 ? 'max-w-4xl' : wizardStep === 2 ? 'max-w-2xl' : 'max-w-md'
+          }`}>
+            
+            {/* Header */}
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-outline-variant/10">
+              <div>
+                <h3 className="text-lg font-headline font-bold text-primary flex items-center gap-2">
+                  <Database size={20} className="text-amber-500" /> Import Nilai Excel
+                </h3>
+                <p className="text-xs text-on-surface-variant/70 mt-0.5">
+                  {wizardStep === 1 && 'Langkah 1: Upload File & Metadata'}
+                  {wizardStep === 2 && 'Langkah 2: Pemetaan Kelas & Kolom'}
+                  {wizardStep === 3 && 'Langkah 3: Pencocokan Data Siswa'}
+                  {wizardStep === 4 && 'Langkah 4: Ringkasan & Konfirmasi'}
+                </p>
+              </div>
+              <button 
+                onClick={() => !isSubmitting && setIsExcelImport(false)}
+                className="p-1.5 hover:bg-surface-container rounded-full text-on-surface-variant transition-colors"
+                disabled={isSubmitting}
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+
+            {/* Step Content */}
+            <div className="flex-1 overflow-y-auto pr-1">
+              
+              {/* STEP 1: UPLOAD & META */}
+              {wizardStep === 1 && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1 mb-1 block">Mata Pelajaran</label>
+                    <input 
+                      required 
+                      type="text" 
+                      value={importMeta.subject} 
+                      onChange={e => setImportMeta({...importMeta, subject: e.target.value})} 
+                      className="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-primary focus:ring-1 focus:ring-amber-500/40 outline-none" 
+                      placeholder="Contoh: Matematika, Fisika..." 
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1 mb-1 block">Jenis Ujian</label>
+                      <select 
+                        value={importMeta.examType} 
+                        onChange={e => setImportMeta({...importMeta, examType: e.target.value})} 
+                        className="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-primary focus:ring-1 focus:ring-amber-500/40 outline-none"
+                      >
+                        <option value="UTS">UTS</option>
+                        <option value="UAS">UAS</option>
+                        <option value="PAS">PAS</option>
+                        <option value="PAT">PAT</option>
+                        <option value="QUIZ">Kuis</option>
+                        <option value="MANUAL">Tugas Manual</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1 mb-1 block">Tahun Ajaran</label>
+                      <input 
+                        required 
+                        type="text" 
+                        value={importMeta.academicYear} 
+                        onChange={e => setImportMeta({...importMeta, academicYear: e.target.value})} 
+                        className="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-primary focus:ring-1 focus:ring-amber-500/40 outline-none" 
+                        placeholder="2025/2026" 
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1 mb-1 block">File Excel</label>
+                    <div className="border-2 border-dashed border-outline-variant/30 rounded-2xl p-8 text-center bg-surface-container-lowest hover:border-amber-500/50 transition-colors relative group">
+                      <input 
+                        type="file" 
+                        accept=".xlsx, .xls, .csv" 
+                        onChange={handleFileChange} 
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                        disabled={!importMeta.subject}
+                      />
+                      <div className="flex flex-col items-center gap-2 pointer-events-none">
+                        <Upload size={32} className="text-on-surface-variant/40 group-hover:text-amber-500 transition-colors" />
+                        <p className="text-xs font-bold text-primary">Pilih file atau seret kemari</p>
+                        <p className="text-[10px] text-on-surface-variant/60">Mendukung format .xlsx, .xls, .csv</p>
+                      </div>
+                    </div>
+                    {!importMeta.subject && (
+                      <p className="text-[10px] text-amber-500 mt-1 pl-1 font-medium flex items-center gap-1">
+                        <Info size={10} /> Isi nama mata pelajaran terlebih dahulu untuk membuka upload file.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2: SHEET & COLUMN MAPPING */}
+              {wizardStep === 2 && workbookData && (
+                <div className="space-y-6">
+                  <div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-4 flex gap-3 text-amber-600">
+                    <Info size={18} className="shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider">Pemetaan Lembar Kerja (Sheet)</h4>
+                      <p className="text-[10px] leading-relaxed mt-0.5 text-on-surface-variant/80">
+                        Setiap sheet akan mewakili satu kelas. Tentukan kelas database dan kolom mana yang berisi nama siswa serta nilai.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 max-h-[45vh] overflow-y-auto pr-1">
+                    {sheetMappings.map((mapping, idx) => {
+                      const sheet = workbookData.sheets.find(s => s.name === mapping.sheetName);
+                      const columns = sheet && sheet.rows[mapping.headerRow] 
+                        ? sheet.rows[mapping.headerRow].map((col, cIdx) => ({ label: String(col || `Kolom ${cIdx + 1}`), val: cIdx }))
+                        : [];
+                      
+                      const uniqueDbClasses = Array.from(new Set(students.map(s => s.className).filter(c => c && c !== 'Unknown'))).sort();
+
+                      return (
+                        <div key={mapping.sheetName} className={`p-4 rounded-2xl border transition-all ${
+                          mapping.enabled 
+                            ? 'bg-surface-container border-outline-variant/30 shadow-sm' 
+                            : 'bg-surface-container/30 border-outline-variant/10 opacity-60'
+                        }`}>
+                          <div className="flex items-center justify-between mb-3">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={mapping.enabled} 
+                                onChange={e => {
+                                  const updated = [...sheetMappings];
+                                  updated[idx].enabled = e.target.checked;
+                                  setSheetMappings(updated);
+                                }}
+                                className="rounded text-amber-500 focus:ring-amber-500"
+                              />
+                              <span className="font-bold text-sm text-primary">Sheet: {mapping.sheetName}</span>
+                            </label>
+                          </div>
+
+                          {mapping.enabled && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <div>
+                                <label className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest block mb-1">Kelas Database</label>
+                                <select 
+                                  value={mapping.dbClassName} 
+                                  onChange={e => {
+                                    const updated = [...sheetMappings];
+                                    updated[idx].dbClassName = e.target.value;
+                                    setSheetMappings(updated);
+                                  }}
+                                  className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-xl px-3 py-2.5 text-xs text-primary focus:ring-1 focus:ring-amber-500/40 outline-none"
+                                >
+                                  {uniqueDbClasses.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest block mb-1">Kolom Nama</label>
+                                <select 
+                                  value={mapping.nameCol} 
+                                  onChange={e => {
+                                    const updated = [...sheetMappings];
+                                    updated[idx].nameCol = Number(e.target.value);
+                                    setSheetMappings(updated);
+                                  }}
+                                  className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-xl px-3 py-2.5 text-xs text-primary focus:ring-1 focus:ring-amber-500/40 outline-none"
+                                >
+                                  {columns.map(col => <option key={col.val} value={col.val}>{col.label}</option>)}
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest block mb-1">Kolom Nilai</label>
+                                <select 
+                                  value={mapping.scoreCol} 
+                                  onChange={e => {
+                                    const updated = [...sheetMappings];
+                                    updated[idx].scoreCol = Number(e.target.value);
+                                    setSheetMappings(updated);
+                                  }}
+                                  className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-xl px-3 py-2.5 text-xs text-primary focus:ring-1 focus:ring-amber-500/40 outline-none"
+                                >
+                                  {columns.map(col => <option key={col.val} value={col.val}>{col.label}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                          )}
+
+                          {mapping.enabled && sheet && sheet.rows.length > mapping.headerRow + 1 && (
+                            <div className="mt-3 bg-surface-container-lowest rounded-xl p-2.5 border border-outline-variant/10">
+                              <span className="text-[8px] font-bold text-on-surface-variant/50 uppercase tracking-widest block mb-1.5">Pratinjau Data (Baris Pertama)</span>
+                              <div className="space-y-1">
+                                {sheet.rows.slice(mapping.headerRow + 1, mapping.headerRow + 4).map((row, rIdx) => (
+                                  <div key={rIdx} className="flex justify-between items-center text-[10px] text-on-surface-variant">
+                                    <span className="font-semibold">{String(row[mapping.nameCol] || '-')}</span>
+                                    <span className="font-bold text-amber-500">{String(row[mapping.scoreCol] || '0')}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 3: MATCH STUDENTS */}
+              {wizardStep === 3 && (
+                <div className="space-y-4 flex flex-col h-full">
+                  <div className="flex flex-col md:flex-row justify-between gap-3 bg-surface-container-low p-3.5 rounded-2xl border border-outline-variant/10">
+                    <div className="flex flex-wrap gap-1.5">
+                      <button 
+                        onClick={() => setMatchFilterStatus('all')}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+                          matchFilterStatus === 'all' ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant'
+                        }`}
+                      >
+                        Semua ({matchedRecords.length})
+                      </button>
+                      <button 
+                        onClick={() => setMatchFilterStatus('perfect')}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+                          matchFilterStatus === 'perfect' ? 'bg-emerald-500 text-white' : 'bg-surface-container text-on-surface-variant'
+                        }`}
+                      >
+                        Sesuai ({matchedRecords.filter(r => r.status === 'perfect').length})
+                      </button>
+                      <button 
+                        onClick={() => setMatchFilterStatus('fuzzy')}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+                          matchFilterStatus === 'fuzzy' ? 'bg-amber-500 text-white' : 'bg-surface-container text-on-surface-variant'
+                        }`}
+                      >
+                        Saran ({matchedRecords.filter(r => r.status === 'fuzzy').length})
+                      </button>
+                      <button 
+                        onClick={() => setMatchFilterStatus('unmatched')}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+                          matchFilterStatus === 'unmatched' ? 'bg-rose-500 text-white' : 'bg-surface-container text-on-surface-variant'
+                        }`}
+                      >
+                        Tidak Cocok ({matchedRecords.filter(r => r.status === 'unmatched').length})
+                      </button>
+                    </div>
+
+                    <div className="relative w-full md:w-60">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
+                      <input 
+                        type="text" 
+                        placeholder="Cari nama..." 
+                        value={matchSearchQuery}
+                        onChange={e => setMatchSearchQuery(e.target.value)}
+                        className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-xl pl-9 pr-3 py-1.5 text-xs text-primary focus:ring-1 focus:ring-amber-500/40 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border border-outline-variant/20 rounded-2xl overflow-hidden max-h-[40vh] overflow-y-auto shadow-inner bg-surface-container-lowest">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-surface-container text-on-surface-variant text-[9px] font-black uppercase tracking-widest sticky top-0 z-10 border-b border-outline-variant/10">
+                          <th className="p-3">Nama di Excel</th>
+                          <th className="p-3">Nilai</th>
+                          <th className="p-3">Kelas</th>
+                          <th className="p-3">Status Pencocokan</th>
+                          <th className="p-3 text-right">Tindakan</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {matchedRecords
+                          .filter(r => {
+                            const matchSearch = r.excelName.toLowerCase().includes(matchSearchQuery.toLowerCase());
+                            const matchStatus = matchFilterStatus === 'all' || r.status === matchFilterStatus;
+                            return matchSearch && matchStatus;
+                          })
+                          .map((record, rIdx) => {
+                            const classDbStudents = students.filter(s => s.className === record.className);
+                            return (
+                              <tr key={record.id} className="border-b border-outline-variant/5 hover:bg-surface-container/30 transition-colors text-xs text-on-surface-variant">
+                                <td className="p-3 font-semibold text-primary">{record.excelName}</td>
+                                <td className="p-3 font-bold text-amber-500">{record.score}</td>
+                                <td className="p-3">
+                                  <span className="px-1.5 py-0.5 bg-surface-container text-on-surface-variant text-[9px] font-bold rounded uppercase tracking-wider">{record.className}</span>
+                                </td>
+                                <td className="p-3">
+                                  {record.status === 'perfect' && (
+                                    <span className="px-2 py-1 bg-emerald-500/10 text-emerald-600 rounded-lg text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 w-max">
+                                      <Check size={10} strokeWidth={3} /> Sesuai Otomatis
+                                    </span>
+                                  )}
+                                  {record.status === 'fuzzy' && (
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="px-2 py-1 bg-amber-500/10 text-amber-600 rounded-lg text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 w-max">
+                                        <AlertTriangle size={10} /> Saran Cocok ({Math.round(record.similarity * 100)}%)
+                                      </span>
+                                      <span className="text-[9px] text-on-surface-variant/60">Fuzzy: "{record.matchedName}"</span>
+                                    </div>
+                                  )}
+                                  {record.status === 'unmatched' && (
+                                    <span className="px-2 py-1 bg-rose-500/10 text-rose-600 rounded-lg text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 w-max">
+                                      <AlertCircle size={10} /> Tidak Cocok
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="p-3 text-right">
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <select
+                                      value={record.action}
+                                      onChange={e => {
+                                        const actionVal = e.target.value as any;
+                                        const updated = [...matchedRecords];
+                                        const idx = updated.findIndex(r => r.id === record.id);
+                                        updated[idx].action = actionVal;
+                                        if (actionVal === 'match') {
+                                          updated[idx].matchedName = record.matchedName || (classDbStudents[0]?.name || '');
+                                        } else {
+                                          updated[idx].matchedName = '';
+                                        }
+                                        setMatchedRecords(updated);
+                                      }}
+                                      className="bg-surface-container border border-outline-variant/30 rounded-lg px-2 py-1 text-[10px] text-primary focus:ring-1 focus:ring-amber-500/40 outline-none cursor-pointer"
+                                    >
+                                      {record.status !== 'unmatched' && <option value="match">Hubungkan</option>}
+                                      {record.status === 'unmatched' && classDbStudents.length > 0 && <option value="match">Hubungkan manual</option>}
+                                      <option value="create_new">Buat Akun Baru</option>
+                                      <option value="skip">Lewati</option>
+                                    </select>
+
+                                    {record.action === 'match' && (
+                                      <select
+                                        value={record.matchedName}
+                                        onChange={e => {
+                                          const updated = [...matchedRecords];
+                                          const idx = updated.findIndex(r => r.id === record.id);
+                                          updated[idx].matchedName = e.target.value;
+                                          setMatchedRecords(updated);
+                                        }}
+                                        className="bg-surface-container border border-outline-variant/30 rounded-lg px-2 py-1 text-[10px] text-primary focus:ring-1 focus:ring-amber-500/40 outline-none max-w-[150px] cursor-pointer"
+                                      >
+                                        {classDbStudents.map(student => (
+                                          <option key={student.id} value={student.name}>{student.name}</option>
+                                        ))}
+                                      </select>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 4: SUMMARY & CONFIRM */}
+              {wizardStep === 4 && (
+                <div className="space-y-6">
+                  <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-2xl p-4 flex gap-3 text-emerald-600">
+                    <CheckCircle2 size={20} className="shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-bold">Semua data siap diimport!</h4>
+                      <p className="text-xs text-on-surface-variant/80 mt-0.5">
+                        Konfirmasi ringkasan data di bawah ini sebelum menyimpan ke dalam database.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-surface-container rounded-2xl p-4 border border-outline-variant/10 text-center">
+                      <span className="text-[10px] text-on-surface-variant/50 uppercase tracking-widest block font-bold">Mata Pelajaran</span>
+                      <span className="text-base font-bold text-primary mt-1 block">{importMeta.subject}</span>
+                      <span className="px-2 py-0.5 bg-amber-500/15 text-amber-600 rounded text-[9px] font-bold uppercase tracking-wider mt-1.5 inline-block">{importMeta.examType}</span>
+                    </div>
+
+                    <div className="bg-surface-container rounded-2xl p-4 border border-outline-variant/10 text-center">
+                      <span className="text-[10px] text-on-surface-variant/50 uppercase tracking-widest block font-bold">Tahun Ajaran</span>
+                      <span className="text-base font-bold text-primary mt-1 block">{importMeta.academicYear}</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-surface-container rounded-2xl border border-outline-variant/10 overflow-hidden divide-y divide-outline-variant/10">
+                    <div className="flex justify-between items-center p-3.5">
+                      <span className="text-xs text-on-surface-variant font-medium">Total Nilai Diimport</span>
+                      <span className="text-xs font-bold text-emerald-500">{matchedRecords.filter(r => r.action === 'match').length}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3.5">
+                      <span className="text-xs text-on-surface-variant font-medium">Akun Siswa Baru Dibuat</span>
+                      <span className="text-xs font-bold text-amber-500">{matchedRecords.filter(r => r.action === 'create_new').length}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3.5">
+                      <span className="text-xs text-on-surface-variant font-medium">Diabaikan (Skip)</span>
+                      <span className="text-xs font-bold text-on-surface-variant/50">{matchedRecords.filter(r => r.action === 'skip').length}</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-rose-500/5 border border-rose-500/10 rounded-2xl p-4 flex gap-3 text-rose-600">
+                    <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+                    <div>
+                      <h5 className="text-xs font-bold uppercase tracking-wider">Pemberitahuan Database</h5>
+                      <p className="text-[10px] leading-relaxed mt-0.5 text-on-surface-variant/80">
+                        Proses ini akan meng-upsert nilai siswa. Jika nilai siswa di subjek dan ujian tersebut sudah ada di database, nilai lama akan langsung tertimpa.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="flex gap-3 mt-6 pt-4 border-t border-outline-variant/10">
+              {wizardStep > 1 && (
+                <button 
+                  type="button" 
+                  onClick={() => setWizardStep(wizardStep - 1)} 
+                  className="flex-1 py-3 bg-surface-container text-on-surface-variant rounded-xl text-xs font-bold uppercase tracking-widest active:scale-95 transition-all border border-outline-variant/10"
+                  disabled={isSubmitting}
+                >
+                  Kembali
+                </button>
+              )}
+              {wizardStep === 1 && (
+                <button 
+                  type="button" 
+                  onClick={() => setIsExcelImport(false)} 
+                  className="flex-1 py-3 bg-surface-container text-on-surface-variant rounded-xl text-xs font-bold uppercase tracking-widest active:scale-95 transition-all border border-outline-variant/10"
+                >
+                  Batal
+                </button>
+              )}
+              
+              {wizardStep === 2 && (
+                <button 
+                  type="button" 
+                  onClick={generateStudentMatches} 
+                  className="flex-1 py-3 bg-amber-500 text-white rounded-xl text-xs font-bold uppercase tracking-widest active:scale-95 hover:bg-amber-600 transition-all flex justify-center items-center gap-1"
+                >
+                  Lanjut Cocokkan <ChevronRight size={14} />
+                </button>
+              )}
+              {wizardStep === 3 && (
+                <button 
+                  type="button" 
+                  onClick={() => setWizardStep(4)} 
+                  className="flex-1 py-3 bg-amber-500 text-white rounded-xl text-xs font-bold uppercase tracking-widest active:scale-95 hover:bg-amber-600 transition-all flex justify-center items-center gap-1"
+                >
+                  Lanjut Tinjauan <ChevronRight size={14} />
+                </button>
+              )}
+              {wizardStep === 4 && (
+                <button 
+                  type="button" 
+                  onClick={handleSaveImport}
+                  disabled={isSubmitting}
+                  className="flex-1 py-3 bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase tracking-widest active:scale-95 hover:bg-emerald-600 transition-all flex justify-center items-center"
+                >
+                  {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Simpan & Terapkan'}
+                </button>
+              )}
+            </div>
+
           </div>
         </div>
       )}

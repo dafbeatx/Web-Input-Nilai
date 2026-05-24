@@ -348,14 +348,7 @@ export async function submitRemedial(
 
     // Jika melebihi waktu maksimum, otomatis timeout/gagal
     if (isTooLate && status !== 'CHEATED') {
-      studentUpdate.remedial_score = 0;
-      studentUpdate.final_score = 0;
-      studentUpdate.final_score_locked = 0;
-      studentUpdate.remedial_status = 'TIME_UP';
-      attemptUpdate.status = 'TIME_UP';
-      studentUpdate.teacher_reviewed = true;
-      finalFlags.push({ event: 'TIMEOUT_BYPASS', severity: 'HIGH', points: 30, timestamp: Date.now() });
-      attemptUpdate.risk_flags = finalFlags;
+      throw new Error("Score calculation timed out");
     } else if (explicitlyBlocked) {
       // Manual/Automatic lockout triggered (e.g. 3 strikes)
       attemptUpdate.status = 'CHEATED';
@@ -433,6 +426,31 @@ export async function submitRemedial(
 
   // ── FINALIZATION: Transactional Update (Attempt + Student) ──
   
+  const calculatedScore = studentUpdate.final_score as number | undefined;
+  const remedialScore = studentUpdate.remedial_score as number | undefined;
+  const originalScore = (student.original_score || student.final_score) as number | undefined;
+
+  const finalScore =
+     calculatedScore ??
+     remedialScore ??
+     originalScore ??
+     0;
+
+  console.log({
+     originalScore,
+     remedialScore,
+     calculatedScore,
+     finalScore
+  });
+
+  if (finalScore === null || finalScore === undefined) {
+     throw new Error("Final score missing");
+  }
+
+  // Ensure final_score is never null before insert/update
+  studentUpdate.final_score = finalScore;
+  studentUpdate.final_score_locked = finalScore;
+
   const result = await withRetry(async () => {
     try {
       const { data, error } = await supabase.rpc('finalize_remedial_attempt', {
@@ -626,8 +644,26 @@ export async function finalizeRemedial(
   if (student.is_cheated) throw new Error('Siswa curang, nilai sudah di 0');
   if (!student.teacher_reviewed) throw new Error('Guru belum mengoreksi nilai remedial');
 
-  const remedialResult = Math.min(student.essay_score_final || student.remedial_score || 0, sessionKkm);
-  const finalScore = Math.max(student.original_score || student.final_score || 0, remedialResult);
+  const calculatedScore = Math.min(student.essay_score_final || student.remedial_score || 0, sessionKkm);
+  const remedialScore = student.remedial_score;
+  const originalScore = student.original_score || student.final_score;
+
+  const finalScore =
+     calculatedScore ??
+     remedialScore ??
+     originalScore ??
+     0;
+
+  console.log({
+     originalScore,
+     remedialScore,
+     calculatedScore,
+     finalScore
+  });
+
+  if (finalScore === null || finalScore === undefined) {
+     throw new Error("Final score missing");
+  }
 
   const { error } = await supabase
     .from('gm_students')
