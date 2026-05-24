@@ -249,7 +249,7 @@ export default function RemedialDashboardLayer({
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 pt-20 pb-32 px-4 flex flex-col gap-5 max-w-lg mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <main className="flex-1 pt-20 pb-32 px-4 flex flex-col gap-5 max-w-5xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
         
         {/* Editorial Header & Session Picker */}
         <section className="flex flex-col gap-4">
@@ -288,7 +288,7 @@ export default function RemedialDashboardLayer({
           </div>
           
           {/* Advanced Filters Grid */}
-          <div className="grid grid-cols-2 gap-2 relative">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 relative">
             {[
               { label: 'Kelas', value: displayClass },
               { label: 'Tahun', value: academicYear.replace('20', '') },
@@ -333,9 +333,9 @@ export default function RemedialDashboardLayer({
         </div>
 
         {/* Student List Section */}
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           {!activeSessionId ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-outline-variant/30 rounded-3xl bg-surface-container-lowest">
+            <div className="lg:col-span-2 flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-outline-variant/30 rounded-3xl bg-surface-container-lowest">
                <div className="w-16 h-16 rounded-3xl bg-surface-container-high text-on-surface-variant flex items-center justify-center mb-6">
                  <span className="material-symbols-outlined text-4xl">inventory_2</span>
                </div>
@@ -345,7 +345,7 @@ export default function RemedialDashboardLayer({
                </p>
             </div>
           ) : remedialStudents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="lg:col-span-2 flex flex-col items-center justify-center py-16 text-center">
                <div className="relative mb-6">
                 <div className="absolute inset-0 bg-tertiary/5 blur-[60px] rounded-full scale-150"></div>
                 <div className="relative h-20 w-20 bg-surface-container-high rounded-full flex items-center justify-center border border-outline-variant/10">
@@ -543,8 +543,8 @@ export default function RemedialDashboardLayer({
 
       {/* Sticky Bottom Actions */}
       <div className="fixed bottom-0 w-full z-40 px-6 pb-6 pt-4 bg-gradient-to-t from-surface via-surface/90 to-transparent pointer-events-none">
-         <div className="max-w-lg mx-auto flex flex-col gap-3 pointer-events-auto">
-            <div className="flex gap-3">
+         <div className="max-w-5xl mx-auto flex flex-col md:flex-row gap-3 pointer-events-auto items-center">
+            <div className="flex gap-3 w-full md:w-auto flex-1">
               <button 
                 onClick={() => setIsEditing(true)}
                 disabled={!activeSessionId}
@@ -568,7 +568,7 @@ export default function RemedialDashboardLayer({
             </div>
             <button 
               onClick={onBack}
-              className="w-full py-2 text-on-surface-variant/50 hover:text-primary transition-colors text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2"
+              className="w-full md:w-auto px-6 py-4 text-on-surface-variant/70 hover:text-primary transition-colors text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 bg-surface-container hover:bg-surface-container-high rounded-2xl"
             >
                <span className="material-symbols-outlined text-sm">arrow_back</span>
                Menu Utama
