@@ -66,6 +66,9 @@ export default function DashboardLayer({
   const [similarityReports, setSimilarityReports] = useState<any[] | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isEditingScore, setIsEditingScore] = useState<string | null>(null);
+  const [aiInsights, setAiInsights] = useState<any>(null);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!studentClass) return;
@@ -81,6 +84,48 @@ export default function DashboardLayer({
       })
       .catch(() => {});
   }, [studentClass, academicYear]);
+
+  // Restore cached AI insights
+  useEffect(() => {
+    if (typeof window === 'undefined' || !sessionId) return;
+    const cached = sessionStorage.getItem(`gm_ai_insights_${sessionId}`);
+    if (cached) {
+      try {
+        setAiInsights(JSON.parse(cached));
+      } catch {
+        sessionStorage.removeItem(`gm_ai_insights_${sessionId}`);
+      }
+    }
+  }, [sessionId]);
+
+  const handleGenerateAIInsights = async () => {
+    if (!sessionId) return;
+    setIsLoadingInsights(true);
+    setInsightsError(null);
+    try {
+      const res = await fetch('/api/grademaster/ai-insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionName,
+          subject,
+          studentClass,
+          kkm,
+          gradedStudents,
+          analytics
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal menghasilkan analisis AI');
+      
+      setAiInsights(data.insights);
+      sessionStorage.setItem(`gm_ai_insights_${sessionId}`, JSON.stringify(data.insights));
+    } catch (err: any) {
+      setInsightsError(err.message || 'Gagal menganalisis data');
+    } finally {
+      setIsLoadingInsights(false);
+    }
+  };
 
   const handleDeleteStudent = async (name: string) => {
     const student = gradedStudents.find(s => s.name === name);
@@ -512,6 +557,137 @@ export default function DashboardLayer({
                 <div className="mt-6">
                    <InsightPanel insights={analytics.insights} />
                 </div>
+
+                {/* AI Insights Section */}
+                {isAdmin && (
+                  <div className="mt-8 pt-8 border-t border-outline-variant">
+                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div className="flex items-center gap-3">
+                           <div className="p-2.5 bg-tertiary/10 rounded-xl text-tertiary border border-tertiary/20">
+                              <Cpu size={20} className={isLoadingInsights ? 'animate-spin' : ''} />
+                           </div>
+                           <div>
+                              <h4 className="font-headline font-bold text-base text-primary uppercase tracking-tight">AI Teacher Insights</h4>
+                              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Rekomendasi pedagogis otomatis oleh Llama 3.3</p>
+                           </div>
+                        </div>
+                        <button
+                          onClick={handleGenerateAIInsights}
+                          disabled={isLoadingInsights || gradedStudents.length === 0}
+                          className="px-4 py-2.5 bg-tertiary text-on-tertiary hover:scale-105 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest rounded-xl disabled:opacity-40 flex items-center gap-2 shadow-lg shadow-tertiary/20"
+                        >
+                          {isLoadingInsights ? (
+                             <>
+                               <Loader2 size={12} className="animate-spin" />
+                               Menganalisis...
+                             </>
+                          ) : aiInsights ? (
+                             <>
+                               <RefreshCcw size={12} />
+                               Analisis Ulang
+                             </>
+                          ) : (
+                             <>
+                               <Target size={12} />
+                               Mulai Analisis AI
+                             </>
+                          )}
+                        </button>
+                     </div>
+
+                     {/* Error State */}
+                     {insightsError && (
+                       <div className="p-4 bg-error/5 border border-error/20 rounded-2xl flex items-center gap-3 text-error text-xs font-bold mb-6">
+                          <AlertCircle size={16} className="shrink-0" />
+                          <span>{insightsError}</span>
+                       </div>
+                     )}
+
+                     {/* Loading State */}
+                     {isLoadingInsights && (
+                       <div className="bg-surface-container-high p-8 rounded-3xl border border-outline-variant flex flex-col items-center justify-center text-center gap-3 animate-pulse">
+                          <Loader2 size={32} className="text-tertiary animate-spin" />
+                          <div>
+                            <h5 className="text-xs font-black text-primary uppercase tracking-wider">AI sedang mempelajari data kelas...</h5>
+                            <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">Mengukur deviasi, KKM, dan tingkat kesulitan soal</p>
+                          </div>
+                       </div>
+                     )}
+
+                     {/* Insights Result */}
+                     {aiInsights && !isLoadingInsights && (
+                       <div className="space-y-6 animate-in fade-in duration-500">
+                          {/* Summary Card */}
+                          <div className="bg-gradient-to-r from-tertiary/5 to-primary/5 border border-outline-variant p-5 rounded-3xl relative overflow-hidden">
+                             <div className="absolute top-0 right-0 w-32 h-32 bg-tertiary/5 rounded-bl-full blur-2xl"></div>
+                             <h5 className="text-[10px] font-black text-tertiary uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-sm">psychology</span> Rangkuman Belajar AI
+                             </h5>
+                             <p className="text-xs font-medium text-primary leading-relaxed">{aiInsights.summary}</p>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             {/* Strengths */}
+                             <div className="bg-surface-container-high border border-outline-variant p-5 rounded-3xl">
+                                <h5 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                                   <CheckCircle2 size={14} className="text-emerald-400" /> Kekuatan Belajar Kelas
+                                </h5>
+                                <ul className="space-y-3">
+                                   {aiInsights.strengths?.map((str: string, idx: number) => (
+                                     <li key={idx} className="flex gap-2.5 items-start text-xs font-medium text-on-surface-variant leading-relaxed">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
+                                        <span>{str}</span>
+                                     </li>
+                                   ))}
+                                </ul>
+                             </div>
+
+                             {/* Weaknesses */}
+                             <div className="bg-surface-container-high border border-outline-variant p-5 rounded-3xl">
+                                <h5 className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                                   <AlertCircle size={14} className="text-amber-400" /> Area Evaluasi / Kelemahan
+                                </h5>
+                                <ul className="space-y-3">
+                                   {aiInsights.weaknesses?.map((weak: string, idx: number) => (
+                                     <li key={idx} className="flex gap-2.5 items-start text-xs font-medium text-on-surface-variant leading-relaxed">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1.5" />
+                                        <span>{weak}</span>
+                                     </li>
+                                   ))}
+                                </ul>
+                             </div>
+                          </div>
+
+                          {/* Recommendations */}
+                          <div className="bg-surface-container-high border border-outline-variant p-5 rounded-3xl">
+                             <h5 className="text-[10px] font-black text-primary uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                                <Target size={14} className="text-primary" /> Rekomendasi Aksi Tindakan Guru
+                             </h5>
+                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                {aiInsights.recommendations?.map((rec: string, idx: number) => (
+                                  <div key={idx} className="p-4 rounded-2xl bg-surface-container-low border border-white/[0.02] flex flex-col gap-2">
+                                     <div className="w-7 h-7 bg-primary/10 text-primary rounded-lg flex items-center justify-center border border-primary/20 font-black text-xs">
+                                        {idx + 1}
+                                     </div>
+                                     <p className="text-[11px] font-bold text-on-surface-variant leading-relaxed">{rec}</p>
+                                  </div>
+                                ))}
+                             </div>
+                          </div>
+                       </div>
+                     )}
+
+                     {!aiInsights && !isLoadingInsights && (
+                       <div className="p-8 bg-surface-container-low border-2 border-dashed border-outline-variant/30 rounded-3xl flex flex-col items-center justify-center text-center">
+                          <span className="material-symbols-outlined text-4xl text-on-surface-variant/30 mb-4">analytics</span>
+                          <h5 className="text-xs font-black text-primary uppercase tracking-wider">Belum Ada Analisis AI</h5>
+                          <p className="text-[10px] text-on-surface-variant/60 font-bold uppercase tracking-widest mt-1 max-w-xs leading-relaxed">
+                             Ketuk tombol "Mulai Analisis AI" di atas untuk men-generasi laporan rekomendasi pembelajaran otomatis.
+                          </p>
+                       </div>
+                     )}
+                  </div>
+                )}
              </div>
           </section>
         )}
