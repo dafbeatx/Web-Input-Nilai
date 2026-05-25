@@ -690,26 +690,26 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
             4: { halign: 'center', cellWidth: 25 }
           }
         });
-        behaviorTableEndY = (doc as any).lastAutoTable.finalY + 12;
+        behaviorTableEndY = (doc as any).lastAutoTable.finalY + 7;
       } else {
         doc.setFont("Helvetica", "normal");
         doc.setFontSize(10);
         doc.setTextColor(100, 100, 100);
         doc.text('Catatan perilaku bersih — Tidak ada pelanggaran kedisiplinan tercatat.', 15, 87);
         doc.setTextColor(0, 0, 0);
-        behaviorTableEndY = 97;
+        behaviorTableEndY = 95;
       }
 
       // 2. Ringkasan Evaluasi
       doc.setFont("Helvetica", "bold");
-      doc.setFontSize(12);
+      doc.setFontSize(11);
       doc.setTextColor(0, 0, 0);
       doc.text('Ringkasan Evaluasi', 15, behaviorTableEndY);
       
       // Horizontal separator line
       doc.setDrawColor(200, 200, 200);
       doc.setLineWidth(0.2);
-      doc.line(15, behaviorTableEndY + 3, 195, behaviorTableEndY + 3);
+      doc.line(15, behaviorTableEndY + 2, 195, behaviorTableEndY + 2);
 
       let evalText = '';
       const violations = (student.behaviorLogs || []).filter(log => log.points > 0);
@@ -728,21 +728,21 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         }
       }
 
-      // Check if evaluation text overflows the page. If it starts too low (Y > 230), add page first
-      if (behaviorTableEndY + 8 > 230) {
+      // Check if evaluation text overflows the page. If it starts too low (Y > 240), add page first
+      if (behaviorTableEndY + 5 > 240) {
         doc.addPage();
         doc.rect(10, 10, 190, 277);
         behaviorTableEndY = 20; // reset start coordinate on the new page
       }
 
       doc.setFont("Helvetica", "normal");
-      doc.setFontSize(10);
+      doc.setFontSize(9.5);
       doc.setTextColor(50, 50, 50);
       
       const splitEval = doc.splitTextToSize(evalText, 180);
-      doc.text(splitEval, 15, behaviorTableEndY + 8);
+      doc.text(splitEval, 15, behaviorTableEndY + 5);
       
-      const evalEndY = behaviorTableEndY + 8 + (splitEval.length * 5) + 12;
+      const evalEndY = behaviorTableEndY + 5 + (splitEval.length * 4.5) + 6;
 
       const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
       const now = new Date();
@@ -754,8 +754,8 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       const dateTimeStr = `${day} ${month} ${year} • ${hours}:${minutes} WIB`;
 
       // Check page overflow for signature block and footer
-      let signatureY = evalEndY + 6;
-      if (signatureY > 250) {
+      let signatureY = evalEndY + 4;
+      if (signatureY > 255) {
         doc.addPage();
         doc.rect(10, 10, 190, 277);
         signatureY = 25;
@@ -768,22 +768,22 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       
       const signatureX = 135;
       doc.text(`Bogor, ${day} ${month} ${year}`, signatureX, signatureY);
-      doc.text('Pembimbing OSIS,', signatureX, signatureY + 5);
+      doc.text('Pembimbing OSIS,', signatureX, signatureY + 4);
 
       // Draw uploaded signature if available
       if (signatureBase64) {
         try {
-          doc.addImage(signatureBase64, 'PNG', signatureX + 2, signatureY + 7, 35, 12);
+          doc.addImage(signatureBase64, 'PNG', signatureX + 2, signatureY + 5, 35, 10);
         } catch (imgErr) {
           console.error("Failed to add signature image to PDF:", imgErr);
         }
       }
       
       doc.setFont("Helvetica", "bold");
-      doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + 21);
+      doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + 16);
       
       doc.setLineWidth(0.2);
-      doc.line(signatureX, signatureY + 22, signatureX + 50, signatureY + 22);
+      doc.line(signatureX, signatureY + 17, signatureX + 50, signatureY + 17);
 
       // Bottom footer section (fixed at the bottom of the page)
       const footerY = 278;
@@ -1057,26 +1057,26 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
               4: { halign: 'center', cellWidth: 25 }
             }
           });
-          behaviorTableEndY = (doc as any).lastAutoTable.finalY + 12;
+          behaviorTableEndY = (doc as any).lastAutoTable.finalY + 7;
         } else {
           doc.setFont("Helvetica", "normal");
           doc.setFontSize(10);
           doc.setTextColor(100, 100, 100);
           doc.text('Catatan perilaku bersih — Tidak ada pelanggaran kedisiplinan tercatat.', 15, 87);
           doc.setTextColor(0, 0, 0);
-          behaviorTableEndY = 97;
+          behaviorTableEndY = 95;
         }
 
         // 2. Ringkasan Evaluasi
         doc.setFont("Helvetica", "bold");
-        doc.setFontSize(12);
+        doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.text('Ringkasan Evaluasi', 15, behaviorTableEndY);
         
         // Horizontal separator line
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.2);
-        doc.line(15, behaviorTableEndY + 3, 195, behaviorTableEndY + 3);
+        doc.line(15, behaviorTableEndY + 2, 195, behaviorTableEndY + 2);
 
         let evalText = '';
         const violations = (student.behaviorLogs || []).filter(log => log.points > 0);
@@ -1095,21 +1095,21 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
           }
         }
 
-        // Check if evaluation text overflows the page. If it starts too low (Y > 230), add page first
-        if (behaviorTableEndY + 8 > 230) {
+        // Check if evaluation text overflows the page. If it starts too low (Y > 240), add page first
+        if (behaviorTableEndY + 5 > 240) {
           doc.addPage();
           doc.rect(10, 10, 190, 277);
           behaviorTableEndY = 20; // reset start coordinate on the new page
         }
 
         doc.setFont("Helvetica", "normal");
-        doc.setFontSize(10);
+        doc.setFontSize(9.5);
         doc.setTextColor(50, 50, 50);
         
         const splitEval = doc.splitTextToSize(evalText, 180);
-        doc.text(splitEval, 15, behaviorTableEndY + 8);
+        doc.text(splitEval, 15, behaviorTableEndY + 5);
         
-        const evalEndY = behaviorTableEndY + 8 + (splitEval.length * 5) + 12;
+        const evalEndY = behaviorTableEndY + 5 + (splitEval.length * 4.5) + 6;
 
         const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
         const now = new Date();
@@ -1121,8 +1121,8 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         const dateTimeStr = `${day} ${month} ${year} • ${hours}:${minutes} WIB`;
 
         // Check page overflow for signature block and footer
-        let signatureY = evalEndY + 6;
-        if (signatureY > 250) {
+        let signatureY = evalEndY + 4;
+        if (signatureY > 255) {
           doc.addPage();
           doc.rect(10, 10, 190, 277);
           signatureY = 25;
@@ -1135,22 +1135,22 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         
         const signatureX = 135;
         doc.text(`Bogor, ${day} ${month} ${year}`, signatureX, signatureY);
-        doc.text('Pembimbing OSIS,', signatureX, signatureY + 5);
+        doc.text('Pembimbing OSIS,', signatureX, signatureY + 4);
 
         // Draw uploaded signature if available
         if (signatureBase64) {
           try {
-            doc.addImage(signatureBase64, 'PNG', signatureX + 2, signatureY + 7, 35, 12);
+            doc.addImage(signatureBase64, 'PNG', signatureX + 2, signatureY + 5, 35, 10);
           } catch (imgErr) {
             console.error("Failed to add signature image to PDF:", imgErr);
           }
         }
         
         doc.setFont("Helvetica", "bold");
-        doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + 21);
+        doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + 16);
         
         doc.setLineWidth(0.2);
-        doc.line(signatureX, signatureY + 22, signatureX + 50, signatureY + 22);
+        doc.line(signatureX, signatureY + 17, signatureX + 50, signatureY + 17);
 
         // Bottom footer section (fixed at the bottom of the page)
         const footerY = 278;
