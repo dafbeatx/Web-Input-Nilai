@@ -331,6 +331,9 @@ export async function submitRemedial(
     if (isTooFast && status === 'COMPLETED') {
       finalFlags.push({ event: 'FAST_COMPLETION', severity: 'CRITICAL', points: 50, timestamp: Date.now() });
     }
+    if (!hasEnoughEffort && status === 'COMPLETED') {
+      finalFlags.push({ event: 'LOW_EFFORT', severity: 'CRITICAL', points: 50, timestamp: Date.now() });
+    }
     attemptUpdate.risk_flags = finalFlags;
 
     attemptUpdate.essay_score_auto = essayResult.score;

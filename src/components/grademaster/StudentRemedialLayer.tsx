@@ -169,6 +169,7 @@ export default function StudentRemedialLayer({
   const [warningCount, setWarningCount] = useState(0);
   const [tabWarningCount, setTabWarningCount] = useState(0);
   const [clientCheatingFlags, setClientCheatingFlags] = useState<string[]>([]);
+  const [serverCheatingFlags, setServerCheatingFlags] = useState<string[]>([]);
   const hasTriggeredCheatingRef = useRef(false);
   const startedAtRef = useRef<number>(0);
   const isRefreshingRef = useRef(false);
@@ -948,6 +949,7 @@ export default function StudentRemedialLayer({
                   const data = await res.json();
                   if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
                     setStep(data.status as RemedialStep);
+                    if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
                     return;
                   }
                   if (data.status === null) {
@@ -1065,6 +1067,7 @@ export default function StudentRemedialLayer({
           // If server says terminal status, override local state
           if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'TIME_UP', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
             setStep(data.status as RemedialStep);
+            if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
             
             if (['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
               setFinalScore(data.finalScore);
@@ -1190,6 +1193,7 @@ export default function StudentRemedialLayer({
             const data = await res.json();
             if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
               setStep(data.status as RemedialStep);
+              if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
               if (['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) setFinalScore(data.finalScore);
               return;
             }
@@ -2100,7 +2104,12 @@ export default function StudentRemedialLayer({
           }
           
           const finalStatus = data.status || status;
-          if (['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT'].includes(finalStatus)) {
+          if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
+          
+          if (finalStatus === 'FAILED_EFFORT') {
+            setToast({ message: "Sesi selesai: Jawaban dibatalkan karena terdeteksi tidak valid atau terlalu cepat.", type: "error" });
+            setFinalScore(0);
+          } else if (['COMPLETED', 'SUBMITTED'].includes(finalStatus)) {
             setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Selamat, Anda LULUS KKM!", type: "success" });
             const fScore = data.newFinalScore ?? data.final_score ?? 0;
             setFinalScore(fScore);
@@ -2123,7 +2132,8 @@ export default function StudentRemedialLayer({
             // Pastikan UI langsung merender 0
             setFinalScore(0);
           } else if (finalStatus === 'TIMEOUT' || finalStatus === 'TIME_UP') {
-            setFinalScore(0);
+            const fScore = data.newFinalScore ?? data.final_score ?? 0;
+            setFinalScore(fScore);
           }
           setStep(finalStatus as RemedialStep);
           setIsSubmitting(false);
@@ -2453,7 +2463,9 @@ export default function StudentRemedialLayer({
   if (step === 'CHEATED' || step === 'TIMEOUT' || step === 'TIME_UP' || step === 'COMPLETED' || step === 'SUBMITTED' || step === 'FAILED_EFFORT') {
     const isCheat = step === 'CHEATED';
     const isTimeout = step === 'TIMEOUT' || step === 'TIME_UP';
-    const isCompleted = ['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT'].includes(step);
+    const isFailedEffort = step === 'FAILED_EFFORT';
+    const isSuccess = step === 'COMPLETED' || step === 'SUBMITTED';
+    const isCompleted = isSuccess || isFailedEffort;
 
     const getRemainingTimeStr = () => {
       return "Selesai";
@@ -2467,26 +2479,131 @@ export default function StudentRemedialLayer({
 
     return (
       <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4 overflow-y-auto custom-scrollbar">
-        <div className={`absolute inset-0 opacity-20 ${isCheat ? 'bg-rose-500/10' : isTimeout ? 'bg-amber-500/10' : 'bg-emerald-500/10'}`}></div>
+        <div className={`absolute inset-0 opacity-20 ${isCheat ? 'bg-rose-500/10' : (isTimeout || isFailedEffort) ? 'bg-amber-500/10' : 'bg-emerald-500/10'}`}></div>
         
-        <div className={`w-full max-w-xl relative bg-surface premium-shadow backdrop-blur-2xl border rounded-[2.5rem] premium-shadow p-8 md:p-12 text-center animate-in zoom-in-95 duration-700 ${isCheat ? 'border-rose-500/20' : isTimeout ? 'border-amber-500/20' : 'border-emerald-500/20'}`}>
-          <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-${isCheat ? 'rose' : isTimeout ? 'amber' : 'emerald'}-500/50 to-transparent`}></div>
+        <div className={`w-full max-w-xl relative bg-surface premium-shadow backdrop-blur-2xl border rounded-[2.5rem] p-8 md:p-12 text-center animate-in zoom-in-95 duration-700 ${isCheat ? 'border-rose-500/20' : (isTimeout || isFailedEffort) ? 'border-amber-500/20' : 'border-emerald-500/20'}`}>
+          <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-${isCheat ? 'rose' : (isTimeout || isFailedEffort) ? 'amber' : 'emerald'}-500/50 to-transparent`}></div>
           
-          <div className={`w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border ${isCheat ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : isTimeout ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
-            {isCheat ? <ShieldX size={48} /> : isTimeout ? <Clock size={48} /> : <CheckCircle2 size={48} />}
+          <div className={`w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border ${isCheat ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : isTimeout ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : isFailedEffort ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
+            {isCheat ? <ShieldX size={48} /> : isTimeout ? <Clock size={48} /> : isFailedEffort ? <AlertTriangle size={48} /> : <CheckCircle2 size={48} />}
           </div>
           
           <h2 className="text-3xl font-black text-on-surface mb-3 tracking-tight uppercase font-outfit">
-            {isCheat ? 'Diskualifikasi!' : isTimeout ? 'Waktu Berakhir' : 'Sesi Selesai!'}
+            {isCheat ? 'Diskualifikasi!' : isTimeout ? 'Waktu Berakhir' : isFailedEffort ? 'Ujian Ditolak!' : 'Sesi Selesai!'}
           </h2>
           
-          <div className="space-y-4 mb-10">
+          <div className="space-y-6 mb-10 text-left">
             {isCheat ? (
-               <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide">Pelanggaran berat terdeteksi. Skor otomatis diatur menjadi <span className="text-rose-500 font-black">NOL</span>. Silakan hubungi Guru Pengampu.</p>
-            ) : isTimeout ? (
-               <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide">Sesi ditutup otomatis oleh sistem. Jawaban terakhir yang tersimpan akan dievaluasi.</p>
-            ) : (
                <div className="space-y-4">
+                 <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide text-center">
+                   Pelanggaran berat terdeteksi. Skor otomatis diatur menjadi <span className="text-rose-500 font-black">NOL</span>. Silakan hubungi Guru Pengampu.
+                 </p>
+                 <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-5 space-y-3">
+                   <p className="text-[11px] font-black text-rose-400 uppercase tracking-wider mb-2">Riwayat Pelanggaran Keamanan:</p>
+                   <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                     {(serverCheatingFlags.length > 0 ? serverCheatingFlags : clientCheatingFlags).map((flag, idx) => {
+                       let label = flag;
+                       let desc = "";
+                       if (flag === 'TAB_SWITCH' || flag.includes('Meninggalkan halaman') || flag.includes('Tab Switch')) {
+                         label = "Meninggalkan Halaman Ujian (Tab Switch)";
+                         desc = "Membuka tab baru, menekan tombol Home, atau berpindah ke aplikasi lain.";
+                       } else if (flag === 'BACK_PRESS' || flag.includes('tombol kembali')) {
+                         label = "Navigasi Kembali (Back Press)";
+                         desc = "Mencoba menekan tombol kembali pada perangkat browser.";
+                       } else if (flag === 'COPY_ATTEMPT' || flag.includes('menyalin') || flag.includes('copy')) {
+                         label = "Mencoba Menyalin Soal (Copy)";
+                         desc = "Tindakan menyalin teks soal atau jawaban dilarang oleh sistem.";
+                       } else if (flag === 'PASTE_ATTEMPT' || flag.includes('paste')) {
+                         label = "Mencoba Menempel Teks (Paste)";
+                         desc = "Tindakan menempel teks dari luar halaman ujian dibatasi.";
+                       } else if (flag === 'NO_FACE' || flag.includes('Wajah tidak terdeteksi')) {
+                         label = "Wajah Tidak Terdeteksi Kamera";
+                         desc = "Kamera pengawas tidak dapat menemukan wajah Anda di area ujian.";
+                       } else if (flag === 'MULTI_FACE' || flag.includes('lebih dari satu')) {
+                         label = "Deteksi Wajah Ganda";
+                         desc = "Sistem mendeteksi lebih dari satu orang di depan kamera.";
+                       } else if (flag === 'PIP_ACTIVE' || flag.includes('PICTURE-IN-PICTURE')) {
+                         label = "Mode Picture-in-Picture Aktif";
+                         desc = "Menampilkan layar di atas aplikasi lain (PiP/floating window) terdeteksi.";
+                       } else if (flag === 'OVERLAY_INDICATION' || flag.includes('Layer/Overlay')) {
+                         label = "Indikasi Layar Mengambang/Overlay";
+                         desc = "Aplikasi perekam layar atau overlay pihak ketiga terdeteksi aktif.";
+                       } else if (flag === 'FAST_COMPLETION') {
+                         label = "Pengumpulan Terlalu Cepat";
+                         desc = "Ujian diselesaikan dalam waktu kurang dari batas minimal pengerjaan (5 menit).";
+                       } else if (flag === 'LOW_EFFORT') {
+                         label = "Jawaban Kosong atau Asal-asalan";
+                         desc = "Sebagian besar jawaban terdeteksi kosong, terlalu pendek, atau berisi kata acak.";
+                       } else if (flag === 'IDENTICAL_ESSAY' || flag === 'HIGH_ESSAY_SIMILARITY') {
+                         label = "Plagiarisme / Kesamaan Esai Tinggi";
+                         desc = "Jawaban yang dikirim memiliki kemiripan ekstrem dengan siswa lain.";
+                       }
+
+                       return (
+                         <div key={idx} className="p-3 rounded-xl bg-surface-variant/50 border border-outline-variant">
+                           <p className="text-[11px] font-bold text-rose-400 uppercase tracking-tight">{label}</p>
+                           {desc && <p className="text-[10px] text-on-surface-variant font-medium mt-1 leading-normal">{desc}</p>}
+                         </div>
+                       );
+                     })}
+                     {(serverCheatingFlags.length === 0 && clientCheatingFlags.length === 0) && (
+                       <p className="text-xs text-on-surface-variant font-medium text-center">Pelanggaran aturan proctoring ujian terdeteksi secara otomatis oleh sistem.</p>
+                     )}
+                   </div>
+                   <p className="text-[10px] font-bold text-slate-500 pt-3 border-t border-rose-500/10 text-center uppercase tracking-wider">
+                     Sesi dikunci secara permanen
+                   </p>
+                 </div>
+               </div>
+            ) : isTimeout ? (
+               <div className="space-y-4">
+                 <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide text-center">
+                   Sesi ditutup otomatis oleh sistem karena batas waktu habis.
+                 </p>
+                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 space-y-2">
+                   <p className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Informasi Batas Waktu:</p>
+                   <p className="text-xs text-on-surface-variant font-medium leading-relaxed">
+                     Sesi ujian remedial Anda ditutup secara otomatis karena waktu pengerjaan yang ditentukan telah berakhir.
+                   </p>
+                   {finalScore !== null && finalScore > 0 ? (
+                     <div className="mt-3">
+                       <p className="text-[11px] font-bold text-emerald-400 bg-emerald-500/5 p-3 rounded-xl border border-emerald-500/10">
+                         ✓ Jawaban terakhir Anda telah berhasil disimpan dan dinilai secara otomatis oleh Server.
+                       </p>
+                       <div className="mt-3 p-3 bg-surface-variant rounded-xl border border-outline-variant text-center">
+                         <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block mb-1">Skor Akhir</span>
+                         <span className={`text-3xl font-black font-outfit ${finalScore < 70 ? 'text-rose-500' : 'text-emerald-500'}`}>{finalScore}</span>
+                       </div>
+                     </div>
+                   ) : (
+                     <p className="text-[11px] font-bold text-rose-400 mt-2 bg-rose-500/5 p-3 rounded-xl border border-rose-500/10">
+                       ⚠️ Ujian berakhir tanpa adanya jawaban valid yang diisi. Skor akhir diatur menjadi 0.
+                     </p>
+                   )}
+                 </div>
+               </div>
+            ) : isFailedEffort ? (
+               <div className="space-y-4">
+                 <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide text-center">
+                   Ujian remedial Anda ditolak oleh sistem karena tidak memenuhi batas usaha pengerjaan minimal (Anti-Exploit).
+                 </p>
+                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 space-y-3">
+                   <p className="text-[11px] font-black text-amber-400 uppercase tracking-wider mb-1">Penyebab Penolakan Ujian:</p>
+                   <ul className="text-xs text-on-surface-variant font-medium space-y-2 list-disc list-inside">
+                     <li>
+                       <span className="text-amber-500 font-bold">Durasi Minimal:</span> Penginputan remedial membutuhkan fokus dan waktu pengerjaan minimal <span className="font-bold text-white">5 menit</span>.
+                     </li>
+                     <li>
+                       <span className="text-amber-500 font-bold">Kualitas Jawaban:</span> Lebih dari setengah dari jumlah soal essay wajib diisi dengan jawaban sah (minimal 20 karakter, 5 kata unik, dan tidak berisi kata asal-asalan seperti 'tidak tahu', 'kosong', dll).
+                     </li>
+                   </ul>
+                   <p className="text-[11px] font-bold text-on-surface pt-3 border-t border-amber-500/10 text-center leading-normal">
+                     💡 <span className="text-amber-400">Silakan hubungi Guru Pengampu</span> untuk meminta reset sesi ujian jika Anda ingin mengulang dengan benar.
+                   </p>
+                 </div>
+               </div>
+            ) : (
+               <div className="space-y-4 text-center">
                   <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide">Evaluasi mandiri selesai. Data Anda telah disinkronisasi dengan Server Nilai Pusat.</p>
                   <div className="py-6 px-10 bg-surface-variant border border-outline-variant rounded-3xl inline-block">
                     <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] mb-1">Skor Akhir</p>
@@ -2495,14 +2612,14 @@ export default function StudentRemedialLayer({
                     </p>
                   </div>
                   {finalScore !== null && finalScore < 70 && (
-                    <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest bg-rose-500/10 py-2 rounded-full border border-rose-500/20 px-4 inline-block">⚠️ Belum Mencapai KKM (70)</p>
+                    <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest bg-rose-500/10 py-2 rounded-full border border-rose-500/20 px-4 inline-block block mx-auto w-fit">⚠️ Belum Mencapai KKM (70)</p>
                   )}
                </div>
             )}
           </div>
 
           <div className="space-y-4">
-            {isCompleted && (
+            {isSuccess && (
               <>
                  {finalScore !== null && finalScore < 70 ? (
                     <button

@@ -150,6 +150,7 @@ export async function POST(req: NextRequest) {
       studentId: data.id,
       newFinalScore: data.newFinalScore,
       status: data.remedial_status,
+      cheatingFlags: data.cheating_flags,
       subject: data.subject,
       className: data.class_name,
       remedialQuestions: data.remedialQuestions,
