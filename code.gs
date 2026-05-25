@@ -603,7 +603,7 @@ function sendResponse(text) {
 function initSetup() {
   // JALANKAN FUNGSI INI SEKALI DI EDITOR GOOGLE APPS SCRIPT
   // Ganti 'https://(domain-web-anda)' dengan URL web GradeMaster Anda yang asli.
-  PropertiesService.getScriptProperties().setProperty('APP_URL', 'https://(domain-web-anda)');
+  PropertiesService.getScriptProperties().setProperty('APP_URL', 'https://web-input-nilai.vercel.app/');
   Logger.log("APP_URL berhasil disetel!");
 }
 
