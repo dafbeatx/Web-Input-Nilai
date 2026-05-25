@@ -95,24 +95,24 @@ export function getLpsLabel(lps: number): string {
   return 'Perlu Perhatian';
 }
 
-import { calculateHybridEssayScore } from './services/essay-scoring.service';
+import { gradeEssayWithGroq } from './services/groq-scoring.service';
 
 export interface EssayScoreResult {
   score: number;
   details: { similarity: number; score: number }[];
 }
 
-export function calculateEssayScore(
+export async function calculateEssayScore(
   studentAnswers: string[],
-  answerKeys: string[]
-): EssayScoreResult {
-  const hybrid = calculateHybridEssayScore(studentAnswers, answerKeys);
-  // Map to legacy format for backward compatibility
+  answerKeys: string[],
+  questions: string[] = []
+): Promise<EssayScoreResult> {
+  const result = await gradeEssayWithGroq(studentAnswers, answerKeys, questions);
   return {
-    score: hybrid.score,
-    details: hybrid.details.map(d => ({
-      similarity: d.diceScore / 100,
-      score: d.weightedScore,
+    score: result.score,
+    details: result.details.map(d => ({
+      similarity: d.similarity,
+      score: d.score,
     })),
   };
 }

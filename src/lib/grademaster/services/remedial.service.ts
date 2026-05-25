@@ -318,7 +318,8 @@ export async function submitRemedial(
 
     // Essay scoring (server-side only)
     const answerKeys: string[] = session.scoring_config?.remedialAnswerKeys || [];
-    const essayResult = calculateEssayScore(answers, answerKeys);
+    const questions: string[] = session.scoring_config?.remedialQuestions || [];
+    const essayResult = await calculateEssayScore(answers, answerKeys, questions);
 
     // Update attempt
     attemptUpdate.answers = answers;
