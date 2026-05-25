@@ -853,6 +853,17 @@ export default function StudentRemedialLayer({
         localStorage.setItem('gm_visitor_id', visitorId);
       }
 
+      // Prevent spamming Telegram notifications if the student reloads/remounts within 5 minutes
+      const cacheKey = `gm_last_log_${sessionId || 'default'}_${studentName || 'unknown'}`;
+      const lastLogStr = localStorage.getItem(cacheKey);
+      if (lastLogStr) {
+        const lastLogTime = parseInt(lastLogStr, 10);
+        if (Date.now() - lastLogTime < 5 * 60 * 1000) {
+          console.log('[Visitor Log] Throttled client-side visitor tracking to prevent notification spam.');
+          return;
+        }
+      }
+
       try {
         const res = await fetch('/api/grademaster/visitor/log', {
           method: 'POST',
@@ -867,13 +878,16 @@ export default function StudentRemedialLayer({
           })
         });
 
-        if (res.ok && isReturning) {
-          const data = await res.json();
-          // Notify returning visitor as requested "beritahu orangnya"
-          // setToast({ 
-          //   message: `Sistem mendeteksi kehadiran Anda kembali. Pengawasan proctoring tetap aktif. (IP: ${data.ip})`, 
-          //   type: 'success' 
-          // });
+        if (res.ok) {
+          localStorage.setItem(cacheKey, Date.now().toString());
+          if (isReturning) {
+            const data = await res.json();
+            // Notify returning visitor as requested "beritahu orangnya"
+            // setToast({ 
+            //   message: `Sistem mendeteksi kehadiran Anda kembali. Pengawasan proctoring tetap aktif. (IP: ${data.ip})`, 
+            //   type: 'success' 
+            // });
+          }
         }
       } catch (err) {
         console.error('Visitor tracking failed:', err);
