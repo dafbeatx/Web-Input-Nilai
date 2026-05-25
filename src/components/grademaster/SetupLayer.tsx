@@ -125,8 +125,8 @@ export default function SetupLayer(props: SetupLayerProps) {
   const cardClass = "bg-surface premium-shadow backdrop-blur-xl rounded-2xl p-6 premium-shadow border border-outline-variant";
 
   return (
-    <div className="min-h-screen flex items-start justify-center p-4 py-8 lg:py-12 animate-in bg-transparent">
-      <div className="w-full max-w-6xl space-y-8">
+    <main className="min-h-dvh p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto page-pt md:pt-16 pb-24 font-outfit bg-transparent">
+      <div className="w-full space-y-8">
         
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -384,6 +384,6 @@ export default function SetupLayer(props: SetupLayerProps) {
 
         </div>
       </div>
-    </div>
+    </main>
   );
 }

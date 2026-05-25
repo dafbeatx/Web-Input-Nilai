@@ -191,7 +191,7 @@ export default function StudentAccountsLayer({
   const hasPasswords = accounts.some(a => a.password_plain);
 
   return (
-    <div className="min-h-dvh bg-transparent p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto page-pt md:pt-16 pb-24 md:pb-8">
+    <main className="min-h-dvh p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto page-pt md:pt-16 pb-24 font-outfit bg-transparent">
       <header className="mb-6 md:mb-10">
         <button type="button" onClick={onBack} className="flex items-center gap-2 text-on-surface-variant hover:text-[#00b4ff] font-sans text-[13px] font-medium transition-all mb-4 bg-surface-variant px-4 py-2 rounded-xl border border-outline-variant hover:border-[#00b4ff]/20">
           <ArrowLeft size={14} /> Beranda
@@ -346,6 +346,6 @@ export default function StudentAccountsLayer({
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }

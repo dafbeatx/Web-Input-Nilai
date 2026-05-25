@@ -249,7 +249,7 @@ export default function RemedialDashboardLayer({
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 pt-20 pb-32 px-4 flex flex-col gap-5 max-w-5xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <main className="flex-1 pt-20 pb-32 px-4 sm:px-6 lg:px-10 flex flex-col gap-6 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
         
         {/* Editorial Header & Session Picker */}
         <section className="flex flex-col gap-4">
@@ -543,7 +543,7 @@ export default function RemedialDashboardLayer({
 
       {/* Sticky Bottom Actions */}
       <div className="fixed bottom-0 w-full z-40 px-6 pb-6 pt-4 bg-gradient-to-t from-surface via-surface/90 to-transparent pointer-events-none">
-         <div className="max-w-5xl mx-auto flex flex-col md:flex-row gap-3 pointer-events-auto items-center">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 flex flex-col md:flex-row gap-3 pointer-events-auto items-center">
             <div className="flex gap-3 w-full md:w-auto flex-1">
               <button 
                 onClick={() => setIsEditing(true)}

@@ -97,10 +97,10 @@ export default function RemedialManagementLayer({
   const cardClass = "bg-surface premium-shadow backdrop-blur-xl rounded-2xl p-6 border border-outline-variant";
 
   return (
-    <div className="min-h-screen flex items-start justify-center p-4 py-8 lg:py-12 animate-in bg-transparent">
-      <div className="w-full max-w-4xl space-y-8">
-        
-        {/* Header */}
+    <main className="min-h-dvh bg-white p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto page-pt md:pt-16 pb-24 font-outfit">
+      
+      {/* Header */}
+      <header className="mb-8 md:mb-12 animate-in fade-in slide-in-from-top-4 duration-700">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-secondary/10 text-secondary rounded-full text-[10px] font-black uppercase tracking-widest mb-3 border border-secondary/20">
@@ -112,12 +112,15 @@ export default function RemedialManagementLayer({
             </p>
           </div>
         </div>
+      </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {/* LEFT COLUMN */}
+        <div className="space-y-6">
           {/* IDENTIFIKASI UJIAN */}
           <div className={cardClass}>
             <h2 className="flex items-center gap-2 text-sm font-black text-on-surface uppercase tracking-widest mb-6 pb-4 border-b border-outline-variant">
-              <BookOpen className="text-secondary" /> Identifikasi Sesi
+              <BookOpen className="text-secondary" size={18} /> Identifikasi Sesi
             </h2>
             <div className="space-y-5">
               <div>
@@ -163,79 +166,75 @@ export default function RemedialManagementLayer({
             </div>
           </div>
 
-          {/* MATERI REMEDIAL */}
-          <div className={`${cardClass} md:col-span-2`}>
-            <h2 className="flex items-center gap-2 text-sm font-black text-on-surface uppercase tracking-widest mb-6 pb-4 border-b border-outline-variant">
-              <ListTodo className="text-primary" /> Materi Remedial
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className={labelClass} style={{ marginBottom: 0 }}>
-                    <ListTodo size={14} /> Soal Remedial
-                  </label>
-                  <button
-                    onClick={() => setQuestionsInput(handleAutoFormatList(questionsInput))}
-                    className="flex items-center gap-1.5 px-2.5 py-1 bg-surface-variant hover:bg-surface-container-highest text-on-surface-variant hover:text-primary rounded-lg text-[10px] font-bold transition-colors"
-                  >
-                    <Wand2 size={12} /> Auto Format
-                  </button>
-                </div>
-                <textarea
-                  value={questionsInput}
-                  onChange={(e) => setQuestionsInput(e.target.value)}
-                  placeholder={"1. Apa yang dimaksud dengan jaringan komputer?\n2. Sebutkan contoh sistem operasi..."}
-                  rows={8}
-                  className={`${inputClass} resize-y text-sm font-mono`}
-                />
-                <p className="text-[10px] text-on-surface-variant font-medium">
-                  Gunakan format daftar bernomor (1. 2. 3.) untuk hasil terbaik.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className={labelClass} style={{ marginBottom: 0 }}>
-                    <CheckSquare size={14} /> Kunci Jawaban Remedial
-                  </label>
-                  <button
-                    onClick={() => setAnswerKeysInput(handleAutoFormatList(answerKeysInput))}
-                    className="flex items-center gap-1.5 px-2.5 py-1 bg-surface-variant hover:bg-surface-container-highest text-on-surface-variant hover:text-primary rounded-lg text-[10px] font-bold transition-colors"
-                  >
-                    <Wand2 size={12} /> Auto Format
-                  </button>
-                </div>
-                <textarea
-                  value={answerKeysInput}
-                  onChange={(e) => setAnswerKeysInput(e.target.value)}
-                  placeholder={"1. Jaringan komputer adalah...\n2. Windows, Linux, macOS..."}
-                  rows={8}
-                  className={`${inputClass} resize-y text-sm font-mono`}
-                />
-                <p className="text-[10px] text-on-surface-variant font-medium">
-                  Opsional. Sangat disarankan jika Anda ingin AI membantu proses *grading*.
-                </p>
-              </div>
+          {/* SOAL REMEDIAL */}
+          <div className={cardClass}>
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-outline-variant">
+              <h2 className="flex items-center gap-2 text-sm font-black text-on-surface uppercase tracking-widest">
+                <ListTodo className="text-primary" size={18} /> Soal Remedial
+              </h2>
+              <button
+                onClick={() => setQuestionsInput(handleAutoFormatList(questionsInput))}
+                className="flex items-center gap-1.5 px-2.5 py-1 bg-surface-variant hover:bg-surface-container-highest text-on-surface-variant hover:text-primary rounded-lg text-[10px] font-bold transition-colors"
+              >
+                <Wand2 size={12} /> Auto Format
+              </button>
+            </div>
+            <div className="space-y-3">
+              <textarea
+                value={questionsInput}
+                onChange={(e) => setQuestionsInput(e.target.value)}
+                placeholder={"1. Apa yang dimaksud dengan jaringan komputer?\n2. Sebutkan contoh sistem operasi..."}
+                rows={10}
+                className={`${inputClass} resize-y text-sm font-mono`}
+              />
+              <p className="text-[10px] text-on-surface-variant font-medium">
+                Gunakan format daftar bernomor (1. 2. 3.) untuk hasil terbaik.
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Action Button */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900 border-t border-outline-variant z-50 lg:static lg:bg-transparent lg:border-none lg:p-0">
-          <button
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className="w-full py-4 bg-primary text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} Terapkan Pengaturan Remedial Ke Semua Kelas
-          </button>
-        </div>
-        
-        {/* Mobile padding spacer */}
-        <div className="h-32 lg:hidden"></div>
+        {/* RIGHT COLUMN */}
+        <div className="space-y-6">
+          {/* KUNCI JAWABAN REMEDIAL */}
+          <div className={cardClass}>
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-outline-variant">
+              <h2 className="flex items-center gap-2 text-sm font-black text-on-surface uppercase tracking-widest">
+                <CheckSquare className="text-emerald-500" size={18} /> Kunci Jawaban
+              </h2>
+              <button
+                onClick={() => setAnswerKeysInput(handleAutoFormatList(answerKeysInput))}
+                className="flex items-center gap-1.5 px-2.5 py-1 bg-surface-variant hover:bg-surface-container-highest text-on-surface-variant hover:text-primary rounded-lg text-[10px] font-bold transition-colors"
+              >
+                <Wand2 size={12} /> Auto Format
+              </button>
+            </div>
+            <div className="space-y-3">
+              <textarea
+                value={answerKeysInput}
+                onChange={(e) => setAnswerKeysInput(e.target.value)}
+                placeholder={"1. Jaringan komputer adalah...\n2. Windows, Linux, macOS..."}
+                rows={10}
+                className={`${inputClass} resize-y text-sm font-mono`}
+              />
+              <p className="text-[10px] text-on-surface-variant font-medium">
+                Opsional. Sangat disarankan jika Anda ingin AI membantu proses *grading*.
+              </p>
+            </div>
+          </div>
 
+          {/* ACTION BUTTON */}
+          <div className="pt-2">
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="w-full h-14 bg-primary hover:bg-emerald-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} Terapkan Pengaturan Remedial Ke Semua Kelas
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

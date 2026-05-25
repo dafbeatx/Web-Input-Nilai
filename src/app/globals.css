@@ -202,7 +202,7 @@ body.hide-mobile-header #mobile-bottom-nav {
 }
 
 @media (min-width: 768px) {
-  body.has-desktop-sidebar main {
+  body.has-desktop-sidebar .main-content-wrapper {
     padding-left: 16rem !important;
   }
 }

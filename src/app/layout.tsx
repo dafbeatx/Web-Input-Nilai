@@ -45,7 +45,7 @@ export default function RootLayout({
         <ErrorBoundary>
           <GradeMasterProvider>
             <Navbar />
-            <main className="relative flex-1">
+            <main className="relative flex-1 main-content-wrapper">
               {children}
             </main>
           </GradeMasterProvider>
