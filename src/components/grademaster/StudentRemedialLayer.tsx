@@ -1025,8 +1025,8 @@ export default function StudentRemedialLayer({
              setTabWarningCount(data.violationCount);
           }
           
-          // RESET DETECTION: If server says status is null/NONE and we aren't at START, clear local
-          if (data.status === null && step !== 'RULES') {
+          // RESET DETECTION: If server says status is null/NONE and we were in the exam/timeout phase, clear local
+          if (data.status === null && !['RULES', 'INFO', 'GUIDE'].includes(step)) {
             console.log("Server indicated session reset. Moving to RULES...");
             clearRemedialSession();
             setToast({ message: "Sesi Anda telah direset oleh Guru. Silakan masuk kembali.", type: "success" });
