@@ -599,3 +599,11 @@ function processAIRequest(history, userMsg, introKey, phone, senderName, systemC
 function sendResponse(text) {
   return ContentService.createTextOutput(JSON.stringify({ "reply": text })).setMimeType(ContentService.MimeType.JSON);
 }
+
+function initSetup() {
+  // JALANKAN FUNGSI INI SEKALI DI EDITOR GOOGLE APPS SCRIPT
+  // Ganti 'https://(domain-web-anda)' dengan URL web GradeMaster Anda yang asli.
+  PropertiesService.getScriptProperties().setProperty('APP_URL', 'https://(domain-web-anda)');
+  Logger.log("APP_URL berhasil disetel!");
+}
+
