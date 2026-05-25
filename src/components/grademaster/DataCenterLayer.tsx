@@ -679,7 +679,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
 
       // Check page overflow for signature block and footer
       let signatureY = evalEndY + 10;
-      if (signatureY + 45 > 270) {
+      if (signatureY > 235) {
         doc.addPage();
         doc.rect(10, 10, 190, 277);
         signatureY = 25;
@@ -700,8 +700,8 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       doc.setLineWidth(0.2);
       doc.line(signatureX, signatureY + 29, signatureX + 50, signatureY + 29);
 
-      // Bottom footer section
-      const footerY = signatureY + 38;
+      // Bottom footer section (fixed at the bottom of the page)
+      const footerY = 272;
       doc.setDrawColor(200, 200, 200);
       doc.setLineWidth(0.2);
       doc.line(15, footerY, 195, footerY);
@@ -709,8 +709,8 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       doc.setFont("Helvetica", "normal");
       doc.setFontSize(9);
       doc.setTextColor(120, 120, 120);
-      doc.text('Dokumen dihasilkan otomatis oleh GradeMaster OS', 15, footerY + 6);
-      doc.text(dateTimeStr, 15, footerY + 11);
+      doc.text('Dokumen dihasilkan otomatis oleh GradeMaster OS', 15, footerY + 5);
+      doc.text(dateTimeStr, 15, footerY + 10);
 
       doc.save(`Laporan_Pelanggaran_${student.name.replace(/ /g, '_')}_${student.className}.pdf`);
       setToast({ message: `Berhasil mengunduh Laporan Kedisiplinan untuk ${student.name}`, type: 'success' });
@@ -1030,7 +1030,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
 
         // Check page overflow for signature block and footer
         let signatureY = evalEndY + 10;
-        if (signatureY + 45 > 270) {
+        if (signatureY > 235) {
           doc.addPage();
           doc.rect(10, 10, 190, 277);
           signatureY = 25;
@@ -1051,8 +1051,8 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         doc.setLineWidth(0.2);
         doc.line(signatureX, signatureY + 29, signatureX + 50, signatureY + 29);
 
-        // Bottom footer section
-        const footerY = signatureY + 38;
+        // Bottom footer section (fixed at the bottom of the page)
+        const footerY = 272;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.2);
         doc.line(15, footerY, 195, footerY);
@@ -1060,8 +1060,8 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         doc.setFont("Helvetica", "normal");
         doc.setFontSize(9);
         doc.setTextColor(120, 120, 120);
-        doc.text('Dokumen dihasilkan otomatis oleh GradeMaster OS', 15, footerY + 6);
-        doc.text(dateTimeStr, 15, footerY + 11);
+        doc.text('Dokumen dihasilkan otomatis oleh GradeMaster OS', 15, footerY + 5);
+        doc.text(dateTimeStr, 15, footerY + 10);
       }
 
       doc.save(`Laporan_Pelanggaran_Kelas_${className}.pdf`);
