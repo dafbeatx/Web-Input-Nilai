@@ -73,6 +73,75 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
   const [downloadingAcademicId, setDownloadingAcademicId] = useState<string | null>(null);
   const [downloadingBehaviorId, setDownloadingBehaviorId] = useState<string | null>(null);
 
+  // Signature Upload Modal State
+  const [signatureModal, setSignatureModal] = useState<{
+    isOpen: boolean;
+    type: 'single' | 'class';
+    student?: StudentData;
+    classStudents?: StudentData[];
+    className?: string;
+  }>({
+    isOpen: false,
+    type: 'class'
+  });
+  const [signatureFile, setSignatureFile] = useState<File | null>(null);
+  const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
+
+  const handleSignatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (file.size > 5 * 1024 * 1024) {
+      setToast({ message: "Ukuran file tanda tangan terlalu besar (Maksimal 5MB)", type: "error" });
+      return;
+    }
+
+    setSignatureFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setSignaturePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDownloadWithSignature = () => {
+    if (!signaturePreview) return;
+    
+    if (signatureModal.type === 'class') {
+      generateClassBehaviorPdfReport(
+        signatureModal.classStudents || [],
+        signatureModal.className || '',
+        signaturePreview
+      );
+    } else {
+      generateBehaviorPdfReport(
+        signatureModal.student!,
+        signaturePreview
+      );
+    }
+    
+    setSignatureModal({ isOpen: false, type: 'class' });
+    setSignatureFile(null);
+    setSignaturePreview(null);
+  };
+
+  const handleDownloadWithoutSignature = () => {
+    if (signatureModal.type === 'class') {
+      generateClassBehaviorPdfReport(
+        signatureModal.classStudents || [],
+        signatureModal.className || ''
+      );
+    } else {
+      generateBehaviorPdfReport(
+        signatureModal.student!
+      );
+    }
+    
+    setSignatureModal({ isOpen: false, type: 'class' });
+    setSignatureFile(null);
+    setSignaturePreview(null);
+  };
+
   const fetchStudents = async () => {
     try {
       setIsLoading(true);
@@ -504,7 +573,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     }
   };
 
-  const generateBehaviorPdfReport = async (student: StudentData) => {
+  const generateBehaviorPdfReport = async (student: StudentData, signatureBase64?: string) => {
     setDownloadingBehaviorId(student.id);
     try {
       const doc = new jsPDF();
@@ -693,6 +762,15 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       const signatureX = 135;
       doc.text(`Bogor, ${day} ${month} ${year}`, signatureX, signatureY);
       doc.text('Pembimbing OSIS,', signatureX, signatureY + 6);
+
+      // Draw uploaded signature if available
+      if (signatureBase64) {
+        try {
+          doc.addImage(signatureBase64, 'PNG', signatureX + 2, signatureY + 8, 35, 18);
+        } catch (imgErr) {
+          console.error("Failed to add signature image to PDF:", imgErr);
+        }
+      }
       
       doc.setFont("Helvetica", "bold");
       doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + 28);
@@ -849,7 +927,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     }
   };
 
-  const generateClassBehaviorPdfReport = async (classStudents: StudentData[], className: string) => {
+  const generateClassBehaviorPdfReport = async (classStudents: StudentData[], className: string, signatureBase64?: string) => {
     try {
       setIsDownloadingClassBehaviorPdf(true);
       const doc = new jsPDF();
@@ -1044,6 +1122,15 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         const signatureX = 135;
         doc.text(`Bogor, ${day} ${month} ${year}`, signatureX, signatureY);
         doc.text('Pembimbing OSIS,', signatureX, signatureY + 6);
+
+        // Draw uploaded signature if available
+        if (signatureBase64) {
+          try {
+            doc.addImage(signatureBase64, 'PNG', signatureX + 2, signatureY + 8, 35, 18);
+          } catch (imgErr) {
+            console.error("Failed to add signature image to PDF:", imgErr);
+          }
+        }
         
         doc.setFont("Helvetica", "bold");
         doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + 28);
@@ -1122,14 +1209,19 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
                       Rapor Akademik {selectedClass}
                    </button>
                    <button 
-                     onClick={() => generateClassBehaviorPdfReport(filteredStudents, selectedClass)}
-                     disabled={isDownloadingClassBehaviorPdf}
-                     className="px-4 py-3 bg-rose-500/10 text-rose-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all flex items-center gap-2 border border-rose-500/20 active:scale-95 disabled:opacity-50"
-                     title="Unduh seluruh Laporan Pelanggaran kelas ini"
-                   >
-                      {isDownloadingClassBehaviorPdf ? <Loader2 size={16} className="animate-spin" /> : <AlertTriangle size={16} />} 
-                      Laporan Pelanggaran {selectedClass}
-                   </button>
+                      onClick={() => setSignatureModal({
+                        isOpen: true,
+                        type: 'class',
+                        classStudents: filteredStudents,
+                        className: selectedClass
+                      })}
+                      disabled={isDownloadingClassBehaviorPdf}
+                      className="px-4 py-3 bg-rose-500/10 text-rose-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all flex items-center gap-2 border border-rose-500/20 active:scale-95 disabled:opacity-50"
+                      title="Unduh seluruh Laporan Pelanggaran kelas ini"
+                    >
+                       {isDownloadingClassBehaviorPdf ? <Loader2 size={16} className="animate-spin" /> : <AlertTriangle size={16} />} 
+                       Laporan Pelanggaran {selectedClass}
+                    </button>
                  </>
                )}
                <button 
@@ -1217,7 +1309,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
                            </div>
                            <div className="flex flex-col">
                              <span className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-0.5">Poin Sikap</span>
-<span className={`font-bold text-sm flex items-center gap-1 ${s.behaviorPoints < 0 ? 'text-error' : 'text-primary'}`}><ShieldCheck size={14} className={s.behaviorPoints < 0 ? 'text-error' : 'text-emerald-500'} /> {s.behaviorPoints}</span>
+                             <span className={`font-bold text-sm flex items-center gap-1 ${s.behaviorPoints < 0 ? 'text-error' : 'text-primary'}`}><ShieldCheck size={14} className={s.behaviorPoints < 0 ? 'text-error' : 'text-emerald-500'} /> {s.behaviorPoints}</span>
                            </div>
                          </div>
                        </td>
@@ -1232,13 +1324,17 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
                               {downloadingAcademicId === s.id ? <Loader2 size={18} className="animate-spin" /> : <FileText size={18} />}
                             </button>
                             <button 
-                              onClick={() => generateBehaviorPdfReport(s)}
-                              disabled={downloadingBehaviorId === s.id}
-                              className="p-2 bg-rose-500/10 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg transition-colors active:scale-90 disabled:opacity-50"
-                              title="Unduh Laporan Pelanggaran Lengkap"
-                            >
-                              {downloadingBehaviorId === s.id ? <Loader2 size={18} className="animate-spin" /> : <AlertTriangle size={18} />}
-                            </button>
+                               onClick={() => setSignatureModal({
+                                 isOpen: true,
+                                 type: 'single',
+                                 student: s
+                               })}
+                               disabled={downloadingBehaviorId === s.id}
+                               className="p-2 bg-rose-500/10 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg transition-colors active:scale-90 disabled:opacity-50"
+                               title="Unduh Laporan Pelanggaran Lengkap"
+                             >
+                               {downloadingBehaviorId === s.id ? <Loader2 size={18} className="animate-spin" /> : <AlertTriangle size={18} />}
+                             </button>
                            <button 
                              onClick={() => handleDeleteStudent(s.name, s.className)}
                              className="p-2 bg-error/10 text-error hover:bg-error hover:text-white rounded-lg transition-colors active:scale-90"
@@ -1754,6 +1850,76 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
               )}
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Signature Upload Modal */}
+      {signatureModal.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSignatureModal({ isOpen: false, type: 'class' })} />
+          <div className="bg-surface rounded-[2rem] p-8 w-full max-w-md relative z-10 border border-outline-variant/20 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-6 pb-3 border-b border-outline-variant/10">
+              <h3 className="text-lg font-headline font-bold text-primary flex items-center gap-2">
+                <span className="material-symbols-outlined text-rose-500">signature</span> Tanda Tangan Digital
+              </h3>
+              <button 
+                onClick={() => setSignatureModal({ isOpen: false, type: 'class' })}
+                className="p-1.5 hover:bg-surface-container rounded-full text-on-surface-variant transition-colors"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                Silakan unggah gambar tanda tangan digital pembimbing OSIS (.png / .jpg) untuk disematkan secara otomatis pada dokumen laporan.
+              </p>
+
+              {/* Upload Dropzone */}
+              <label className="border-2 border-dashed border-outline-variant hover:border-rose-500/50 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer transition-all bg-surface-container-low hover:bg-surface-container-high group relative overflow-hidden">
+                <input 
+                  type="file" 
+                  accept="image/png, image/jpeg, image/jpg" 
+                  onChange={handleSignatureChange}
+                  className="hidden" 
+                />
+                
+                {signaturePreview ? (
+                  <div className="flex flex-col items-center gap-2 py-2">
+                    <img 
+                      src={signaturePreview} 
+                      alt="Pratinjau Tanda Tangan" 
+                      className="max-h-[100px] object-contain border border-outline-variant/20 rounded-lg p-2 bg-white" 
+                    />
+                    <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest mt-2 hover:underline">Ganti Gambar</span>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <span className="material-symbols-outlined text-4xl text-on-surface-variant/40 group-hover:text-rose-500/80 transition-colors mb-2">upload_file</span>
+                    <p className="text-xs font-bold text-on-surface">Pilih File Tanda Tangan</p>
+                    <p className="text-[10px] text-on-surface-variant/70 mt-1">PNG atau JPG (Maks. 5MB)</p>
+                  </div>
+                )}
+              </label>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3.5 pt-2">
+                <button 
+                  onClick={handleDownloadWithSignature}
+                  disabled={!signaturePreview}
+                  className="w-full py-3.5 bg-rose-500 text-white rounded-xl text-xs font-black uppercase tracking-[0.1em] shadow-lg shadow-rose-500/20 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none disabled:shadow-none"
+                >
+                  <span className="material-symbols-outlined text-base">download</span> Unduh Dengan Tanda Tangan
+                </button>
+                <button 
+                  onClick={handleDownloadWithoutSignature}
+                  className="w-full py-3 bg-surface-container text-on-surface-variant border border-outline-variant/30 rounded-xl text-xs font-black uppercase tracking-[0.1em] hover:bg-surface-container-high transition-colors active:scale-95 flex items-center justify-center gap-2"
+                >
+                  Unduh Tanpa Tanda Tangan
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
