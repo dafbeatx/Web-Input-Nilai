@@ -11,7 +11,11 @@ import {
   CheckSquare,
   Wand2,
   Save,
-  Loader2
+  Loader2,
+  Sparkles,
+  Brain,
+  AlertCircle,
+  Cpu
 } from 'lucide-react';
 import { ToastType } from '@/lib/grademaster/types';
 import { parseEssayQuestions } from '@/lib/grademaster/parser';
@@ -32,6 +36,15 @@ export default function RemedialManagementLayer({
   const [answerKeysInput, setAnswerKeysInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  // AI Adaptive Generator states
+  const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
+  const [originalExamText, setOriginalExamText] = useState("");
+  const [aiQuestionCount, setAiQuestionCount] = useState(5);
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [aiWeakTopics, setAiWeakTopics] = useState<string[] | null>(null);
+  const [aiDifficulties, setAiDifficulties] = useState<any[] | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+
   const handleAutoFormatList = (text: string) => {
     return text.split('\n')
       .map(line => line.trim())
@@ -41,6 +54,60 @@ export default function RemedialManagementLayer({
         return `${index + 1}. ${cleaned}`;
       })
       .join('\n');
+  };
+
+  const handleGenerateAiQuestions = async () => {
+    if (!subject) {
+      setToast({ message: "Pilih Mata Pelajaran terlebih dahulu sebelum melakukan analisis AI.", type: "error" });
+      return;
+    }
+    if (!examType) {
+      setToast({ message: "Pilih Jenis Ujian terlebih dahulu sebelum melakukan analisis AI.", type: "error" });
+      return;
+    }
+    if (aiQuestionCount < 1 || aiQuestionCount > 15) {
+      setToast({ message: "Jumlah soal remedial antara 1 sampai 15.", type: "error" });
+      return;
+    }
+
+    setIsGeneratingAi(true);
+    setAiError(null);
+    setAiWeakTopics(null);
+    setAiDifficulties(null);
+
+    try {
+      const res = await fetch('/api/grademaster/remedial/generate-adaptive', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          subject,
+          examType,
+          academicYear,
+          questionCount: aiQuestionCount,
+          originalQuestionsText: originalExamText
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal membuat soal remedial adaptif");
+
+      const formattedQuestions = (data.questions || []).join('\n');
+      const formattedKeys = (data.answerKeys || []).join('\n');
+
+      setQuestionsInput(formattedQuestions);
+      setAnswerKeysInput(formattedKeys);
+      setAiWeakTopics(data.weakTopics || []);
+      setAiDifficulties(data.difficulties || []);
+
+      setToast({ message: "Soal remedial adaptif berhasil digenerasikan!", type: "success" });
+    } catch (err: any) {
+      setAiError(err.message || "Terjadi kesalahan pada AI Generator");
+      setToast({ message: err.message || "Gagal membuat soal remedial", type: "error" });
+    } finally {
+      setIsGeneratingAi(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -166,6 +233,111 @@ export default function RemedialManagementLayer({
             </div>
           </div>
 
+          {/* AI ADAPTIVE GENERATOR CARD */}
+          <div className="bg-gradient-to-tr from-purple-50/50 via-white to-indigo-50/50 rounded-2xl p-6 border border-purple-200/60 shadow-lg relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-purple-200/30 to-indigo-200/30 rounded-bl-full pointer-events-none transition-transform duration-700 group-hover:scale-110" />
+            
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-purple-100">
+              <h2 className="flex items-center gap-2 text-sm font-black text-purple-950 uppercase tracking-widest">
+                <Sparkles className="text-purple-600 animate-pulse" size={18} /> AI Adaptive Generator
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsAiPanelOpen(!isAiPanelOpen)}
+                className="text-[10px] font-black uppercase px-2.5 py-1 bg-purple-100/80 hover:bg-purple-200/80 text-purple-700 rounded-lg transition-all"
+              >
+                {isAiPanelOpen ? "Sembunyikan" : "Buka Panel"}
+              </button>
+            </div>
+
+            {isAiPanelOpen ? (
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                <p className="text-xs text-purple-900/70 font-medium leading-relaxed">
+                  AI akan secara otomatis menganalisis butir soal tersulit yang paling banyak dijawab salah oleh siswa pada ujian utama, lalu memformulasikan paket soal remedial baru yang setara.
+                </p>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="flex items-center gap-2 text-[10px] font-bold text-purple-800 uppercase tracking-widest mb-1.5">
+                      <Cpu size={12} /> Jumlah Soal Remedial
+                    </label>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max="15" 
+                      value={aiQuestionCount} 
+                      onChange={(e) => setAiQuestionCount(Number(e.target.value))} 
+                      className="w-full bg-white/70 border border-purple-200 rounded-xl p-2.5 text-sm font-bold text-purple-950 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-2 text-[10px] font-bold text-purple-800 uppercase tracking-widest mb-1.5">
+                      <Brain size={12} /> Naskah Soal Asli / Kisi-kisi (Opsional)
+                    </label>
+                    <textarea 
+                      placeholder="Tempel naskah soal ujian utama di sini (membantu AI mendeteksi topik dari nomor soal yang paling banyak salah secara presisi)..."
+                      value={originalExamText}
+                      onChange={(e) => setOriginalExamText(e.target.value)}
+                      rows={4}
+                      className="w-full bg-white/70 border border-purple-200 rounded-xl p-3 text-xs font-mono text-purple-950 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none transition-all resize-y placeholder:text-purple-400"
+                    />
+                  </div>
+                </div>
+
+                {aiError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 text-xs font-bold text-red-600">
+                    <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                    <span>{aiError}</span>
+                  </div>
+                )}
+
+                {/* AI Analysis Summary Display */}
+                {aiWeakTopics && aiWeakTopics.length > 0 && (
+                  <div className="p-4 bg-white/80 border border-purple-100 rounded-xl space-y-2 text-xs font-bold text-purple-950 shadow-inner">
+                    <div className="text-[10px] text-purple-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <Brain size={12} /> Hasil Analisis Kelemahan Kelas
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {aiWeakTopics.map((topic, i) => (
+                        <span key={i} className="px-2 py-1 bg-purple-100 text-purple-800 rounded-md text-[10px]">
+                          {topic}
+                        </span>
+                      ))}
+                    </div>
+                    {aiDifficulties && aiDifficulties.length > 0 && (
+                      <div className="text-[10px] text-on-surface-variant/80 font-normal pt-1">
+                        Soal tersulit terdeteksi: {aiDifficulties.map(d => `#${d.questionNumber} (${d.difficultyPercent}% salah)`).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleGenerateAiQuestions}
+                  disabled={isGeneratingAi}
+                  className="w-full h-11 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md shadow-purple-500/10 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isGeneratingAi ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" /> Menganalisis & Membuat Soal...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={14} /> Mulai Analisis & Buat Soal AI
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between text-xs text-purple-900/60 font-semibold cursor-pointer" onClick={() => setIsAiPanelOpen(true)}>
+                <span>Aktifkan asisten AI untuk memformulasikan soal otomatis.</span>
+                <Sparkles size={14} className="text-purple-600" />
+              </div>
+            )}
+          </div>
+
           {/* SOAL REMEDIAL */}
           <div className={cardClass}>
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-outline-variant">
@@ -238,3 +410,4 @@ export default function RemedialManagementLayer({
     </main>
   );
 }
+
