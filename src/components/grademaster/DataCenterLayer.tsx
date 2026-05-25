@@ -770,10 +770,11 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       doc.text(`Bogor, ${day} ${month} ${year}`, signatureX, signatureY);
       doc.text('Pembimbing OSIS,', signatureX, signatureY + 4);
 
+      const nameY = signatureY + 18;
       let targetW = 35;
-      let targetH = 10;
+      let targetH = 12;
 
-      // Draw uploaded signature if available with aspect-ratio scaling
+      // Draw uploaded signature if available with aspect-ratio scaling (front-of-text overlay)
       if (signatureBase64) {
         try {
           const sigImg = await loadImage(signatureBase64);
@@ -782,7 +783,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
           const aspectRatio = origW / origH;
           
           const maxW = 45;
-          const maxH = 14;
+          const maxH = 20;
           
           if (aspectRatio > maxW / maxH) {
             targetW = maxW;
@@ -793,19 +794,18 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
           }
           
           const sigXPos = signatureX + (50 - targetW) / 2;
-          doc.addImage(sigImg, 'PNG', sigXPos, signatureY + 5, targetW, targetH);
+          // Overlay signature: starts 3mm below signatureY, overlapping both 'Pembimbing OSIS,' and name
+          doc.addImage(sigImg, 'PNG', sigXPos, signatureY + 2, targetW, targetH);
         } catch (imgErr) {
           console.error("Failed to add signature image to PDF:", imgErr);
         }
       }
       
-      const signatureHeightOffset = Math.max(10, targetH) + 6;
-      
       doc.setFont("Helvetica", "bold");
-      doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + signatureHeightOffset);
+      doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, nameY);
       
       doc.setLineWidth(0.2);
-      doc.line(signatureX, signatureY + signatureHeightOffset + 1, signatureX + 50, signatureY + signatureHeightOffset + 1);
+      doc.line(signatureX, nameY + 1, signatureX + 50, nameY + 1);
 
       // Bottom footer section (fixed at the bottom of the page)
       const footerY = 278;
@@ -1159,10 +1159,11 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         doc.text(`Bogor, ${day} ${month} ${year}`, signatureX, signatureY);
         doc.text('Pembimbing OSIS,', signatureX, signatureY + 4);
 
+        const nameY = signatureY + 18;
         let targetW = 35;
-        let targetH = 10;
+        let targetH = 12;
 
-        // Draw uploaded signature if available with aspect-ratio scaling
+        // Draw uploaded signature if available with aspect-ratio scaling (front-of-text overlay)
         if (signatureBase64) {
           try {
             const sigImg = await loadImage(signatureBase64);
@@ -1171,7 +1172,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
             const aspectRatio = origW / origH;
             
             const maxW = 45;
-            const maxH = 14;
+            const maxH = 20;
             
             if (aspectRatio > maxW / maxH) {
               targetW = maxW;
@@ -1182,19 +1183,18 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
             }
             
             const sigXPos = signatureX + (50 - targetW) / 2;
-            doc.addImage(sigImg, 'PNG', sigXPos, signatureY + 5, targetW, targetH);
+            // Overlay signature: starts 3mm below signatureY, overlapping both 'Pembimbing OSIS,' and name
+            doc.addImage(sigImg, 'PNG', sigXPos, signatureY + 2, targetW, targetH);
           } catch (imgErr) {
             console.error("Failed to add signature image to PDF:", imgErr);
           }
         }
         
-        const signatureHeightOffset = Math.max(10, targetH) + 6;
-        
         doc.setFont("Helvetica", "bold");
-        doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + signatureHeightOffset);
+        doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, nameY);
         
         doc.setLineWidth(0.2);
-        doc.line(signatureX, signatureY + signatureHeightOffset + 1, signatureX + 50, signatureY + signatureHeightOffset + 1);
+        doc.line(signatureX, nameY + 1, signatureX + 50, nameY + 1);
 
         // Bottom footer section (fixed at the bottom of the page)
         const footerY = 278;
