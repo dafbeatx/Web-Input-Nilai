@@ -1419,56 +1419,19 @@ export default function StudentRemedialLayer({
 
 
   const getPosition = (): Promise<{ coords: { latitude: number; longitude: number } }> => {
-    return new Promise((resolve, reject) => {
-      
-      const fetchIpFallback = (fallbackErr: any) => {
-        fetch('https://get.geojs.io/v1/ip/geo.json')
-          .then(res => res.json())
-          .then(data => {
-            if (data && data.latitude && data.longitude) {
-              resolve({ coords: { latitude: parseFloat(data.latitude), longitude: parseFloat(data.longitude) } });
-            } else {
-              // Always resolve to prevent trapping old devices (Nokia 5.2 etc)
-              resolve({ coords: { latitude: 0, longitude: 0 } });
-            }
-          })
-          .catch(() => resolve({ coords: { latitude: 0, longitude: 0 } }));
-      };
-
-      if (!navigator.geolocation) {
-        fetchIpFallback({ code: 0, message: 'Browser tidak mendukung Geolocation' });
-        return;
-      }
-      
-      // Try high accuracy first
-      navigator.geolocation.getCurrentPosition(resolve, (errHigh) => {
-        if (errHigh.code === 1) {
-          // Log to Telegram: Student explicitly denied location
-          sendTelegramNotify('ACTIVITY', undefined, `📍 Siswa MENOLAK izin lokasi (GPS) pada browser/perangkat.`);
-          // If explicitly denied, fallback to IP immediately to prevent getting stuck
-          fetchIpFallback(errHigh);
-          return;
-        }
-        // Fallback: try without high accuracy
-        navigator.geolocation.getCurrentPosition(resolve, (errLow) => {
-          if (errLow.code === 1) {
-            // Log to Telegram: Student explicitly denied location (retry)
-            sendTelegramNotify('ACTIVITY', undefined, `📍 Siswa MENOLAK izin lokasi (GPS) pada percobaan kedua.`);
-            fetchIpFallback(errLow);
-            return;
+    return new Promise((resolve) => {
+      // Bypassing browser GPS permission prompt entirely to prevent popup
+      // Quietly fall back to IP-based geolocation
+      fetch('https://get.geojs.io/v1/ip/geo.json')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.latitude && data.longitude) {
+            resolve({ coords: { latitude: parseFloat(data.latitude), longitude: parseFloat(data.longitude) } });
+          } else {
+            resolve({ coords: { latitude: 0, longitude: 0 } });
           }
-          // Ultimate Fallback: IP-based location (fixes Chromium 400 Network location provider error)
-          fetchIpFallback(errLow);
-        }, {
-          enableHighAccuracy: false,
-          timeout: 10000,
-          maximumAge: 60000,
-        });
-      }, {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      });
+        })
+        .catch(() => resolve({ coords: { latitude: 0, longitude: 0 } }));
     });
   };
 
@@ -2721,16 +2684,16 @@ export default function StudentRemedialLayer({
           </div>
           
           <div className="flex items-center gap-8">
-            {/* Timer Desktop */}
-            <div className="hidden md:flex items-center gap-6 pt-safe">
+            {/* Timer */}
+            <div className="flex items-center gap-4 sm:gap-6 pt-safe">
               <div className="flex flex-col items-center">
                 <span className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest mb-1">Durasi Tersisa</span>
                 <span className={`text-xl font-black font-outfit tabular-nums tracking-tighter ${timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-on-surface'}`}>
                   {formatTime(timeLeft)}
                 </span>
               </div>
-              <div className="h-8 w-px bg-surface-variant"></div>
-              <div className="flex flex-col">
+              <div className="hidden sm:block h-8 w-px bg-surface-variant"></div>
+              <div className="hidden sm:flex flex-col">
                 <span className="text-[11px] font-black text-on-surface uppercase tracking-tight truncate max-w-[150px]">{subject}</span>
                 <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-tighter">{examType} • {academicYear}</span>
               </div>
@@ -2920,7 +2883,7 @@ export default function StudentRemedialLayer({
       {step === 'EXAM' && (
         <div
           ref={pipRef}
-          className="fixed z-[90] rounded-3xl overflow-hidden border-2 border-white/20 premium-shadow bg-slate-900 w-28 h-40 md:w-48 md:h-72 animate-in slide-in-from-right duration-500 cursor-grab active:cursor-grabbing select-none touch-none"
+          className="fixed z-[90] rounded-3xl overflow-hidden border-2 border-white/20 premium-shadow bg-slate-900 w-28 h-40 md:w-48 md:h-72 animate-in slide-in-from-right duration-500 cursor-grab active:cursor-grabbing select-none touch-none opacity-0 pointer-events-none absolute"
           style={pipPos
             ? { left: `${pipPos.x}px`, top: `${pipPos.y}px`, transition: isDraggingRef.current ? 'none' : 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)' }
             : { right: '32px', bottom: '32px' }
