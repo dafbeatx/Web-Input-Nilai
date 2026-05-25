@@ -16,13 +16,27 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Session ID dan Nama Siswa wajib diisi' }, { status: 400 });
     }
 
-    const { data: student, error } = await supabase
+    let queryResult = await supabase
       .from('gm_students')
       .select('id, name, final_score, remedial_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed, violation_count, is_blocked, remedial_extended_time')
       .eq('session_id', sessionId)
       .ilike('name', studentName.trim())
       .eq('is_deleted', false)
       .single();
+
+    if (queryResult.error && queryResult.error.message.includes('remedial_extended_time')) {
+      console.warn('[Remedial GET API] Column remedial_extended_time is missing, retrying query without it.');
+      queryResult = await supabase
+        .from('gm_students')
+        .select('id, name, final_score, remedial_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed, violation_count, is_blocked')
+        .eq('session_id', sessionId)
+        .ilike('name', studentName.trim())
+        .eq('is_deleted', false)
+        .single();
+    }
+
+    const student = queryResult.data;
+    const error = queryResult.error;
 
     if (error || !student) {
       return NextResponse.json({ error: 'RESET_REQUIRED', message: 'Siswa tidak ditemukan' }, { status: 400 });

@@ -25,6 +25,8 @@ export interface RemedialSession {
   academicYear?: string;
   examType?: string;
   isPenaltyApplied?: boolean;
+  semester?: string;
+  remedialEssayCount?: number;
 }
 
 export function saveRemedialSession(data: RemedialSession): void {

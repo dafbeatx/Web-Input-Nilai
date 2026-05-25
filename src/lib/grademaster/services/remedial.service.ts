@@ -846,30 +846,45 @@ export async function markRemedialFailed(attemptId: string, studentId: string) {
 }
 
 export async function extendRemedialTime(studentId: string, minutes: number) {
-  // 1. Fetch student
-  const { data: student, error: fetchErr } = await supabase
+  // 1. Fetch student (fallback if column doesn't exist)
+  let queryResult = await supabase
     .from('gm_students')
     .select('id, session_id, name, remedial_status, remedial_extended_time')
     .eq('id', studentId)
     .single();
 
+  if (queryResult.error && queryResult.error.message.includes('remedial_extended_time')) {
+    queryResult = await supabase
+      .from('gm_students')
+      .select('id, session_id, name, remedial_status')
+      .eq('id', studentId)
+      .single();
+  }
+
+  const { data: student, error: fetchErr } = queryResult;
+
   if (fetchErr || !student) {
     throw new Error('Siswa tidak ditemukan');
   }
 
-  const currentExtended = student.remedial_extended_time || 0;
+  const currentExtended = (student as any).remedial_extended_time || 0;
   const newExtended = currentExtended + minutes;
 
   // 2. Update student status and extended time
+  const updatePayload: Record<string, any> = {
+    remedial_status: 'ACTIVE',
+    is_cheated: false,
+    teacher_reviewed: false,
+    final_score_locked: null,
+  };
+  
+  if (student && 'remedial_extended_time' in student) {
+    updatePayload.remedial_extended_time = newExtended;
+  }
+
   const { error: studentErr } = await supabase
     .from('gm_students')
-    .update({
-      remedial_status: 'ACTIVE',
-      remedial_extended_time: newExtended,
-      is_cheated: false,
-      teacher_reviewed: false,
-      final_score_locked: null,
-    })
+    .update(updatePayload)
     .eq('id', studentId);
 
   if (studentErr) throw studentErr;

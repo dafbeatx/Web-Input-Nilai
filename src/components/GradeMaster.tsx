@@ -110,6 +110,13 @@ export default function GradeMaster() {
       if (remedialSession.className) setStudentClass(remedialSession.className);
       if (remedialSession.subject) setSubject(remedialSession.subject);
       if (remedialSession.sessionId) setSessionId(remedialSession.sessionId);
+      if (remedialSession.examType) setExamType(remedialSession.examType);
+      if (remedialSession.academicYear) setAcademicYear(remedialSession.academicYear);
+      if (remedialSession.semester) setSemester(remedialSession.semester);
+      if (remedialSession.kkm) setKkm(remedialSession.kkm);
+      if (remedialSession.remedialQuestions) setRemedialQuestions(remedialSession.remedialQuestions);
+      if (remedialSession.remedialEssayCount) setRemedialEssayCount(remedialSession.remedialEssayCount);
+      if (remedialSession.remedialTimer) setRemedialTimer(remedialSession.remedialTimer);
       
       if (layer !== 'remedial') {
         setLayer('remedial');
@@ -502,6 +509,9 @@ export default function GradeMaster() {
       setSubject(data.subject || "");
       setStudentClass(data.className || "");
       setSchoolLevel(data.schoolLevel || "SMA");
+      setExamType(data.examType || "UTS");
+      setAcademicYear(data.academicYear || "2025/2026");
+      setSemester(data.semester || "Ganjil");
       setStudentList(data.studentList || []);
       setGradedStudents(data.gradedStudents || []);
       setKkm(data.kkm || 70);
@@ -549,6 +559,9 @@ export default function GradeMaster() {
       setSubject(data.subject || "");
       setStudentClass(data.className || "");
       setSchoolLevel(data.schoolLevel || "SMA");
+      setExamType(data.examType || "UTS");
+      setAcademicYear(data.academicYear || "2025/2026");
+      setSemester(data.semester || "Ganjil");
       setStudentList(data.studentList || []);
       setGradedStudents(data.gradedStudents || []);
       setKkm(data.kkm || 70);

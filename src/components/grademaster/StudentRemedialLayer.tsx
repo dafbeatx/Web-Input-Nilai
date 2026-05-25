@@ -1158,8 +1158,10 @@ export default function StudentRemedialLayer({
       subject,
       remedialQuestions: (remedialQuestions && remedialQuestions.length > 0) ? remedialQuestions : prevQuestions,
       remedialTimer: (remedialTimer && remedialTimer > 0) ? remedialTimer : prevTimer,
+      semester,
+      remedialEssayCount,
     });
-  }, [answers, note, step, sessionId, studentName, className, subject, currentLocation, shuffledQuestions, currentStudentId, examMode, cameraStatus, remedialQuestions, remedialTimer]);
+  }, [answers, note, step, sessionId, studentName, className, subject, currentLocation, shuffledQuestions, currentStudentId, examMode, cameraStatus, remedialQuestions, remedialTimer, semester, remedialEssayCount]);
 
   // Backup answers to a separate key that survives session resets
   useEffect(() => {
@@ -1658,7 +1660,9 @@ export default function StudentRemedialLayer({
         remedialTimer,
         kkm: kkm || 70,
         academicYear: academicYear || '2025/2026',
-        examType: examType || 'UTS'
+        examType: examType || 'UTS',
+        semester,
+        remedialEssayCount,
       });
       // Initialize session and set step to EXAM
       setIsSubmitting(false);
@@ -1716,6 +1720,8 @@ export default function StudentRemedialLayer({
         kkm: kkm || 70,
         academicYear: academicYear || '2025/2026',
         examType: examType || 'UTS',
+        semester,
+        remedialEssayCount,
         step: 'EXAM',
         isPenaltyApplied,
         lastUpdated: Date.now()
