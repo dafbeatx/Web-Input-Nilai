@@ -7,7 +7,7 @@ const scriptProperties = PropertiesService.getScriptProperties();
 const SUPABASE_URL = scriptProperties.getProperty('SUPABASE_URL');
 const SUPABASE_KEY = scriptProperties.getProperty('SUPABASE_KEY');
 const LOG_SHEET_ID = scriptProperties.getProperty('LOG_SHEET_ID'); 
-const APP_URL = scriptProperties.getProperty('APP_URL') || "https://grademaster.my.id"; // URL Web GradeMaster OS
+const APP_URL = scriptProperties.getProperty('APP_URL') || "https://(domain-web-anda)"; // URL Web GradeMaster OS
 const MODEL_NAME = 'llama-3.3-70b-versatile'; 
 const MAX_HISTORY = 5; 
 
