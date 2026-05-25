@@ -728,6 +728,13 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         }
       }
 
+      // Check if evaluation text overflows the page. If it starts too low (Y > 230), add page first
+      if (behaviorTableEndY + 8 > 230) {
+        doc.addPage();
+        doc.rect(10, 10, 190, 277);
+        behaviorTableEndY = 20; // reset start coordinate on the new page
+      }
+
       doc.setFont("Helvetica", "normal");
       doc.setFontSize(10);
       doc.setTextColor(50, 50, 50);
@@ -747,8 +754,8 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       const dateTimeStr = `${day} ${month} ${year} • ${hours}:${minutes} WIB`;
 
       // Check page overflow for signature block and footer
-      let signatureY = evalEndY + 10;
-      if (signatureY > 235) {
+      let signatureY = evalEndY + 6;
+      if (signatureY > 250) {
         doc.addPage();
         doc.rect(10, 10, 190, 277);
         signatureY = 25;
@@ -761,25 +768,25 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       
       const signatureX = 135;
       doc.text(`Bogor, ${day} ${month} ${year}`, signatureX, signatureY);
-      doc.text('Pembimbing OSIS,', signatureX, signatureY + 6);
+      doc.text('Pembimbing OSIS,', signatureX, signatureY + 5);
 
       // Draw uploaded signature if available
       if (signatureBase64) {
         try {
-          doc.addImage(signatureBase64, 'PNG', signatureX + 2, signatureY + 8, 35, 18);
+          doc.addImage(signatureBase64, 'PNG', signatureX + 2, signatureY + 7, 35, 12);
         } catch (imgErr) {
           console.error("Failed to add signature image to PDF:", imgErr);
         }
       }
       
       doc.setFont("Helvetica", "bold");
-      doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + 28);
+      doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + 21);
       
       doc.setLineWidth(0.2);
-      doc.line(signatureX, signatureY + 29, signatureX + 50, signatureY + 29);
+      doc.line(signatureX, signatureY + 22, signatureX + 50, signatureY + 22);
 
       // Bottom footer section (fixed at the bottom of the page)
-      const footerY = 272;
+      const footerY = 278;
       doc.setDrawColor(200, 200, 200);
       doc.setLineWidth(0.2);
       doc.line(15, footerY, 195, footerY);
@@ -1088,6 +1095,13 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
           }
         }
 
+        // Check if evaluation text overflows the page. If it starts too low (Y > 230), add page first
+        if (behaviorTableEndY + 8 > 230) {
+          doc.addPage();
+          doc.rect(10, 10, 190, 277);
+          behaviorTableEndY = 20; // reset start coordinate on the new page
+        }
+
         doc.setFont("Helvetica", "normal");
         doc.setFontSize(10);
         doc.setTextColor(50, 50, 50);
@@ -1107,8 +1121,8 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         const dateTimeStr = `${day} ${month} ${year} • ${hours}:${minutes} WIB`;
 
         // Check page overflow for signature block and footer
-        let signatureY = evalEndY + 10;
-        if (signatureY > 235) {
+        let signatureY = evalEndY + 6;
+        if (signatureY > 250) {
           doc.addPage();
           doc.rect(10, 10, 190, 277);
           signatureY = 25;
@@ -1121,25 +1135,25 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         
         const signatureX = 135;
         doc.text(`Bogor, ${day} ${month} ${year}`, signatureX, signatureY);
-        doc.text('Pembimbing OSIS,', signatureX, signatureY + 6);
+        doc.text('Pembimbing OSIS,', signatureX, signatureY + 5);
 
         // Draw uploaded signature if available
         if (signatureBase64) {
           try {
-            doc.addImage(signatureBase64, 'PNG', signatureX + 2, signatureY + 8, 35, 18);
+            doc.addImage(signatureBase64, 'PNG', signatureX + 2, signatureY + 7, 35, 12);
           } catch (imgErr) {
             console.error("Failed to add signature image to PDF:", imgErr);
           }
         }
         
         doc.setFont("Helvetica", "bold");
-        doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + 28);
+        doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + 21);
         
         doc.setLineWidth(0.2);
-        doc.line(signatureX, signatureY + 29, signatureX + 50, signatureY + 29);
+        doc.line(signatureX, signatureY + 22, signatureX + 50, signatureY + 22);
 
         // Bottom footer section (fixed at the bottom of the page)
-        const footerY = 272;
+        const footerY = 278;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.2);
         doc.line(15, footerY, 195, footerY);
