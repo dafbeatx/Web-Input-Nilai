@@ -528,7 +528,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       // School Header
       doc.setFont("Times", "bold");
       doc.setFontSize(16);
-      doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 20, { align: 'center' });
+      doc.text('OSIS SMP TERPADU AL-ITTIHADIYAH', 105, 20, { align: 'center' });
       
       doc.setFontSize(12);
       doc.text('Laporan Kedisiplinan dan Kepatuhan Perilaku Siswa', 105, 26, { align: 'center' });
@@ -601,7 +601,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         log.reason,
         log.points > 0 ? `+${log.points}` : `${log.points}`,
         new Date(log.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
-        log.points > 0 ? 'Pujian' : 'Pelanggaran'
+        log.points > 0 ? 'Pelanggaran' : 'Pujian'
       ]);
 
       let behaviorTableEndY = 83;
@@ -643,7 +643,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       doc.line(15, behaviorTableEndY + 3, 195, behaviorTableEndY + 3);
 
       let evalText = '';
-      const violations = (student.behaviorLogs || []).filter(log => log.points <= 0 || !log.points);
+      const violations = (student.behaviorLogs || []).filter(log => log.points > 0);
       if (violations.length === 0) {
         evalText = `Siswa menunjukkan kepatuhan dan kedisiplinan yang sangat baik selama semester ini. Catatan perilaku bersih tanpa ada pelanggaran kedisiplinan yang tercatat. Sangat disarankan untuk terus mempertahankan sikap positif ini sebagai teladan bagi siswa lainnya.`;
       } else {
@@ -668,19 +668,6 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       
       const evalEndY = behaviorTableEndY + 8 + (splitEval.length * 5) + 12;
 
-      // Check page overflow for footer
-      let footerY = evalEndY;
-      if (footerY > 250) {
-        doc.addPage();
-        doc.rect(10, 10, 190, 277);
-        footerY = 25;
-      }
-
-      // Bottom footer section
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.2);
-      doc.line(15, footerY, 195, footerY);
-
       const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
       const now = new Date();
       const day = now.getDate();
@@ -689,6 +676,35 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       const hours = String(now.getHours()).padStart(2, '0');
       const minutes = String(now.getMinutes()).padStart(2, '0');
       const dateTimeStr = `${day} ${month} ${year} • ${hours}:${minutes} WIB`;
+
+      // Check page overflow for signature block and footer
+      let signatureY = evalEndY + 10;
+      if (signatureY + 45 > 270) {
+        doc.addPage();
+        doc.rect(10, 10, 190, 277);
+        signatureY = 25;
+      }
+
+      // Signature section
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      
+      const signatureX = 135;
+      doc.text(`Cianjur, ${day} ${month} ${year}`, signatureX, signatureY);
+      doc.text('Pembimbing OSIS,', signatureX, signatureY + 6);
+      
+      doc.setFont("Helvetica", "bold");
+      doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + 28);
+      
+      doc.setLineWidth(0.2);
+      doc.line(signatureX, signatureY + 29, signatureX + 50, signatureY + 29);
+
+      // Bottom footer section
+      const footerY = signatureY + 38;
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.2);
+      doc.line(15, footerY, 195, footerY);
 
       doc.setFont("Helvetica", "normal");
       doc.setFontSize(9);
@@ -863,7 +879,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         // School Header (Only School Name, Centered, No Yayasan, No Address)
         doc.setFont("Times", "bold");
         doc.setFontSize(16);
-        doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 20, { align: 'center' });
+        doc.text('OSIS SMP TERPADU AL-ITTIHADIYAH', 105, 20, { align: 'center' });
         
         doc.setFontSize(12);
         doc.text('Laporan Kedisiplinan dan Kepatuhan Perilaku Siswa', 105, 26, { align: 'center' });
@@ -936,7 +952,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
           log.reason,
           log.points > 0 ? `+${log.points}` : `${log.points}`,
           new Date(log.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
-          log.points > 0 ? 'Pujian' : 'Pelanggaran'
+          log.points > 0 ? 'Pelanggaran' : 'Pujian'
         ]);
 
         let behaviorTableEndY = 83;
@@ -978,7 +994,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         doc.line(15, behaviorTableEndY + 3, 195, behaviorTableEndY + 3);
 
         let evalText = '';
-        const violations = (student.behaviorLogs || []).filter(log => log.points <= 0 || !log.points);
+        const violations = (student.behaviorLogs || []).filter(log => log.points > 0);
         if (violations.length === 0) {
           evalText = `Siswa menunjukkan kepatuhan dan kedisiplinan yang sangat baik selama semester ini. Catatan perilaku bersih tanpa ada pelanggaran kedisiplinan yang tercatat. Sangat disarankan untuk terus mempertahankan sikap positif ini sebagai teladan bagi siswa lainnya.`;
         } else {
@@ -1003,19 +1019,6 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         
         const evalEndY = behaviorTableEndY + 8 + (splitEval.length * 5) + 12;
 
-        // Check page overflow for footer
-        let footerY = evalEndY;
-        if (footerY > 250) {
-          doc.addPage();
-          doc.rect(10, 10, 190, 277);
-          footerY = 25;
-        }
-
-        // Bottom footer section
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.2);
-        doc.line(15, footerY, 195, footerY);
-
         const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
         const now = new Date();
         const day = now.getDate();
@@ -1024,6 +1027,35 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
         const dateTimeStr = `${day} ${month} ${year} • ${hours}:${minutes} WIB`;
+
+        // Check page overflow for signature block and footer
+        let signatureY = evalEndY + 10;
+        if (signatureY + 45 > 270) {
+          doc.addPage();
+          doc.rect(10, 10, 190, 277);
+          signatureY = 25;
+        }
+
+        // Signature section
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        
+        const signatureX = 135;
+        doc.text(`Cianjur, ${day} ${month} ${year}`, signatureX, signatureY);
+        doc.text('Pembimbing OSIS,', signatureX, signatureY + 6);
+        
+        doc.setFont("Helvetica", "bold");
+        doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + 28);
+        
+        doc.setLineWidth(0.2);
+        doc.line(signatureX, signatureY + 29, signatureX + 50, signatureY + 29);
+
+        // Bottom footer section
+        const footerY = signatureY + 38;
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.2);
+        doc.line(15, footerY, 195, footerY);
 
         doc.setFont("Helvetica", "normal");
         doc.setFontSize(9);
