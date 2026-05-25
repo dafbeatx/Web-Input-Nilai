@@ -691,7 +691,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       doc.setTextColor(0, 0, 0);
       
       const signatureX = 135;
-      doc.text(`Cianjur, ${day} ${month} ${year}`, signatureX, signatureY);
+      doc.text(`Bogor, ${day} ${month} ${year}`, signatureX, signatureY);
       doc.text('Pembimbing OSIS,', signatureX, signatureY + 6);
       
       doc.setFont("Helvetica", "bold");
@@ -1042,7 +1042,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         doc.setTextColor(0, 0, 0);
         
         const signatureX = 135;
-        doc.text(`Cianjur, ${day} ${month} ${year}`, signatureX, signatureY);
+        doc.text(`Bogor, ${day} ${month} ${year}`, signatureX, signatureY);
         doc.text('Pembimbing OSIS,', signatureX, signatureY + 6);
         
         doc.setFont("Helvetica", "bold");
