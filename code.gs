@@ -1,13 +1,14 @@
 /**
- * Bot WhatsAuto AI - GradeMaster OS (Ultimate Version: Token Saver + Supabase Integration)
- * Fitur: Respons Ringkas (Hemat Token), VIP Persona, Auto-Lunas, Smart Media, 6 API, Integrasi Supabase.
+ * Bot WhatsAuto AI - GradeMaster OS (Ultimate Version: Token Saver + Supabase & Google Drive OCR)
+ * Fitur: Respons Ringkas (Hemat Token), VIP Persona, Auto-Lunas, Smart Media, 6 API, Integrasi Supabase & OCR Drive.
  */
 
 const scriptProperties = PropertiesService.getScriptProperties();
 const SUPABASE_URL = scriptProperties.getProperty('SUPABASE_URL');
 const SUPABASE_KEY = scriptProperties.getProperty('SUPABASE_KEY');
 const LOG_SHEET_ID = scriptProperties.getProperty('LOG_SHEET_ID'); 
-const APP_URL = scriptProperties.getProperty('APP_URL') || "https://(domain-web-anda)"; // URL Web GradeMaster OS
+const APP_URL = scriptProperties.getProperty('APP_URL') || "https://web-input-nilai.vercel.app/"; // URL Web GradeMaster OS
+const DRIVE_FOLDER_ID = "1LJQ9sf1TYFtRI_c5cCFU2dIwaoRSh_Zd"; // ID Folder Google Drive Anda
 const MODEL_NAME = 'llama-3.3-70b-versatile'; 
 const MAX_HISTORY = 5; 
 
@@ -36,6 +37,41 @@ function doPost(e) {
       scriptProperties.deleteProperty(phone + "_student_cache_expire");
       logToSheet(phone, senderName, "User", userMessage, "Command Reset");
       return sendResponse("Sistem telah mereset memori dan tautan nama Anda. Sapa aku kembali, hehe.");
+    }
+
+    // --- DETEKSI PENGIRIMAN MEDIA (GAMBAR/FOTO) ---
+    // WhatsAuto mengirimkan teks penanda notifikasi seperti "📷 Foto" atau "[Pengguna mengirim...]"
+    const isMedia = msgLower.indexOf("📷") !== -1 || 
+                    msgLower.indexOf("foto") !== -1 || 
+                    msgLower.indexOf("gambar") !== -1 || 
+                    msgLower.indexOf("file") !== -1 || 
+                    msgLower.indexOf("[pengguna mengirim") !== -1;
+
+    if (isMedia && DRIVE_FOLDER_ID) {
+      let fileFound = null;
+      // Melakukan polling di Drive selama maksimal 8 detik (memeriksa setiap 1 detik)
+      // Menunggu aplikasi FolderSync di Android mengunggah file media terbaru
+      for (let i = 0; i < 8; i++) {
+        Utilities.sleep(1000);
+        fileFound = getNewestImageFromDrive(DRIVE_FOLDER_ID, 25); // batas usia file maksimal 25 detik
+        if (fileFound) {
+          break;
+        }
+      }
+      
+      if (fileFound) {
+        const ocrText = performOcrOnDriveFile(fileFound.getId());
+        if (ocrText) {
+          userMessage = `[Hasil pembacaan teks (OCR) otomatis dari foto/media bukti yang dikirim siswa: "${ocrText.replace(/\n/g, ' ')}"]`;
+        } else {
+          userMessage = `[Siswa mengirim gambar/media bukti, namun sistem gagal mendeteksi tulisan teks di dalamnya]`;
+        }
+        // Hapus file gambar asli dari Google Drive agar penyimpanan tetap lega (0 MB)
+        try { Drive.Files.remove(fileFound.getId()); } catch(e) {}
+      } else {
+        // Fallback jika proses unggah FolderSync lambat
+        userMessage = `[Siswa mengirim gambar/media bukti, namun sistem tidak mendeteksi berkas baru di Google Drive dalam 8 detik]`;
+      }
     }
 
     // --- STATE & DATA MANAGEMENT ---
@@ -407,6 +443,65 @@ function getStudentDataSummary(studentName) {
   return summary;
 }
 
+// --- FUNGSI DETEKSI & OCR DRIVE ---
+
+// Mencari file gambar terbaru di folder Drive yang usianya < maxAgeSeconds
+function getNewestImageFromDrive(folderId, maxAgeSeconds) {
+  try {
+    const folder = DriveApp.getFolderById(folderId);
+    const files = folder.getFiles();
+    const now = new Date().getTime();
+    
+    let newestFile = null;
+    let newestTime = 0;
+    
+    while (files.hasNext()) {
+      const file = files.next();
+      const createdTime = file.getDateCreated().getTime();
+      const age = (now - createdTime) / 1000;
+      
+      // Filter hanya file berumur baru dan berformat gambar
+      if (age < maxAgeSeconds) {
+        const mime = file.getMimeType().toLowerCase();
+        if (mime.indexOf("image/") !== -1 || mime === "application/octet-stream" || file.getName().toLowerCase().endsWith(".jpg") || file.getName().toLowerCase().endsWith(".png")) {
+          if (createdTime > newestTime) {
+            newestTime = createdTime;
+            newestFile = file;
+          }
+        }
+      }
+    }
+    return newestFile;
+  } catch (e) {
+    logToSheet("system", "error", "getNewestImageFromDrive", e.toString(), "Error");
+  }
+  return null;
+}
+
+// Mengonversi gambar menjadi Google Doc sementara untuk OCR dan mengekstrak teksnya
+function performOcrOnDriveFile(fileId) {
+  try {
+    const blob = DriveApp.getFileById(fileId).getBlob();
+    const resource = {
+      title: "OCR Temp Doc",
+      mimeType: MimeType.GOOGLE_DOCS
+    };
+    
+    // Memasukkan file ke Google Drive REST API dengan mengaktifkan flag OCR
+    const doc = Drive.Files.insert(resource, blob, { ocr: true, ocrLanguage: "id" });
+    const docFile = DocumentApp.openById(doc.id);
+    const extractedText = docFile.getBody().getText().trim();
+    
+    // Hapus dokumen Google Doc sementara agar tidak menyampah di Drive
+    Drive.Files.remove(doc.id);
+    
+    return extractedText;
+  } catch (e) {
+    logToSheet("system", "error", "performOcrOnDriveFile", e.toString(), "Error");
+    return "";
+  }
+}
+
 // --- FUNGSI FILTRASI & VIP ---
 
 function getPerlakuanKhusus(senderName) {
@@ -602,8 +697,7 @@ function sendResponse(text) {
 
 function initSetup() {
   // JALANKAN FUNGSI INI SEKALI DI EDITOR GOOGLE APPS SCRIPT
-  // Ganti 'https://(domain-web-anda)' dengan URL web GradeMaster Anda yang asli.
+  // Ganti URL dengan URL web GradeMaster Anda yang asli jika nanti berubah.
   PropertiesService.getScriptProperties().setProperty('APP_URL', 'https://web-input-nilai.vercel.app/');
   Logger.log("APP_URL berhasil disetel!");
 }
-
