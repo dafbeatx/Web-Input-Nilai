@@ -770,20 +770,42 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       doc.text(`Bogor, ${day} ${month} ${year}`, signatureX, signatureY);
       doc.text('Pembimbing OSIS,', signatureX, signatureY + 4);
 
-      // Draw uploaded signature if available
+      let targetW = 35;
+      let targetH = 10;
+
+      // Draw uploaded signature if available with aspect-ratio scaling
       if (signatureBase64) {
         try {
-          doc.addImage(signatureBase64, 'PNG', signatureX + 2, signatureY + 5, 35, 10);
+          const sigImg = await loadImage(signatureBase64);
+          const origW = sigImg.naturalWidth || sigImg.width || 1;
+          const origH = sigImg.naturalHeight || sigImg.height || 1;
+          const aspectRatio = origW / origH;
+          
+          const maxW = 45;
+          const maxH = 14;
+          
+          if (aspectRatio > maxW / maxH) {
+            targetW = maxW;
+            targetH = maxW / aspectRatio;
+          } else {
+            targetH = maxH;
+            targetW = maxH * aspectRatio;
+          }
+          
+          const sigXPos = signatureX + (50 - targetW) / 2;
+          doc.addImage(sigImg, 'PNG', sigXPos, signatureY + 5, targetW, targetH);
         } catch (imgErr) {
           console.error("Failed to add signature image to PDF:", imgErr);
         }
       }
       
+      const signatureHeightOffset = Math.max(10, targetH) + 6;
+      
       doc.setFont("Helvetica", "bold");
-      doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + 16);
+      doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + signatureHeightOffset);
       
       doc.setLineWidth(0.2);
-      doc.line(signatureX, signatureY + 17, signatureX + 50, signatureY + 17);
+      doc.line(signatureX, signatureY + signatureHeightOffset + 1, signatureX + 50, signatureY + signatureHeightOffset + 1);
 
       // Bottom footer section (fixed at the bottom of the page)
       const footerY = 278;
@@ -1137,20 +1159,42 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         doc.text(`Bogor, ${day} ${month} ${year}`, signatureX, signatureY);
         doc.text('Pembimbing OSIS,', signatureX, signatureY + 4);
 
-        // Draw uploaded signature if available
+        let targetW = 35;
+        let targetH = 10;
+
+        // Draw uploaded signature if available with aspect-ratio scaling
         if (signatureBase64) {
           try {
-            doc.addImage(signatureBase64, 'PNG', signatureX + 2, signatureY + 5, 35, 10);
+            const sigImg = await loadImage(signatureBase64);
+            const origW = sigImg.naturalWidth || sigImg.width || 1;
+            const origH = sigImg.naturalHeight || sigImg.height || 1;
+            const aspectRatio = origW / origH;
+            
+            const maxW = 45;
+            const maxH = 14;
+            
+            if (aspectRatio > maxW / maxH) {
+              targetW = maxW;
+              targetH = maxW / aspectRatio;
+            } else {
+              targetH = maxH;
+              targetW = maxH * aspectRatio;
+            }
+            
+            const sigXPos = signatureX + (50 - targetW) / 2;
+            doc.addImage(sigImg, 'PNG', sigXPos, signatureY + 5, targetW, targetH);
           } catch (imgErr) {
             console.error("Failed to add signature image to PDF:", imgErr);
           }
         }
         
+        const signatureHeightOffset = Math.max(10, targetH) + 6;
+        
         doc.setFont("Helvetica", "bold");
-        doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + 16);
+        doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + signatureHeightOffset);
         
         doc.setLineWidth(0.2);
-        doc.line(signatureX, signatureY + 17, signatureX + 50, signatureY + 17);
+        doc.line(signatureX, signatureY + signatureHeightOffset + 1, signatureX + 50, signatureY + signatureHeightOffset + 1);
 
         // Bottom footer section (fixed at the bottom of the page)
         const footerY = 278;
