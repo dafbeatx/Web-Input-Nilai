@@ -24,7 +24,7 @@ interface StudentRemedialLayerProps {
   setToast: (t: ToastType) => void;
 }
 
-type RemedialStep = 'RULES' | 'INFO' | 'GUIDE' | 'EXAM' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT' | 'SECOND_CHANCE' | 'AI_BOT_DETECTED' | 'SUBMITTED' | 'FAILED_EFFORT';
+type RemedialStep = 'RULES' | 'INFO' | 'GUIDE' | 'EXAM' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT' | 'SECOND_CHANCE' | 'AI_BOT_DETECTED' | 'SUBMITTED' | 'FAILED_EFFORT' | 'TIME_UP';
 
 const Badge = ({ children, color = 'indigo' }: { children: React.ReactNode; color?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'rose' }) => {
   const colors = {
@@ -986,13 +986,13 @@ export default function StudentRemedialLayer({
 
         // setToast({ message: "Melanjutkan sesi remedial sebelumnya...", type: "success" });
         saveRemedialSession({ ...saved, refreshCount: (saved.refreshCount || 0) + 1 });
-      } else if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'SUBMITTED', 'FAILED_EFFORT'].includes(saved.step)) {
+      } else if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'TIME_UP', 'SUBMITTED', 'FAILED_EFFORT'].includes(saved.step)) {
         setStep(saved.step as RemedialStep);
       }
     }
   }, [sessionId, studentName, remedialEssayCount, remedialTimer]);
 
-  // Check server status on mount (Database) - Persist terminal state across devices/hard-clears
+  // Check server status (Database) - Persist terminal state across devices/hard-clears + poll every 10s
   useEffect(() => {
     // Guard: only fetch if we have identifying info
     if (!sessionId || !studentName) return;
@@ -1020,8 +1020,36 @@ export default function StudentRemedialLayer({
             return;
           }
 
+          // Handle teacher extending the time dynamically
+          if (data.remedialExtendedTime !== undefined) {
+            const newExtendedSeconds = (data.remedialExtendedTime || 0) * 60;
+            const saved = loadRemedialSession();
+            if (saved) {
+              const prevExtended = saved.extendedTime || 0;
+              if (newExtendedSeconds !== prevExtended) {
+                console.log(`[Timer Extension] Updating extended time from ${prevExtended} to ${newExtendedSeconds} seconds`);
+                const updated = { ...saved, extendedTime: newExtendedSeconds };
+                saveRemedialSession(updated);
+
+                const baseTimer = (saved.remedialTimer || remedialTimer) * 60;
+                const elapsedSeconds = Math.floor((Date.now() - saved.startedAt) / 1000);
+                let remaining = baseTimer + newExtendedSeconds - elapsedSeconds;
+                if (remaining < 0) remaining = 0;
+                setTimeLeft(remaining);
+
+                if (remaining > 0) {
+                  setIsTimeoutTriggered(false);
+                  if (step === 'TIMEOUT' || step === 'TIME_UP') {
+                    setStep('EXAM');
+                    setToast({ message: "Waktu tambahan telah diberikan oleh guru. Silakan lanjutkan!", type: "success" });
+                  }
+                }
+              }
+            }
+          }
+
           // If server says terminal status, override local state
-          if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
+          if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'TIME_UP', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
             setStep(data.status as RemedialStep);
             
             if (['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
@@ -1064,8 +1092,11 @@ export default function StudentRemedialLayer({
         console.error('Failed to fetch points status:', err);
       }
     };
+
     checkServerStatus();
-  }, [sessionId, studentName]);
+    const intervalId = setInterval(checkServerStatus, 10000);
+    return () => clearInterval(intervalId);
+  }, [sessionId, studentName, step, remedialTimer, className, academicYear]);
 
   // Mark refresh vs tab-leave
   useEffect(() => {
@@ -1115,6 +1146,14 @@ export default function StudentRemedialLayer({
       remedialTimer: (remedialTimer && remedialTimer > 0) ? remedialTimer : prevTimer,
     });
   }, [answers, note, step, sessionId, studentName, className, subject, currentLocation, shuffledQuestions, currentStudentId, examMode, cameraStatus, remedialQuestions, remedialTimer]);
+
+  // Backup answers to a separate key that survives session resets
+  useEffect(() => {
+    if (step === 'EXAM' && answers && answers.some(a => a && a.trim() !== '')) {
+      const backupKey = `gm_remedial_backup_${sessionId}_${studentName.toLowerCase().trim()}`;
+      localStorage.setItem(backupKey, JSON.stringify(answers));
+    }
+  }, [answers, step, sessionId, studentName]);
 
   const isSubmittingRef = useRef(isSubmitting);
   useEffect(() => { isSubmittingRef.current = isSubmitting; });
@@ -1568,14 +1607,30 @@ export default function StudentRemedialLayer({
       }));
       
       setShuffledQuestions(initialShuffled);
-      setAnswers(new Array(activeQuestions.length).fill(""));
+      
+      // Try to recover from backup first
+      let initialAnswers = new Array(activeQuestions.length).fill("");
+      if (typeof window !== 'undefined') {
+        const backupKey = `gm_remedial_backup_${sessionId}_${studentName.toLowerCase().trim()}`;
+        const backupRaw = localStorage.getItem(backupKey);
+        if (backupRaw) {
+          try {
+            const parsed = JSON.parse(backupRaw);
+            if (Array.isArray(parsed) && parsed.length === activeQuestions.length) {
+              initialAnswers = parsed;
+              console.log("Restored answers from backup on exam start:", parsed);
+            }
+          } catch {}
+        }
+      }
+      setAnswers(initialAnswers);
 
       saveRemedialSession({
         sessionId,
         studentName,
         step: 'EXAM',
         startedAt: startedAtRef.current,
-        answers: new Array(activeQuestions.length).fill(""),
+        answers: initialAnswers,
         note,
         location: locStr || 'UNAVAILABLE',
         refreshCount: 0,
@@ -2019,6 +2074,10 @@ export default function StudentRemedialLayer({
           }
 
           clearRemedialSession();
+          if (typeof window !== 'undefined') {
+            const backupKey = `gm_remedial_backup_${sessionId}_${studentName.toLowerCase().trim()}`;
+            localStorage.removeItem(backupKey);
+          }
           
           const finalStatus = data.status || status;
           if (['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT'].includes(finalStatus)) {
@@ -2371,9 +2430,9 @@ export default function StudentRemedialLayer({
   }
 
   // RENDER: COMPLETED / CHEATED / TIMEOUT
-  if (step === 'CHEATED' || step === 'TIMEOUT' || step === 'COMPLETED' || step === 'SUBMITTED' || step === 'FAILED_EFFORT') {
+  if (step === 'CHEATED' || step === 'TIMEOUT' || step === 'TIME_UP' || step === 'COMPLETED' || step === 'SUBMITTED' || step === 'FAILED_EFFORT') {
     const isCheat = step === 'CHEATED';
-    const isTimeout = step === 'TIMEOUT';
+    const isTimeout = step === 'TIMEOUT' || step === 'TIME_UP';
     const isCompleted = ['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT'].includes(step);
 
     const getRemainingTimeStr = () => {

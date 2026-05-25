@@ -425,13 +425,15 @@ $$;
 ALTER TABLE public.gm_students 
 ADD COLUMN IF NOT EXISTS exam_mode TEXT DEFAULT 'STRICT',
 ADD COLUMN IF NOT EXISTS camera_status TEXT DEFAULT 'ACTIVE',
-ADD COLUMN IF NOT EXISTS risk_level TEXT DEFAULT 'LOW';
+ADD COLUMN IF NOT EXISTS risk_level TEXT DEFAULT 'LOW',
+ADD COLUMN IF NOT EXISTS remedial_extended_time INTEGER DEFAULT 0;
 
--- Add missing columns to gm_remedial_attempts to support heartbeat monitoring
+-- Add missing columns to gm_remedial_attempts to support heartbeat monitoring and time extensions
 ALTER TABLE public.gm_remedial_attempts 
 ADD COLUMN IF NOT EXISTS last_heartbeat_at TIMESTAMPTZ DEFAULT now(),
 ADD COLUMN IF NOT EXISTS last_network_status TEXT DEFAULT 'ONLINE',
-ADD COLUMN IF NOT EXISTS last_latency_ms INTEGER DEFAULT 0;
+ADD COLUMN IF NOT EXISTS last_latency_ms INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS extended_time INTEGER DEFAULT 0;
 -- ============================================================
 -- Normalized Behavior Schema
 -- ============================================================

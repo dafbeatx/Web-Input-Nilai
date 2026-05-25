@@ -844,3 +844,58 @@ export async function markRemedialFailed(attemptId: string, studentId: string) {
 
   return true;
 }
+
+export async function extendRemedialTime(studentId: string, minutes: number) {
+  // 1. Fetch student
+  const { data: student, error: fetchErr } = await supabase
+    .from('gm_students')
+    .select('id, session_id, name, remedial_status, remedial_extended_time')
+    .eq('id', studentId)
+    .single();
+
+  if (fetchErr || !student) {
+    throw new Error('Siswa tidak ditemukan');
+  }
+
+  const currentExtended = student.remedial_extended_time || 0;
+  const newExtended = currentExtended + minutes;
+
+  // 2. Update student status and extended time
+  const { error: studentErr } = await supabase
+    .from('gm_students')
+    .update({
+      remedial_status: 'ACTIVE',
+      remedial_extended_time: newExtended,
+      is_cheated: false,
+      teacher_reviewed: false,
+      final_score_locked: null,
+    })
+    .eq('id', studentId);
+
+  if (studentErr) throw studentErr;
+
+  // 3. Find latest attempt and set it to ACTIVE
+  const { data: latestAttempt } = await supabase
+    .from('gm_remedial_attempts')
+    .select('id')
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (latestAttempt) {
+    const { error: attemptErr } = await supabase
+      .from('gm_remedial_attempts')
+      .update({
+        status: 'ACTIVE',
+        completed_at: null,
+      })
+      .eq('id', latestAttempt.id);
+
+    if (attemptErr) throw attemptErr;
+  }
+
+  console.log(`[Remedial] Extended time for student=${student.name} (id: ${studentId}) by ${minutes} minutes. New total extended: ${newExtended}`);
+  return { newExtended };
+}
+

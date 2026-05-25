@@ -57,6 +57,7 @@ export interface GradedStudent {
   essayScoreManual?: number;
   essayScoreFinal?: number;
   essayAutoDetails?: { similarity: number; score: number }[];
+  remedialExtendedTime?: number;
 }
 
 export interface SessionData {

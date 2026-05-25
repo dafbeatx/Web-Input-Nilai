@@ -67,6 +67,7 @@ export default function RemedialDashboardLayer({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isExtending, setIsExtending] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const generateAndCopyPendingList = () => {
@@ -178,6 +179,36 @@ export default function RemedialDashboardLayer({
       alert('Gagal mereset data remedial. Silakan coba lagi.');
     } finally {
       setIsDeleting(null);
+    }
+  };
+
+  const handleExtendTimePrompt = async (e: React.MouseEvent, id: string, name: string) => {
+    e.stopPropagation();
+    const minutesStr = window.prompt(`Masukkan jumlah waktu tambahan (menit) untuk "${name}":`, "10");
+    if (minutesStr === null) return;
+    const minutes = parseInt(minutesStr, 10);
+    if (isNaN(minutes) || minutes <= 0) {
+      alert('Jumlah menit tidak valid');
+      return;
+    }
+    
+    setIsExtending(id);
+    try {
+      const res = await fetch('/api/grademaster/students/remedial/extend-time', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: id, minutes })
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Gagal menambahkan waktu');
+      }
+      alert(`Berhasil menambahkan ${minutes} menit untuk "${name}".`);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menambahkan waktu. Silakan coba lagi.');
+    } finally {
+      setIsExtending(null);
     }
   };
 
@@ -404,15 +435,27 @@ export default function RemedialDashboardLayer({
                               {student.finalScoreLocked || student.finalScore}
                             </span>
                          </div>
-                         <button 
-                          onClick={(e) => handleResetRemedial(e, student.id, student.name)}
-                          disabled={!isAdmin || isDeleting === student.id}
-                          className="px-3 py-1.5 rounded-xl bg-error/10 border border-error/20 flex items-center gap-1.5 text-error hover:bg-error hover:text-on-error transition-all disabled:opacity-30 active:scale-95"
-                          title="Berikan kesempatan ulang kepada siswa ini"
-                         >
-                            {isDeleting === student.id ? <Clock size={12} className="animate-spin" /> : <RotateCcw size={12} strokeWidth={3} />}
-                            <span className="text-[9px] font-black uppercase tracking-widest leading-none">Set Ulang</span>
-                         </button>
+                          {(student.remedialStatus === 'TIMEOUT' || student.remedialStatus === 'TIME_UP' || student.remedialStatus === 'ACTIVE') && (
+                            <button 
+                             onClick={(e) => handleExtendTimePrompt(e, student.id, student.name)}
+                             disabled={!isAdmin || isExtending === student.id}
+                             className="px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 flex items-center gap-1.5 text-primary hover:bg-primary hover:text-white transition-all disabled:opacity-30 active:scale-95"
+                             title="Tambah waktu remedial siswa"
+                            >
+                               {isExtending === student.id ? <Clock size={12} className="animate-spin" /> : <Clock size={12} />}
+                               <span className="text-[9px] font-black uppercase tracking-widest leading-none">Tambah Waktu</span>
+                            </button>
+                          )}
+
+                          <button 
+                           onClick={(e) => handleResetRemedial(e, student.id, student.name)}
+                           disabled={!isAdmin || isDeleting === student.id}
+                           className="px-3 py-1.5 rounded-xl bg-error/10 border border-error/20 flex items-center gap-1.5 text-error hover:bg-error hover:text-on-error transition-all disabled:opacity-30 active:scale-95"
+                           title="Berikan kesempatan ulang kepada siswa ini"
+                          >
+                             {isDeleting === student.id ? <Clock size={12} className="animate-spin" /> : <RotateCcw size={12} strokeWidth={3} />}
+                             <span className="text-[9px] font-black uppercase tracking-widest leading-none">Set Ulang</span>
+                          </button>
                       </div>
                    </div>
 
