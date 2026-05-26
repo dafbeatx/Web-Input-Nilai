@@ -6,6 +6,7 @@ export interface ScoringConfig {
   remedialQuestions?: string[];
   remedialAnswerKeys?: string[];
   remedialDeadline?: string;
+  aiDynamicQuestions?: boolean;
 }
 
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {

@@ -2,6 +2,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabase/admin';
 import { assessClientRisk, assessServerRisk, mergeRiskAssessments } from './risk-engine.service';
 import { calculateEssayScore } from '../scoring';
 import { generateAttemptToken, verifyAttemptToken } from '../token';
+import { generateDynamicQuestions } from './question-generator.service';
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   NONE: ['INITIATED'],
@@ -101,13 +102,21 @@ export async function submitRemedial(
 
     if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'SUBMITTED', 'FAILED_EFFORT', 'TIME_UP'].includes(student.remedial_status)) {
       console.log(`[Remedial] Idempotent FINALIZATION: student=${studentName}, status is already ${student.remedial_status}`);
+      const { data: lastAttempt } = await supabase
+        .from('gm_remedial_attempts')
+        .select('remedial_questions')
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
       return {
         ...student,
         remedial_status: student.remedial_status,
         newFinalScore: student.final_score,
         subject: session.subject,
         class_name: session.class_name,
-        remedialQuestions: session.scoring_config?.remedialQuestions || [],
+        remedialQuestions: lastAttempt?.remedial_questions || session.scoring_config?.remedialQuestions || [],
       };
     }
 
@@ -124,7 +133,7 @@ export async function submitRemedial(
         attempt_token: activeAttempt.attempt_token,
         subject: session.subject,
         class_name: session.class_name,
-        remedialQuestions: session.scoring_config?.remedialQuestions || [],
+        remedialQuestions: activeAttempt.remedial_questions || session.scoring_config?.remedialQuestions || [],
       };
     }
 
@@ -133,7 +142,7 @@ export async function submitRemedial(
     if (student.remedial_status === 'INITIATED') {
       const { data: existingAttempt } = await supabase
         .from('gm_remedial_attempts')
-        .select('id, attempt_token, started_at')
+        .select('id, attempt_token, started_at, remedial_questions')
         .eq('student_id', studentId)
         .eq('status', 'INITIATED')
         .order('created_at', { ascending: false })
@@ -152,7 +161,7 @@ export async function submitRemedial(
           attempt_token: existingAttempt.attempt_token,
           subject: session.subject,
           class_name: session.class_name,
-          remedialQuestions: session.scoring_config?.remedialQuestions || [],
+          remedialQuestions: existingAttempt.remedial_questions || session.scoring_config?.remedialQuestions || [],
         };
       }
     }
@@ -179,8 +188,18 @@ export async function submitRemedial(
       throw new Error('DEADLINE_PASSED: Batas waktu untuk mengerjakan remedial sesi ini telah habis.');
     }
 
-    // Defensive Question Check: Ensure session has questions before starting
-    const questions = session.scoring_config?.remedialQuestions || [];
+    // Dynamic AI Question Generator integration
+    let questions = session.scoring_config?.remedialQuestions || [];
+    let answerKeys = session.scoring_config?.remedialAnswerKeys || [];
+    
+    const isAiDynamic = !!session.scoring_config?.aiDynamicQuestions;
+    if (isAiDynamic && questions.length > 0) {
+      console.log(`[Remedial] AI Dynamic Questions is enabled. Generating unique questions for ${studentName}...`);
+      const generated = await generateDynamicQuestions(questions, answerKeys);
+      questions = generated.questions;
+      answerKeys = generated.answerKeys;
+    }
+
     if (questions.length === 0) {
       console.error(`[Remedial Error] ${studentName} (session: ${sessionId}) - Gagal INITIATED: Soal remedial kosong di Database.`);
       throw new Error('INVALID_SESSION_DATA: Guru belum mengatur soal remedial untuk sesi ini.');
@@ -202,6 +221,8 @@ export async function submitRemedial(
         p_location: location,
         p_photo: photo || null,
         p_original_score: originalScore,
+        p_remedial_questions: isAiDynamic ? questions : null,
+        p_remedial_answer_keys: isAiDynamic ? answerKeys : null,
       });
 
       if (error) throw new Error(`RPC start_remedial_attempt: ${error.message}`);
@@ -316,9 +337,9 @@ export async function submitRemedial(
     const maxDurationMs = ((session.remedial_timer || 15) * 60 * 1000) + (2 * 60 * 1000); // Waktu ujian + toleransi 2 menit
     const isTooLate = backendElapsedMs > maxDurationMs;
 
-    // Essay scoring (server-side only)
-    const answerKeys: string[] = session.scoring_config?.remedialAnswerKeys || [];
-    const questions: string[] = session.scoring_config?.remedialQuestions || [];
+    // Essay scoring (server-side only) - Use attempt-specific dynamic keys if available
+    const answerKeys: string[] = attempt.remedial_answer_keys || session.scoring_config?.remedialAnswerKeys || [];
+    const questions: string[] = attempt.remedial_questions || session.scoring_config?.remedialQuestions || [];
     const essayResult = await calculateEssayScore(answers, answerKeys, questions);
 
     // Update attempt
@@ -508,7 +529,15 @@ async function findActiveAttempt(
   sessionId: string,
   studentId: string,
   studentName: string
-): Promise<{ id: string; attempt_token: string; risk_score: number; started_at: string | null; status: string }> {
+): Promise<{ 
+  id: string; 
+  attempt_token: string; 
+  risk_score: number; 
+  started_at: string | null; 
+  status: string; 
+  remedial_questions?: string[] | null; 
+  remedial_answer_keys?: string[] | null; 
+}> {
   // 0. Check student status first - if null/NONE, we should NOT try to recover an old attempt
   const { data: student } = await supabase
     .from('gm_students')
@@ -523,7 +552,7 @@ async function findActiveAttempt(
   // 1. Try finding ACTIVE attempt
   const { data: activeAttempt } = await supabase
     .from('gm_remedial_attempts')
-    .select('id, attempt_token, risk_score, started_at, status')
+    .select('id, attempt_token, risk_score, started_at, status, remedial_questions, remedial_answer_keys')
     .eq('session_id', sessionId)
     .eq('student_id', studentId)
     .eq('status', 'ACTIVE')
@@ -541,7 +570,7 @@ async function findActiveAttempt(
 
   const { data: initiatedAttempt } = await supabase
     .from('gm_remedial_attempts')
-    .select('id, attempt_token, risk_score, session_id, started_at, status')
+    .select('id, attempt_token, risk_score, session_id, started_at, status, remedial_questions, remedial_answer_keys')
     .eq('session_id', sessionId)
     .eq('student_id', studentId)
     .eq('status', 'INITIATED')
@@ -584,7 +613,7 @@ async function findActiveAttempt(
       started_at: new Date().toISOString(),
       location: 'RECOVERY_AUTO',
     })
-    .select('id, attempt_token, risk_score, started_at, status')
+    .select('id, attempt_token, risk_score, started_at, status, remedial_questions, remedial_answer_keys')
     .single();
 
   if (recoveryErr || !recoveryAttempt) {

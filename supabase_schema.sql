@@ -242,6 +242,8 @@ CREATE TABLE IF NOT EXISTS public.gm_remedial_attempts (
     last_heartbeat_at TIMESTAMPTZ DEFAULT now(),
     last_network_status TEXT DEFAULT 'ONLINE',
     last_latency_ms INTEGER DEFAULT 0,
+    remedial_questions JSONB DEFAULT NULL,
+    remedial_answer_keys JSONB DEFAULT NULL,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -336,7 +338,9 @@ CREATE OR REPLACE FUNCTION public.start_remedial_attempt(
   p_attempt_token TEXT,
   p_location TEXT,
   p_photo TEXT DEFAULT NULL,
-  p_original_score NUMERIC DEFAULT NULL
+  p_original_score NUMERIC DEFAULT NULL,
+  p_remedial_questions JSONB DEFAULT NULL,
+  p_remedial_answer_keys JSONB DEFAULT NULL
 )
 RETURNS UUID
 LANGUAGE plpgsql
@@ -346,9 +350,11 @@ DECLARE
   v_attempt_id UUID;
 BEGIN
   INSERT INTO public.gm_remedial_attempts (
-    session_id, student_id, attempt_number, attempt_token, status, location, photo, last_heartbeat_at, last_network_status
+    session_id, student_id, attempt_number, attempt_token, status, location, photo, 
+    last_heartbeat_at, last_network_status, remedial_questions, remedial_answer_keys
   ) VALUES (
-    p_session_id, p_student_id, p_attempt_number, p_attempt_token, 'INITIATED', p_location, p_photo, now(), 'ONLINE'
+    p_session_id, p_student_id, p_attempt_number, p_attempt_token, 'INITIATED', p_location, p_photo, 
+    now(), 'ONLINE', p_remedial_questions, p_remedial_answer_keys
   ) RETURNING id INTO v_attempt_id;
 
   UPDATE public.gm_students SET
