@@ -36,6 +36,7 @@ import LessonManagementLayer from "./grademaster/LessonManagementLayer";
 import RemedialManagementLayer from "@/components/grademaster/RemedialManagementLayer";
 import DataCenterLayer from "@/components/grademaster/DataCenterLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
+import { subscribeUser, isPushSupported } from "@/lib/grademaster/pushHelper";
 
 const ESSAY_COUNT = 5;
 
@@ -325,6 +326,20 @@ export default function GradeMaster() {
     }
   }, [layer, isAdmin, isStudent, adminUser, studentData]);
 
+  // Trigger Web Push Notification Registration for Students logged in with Google
+  useEffect(() => {
+    if (isStudent && studentData && studentData.id && studentData.isGoogleLinked !== false) {
+      const initPush = async () => {
+        if (isPushSupported()) {
+          console.log('[Push Registration] Initializing web push subscription for student account:', studentData.id);
+          await subscribeUser(studentData.id);
+        }
+      };
+      // Short delay to let the app settle
+      const timeout = setTimeout(initPush, 2000);
+      return () => clearTimeout(timeout);
+    }
+  }, [isStudent, studentData]);
 
   const penalizedStudents = React.useMemo(() => {
     return gradedStudents.map(s => ({
