@@ -2,6 +2,8 @@
 -- PUSH SUBSCRIPTIONS DATABASE SCHEMA
 -- ============================================================
 
+DROP TABLE IF EXISTS public.gm_push_subscriptions CASCADE;
+
 CREATE TABLE IF NOT EXISTS public.gm_push_subscriptions (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     student_account_id UUID NOT NULL REFERENCES public.gm_student_accounts(id) ON DELETE CASCADE,
