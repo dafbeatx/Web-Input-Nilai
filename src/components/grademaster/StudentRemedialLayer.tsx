@@ -1241,43 +1241,52 @@ export default function StudentRemedialLayer({
         setAiProctorStatus(analysis.threat_level);
         setAiProctorFindings(analysis.findings || []);
 
-        if (analysis.threat_level === 'warning') {
-          setActiveWarning({
-            type: 'CAMERA',
-            count: warningCount + 1,
-            limit: 10,
-            message: `⚠️ AI VISION ALERT: ${analysis.findings?.join('. ') || 'Aktivitas mencurigakan terdeteksi oleh sistem AI.'}`,
-          });
-          setWarningCount(prev => prev + 1);
-          setClientCheatingFlags(prev => {
-            const newFlag = 'AI Vision: ' + (analysis.findings?.[0] || 'Warning');
-            return prev.includes(newFlag) ? prev : [...prev, newFlag];
-          });
+        let violationDetected = false;
+
+        // 1. Detect missing face or multiple people
+        if (analysis.persons_detected === 0) {
+          handleCameraViolation('NO_FACE');
+          violationDetected = true;
+        } else if (analysis.persons_detected > 1) {
+          handleCameraViolation('MULTIPLE_FACES');
+          violationDetected = true;
         }
 
-        if (analysis.threat_level === 'critical') {
-          const reason = `AI Vision Critical: ${analysis.findings?.join(', ') || 'Pelanggaran berat terdeteksi AI'}`;
-          setClientCheatingFlags(prev => [...prev, reason]);
-          setWarningCount(prev => {
-            const newCount = prev + 3; // Critical = 3 warnings at once
-            if (newCount >= 10) {
-              if (secondChanceUsed) {
-                hasTriggeredCheatingRef.current = true;
-                handleStatusUpdate('CHEATED', reason);
-              } else {
-                setSecondChanceReason(reason);
-                setStep('SECOND_CHANCE');
-                sendTelegramNotify('SECOND_CHANCE', snap || undefined, reason);
-              }
-            }
-            return newCount;
-          });
-          setActiveWarning({
-            type: 'CAMERA',
-            count: warningCount + 3,
-            limit: 10,
-            message: `🚨 AI KRITIS: ${analysis.findings?.join('. ') || 'Pelanggaran berat terdeteksi!'} Orang: ${analysis.persons_detected}. Objek: ${analysis.suspicious_objects?.join(', ') || '-'}`,
-          });
+        // 2. Detect specific suspicious objects
+        if (analysis.suspicious_objects?.includes('phone')) {
+          handleCameraViolation('PHONE_DETECTED');
+          violationDetected = true;
+        }
+        if (analysis.suspicious_objects?.includes('book') || analysis.suspicious_objects?.includes('notes')) {
+          handleCameraViolation('BOOK_DETECTED');
+          violationDetected = true;
+        }
+        if (analysis.suspicious_objects?.includes('earpiece')) {
+          handleCameraViolation('EARPIECE_DETECTED');
+          violationDetected = true;
+        }
+        if (analysis.suspicious_objects?.includes('extra_screen')) {
+          handleCameraViolation('EXTRA_SCREEN_DETECTED');
+          violationDetected = true;
+        }
+
+        // 3. Fallbacks and general gaze behavior detection
+        if (!violationDetected) {
+          const hasSuspiciousGaze = analysis.findings?.some((f: string) => 
+            f.toLowerCase().includes('menoleh') || 
+            f.toLowerCase().includes('tidak menatap') || 
+            f.toLowerCase().includes('tidak sejajar') ||
+            f.toLowerCase().includes('gaze') ||
+            f.toLowerCase().includes('samping')
+          );
+
+          if (hasSuspiciousGaze) {
+            handleCameraViolation('FACE_UNALIGNED');
+          } else if (analysis.threat_level === 'warning') {
+            handleCameraViolation('FACE_UNALIGNED');
+          } else if (analysis.threat_level === 'critical') {
+            handleCameraViolation('PHONE_DETECTED'); // General critical fallback
+          }
         }
 
         // Reset to idle after a display period
@@ -1393,9 +1402,12 @@ export default function StudentRemedialLayer({
       
       let flagMessage = "";
       if (type === 'NO_FACE') flagMessage = "Wajah tidak terdeteksi";
-      if (type === 'MULTIPLE_FACES') flagMessage = "Terdeteksi lebih dari satu orang";
-      if (type === 'FACE_UNALIGNED') flagMessage = "Posisi wajah tidak sejajar";
-      if (type === 'PHONE_DETECTED') flagMessage = "Terdeteksi penggunaan HP (Ponsel)";
+      else if (type === 'MULTIPLE_FACES') flagMessage = "Terdeteksi lebih dari satu orang";
+      else if (type === 'FACE_UNALIGNED') flagMessage = "Posisi wajah tidak sejajar";
+      else if (type === 'PHONE_DETECTED') flagMessage = "Terdeteksi penggunaan HP (Ponsel)";
+      else if (type === 'BOOK_DETECTED') flagMessage = "Terdeteksi membuka buku/catatan";
+      else if (type === 'EARPIECE_DETECTED') flagMessage = "Terdeteksi menggunakan earpiece/headphone";
+      else if (type === 'EXTRA_SCREEN_DETECTED') flagMessage = "Terdeteksi layar/perangkat tambahan";
 
       const reason = `${flagMessage} (${newCount} kali)`;
 
@@ -1418,23 +1430,44 @@ export default function StudentRemedialLayer({
           sendTelegramNotify('SECOND_CHANCE', capturePhoto() || undefined, reason);
         }
       } else {
-        // setToast({ message: `Peringatan Kamera: ${flagMessage} (${newCount}/10)`, type: "error" });
-        
-        // Handle Phone detection with high priority notification & Modal
+        // Handle specific detections
         if (type === 'PHONE_DETECTED') {
             const snap = capturePhoto();
             sendTelegramNotify('PHONE_DETECTED', snap || undefined);
-            
-            // Show Urgent Modal for Phone Detection
             setActiveWarning({
                 type: 'CAMERA',
                 count: newCount,
                 limit: 10,
                 message: "⚠️ HP TERDETEKSI! Sistem AI mendeteksi adanya ponsel di depan kamera. Penggunaan HP dilarang keras selama ujian! Aktivitas ini telah dilaporkan ke Admin Telegram."
             });
-        }
-
-        if ((type === 'NO_FACE' || type === 'MULTIPLE_FACES') && Date.now() - lastEducationShownRef.current > 15000) {
+        } else if (type === 'BOOK_DETECTED') {
+            const snap = capturePhoto();
+            sendTelegramNotify('BOOK_DETECTED', snap || undefined, "Terdeteksi membuka buku/catatan");
+            setActiveWarning({
+                type: 'CAMERA',
+                count: newCount,
+                limit: 10,
+                message: "⚠️ BUKU/CATATAN TERDETEKSI! Sistem AI mendeteksi buku, kertas contekan, atau catatan di dekat Anda. Harap singkirkan benda tersebut segera!"
+            });
+        } else if (type === 'EARPIECE_DETECTED') {
+            const snap = capturePhoto();
+            sendTelegramNotify('EARPIECE_DETECTED', snap || undefined, "Terdeteksi menggunakan earpiece/headphone");
+            setActiveWarning({
+                type: 'CAMERA',
+                count: newCount,
+                limit: 10,
+                message: "⚠️ EARPHONE TERDETEKSI! Penggunaan headset, earphone, atau earpiece dilarang selama ujian demi mencegah komunikasi eksternal."
+            });
+        } else if (type === 'EXTRA_SCREEN_DETECTED') {
+            const snap = capturePhoto();
+            sendTelegramNotify('EXTRA_SCREEN_DETECTED', snap || undefined, "Terdeteksi layar/perangkat tambahan");
+            setActiveWarning({
+                type: 'CAMERA',
+                count: newCount,
+                limit: 10,
+                message: "⚠️ PERANGKAT TAMBAHAN TERDETEKSI! Sistem AI mendeteksi adanya monitor, tablet, atau layar tambahan di sekitar Anda."
+            });
+        } else if ((type === 'NO_FACE' || type === 'MULTIPLE_FACES') && Date.now() - lastEducationShownRef.current > 15000) {
           setActiveWarning({
             type: 'CAMERA',
             count: newCount,
@@ -1442,6 +1475,14 @@ export default function StudentRemedialLayer({
             message: type === 'NO_FACE' 
               ? "⚠️ WAJAH TIDAK TERDETEKSI! Pastikan wajah Anda selalu menatap layar selama ujian berlangsung. Menjauh dari layar dianggap indikasi pelanggaran."
               : "⚠️ MULTI-FACE DETECTED! Sistem mendeteksi lebih dari satu wajah. Ujian harus dikerjakan secara mandiri!"
+          });
+          lastEducationShownRef.current = Date.now();
+        } else if (type === 'FACE_UNALIGNED' && Date.now() - lastEducationShownRef.current > 15000) {
+          setActiveWarning({
+            type: 'CAMERA',
+            count: newCount,
+            limit: 10,
+            message: "⚠️ POSISI WAJAH TIDAK SEJAJAR! Sistem mendeteksi wajah Anda terlalu sering menoleh ke samping atau berpaling dari layar."
           });
           lastEducationShownRef.current = Date.now();
         }
