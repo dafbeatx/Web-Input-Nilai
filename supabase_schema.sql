@@ -285,8 +285,12 @@ CREATE TABLE IF NOT EXISTS public.gm_proctoring_snapshots (
     attempt_id UUID NOT NULL REFERENCES public.gm_remedial_attempts(id) ON DELETE CASCADE,
     violation_type TEXT NOT NULL,
     image_data TEXT,
+    ai_analysis JSONB DEFAULT NULL,
     created_at TIMESTAMPTZ DEFAULT now()
 );
+
+COMMENT ON COLUMN public.gm_proctoring_snapshots.ai_analysis IS 
+  'Hasil analisis AI Proctoring Analyzer via Groq Vision. Struktur: { threat_level, findings[], persons_detected, suspicious_objects[], confidence }';
 
 ALTER TABLE public.gm_proctoring_snapshots ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "gm_proctoring_snapshots_anon_access" ON public.gm_proctoring_snapshots;

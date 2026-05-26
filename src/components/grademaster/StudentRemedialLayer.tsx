@@ -230,6 +230,11 @@ export default function StudentRemedialLayer({
   const [isSplitLocked, setIsSplitLocked] = useState(false);
   const [isScreenshotFlash, setIsScreenshotFlash] = useState(false);
 
+  // AI Proctoring Analyzer State
+  const [aiProctorStatus, setAiProctorStatus] = useState<'idle' | 'scanning' | 'safe' | 'warning' | 'critical'>('idle');
+  const [aiProctorFindings, setAiProctorFindings] = useState<string[]>([]);
+  const aiProctorIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // Monitor Hook Integration
   const { sendLog } = useExamMonitor({
     attemptId,
@@ -1176,6 +1181,116 @@ export default function StudentRemedialLayer({
 
   const isSubmittingRef = useRef(isSubmitting);
   useEffect(() => { isSubmittingRef.current = isSubmitting; });
+
+  // ── AI Proctoring Analyzer — Periodic Snapshot Analysis (30s) ──
+  useEffect(() => {
+    if (step !== 'EXAM' || !attemptId) {
+      if (aiProctorIntervalRef.current) {
+        clearInterval(aiProctorIntervalRef.current);
+        aiProctorIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Initial delay of 10s before first AI scan
+    const initialTimeout = setTimeout(() => {
+      runAiProctorScan();
+    }, 10_000);
+
+    // Then every 30 seconds
+    aiProctorIntervalRef.current = setInterval(() => {
+      runAiProctorScan();
+    }, 30_000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      if (aiProctorIntervalRef.current) {
+        clearInterval(aiProctorIntervalRef.current);
+        aiProctorIntervalRef.current = null;
+      }
+    };
+
+    async function runAiProctorScan() {
+      if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
+
+      const snap = capturePhoto();
+      if (!snap) return;
+
+      setAiProctorStatus('scanning');
+
+      try {
+        const res = await fetch('/api/grademaster/proctoring-analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attemptId, imageData: snap }),
+        });
+
+        if (!res.ok) {
+          setAiProctorStatus('idle');
+          return;
+        }
+
+        const data = await res.json();
+        const analysis = data?.analysis;
+
+        if (!analysis) {
+          setAiProctorStatus('idle');
+          return;
+        }
+
+        setAiProctorStatus(analysis.threat_level);
+        setAiProctorFindings(analysis.findings || []);
+
+        if (analysis.threat_level === 'warning') {
+          setActiveWarning({
+            type: 'CAMERA',
+            count: warningCount + 1,
+            limit: 10,
+            message: `⚠️ AI VISION ALERT: ${analysis.findings?.join('. ') || 'Aktivitas mencurigakan terdeteksi oleh sistem AI.'}`,
+          });
+          setWarningCount(prev => prev + 1);
+          setClientCheatingFlags(prev => {
+            const newFlag = 'AI Vision: ' + (analysis.findings?.[0] || 'Warning');
+            return prev.includes(newFlag) ? prev : [...prev, newFlag];
+          });
+        }
+
+        if (analysis.threat_level === 'critical') {
+          const reason = `AI Vision Critical: ${analysis.findings?.join(', ') || 'Pelanggaran berat terdeteksi AI'}`;
+          setClientCheatingFlags(prev => [...prev, reason]);
+          setWarningCount(prev => {
+            const newCount = prev + 3; // Critical = 3 warnings at once
+            if (newCount >= 10) {
+              if (secondChanceUsed) {
+                hasTriggeredCheatingRef.current = true;
+                handleStatusUpdate('CHEATED', reason);
+              } else {
+                setSecondChanceReason(reason);
+                setStep('SECOND_CHANCE');
+                sendTelegramNotify('SECOND_CHANCE', snap || undefined, reason);
+              }
+            }
+            return newCount;
+          });
+          setActiveWarning({
+            type: 'CAMERA',
+            count: warningCount + 3,
+            limit: 10,
+            message: `🚨 AI KRITIS: ${analysis.findings?.join('. ') || 'Pelanggaran berat terdeteksi!'} Orang: ${analysis.persons_detected}. Objek: ${analysis.suspicious_objects?.join(', ') || '-'}`,
+          });
+        }
+
+        // Reset to idle after a display period
+        if (analysis.threat_level === 'safe') {
+          setTimeout(() => setAiProctorStatus('idle'), 5000);
+        }
+      } catch (err) {
+        console.error('[AI Proctoring Client] Scan error:', err);
+        setAiProctorStatus('idle');
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, attemptId]);
 
   // ── Session Health Monitoring ──
   const healthCheckAttemptedRef = useRef(false);
@@ -2497,9 +2612,12 @@ export default function StudentRemedialLayer({
                        } else if (flag === 'LOW_EFFORT') {
                          label = "Jawaban Kosong atau Asal-asalan";
                          desc = "Sebagian besar jawaban terdeteksi kosong, terlalu pendek, atau berisi kata acak.";
-                       } else if (flag === 'IDENTICAL_ESSAY' || flag === 'HIGH_ESSAY_SIMILARITY') {
+                       } else if (flag === 'IDENTICAL_ESSAY' || flag.includes('HIGH_ESSAY_SIMILARITY')) {
                          label = "Plagiarisme / Kesamaan Esai Tinggi";
                          desc = "Jawaban yang dikirim memiliki kemiripan ekstrem dengan siswa lain.";
+                       } else if (flag.includes('AI Vision')) {
+                         label = "AI Proctoring — Pelanggaran Terdeteksi";
+                         desc = flag.replace('AI Vision: ', '').replace('AI Vision Critical: ', '');
                        }
 
                        return (
@@ -2966,10 +3084,34 @@ export default function StudentRemedialLayer({
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
             <div className="absolute bottom-3 left-3 flex flex-col gap-1">
               <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
-                <span className="text-[8px] font-black text-on-surface uppercase tracking-widest">Live AI</span>
+                <div className={`w-1.5 h-1.5 rounded-full animate-pulse shadow-lg ${
+                  aiProctorStatus === 'scanning' ? 'bg-blue-400 shadow-blue-400/50' :
+                  aiProctorStatus === 'warning' ? 'bg-amber-400 shadow-amber-400/50' :
+                  aiProctorStatus === 'critical' ? 'bg-rose-500 shadow-rose-500/50' :
+                  aiProctorStatus === 'safe' ? 'bg-emerald-500 shadow-emerald-500/50' :
+                  'bg-emerald-500 shadow-emerald-500/50'
+                }`} />
+                <span className={`text-[8px] font-black uppercase tracking-widest ${
+                  aiProctorStatus === 'scanning' ? 'text-blue-400' :
+                  aiProctorStatus === 'warning' ? 'text-amber-400' :
+                  aiProctorStatus === 'critical' ? 'text-rose-400' :
+                  'text-on-surface'
+                }`}>
+                  {aiProctorStatus === 'scanning' ? 'AI Scan...' :
+                   aiProctorStatus === 'safe' ? 'AI: Aman ✓' :
+                   aiProctorStatus === 'warning' ? 'AI: Peringatan ⚠' :
+                   aiProctorStatus === 'critical' ? 'AI: Kritis ✕' :
+                   'Live AI'}
+                </span>
               </div>
             </div>
+            {/* AI scanning ring indicator */}
+            {aiProctorStatus === 'scanning' && (
+              <div className="absolute inset-0 rounded-3xl border-2 border-blue-400/40 animate-pulse pointer-events-none" />
+            )}
+            {aiProctorStatus === 'critical' && (
+              <div className="absolute inset-0 rounded-3xl border-2 border-rose-500/60 animate-pulse pointer-events-none" />
+            )}
             <div className="absolute top-3 right-3 bg-surface/60 backdrop-blur-md px-2 py-1 rounded-lg border border-outline-variant">
               <span className="text-[10px] font-black font-mono text-on-surface/90">{formatTime(timeLeft)}</span>
             </div>

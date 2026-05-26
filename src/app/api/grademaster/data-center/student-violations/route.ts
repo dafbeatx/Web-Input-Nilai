@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     // 3. Get proctoring snapshots
     const { data: snapshots, error: snapshotErr } = await supabase
       .from('gm_proctoring_snapshots')
-      .select('id, attempt_id, violation_type, image_data, created_at')
+      .select('id, attempt_id, violation_type, image_data, ai_analysis, created_at')
       .in('attempt_id', attemptIds)
       .order('created_at', { ascending: false });
 
@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
         id: snap.id,
         violationType: snap.violation_type,
         imageData: snap.image_data,
+        aiAnalysis: snap.ai_analysis,
         createdAt: snap.created_at,
         subject: attempt?.gm_sessions?.subject || 'Informatika',
         examType: attempt?.gm_sessions?.exam_type || 'Remedial'

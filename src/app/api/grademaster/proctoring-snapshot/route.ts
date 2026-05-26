@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/grademaster/security';
+import { analyzeSnapshot } from '@/lib/grademaster/services/proctoring-analyzer.service';
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,17 +33,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, skipped: true, reason: 'Max snapshots reached' });
     }
 
-    const { error: insertErr } = await supabase
+    const { data: inserted, error: insertErr } = await supabase
       .from('gm_proctoring_snapshots')
       .insert({
         attempt_id: attemptId,
         violation_type: violationType,
         image_data: imageData || null,
-      });
+      })
+      .select('id')
+      .single();
 
     if (insertErr) {
       console.error('Snapshot insert error:', insertErr);
       return NextResponse.json({ error: 'Failed to save snapshot' }, { status: 500 });
+    }
+
+    // Fire-and-forget: async AI analysis on the snapshot image (non-blocking)
+    if (imageData && inserted?.id) {
+      analyzeSnapshot(imageData).then(async (analysis) => {
+        try {
+          const sbUpdate = await createClient();
+          await sbUpdate
+            .from('gm_proctoring_snapshots')
+            .update({ ai_analysis: analysis })
+            .eq('id', inserted.id);
+          console.log(`[AI Proctoring] Snapshot ${inserted.id} analyzed: ${analysis.threat_level}`);
+        } catch (updateErr) {
+          console.error('[AI Proctoring] Failed to update snapshot with analysis:', updateErr);
+        }
+      }).catch(err => {
+        console.error('[AI Proctoring] Async analysis failed:', err);
+      });
     }
 
     return NextResponse.json({ ok: true });
