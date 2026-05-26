@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/grademaster/push/send",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
