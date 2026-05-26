@@ -1140,9 +1140,8 @@ export default function StudentRemedialLayer({
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
-  // Persist answers whenever they change
+  // Persist session state whenever any relevant field changes (survives refreshes/hot-reloads)
   useEffect(() => {
-    if (step !== 'EXAM' || !startedAtRef.current) return;
     const saved = loadRemedialSession();
     const refreshCount = saved?.refreshCount || 0;
     const prevQuestions = saved?.remedialQuestions || [];
@@ -1153,12 +1152,14 @@ export default function StudentRemedialLayer({
       sessionId,
       studentName,
       step,
-      startedAt: startedAtRef.current,
+      startedAt: startedAtRef.current || saved?.startedAt || Date.now(),
       answers,
       note,
       location: currentLocation,
       refreshCount,
-      shuffledIndices: shuffledQuestions.map(q => q.originalIndex),
+      shuffledIndices: shuffledQuestions.length > 0
+        ? shuffledQuestions.map(q => q.originalIndex)
+        : (saved?.shuffledIndices || remedialQuestions.map((_, idx) => idx)),
       studentId: currentStudentId || undefined,
       examMode,
       cameraStatus,
