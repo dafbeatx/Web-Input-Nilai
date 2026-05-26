@@ -35,8 +35,9 @@ export async function subscribeUser(studentAccountId: string): Promise<boolean> 
   }
 
   try {
-    // 1. Wait for Service Worker registration to be active
-    const registration = await navigator.serviceWorker.ready;
+    // 1. Register and wait for Service Worker to be active
+    const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    await navigator.serviceWorker.ready;
 
     // 2. Request notification permission from the browser
     const permission = await Notification.requestPermission();
