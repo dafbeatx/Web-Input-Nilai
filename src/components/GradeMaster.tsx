@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+import { CheckCircle2, AlertCircle, BellRing } from "lucide-react";
 
 import {
   SessionMeta,
@@ -36,7 +36,7 @@ import LessonManagementLayer from "./grademaster/LessonManagementLayer";
 import RemedialManagementLayer from "@/components/grademaster/RemedialManagementLayer";
 import DataCenterLayer from "@/components/grademaster/DataCenterLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
-import { subscribeUser, isPushSupported } from "@/lib/grademaster/pushHelper";
+import { subscribeUser, isPushSupported, checkSubscriptionStatus } from "@/lib/grademaster/pushHelper";
 
 const ESSAY_COUNT = 5;
 
@@ -94,6 +94,8 @@ export default function GradeMaster() {
   const [modalError, setModalError] = useState("");
   const [apiQuestionDifficulties, setApiQuestionDifficulties] = useState<any[]>([]);
   const [showRemedialButton, setShowRemedialButton] = useState(false);
+  const [showPushPrompt, setShowPushPrompt] = useState(false);
+  const [pushStatus, setPushStatus] = useState<'GRANTED' | 'DENIED' | 'DEFAULT' | 'UNSUPPORTED'>('DEFAULT');
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -326,20 +328,48 @@ export default function GradeMaster() {
     }
   }, [layer, isAdmin, isStudent, adminUser, studentData]);
 
-  // Trigger Web Push Notification Registration for Students logged in with Google
-  useEffect(() => {
+  // Check and handle mandatory push notification permission for Google-authenticated students
+  const checkPushPermission = useCallback(async () => {
     if (isStudent && studentData && studentData.id && studentData.isGoogleLinked !== false) {
-      const initPush = async () => {
-        if (isPushSupported()) {
-          console.log('[Push Registration] Initializing web push subscription for student account:', studentData.id);
-          await subscribeUser(studentData.id);
-        }
-      };
-      // Short delay to let the app settle
-      const timeout = setTimeout(initPush, 2000);
-      return () => clearTimeout(timeout);
+      const status = await checkSubscriptionStatus();
+      setPushStatus(status);
+      if (status !== 'GRANTED' && status !== 'UNSUPPORTED') {
+        setShowPushPrompt(true);
+      } else {
+        setShowPushPrompt(false);
+      }
+    } else {
+      setShowPushPrompt(false);
     }
   }, [isStudent, studentData]);
+
+  useEffect(() => {
+    // Short delay on mount/login to allow permission checks to run smoothly
+    const timer = setTimeout(checkPushPermission, 1500);
+    return () => clearTimeout(timer);
+  }, [isStudent, studentData, checkPushPermission]);
+
+  const handleActivatePush = async () => {
+    if (!studentData?.id) return;
+    setModalLoading(true);
+    const success = await subscribeUser(studentData.id);
+    
+    // Refresh permission status
+    const status = await checkSubscriptionStatus();
+    setPushStatus(status);
+    setModalLoading(false);
+    
+    if (success || status === 'GRANTED') {
+      setToast({ message: "Notifikasi berhasil diaktifkan!", type: "success" });
+      setShowPushPrompt(false);
+    } else {
+      if (status === 'DENIED') {
+        setToast({ message: "Izin notifikasi diblokir browser. Harap buka blokir lewat URL bar.", type: "error" });
+      } else {
+        setToast({ message: "Gagal mendaftarkan notifikasi. Silakan coba lagi.", type: "error" });
+      }
+    }
+  };
 
   const penalizedStudents = React.useMemo(() => {
     return gradedStudents.map(s => ({
@@ -1211,6 +1241,67 @@ export default function GradeMaster() {
         onClose={closeModal}
         onUpdateAdmin={handleUpdateAdmin}
       />
+
+      {/* Mandatory Push Notification Modal Overlay */}
+      {showPushPrompt && (
+        <div className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#1c1c1e] border border-white/10 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center flex flex-col items-center gap-6 animate-in fade-in zoom-in-95 duration-300">
+            {/* Bell Ringing Anim */}
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-indigo-500/20 blur-xl animate-pulse" />
+              <div className="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 relative z-10 animate-bounce">
+                <BellRing size={32} />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <h2 className="text-xl font-extrabold text-white tracking-tight">Aktifkan Notifikasi Remedial</h2>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                Untuk memastikan Anda tidak melewatkan info nilai terbaru, jadwal, dan batas waktu remedial, Anda wajib mengizinkan notifikasi push di HP/Browser Anda.
+              </p>
+            </div>
+
+            {pushStatus === 'DENIED' ? (
+              <div className="w-full flex flex-col gap-4">
+                <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 text-left flex flex-col gap-2">
+                  <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
+                    <AlertCircle size={16} />
+                    <span>Akses Notifikasi Diblokir</span>
+                  </div>
+                  <p className="text-xs text-rose-300/80 leading-relaxed">
+                    Sistem mendeteksi izin notifikasi diblokir oleh browser Anda. Harap ikuti langkah berikut:
+                  </p>
+                  <ol className="text-xs text-rose-300/80 list-decimal pl-4 flex flex-col gap-1 leading-normal">
+                    <li>Klik <strong>ikon gembok</strong> di sebelah kiri bilah URL browser Anda.</li>
+                    <li>Ubah izin <strong>Notifications</strong> menjadi <strong>Allow (Izinkan)</strong>.</li>
+                    <li>Setelah itu, klik tombol di bawah untuk memeriksa ulang izin.</li>
+                  </ol>
+                </div>
+
+                <button
+                  onClick={checkPushPermission}
+                  disabled={modalLoading}
+                  className="w-full py-3.5 rounded-2xl font-bold bg-white text-black hover:bg-gray-200 transition-colors shadow-lg active:scale-[0.98] disabled:opacity-50"
+                >
+                  {modalLoading ? "Memeriksa..." : "Saya Sudah Mengubah Izin"}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleActivatePush}
+                disabled={modalLoading}
+                className="w-full py-3.5 rounded-2xl font-bold bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {modalLoading ? (
+                  <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                ) : (
+                  "Aktifkan & Lanjutkan"
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Toast */}
       {toast && (
