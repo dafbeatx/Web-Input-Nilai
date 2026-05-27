@@ -261,19 +261,19 @@ export default function AICopilot() {
   return (
     <>
       {/* Floating Trigger Button */}
-      <div className="fixed bottom-24 right-6 z-[9999]">
+      <div className="fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-[9999]">
         <button
           onClick={() => {
             setIsOpen(!isOpen);
             setHasNewMessage(false);
           }}
-          className={`relative w-14 h-14 bg-slate-900 border border-white/10 hover:border-emerald-500/50 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] text-emerald-400 rounded-2xl flex items-center justify-center active:scale-95 transition-all duration-300 group ${
+          className={`relative w-12 h-12 sm:w-14 sm:h-14 bg-slate-900 border border-white/10 hover:border-emerald-500/50 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] text-emerald-400 rounded-2xl flex items-center justify-center active:scale-95 transition-all duration-300 group ${
             isOpen ? 'rotate-90 bg-emerald-950 text-emerald-300' : ''
           }`}
           title="GradeMaster AI Copilot"
         >
           {/* Online green indicator dot */}
-          <div className="absolute top-1.5 right-1.5 w-3 h-3 bg-emerald-500 rounded-full border border-slate-950 flex items-center justify-center">
+          <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-slate-950 flex items-center justify-center">
             <span className="absolute w-full h-full bg-emerald-400 rounded-full animate-ping opacity-75"></span>
           </div>
 
@@ -284,22 +284,22 @@ export default function AICopilot() {
             </div>
           )}
 
-          {isOpen ? <X size={22} /> : <Sparkles size={22} className="group-hover:animate-pulse" />}
+          {isOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 group-hover:animate-pulse" />}
         </button>
       </div>
 
       {/* Floating Glassmorphic Chat Box */}
       {isOpen && (
-        <div className="fixed bottom-40 right-6 z-[9999] w-[350px] sm:w-[380px] h-[520px] bg-slate-950/90 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-300 font-sans">
+        <div className="fixed bottom-36 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-40 z-[9999] w-auto sm:w-[380px] h-[460px] sm:h-[520px] bg-slate-950/95 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-300 font-sans">
           
           {/* Header Panel */}
           <div className="p-4 bg-gradient-to-r from-emerald-950/40 via-slate-950 to-slate-950 border-b border-white/5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-emerald-500/15 text-emerald-400 rounded-xl flex items-center justify-center border border-emerald-500/25">
-                <Bot size={20} className="animate-pulse" />
+              <div className="w-9 h-9 bg-emerald-500/15 text-emerald-400 rounded-xl flex items-center justify-center border border-emerald-500/25">
+                <Bot size={18} className="animate-pulse" />
               </div>
               <div>
-                <h4 className="font-headline font-black text-sm text-slate-100 uppercase tracking-wide">Navigator Copilot</h4>
+                <h4 className="font-headline font-black text-xs sm:text-sm text-slate-100 uppercase tracking-wide">Navigator Copilot</h4>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></div>
                   <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">Sistem Pintas Online</span>
@@ -405,7 +405,7 @@ export default function AICopilot() {
               onChange={(e) => setInputValue(e.target.value)}
               placeholder={isLoading ? "Sedang merespons..." : "Ketik instruksi navigasi/kebutuhan Anda..."}
               disabled={isLoading}
-              className="flex-1 px-4 py-2.5 bg-slate-900 border border-white/5 focus:border-emerald-500/50 rounded-xl text-xs text-slate-100 placeholder-slate-500 outline-none transition-all"
+              className="flex-1 px-4 py-2.5 bg-slate-900 border border-white/5 focus:border-emerald-500/50 rounded-xl text-sm text-slate-100 placeholder-slate-500 outline-none transition-all focus:text-base sm:focus:text-sm"
             />
             <button
               type="submit"
