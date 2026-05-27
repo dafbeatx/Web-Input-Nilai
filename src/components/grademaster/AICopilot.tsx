@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, X, Send, Bot, Loader2, Compass, MessageSquare, ArrowRight, UserCheck } from 'lucide-react';
+import { Sparkles, X, Send, Bot, Loader2, Compass, MessageSquare, ArrowRight, UserCheck, RotateCcw } from 'lucide-react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import { Layer } from '@/lib/grademaster/types';
 
@@ -118,6 +118,12 @@ export default function AICopilot() {
     setSuggestedQuestions(getPresetChips());
   }, [isAdmin, isStudent, isParent, adminUser, studentData]);
 
+  // Reset conversation to initial state
+  const handleResetChat = () => {
+    setMessages([getInitialMessage()]);
+    setSuggestedQuestions(getPresetChips());
+  };
+
   // Handle suggestion chips click
   const handleChipClick = (questionText: string) => {
     sendMessage(questionText);
@@ -172,11 +178,14 @@ export default function AICopilot() {
     setIsLoading(true);
 
     try {
-      // Build conversational history
-      const historyPayload = messages.map(m => ({
-        role: m.role,
-        content: m.content
-      }));
+      // Build conversational history (clean, sliced, filtered of local navigation notifications)
+      const historyPayload = messages
+        .filter(m => !m.content.startsWith('⚡'))
+        .slice(-6)
+        .map(m => ({
+          role: m.role,
+          content: m.content
+        }));
 
       const res = await fetch('/api/grademaster/copilot', {
         method: 'POST',
@@ -339,13 +348,25 @@ export default function AICopilot() {
               </div>
             </div>
             
-            {/* Close button */}
-            <button 
-              onClick={() => setIsOpen(false)} 
-              className="p-1.5 bg-white/5 hover:bg-white/10 hover:text-white rounded-lg text-slate-400 transition-all"
-            >
-              <X size={16} />
-            </button>
+            <div className="flex items-center gap-1.5">
+              {/* Reset Chat button */}
+              <button 
+                onClick={handleResetChat} 
+                className="p-1.5 bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 rounded-lg text-slate-400 transition-all animate-in fade-in duration-200"
+                title="Reset Percakapan"
+              >
+                <RotateCcw size={15} />
+              </button>
+              
+              {/* Close button */}
+              <button 
+                onClick={() => setIsOpen(false)} 
+                className="p-1.5 bg-white/5 hover:bg-white/10 hover:text-white rounded-lg text-slate-400 transition-all"
+                title="Tutup Chat"
+              >
+                <X size={15} />
+              </button>
+            </div>
           </div>
 
           {/* Message Area */}
