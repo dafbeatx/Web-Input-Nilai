@@ -12,6 +12,31 @@ interface Message {
   actions?: { label: string; layer: Layer; description?: string }[];
 }
 
+const GeminiLogo = ({ className = "w-8 h-8" }: { className?: string }) => (
+  <svg viewBox="0 0 256 256" className={className} xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="geminiGrad1" cx="78%" cy="55%" r="78%" fx="78%" fy="55%">
+        <stop offset="0%" stopColor="#1ba1e3" />
+        <stop offset="30%" stopColor="#5489d6" />
+        <stop offset="54%" stopColor="#9b72cb" />
+        <stop offset="82%" stopColor="#d96570" />
+        <stop offset="100%" stopColor="#f49c46" />
+      </radialGradient>
+      <radialGradient id="geminiGrad2" cx="-3%" cy="-54%" r="169%" fx="-3%" fy="-54%">
+        <stop offset="0%" stopColor="#1ba1e3" />
+        <stop offset="30%" stopColor="#5489d6" />
+        <stop offset="54%" stopColor="#9b72cb" />
+        <stop offset="82%" stopColor="#d96570" />
+        <stop offset="100%" stopColor="#f49c46" />
+      </radialGradient>
+    </defs>
+    <g transform="translate(53, 53) scale(0.58)" filter="drop-shadow(0 0 15px rgba(27, 161, 227, 0.4))">
+      <path fill="url(#geminiGrad1)" d="m122.062 172.77l-10.27 23.52c-3.947 9.042-16.459 9.042-20.406 0l-10.27-23.52c-9.14-20.933-25.59-37.595-46.108-46.703L6.74 113.52c-8.987-3.99-8.987-17.064 0-21.053l27.385-12.156C55.172 70.97 71.917 53.69 80.9 32.043L91.303 6.977c3.86-9.303 16.712-9.303 20.573 0l10.403 25.066c8.983 21.646 25.728 38.926 46.775 48.268l27.384 12.156c8.987 3.99 8.987 17.063 0 21.053l-28.267 12.547c-20.52 9.108-36.97 25.77-46.109 46.703" />
+      <path fill="url(#geminiGrad2)" d="m217.5 246.937l-2.888 6.62c-2.114 4.845-8.824 4.845-10.937 0l-2.889-6.62c-5.148-11.803-14.42-21.2-25.992-26.34l-8.898-3.954c-4.811-2.137-4.811-9.131 0-11.269l8.4-3.733c11.87-5.273 21.308-15.017 26.368-27.22l2.966-7.154c2.067-4.985 8.96-4.985 11.027 0l2.966 7.153c5.06 12.204 14.499 21.948 26.368 27.221l8.4 3.733c4.812 2.138 4.812 9.132 0 11.27l-8.898 3.953c-11.571 5.14-20.844 14.537-25.992 26.34" />
+    </g>
+  </svg>
+);
+
 export default function AICopilot() {
   const {
     layer,
@@ -276,14 +301,14 @@ export default function AICopilot() {
             setIsOpen(!isOpen);
             setHasNewMessage(false);
           }}
-          className={`relative w-12 h-12 sm:w-14 sm:h-14 bg-slate-900 border border-white/10 hover:border-emerald-500/50 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] text-emerald-400 rounded-2xl flex items-center justify-center active:scale-95 transition-all duration-300 group ${
-            isOpen ? 'rotate-90 bg-emerald-950 text-emerald-300' : ''
+          className={`relative w-12 h-12 sm:w-14 sm:h-14 bg-slate-900 border border-white/10 hover:border-violet-500/50 hover:shadow-[0_0_20px_rgba(155,114,203,0.4)] text-violet-400 rounded-2xl flex items-center justify-center active:scale-95 transition-all duration-300 group ${
+            isOpen ? 'rotate-90 bg-slate-950 border-violet-500/30 shadow-[0_0_20px_rgba(155,114,203,0.3)]' : ''
           }`}
           title="GradeMaster AI Copilot"
         >
-          {/* Online green indicator dot */}
-          <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-slate-950 flex items-center justify-center">
-            <span className="absolute w-full h-full bg-emerald-400 rounded-full animate-ping opacity-75"></span>
+          {/* Online blue indicator dot */}
+          <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-sky-500 rounded-full border border-slate-950 flex items-center justify-center">
+            <span className="absolute w-full h-full bg-sky-400 rounded-full animate-ping opacity-75"></span>
           </div>
 
           {/* Sparkle Glow and notification badge */}
@@ -293,7 +318,7 @@ export default function AICopilot() {
             </div>
           )}
 
-          {isOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 group-hover:animate-pulse" />}
+          {isOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <GeminiLogo className="w-8 h-8 sm:w-10 sm:h-10 transition-all duration-300 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(27,161,227,0.8)]" />}
         </button>
       </div>
 
@@ -302,16 +327,16 @@ export default function AICopilot() {
         <div className="fixed bottom-[5.5rem] left-3 right-3 sm:left-auto sm:right-6 sm:bottom-40 z-[9999] w-auto sm:w-[380px] h-[440px] sm:h-[520px] max-h-[70vh] sm:max-h-none bg-slate-950/95 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-300 font-sans">
           
           {/* Header Panel */}
-          <div className="p-4 bg-gradient-to-r from-emerald-950/40 via-slate-950 to-slate-950 border-b border-white/5 flex items-center justify-between">
+          <div className="p-4 bg-gradient-to-r from-violet-950/40 via-slate-950 to-slate-950 border-b border-white/5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-emerald-500/15 text-emerald-400 rounded-xl flex items-center justify-center border border-emerald-500/25">
-                <Bot size={18} className="animate-pulse" />
+              <div className="w-9 h-9 bg-violet-500/15 rounded-xl flex items-center justify-center border border-violet-500/25 shadow-[0_0_10px_rgba(155,114,203,0.2)]">
+                <GeminiLogo className="w-6 h-6 animate-pulse" />
               </div>
               <div>
                 <h4 className="font-headline font-black text-xs sm:text-sm text-slate-100 uppercase tracking-wide">Navigator Copilot</h4>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></div>
-                  <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">Sistem Pintas Online</span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-ping"></div>
+                  <span className="text-[9px] font-black bg-gradient-to-r from-[#1ba1e3] via-[#9b72cb] to-[#f49c46] bg-clip-text text-transparent uppercase tracking-widest">Sistem Pintas Online</span>
                 </div>
               </div>
             </div>
@@ -335,8 +360,8 @@ export default function AICopilot() {
                   className={`flex gap-3 max-w-[90%] ${isAI ? 'self-start' : 'self-end ml-auto flex-row-reverse'}`}
                 >
                   {isAI && (
-                    <div className="w-7 h-7 bg-slate-900 text-emerald-400 rounded-lg flex items-center justify-center border border-white/5 shrink-0 mt-0.5">
-                      <Bot size={14} />
+                    <div className="w-7 h-7 bg-slate-900 rounded-lg flex items-center justify-center border border-white/5 shrink-0 mt-0.5 shadow-[0_0_8px_rgba(155,114,203,0.15)]">
+                      <GeminiLogo className="w-5 h-5" />
                     </div>
                   )}
                   
@@ -345,22 +370,22 @@ export default function AICopilot() {
                     <div className={`p-3.5 rounded-2xl ${
                       isAI 
                       ? 'bg-slate-900 text-slate-200 rounded-tl-none border border-white/[0.03]' 
-                      : 'bg-emerald-600 text-white rounded-tr-none shadow-md shadow-emerald-600/10'
+                      : 'bg-gradient-to-r from-[#1ba1e3] via-[#5489d6] to-[#9b72cb] text-white rounded-tr-none shadow-md shadow-violet-600/10 font-medium'
                     }`}>
                       {formatMessageText(msg.content)}
 
                       {/* Display Suggested Navigation Buttons */}
                       {isAI && msg.actions && msg.actions.length > 0 && (
                         <div className="mt-3.5 pt-3.5 border-t border-white/5 space-y-2">
-                          <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest block mb-1">Kemudahan Akses Navigasi:</span>
+                          <span className="text-[9px] font-black text-violet-400 uppercase tracking-widest block mb-1">Kemudahan Akses Navigasi:</span>
                           {msg.actions.map((act) => (
                             <button
                               key={act.layer}
                               onClick={() => handleActionClick(act.layer)}
-                              className="w-full p-2.5 bg-slate-950 hover:bg-emerald-950 text-slate-100 hover:text-emerald-300 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all duration-200 border border-white/5 hover:border-emerald-500/30 flex items-center justify-between group"
+                              className="w-full p-2.5 bg-slate-950 hover:bg-violet-950/40 text-slate-100 hover:text-violet-300 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all duration-200 border border-white/5 hover:border-violet-500/30 flex items-center justify-between group shadow-sm hover:shadow-[0_0_12px_rgba(155,114,203,0.1)]"
                             >
                               <div className="flex items-center gap-2">
-                                <Compass size={12} className="text-emerald-400 group-hover:rotate-45 transition-transform" />
+                                <Compass size={12} className="text-violet-400 group-hover:rotate-45 transition-transform" />
                                 <span>{act.label}</span>
                               </div>
                               <ArrowRight size={12} className="text-slate-500 group-hover:translate-x-1 transition-transform" />
@@ -377,12 +402,12 @@ export default function AICopilot() {
             {/* AI thinking state */}
             {isLoading && (
               <div className="flex gap-3 max-w-[80%] self-start">
-                <div className="w-7 h-7 bg-slate-900 text-emerald-400 rounded-lg flex items-center justify-center border border-white/5 shrink-0 mt-0.5">
-                  <Bot size={14} />
+                <div className="w-7 h-7 bg-slate-900 rounded-lg flex items-center justify-center border border-white/5 shrink-0 mt-0.5">
+                  <GeminiLogo className="w-5 h-5" />
                 </div>
                 <div className="p-3.5 bg-slate-900 text-slate-400 rounded-2xl rounded-tl-none border border-white/[0.03] flex items-center gap-2">
-                  <Loader2 size={14} className="animate-spin text-emerald-400" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Memproses Navigasi Cerdas...</span>
+                  <Loader2 size={14} className="animate-spin text-violet-400" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Memproses Navigasi Cerdas...</span>
                 </div>
               </div>
             )}
@@ -400,7 +425,7 @@ export default function AICopilot() {
                 <button
                   key={idx}
                   onClick={() => handleChipClick(chip)}
-                  className="flex-none px-3 py-1.5 bg-white/5 hover:bg-emerald-500/10 hover:text-emerald-300 border border-white/5 hover:border-emerald-500/30 rounded-xl text-[10px] font-bold text-slate-300 transition-all whitespace-nowrap active:scale-95"
+                  className="flex-none px-3 py-1.5 bg-white/5 hover:bg-violet-500/10 hover:text-violet-300 border border-white/5 hover:border-violet-500/30 rounded-xl text-[10px] font-bold text-slate-300 transition-all whitespace-nowrap active:scale-95"
                 >
                   {chip}
                 </button>
@@ -416,12 +441,12 @@ export default function AICopilot() {
               onChange={(e) => setInputValue(e.target.value)}
               placeholder={isLoading ? "Sedang merespons..." : "Ketik instruksi navigasi/kebutuhan Anda..."}
               disabled={isLoading}
-              className="flex-1 px-4 py-2.5 bg-slate-900 border border-white/5 focus:border-emerald-500/50 rounded-xl text-sm text-slate-100 placeholder-slate-500 outline-none transition-all focus:text-base sm:focus:text-sm"
+              className="flex-1 px-4 py-2.5 bg-slate-900 border border-white/5 focus:border-violet-500/50 rounded-xl text-sm text-slate-100 placeholder-slate-500 outline-none transition-all focus:text-base sm:focus:text-sm"
             />
             <button
               type="submit"
               disabled={isLoading || !inputValue.trim()}
-              className="p-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-lg shadow-emerald-600/10"
+              className="p-2.5 bg-gradient-to-r from-sky-600 to-violet-600 hover:from-sky-500 hover:to-violet-500 disabled:opacity-40 text-white rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-lg shadow-violet-600/20"
             >
               <Send size={14} />
             </button>
