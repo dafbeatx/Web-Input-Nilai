@@ -29,6 +29,7 @@ export default function AICopilot() {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [hasNewMessage, setHasNewMessage] = useState(false);
+  const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom of chat
@@ -89,6 +90,7 @@ export default function AICopilot() {
   // Initialize welcome message
   useEffect(() => {
     setMessages([getInitialMessage()]);
+    setSuggestedQuestions(getPresetChips());
   }, [isAdmin, isStudent, isParent, adminUser, studentData]);
 
   // Handle suggestion chips click
@@ -177,6 +179,13 @@ export default function AICopilot() {
       };
 
       setMessages(prev => [...prev, assistantMsg]);
+      
+      // Update suggested questions dynamically
+      if (data.suggestedQuestions && data.suggestedQuestions.length > 0) {
+        setSuggestedQuestions(data.suggestedQuestions);
+      } else {
+        setSuggestedQuestions(getPresetChips());
+      }
       
       // Update visual indicator if chat closed
       if (!isOpen) {
@@ -290,7 +299,7 @@ export default function AICopilot() {
 
       {/* Floating Glassmorphic Chat Box */}
       {isOpen && (
-        <div className="fixed bottom-36 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-40 z-[9999] w-auto sm:w-[380px] h-[460px] sm:h-[520px] bg-slate-950/95 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-300 font-sans">
+        <div className="fixed bottom-[5.5rem] left-3 right-3 sm:left-auto sm:right-6 sm:bottom-40 z-[9999] w-auto sm:w-[380px] h-[440px] sm:h-[520px] max-h-[70vh] sm:max-h-none bg-slate-950/95 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-300 font-sans">
           
           {/* Header Panel */}
           <div className="p-4 bg-gradient-to-r from-emerald-950/40 via-slate-950 to-slate-950 border-b border-white/5 flex items-center justify-between">
@@ -382,10 +391,12 @@ export default function AICopilot() {
           </div>
 
           {/* Quick Preset Chip Suggestions */}
-          <div className="px-4 py-2 bg-slate-950/50 border-t border-white/5">
-            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Rekomendasi Pintasan Guru/Siswa:</span>
+          <div className="px-4 py-2.5 bg-slate-950/50 border-t border-white/5">
+            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">
+              {messages.length > 1 ? "Saran Tindakan Lanjutan:" : "Rekomendasi Pintasan Guru/Siswa:"}
+            </span>
             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-              {getPresetChips().map((chip, idx) => (
+              {suggestedQuestions.map((chip, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleChipClick(chip)}

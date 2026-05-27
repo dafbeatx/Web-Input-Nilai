@@ -129,7 +129,13 @@ JANGAN menulis penjelasan tambahan di luar JSON. Respon Anda harus langsung dimu
       throw new Error('Groq API response content is empty');
     }
 
-    const parsedResult = JSON.parse(content);
+    // Robust cleaning for potential markdown wrappers
+    let cleanedContent = content.trim();
+    if (cleanedContent.startsWith('```')) {
+      cleanedContent = cleanedContent.replace(/^```(?:json)?\n?/i, '').replace(/```$/, '').trim();
+    }
+
+    const parsedResult = JSON.parse(cleanedContent);
     return NextResponse.json(parsedResult);
 
   } catch (error: any) {
