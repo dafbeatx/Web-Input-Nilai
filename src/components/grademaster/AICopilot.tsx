@@ -30,7 +30,7 @@ const GeminiLogo = ({ className = "w-8 h-8" }: { className?: string }) => (
         <stop offset="100%" stopColor="#f49c46" />
       </radialGradient>
     </defs>
-    <g transform="translate(53, 53) scale(0.58)" filter="drop-shadow(0 0 15px rgba(27, 161, 227, 0.4))">
+    <g transform="translate(53, 53) scale(0.58)">
       <path fill="url(#geminiGrad1)" d="m122.062 172.77l-10.27 23.52c-3.947 9.042-16.459 9.042-20.406 0l-10.27-23.52c-9.14-20.933-25.59-37.595-46.108-46.703L6.74 113.52c-8.987-3.99-8.987-17.064 0-21.053l27.385-12.156C55.172 70.97 71.917 53.69 80.9 32.043L91.303 6.977c3.86-9.303 16.712-9.303 20.573 0l10.403 25.066c8.983 21.646 25.728 38.926 46.775 48.268l27.384 12.156c8.987 3.99 8.987 17.063 0 21.053l-28.267 12.547c-20.52 9.108-36.97 25.77-46.109 46.703" />
       <path fill="url(#geminiGrad2)" d="m217.5 246.937l-2.888 6.62c-2.114 4.845-8.824 4.845-10.937 0l-2.889-6.62c-5.148-11.803-14.42-21.2-25.992-26.34l-8.898-3.954c-4.811-2.137-4.811-9.131 0-11.269l8.4-3.733c11.87-5.273 21.308-15.017 26.368-27.22l2.966-7.154c2.067-4.985 8.96-4.985 11.027 0l2.966 7.153c5.06 12.204 14.499 21.948 26.368 27.221l8.4 3.733c4.812 2.138 4.812 9.132 0 11.27l-8.898 3.953c-11.571 5.14-20.844 14.537-25.992 26.34" />
     </g>
@@ -304,11 +304,6 @@ export default function AICopilot() {
           className="relative flex items-center justify-center active:scale-95 transition-all duration-300 group outline-none focus:outline-none"
           title="GradeMaster AI Copilot"
         >
-          {/* Online blue indicator dot */}
-          <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-sky-500 rounded-full border border-slate-950 flex items-center justify-center z-10">
-            <span className="absolute w-full h-full bg-sky-400 rounded-full animate-ping opacity-75"></span>
-          </div>
-
           {/* Sparkle Glow and notification badge */}
           {hasNewMessage && !isOpen && (
             <div className="absolute -top-1 -left-1 w-5 h-5 bg-rose-500 text-white text-[9px] font-black uppercase rounded-full flex items-center justify-center animate-bounce z-10">
@@ -321,7 +316,7 @@ export default function AICopilot() {
               <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
           ) : (
-            <GeminiLogo className="w-14 h-14 sm:w-16 sm:h-16 transition-all duration-500 ease-out group-hover:-translate-y-2 group-hover:scale-110 drop-shadow-[0_4px_6px_rgba(0,0,0,0.5)] group-hover:drop-shadow-[0_0_25px_rgba(27,161,227,0.75)] cursor-pointer" />
+            <GeminiLogo className="w-14 h-14 sm:w-16 sm:h-16 transition-all duration-500 ease-out group-hover:-translate-y-2 group-hover:scale-110 cursor-pointer" />
           )}
         </button>
       </div>
@@ -339,7 +334,6 @@ export default function AICopilot() {
               <div>
                 <h4 className="font-headline font-black text-xs sm:text-sm text-slate-100 uppercase tracking-wide">Navigator Copilot</h4>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-ping"></div>
                   <span className="text-[9px] font-black bg-gradient-to-r from-[#1ba1e3] via-[#9b72cb] to-[#f49c46] bg-clip-text text-transparent uppercase tracking-widest">Sistem Pintas Online</span>
                 </div>
               </div>
