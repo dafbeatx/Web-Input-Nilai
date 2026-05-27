@@ -301,24 +301,28 @@ export default function AICopilot() {
             setIsOpen(!isOpen);
             setHasNewMessage(false);
           }}
-          className={`relative w-12 h-12 sm:w-14 sm:h-14 bg-slate-900 border border-white/10 hover:border-violet-500/50 hover:shadow-[0_0_20px_rgba(155,114,203,0.4)] text-violet-400 rounded-2xl flex items-center justify-center active:scale-95 transition-all duration-300 group ${
-            isOpen ? 'rotate-90 bg-slate-950 border-violet-500/30 shadow-[0_0_20px_rgba(155,114,203,0.3)]' : ''
-          }`}
+          className="relative flex items-center justify-center active:scale-95 transition-all duration-300 group outline-none focus:outline-none"
           title="GradeMaster AI Copilot"
         >
           {/* Online blue indicator dot */}
-          <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-sky-500 rounded-full border border-slate-950 flex items-center justify-center">
+          <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-sky-500 rounded-full border border-slate-950 flex items-center justify-center z-10">
             <span className="absolute w-full h-full bg-sky-400 rounded-full animate-ping opacity-75"></span>
           </div>
 
           {/* Sparkle Glow and notification badge */}
           {hasNewMessage && !isOpen && (
-            <div className="absolute -top-1 -left-1 w-5 h-5 bg-rose-500 text-white text-[9px] font-black uppercase rounded-full flex items-center justify-center animate-bounce">
+            <div className="absolute -top-1 -left-1 w-5 h-5 bg-rose-500 text-white text-[9px] font-black uppercase rounded-full flex items-center justify-center animate-bounce z-10">
               !
             </div>
           )}
 
-          {isOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <GeminiLogo className="w-8 h-8 sm:w-10 sm:h-10 transition-all duration-300 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(27,161,227,0.8)]" />}
+          {isOpen ? (
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-900 border border-white/10 hover:border-violet-500/50 hover:shadow-[0_0_20px_rgba(155,114,203,0.4)] text-violet-400 rounded-2xl flex items-center justify-center rotate-90 transition-all duration-300">
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+          ) : (
+            <GeminiLogo className="w-14 h-14 sm:w-16 sm:h-16 transition-all duration-500 ease-out group-hover:-translate-y-2 group-hover:scale-110 drop-shadow-[0_4px_6px_rgba(0,0,0,0.5)] group-hover:drop-shadow-[0_0_25px_rgba(27,161,227,0.75)] cursor-pointer" />
+          )}
         </button>
       </div>
 
