@@ -25,6 +25,7 @@ import Navbar from '@/components/grademaster/Navbar';
 import StarBackground from '@/components/grademaster/ui/StarBackground';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import SafeStorageScript from '@/components/SafeStorageScript';
+import AICopilot from '@/components/grademaster/AICopilot';
 
 
 export default function RootLayout({
@@ -48,6 +49,7 @@ export default function RootLayout({
             <main className="relative flex-1 main-content-wrapper">
               {children}
             </main>
+            <AICopilot />
           </GradeMasterProvider>
         </ErrorBoundary>
       </body>
