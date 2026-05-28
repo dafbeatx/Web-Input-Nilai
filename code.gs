@@ -76,12 +76,29 @@ function doPost(e) {
       }
       
       if (fileFound) {
+        // --- ANTI-RACE CONDITION (MENUNGGU UNGGAHAN SELESAI PENUH) ---
+        // Kadang berkas terdeteksi instan di Drive saat proses sinkronisasi baru dimulai (ukuran masih 0 bytes)
+        // Kita pantau ukuran berkas hingga lebih dari 0 bytes atau maksimal menunggu 3 detik
+        let fileSize = 0;
+        try { fileSize = fileFound.getSize(); } catch(e) {}
+        
+        for (let attempt = 0; attempt < 3; attempt++) {
+          if (fileSize > 0) {
+            break;
+          }
+          Utilities.sleep(1000);
+          try { fileSize = fileFound.getSize(); } catch(e) {}
+        }
+        // Jeda ekstra 1.5 detik agar Google Drive menutup stream penulisan & menyelesaikan rendering berkas secara sempurna
+        Utilities.sleep(1500);
+
         const ocrText = performOcrOnDriveFile(fileFound.getId());
         if (ocrText) {
           userMessage = `[Hasil pembacaan teks (OCR) otomatis dari foto/media bukti yang dikirim siswa: "${ocrText.replace(/\n/g, ' ')}"]`;
         } else {
           userMessage = `[Siswa mengirim gambar/media bukti, namun sistem gagal mendeteksi tulisan teks di dalamnya]`;
         }
+        
         // Hapus file gambar asli dari Google Drive agar penyimpanan tetap lega (0 MB)
         try {
           if (typeof Drive !== 'undefined') {
