@@ -554,6 +554,8 @@ function performOcrOnDriveFile(fileId) {
     // Koreksi MIME Type jika bertipe application/octet-stream tetapi berformat gambar berdasarkan nama berkas
     let mimeType = blob.getContentType();
     const fileName = file.getName().toLowerCase();
+    Logger.log("[performOcrOnDriveFile] MIME asal: " + mimeType + ", Nama berkas: " + fileName);
+    
     if (mimeType === "application/octet-stream" || !mimeType) {
       let correctedMime = "image/jpeg";
       if (fileName.endsWith(".png")) {
@@ -562,21 +564,24 @@ function performOcrOnDriveFile(fileId) {
         correctedMime = "image/gif";
       }
       blob = blob.setContentType(correctedMime);
+      Logger.log("[performOcrOnDriveFile] MIME dikoreksi menjadi: " + correctedMime);
     }
     
     let docId = null;
     
     // 1. Coba gunakan Advanced Service (Drive) jika diaktifkan oleh pengguna di Editor Google Apps Script
     if (typeof Drive !== 'undefined') {
+      Logger.log("[performOcrOnDriveFile] Menggunakan Advanced Service (Drive)...");
       const resource = {
         title: "OCR Temp Doc",
         mimeType: MimeType.GOOGLE_DOCS
       };
       const doc = Drive.Files.insert(resource, blob, { ocr: true, ocrLanguage: "id" });
       docId = doc.id;
+      Logger.log("[performOcrOnDriveFile] Berhasil membuat Temp Doc via Advanced Service. ID: " + docId);
     } else {
       // 2. Fallback REST API: Unggah berkas menggunakan Binary Multipart Upload asli
-      // Ini memaksa konversi berkas (convert=true) dengan mendaftarkan metadata mimeType Google Doc secara akurat
+      Logger.log("[performOcrOnDriveFile] Advanced Service dinonaktifkan. Menggunakan REST API Fallback...");
       const metadata = {
         title: "OCR Temp Doc",
         mimeType: "application/vnd.google-apps.document"
@@ -614,20 +619,29 @@ function performOcrOnDriveFile(fileId) {
         muteHttpExceptions: true
       };
       
+      Logger.log("[performOcrOnDriveFile] Mengirim request UrlFetchApp ke Drive API...");
       const response = UrlFetchApp.fetch(url, options);
+      Logger.log("[performOcrOnDriveFile] Respon HTTP Status: " + response.getResponseCode());
+      
       if (response.getResponseCode() === 200) {
         const docInfo = JSON.parse(response.getContentText());
         docId = docInfo.id;
+        Logger.log("[performOcrOnDriveFile] Berhasil membuat Temp Doc via REST API. ID: " + docId);
       } else {
         throw new Error("HTTP OCR Fallback failed: [Status " + response.getResponseCode() + "] " + response.getContentText());
       }
     }
     
-    if (!docId) return "";
+    if (!docId) {
+      Logger.log("[performOcrOnDriveFile] ID Temp Doc kosong!");
+      return "";
+    }
     
     // 3. Baca konten teks hasil OCR dari berkas Google Doc yang baru terbentuk
+    Logger.log("[performOcrOnDriveFile] Membuka Google Doc ID: " + docId + " untuk ekstraksi teks...");
     const docFile = DocumentApp.openById(docId);
     const extractedText = docFile.getBody().getText().trim();
+    Logger.log("[performOcrOnDriveFile] Ekstraksi berhasil. Panjang teks: " + extractedText.length);
     
     // 4. Hapus dokumen Google Doc sementara agar tidak menyampah di Drive
     try {
@@ -636,12 +650,15 @@ function performOcrOnDriveFile(fileId) {
       } else {
         DriveApp.getFileById(docId).setTrashed(true);
       }
+      Logger.log("[performOcrOnDriveFile] Berhasil menghapus Temp Doc.");
     } catch (err) {
+      Logger.log("[performOcrOnDriveFile] Gagal menghapus Temp Doc: " + err.toString());
       logToSheet("system", "error", "deleteTempDoc", err.toString(), "Error");
     }
     
     return extractedText;
   } catch (e) {
+    Logger.log("[performOcrOnDriveFile] CRITICAL ERROR: " + e.toString());
     logToSheet("system", "error", "performOcrOnDriveFile", e.toString(), "Error");
     return "";
   }
