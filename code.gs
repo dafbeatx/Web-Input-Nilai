@@ -57,11 +57,19 @@ function doPost(e) {
       scriptProperties.deleteProperty(phone + "_student_name");
       scriptProperties.deleteProperty(phone + "_student_cache");
       scriptProperties.deleteProperty(phone + "_student_cache_expire");
+      scriptProperties.deleteProperty(phone + "_waiting_media");
+      scriptProperties.deleteProperty(phone + "_waiting_media_time");
       logToSheet(phone, senderName, "User", userMessage, "Command Reset");
       return sendResponse("Sistem telah mereset memori dan tautan nama Anda. Sapa aku kembali, hehe.");
     }
 
-    // --- DETEKSI PENGIRIMAN MEDIA (GAMBAR/FOTO/DOKUMEN) ---
+    // --- DETEKSI PENGIRIMAN MEDIA & STATE DEFERRED ---
+    const waitingMediaKey = phone + "_waiting_media";
+    const waitingMediaTimeKey = phone + "_waiting_media_time";
+    const isWaitingMedia = scriptProperties.getProperty(waitingMediaKey) === "true";
+    const waitingMediaTime = parseInt(scriptProperties.getProperty(waitingMediaTimeKey) || "0");
+    const isWaitingExpired = (now - waitingMediaTime) > 300000; // 5 menit
+
     // WhatsAuto mengirimkan teks penanda notifikasi seperti "📷 Foto", "📄 Dokumen", atau "[Pengguna mengirim...]"
     const isExplicitMedia = msgLower.indexOf("📷") !== -1 || 
                             msgLower.indexOf("🖼️") !== -1 ||
@@ -71,69 +79,85 @@ function doPost(e) {
                             msgLower.indexOf("[sent a") !== -1 ||
                             (userMessage.startsWith("[") && userMessage.endsWith("]"));
 
-    const isMedia = isExplicitMedia || 
-                    msgLower.indexOf("foto") !== -1 || 
-                    msgLower.indexOf("photo") !== -1 ||
-                    msgLower.indexOf("gambar") !== -1 || 
-                    msgLower.indexOf("image") !== -1 ||
-                    msgLower.indexOf("file") !== -1 || 
-                    msgLower.indexOf("document") !== -1 ||
-                    msgLower.indexOf("dokumen") !== -1 ||
-                    /\b(bukti|transfer|bayar|lunas|ss|screenshot|kirim foto|kirim gambar)\b/i.test(userMessage);
+    const isMediaKeyword = msgLower.indexOf("foto") !== -1 || 
+                           msgLower.indexOf("photo") !== -1 ||
+                           msgLower.indexOf("gambar") !== -1 || 
+                           msgLower.indexOf("image") !== -1 ||
+                           msgLower.indexOf("file") !== -1 || 
+                           msgLower.indexOf("document") !== -1 ||
+                           msgLower.indexOf("dokumen") !== -1 ||
+                           /\b(bukti|transfer|bayar|lunas|ss|screenshot|kirim foto|kirim gambar)\b/i.test(userMessage);
 
-    if (isMedia && DRIVE_FOLDER_ID) {
-      let fileFound = null;
-      // Tentukan durasi polling berdasarkan kepastian adanya media
-      // Jika pasti media (explicit), tunggu hingga 15 detik agar FolderSync selesai mengunggah.
-      // Jika hanya berupa kata kunci tekstual (implicit), batasi cek cepat 2 detik agar respons tetap instan.
-      const maxPollSeconds = isExplicitMedia ? 15 : 2;
-      
-      for (let i = 0; i < maxPollSeconds; i++) {
-        // Gunakan batas usia file maksimal 300 detik (5 menit) untuk toleransi keterlambatan sinkronisasi & sinkronisasi waktu
-        fileFound = getNewestImageFromDrive(DRIVE_FOLDER_ID, 300);
-        if (fileFound) {
-          break;
-        }
-        Utilities.sleep(1000);
-      }
-      
-      if (fileFound) {
-        // --- ANTI-RACE CONDITION (MENUNGGU UNGGAHAN SELESAI PENUH) ---
-        // Kadang berkas terdeteksi instan di Drive saat proses sinkronisasi baru dimulai (ukuran masih 0 bytes)
-        // Kita pantau ukuran berkas hingga lebih dari 0 bytes atau maksimal menunggu 3 detik
-        let fileSize = 0;
-        try { fileSize = fileFound.getSize(); } catch(e) {}
-        
-        for (let attempt = 0; attempt < 3; attempt++) {
-          if (fileSize > 0) {
-            break;
-          }
+    const isProsesKeyword = msgLower.includes("proses") || 
+                            msgLower.includes("cek") || 
+                            msgLower.includes("sudah") || 
+                            msgLower.includes("lunas") || 
+                            msgLower.includes("bukti");
+
+    if (DRIVE_FOLDER_ID) {
+      if (isExplicitMedia) {
+        // 1. Kasus: Pengguna benar-benar mengirim Media fisik (WhatsAuto mengirim "📷 Foto" dsb.)
+        // Lakukan pengecekan singkat sekali (max 2 detik) jika FolderSync super cepat
+        let fileFound = null;
+        for (let i = 0; i < 2; i++) {
+          fileFound = getNewestImageFromDrive(DRIVE_FOLDER_ID, 60); // berkas max usia 60 detik
+          if (fileFound) break;
           Utilities.sleep(1000);
-          try { fileSize = fileFound.getSize(); } catch(e) {}
         }
-        // Jeda ekstra 1.5 detik agar Google Drive menutup stream penulisan & menyelesaikan rendering berkas secara sempurna
-        Utilities.sleep(1500);
 
-        const ocrText = performOcrOnDriveFile(fileFound.getId());
-        if (ocrText) {
-          userMessage = `[Hasil pembacaan teks (OCR) otomatis dari foto/media bukti yang dikirim siswa: "${ocrText.replace(/\n/g, ' ')}"]`;
-        } else {
-          userMessage = `[Siswa mengirim gambar/media bukti, namun sistem gagal mendeteksi tulisan teks di dalamnya]`;
-        }
-        
-        // Hapus file gambar asli dari Google Drive agar penyimpanan tetap lega (0 MB)
-        try {
-          if (typeof Drive !== 'undefined') {
-            Drive.Files.remove(fileFound.getId());
+        if (fileFound) {
+          // File terdeteksi instan, langsung diproses
+          const ocrText = processFileWithOcrAndCleanup(fileFound);
+          if (ocrText) {
+            userMessage = `[Hasil pembacaan teks (OCR) otomatis dari foto/media bukti yang dikirim siswa: "${ocrText.replace(/\n/g, ' ')}"]`;
           } else {
-            fileFound.setTrashed(true);
+            userMessage = `[Siswa mengirim gambar/media bukti, namun sistem gagal mendeteksi tulisan teks di dalamnya]`;
           }
-        } catch(e) {
-          logToSheet("system", "error", "removeOriginalFile", e.toString(), "Error");
+        } else {
+          // File belum terunggah (kasus umum FolderSync lambat ~1 menit)
+          // Set status waiting agar ketika pengguna mengetik 'proses' berikutnya, kita cari berkasnya
+          scriptProperties.setProperty(waitingMediaKey, "true");
+          scriptProperties.setProperty(waitingMediaTimeKey, now.toString());
+          
+          logToSheet(phone, senderName, "User", userMessage, "Deferred Media Waiting");
+          return sendResponse("📷 *Foto bukti terdeteksi!*\n\nSedang diunggah ke Google Drive (butuh sekitar 30–60 detik oleh FolderSync).\n\n👉 **Setelah 30 detik, balas chat ini dengan mengetik 'proses'** untuk memverifikasi bukti/foto Anda.");
         }
-      } else if (isExplicitMedia) {
-        // Hanya tampilkan fallback jika kita yakin ada media yang dikirim tapi gagal terunggah
-        userMessage = `[Siswa mengirim gambar/media bukti, namun sistem tidak mendeteksi berkas baru di Google Drive dalam ${maxPollSeconds} detik]`;
+      } else if (isWaitingMedia && !isWaitingExpired) {
+        // 2. Kasus: Kita sedang menunggu media, dan pengguna mengirim pesan selanjutnya
+        // Coba cari berkas baru di Google Drive (maks usia 600 detik/10 menit untuk toleransi waktu)
+        let fileFound = getNewestImageFromDrive(DRIVE_FOLDER_ID, 600);
+        
+        if (fileFound) {
+          const ocrText = processFileWithOcrAndCleanup(fileFound);
+          // Hapus status menunggu media karena berkas sudah ditemukan & diproses
+          scriptProperties.deleteProperty(waitingMediaKey);
+          scriptProperties.deleteProperty(waitingMediaTimeKey);
+
+          if (ocrText) {
+            userMessage = `[Hasil pembacaan teks (OCR) otomatis dari foto/media bukti yang dikirim siswa: "${ocrText.replace(/\n/g, ' ')}"]`;
+          } else {
+            userMessage = `[Siswa mengirim gambar/media bukti, namun sistem gagal mendeteksi tulisan teks di dalamnya]`;
+          }
+        } else {
+          // Berkas belum masuk ke Drive
+          if (isProsesKeyword) {
+            // Jika memang mengetik proses/bukti, beri peringatan sabar
+            return sendResponse("⏳ *Foto bukti belum terdeteksi di sistem.*\n\nFolderSync Anda mungkin masih proses mengunggah atau internet HP lambat. Mohon tunggu 15-30 detik lagi, lalu ketik **'proses'** kembali.");
+          }
+          // Jika ketik chat biasa, biarkan berjalan normal (jangan di-intersep, tapi jangan hapus status tunggu)
+        }
+      } else if (isMediaKeyword) {
+        // 3. Kasus: Hanya kata kunci tekstual (contoh: "saya mau kirim foto bukti") tanpa pesan media asli
+        // Cek cepat 2 detik barangkali file sudah di-upload sebelumnya
+        let fileFound = getNewestImageFromDrive(DRIVE_FOLDER_ID, 300);
+        if (fileFound) {
+          const ocrText = processFileWithOcrAndCleanup(fileFound);
+          if (ocrText) {
+            userMessage = `[Hasil pembacaan teks (OCR) otomatis dari foto/media bukti yang dikirim siswa: "${ocrText.replace(/\n/g, ' ')}"]`;
+          } else {
+            userMessage = `[Siswa mengirim gambar/media bukti, namun sistem gagal mendeteksi tulisan teks di dalamnya]`;
+          }
+        }
       }
     }
 
@@ -543,9 +567,43 @@ function getNewestImageFromDrive(folderId, maxAgeSeconds) {
   return null;
 }
 
+// Memproses berkas gambar: memastikan unggahan selesai, melakukan OCR, dan menghapus berkas
+function processFileWithOcrAndCleanup(fileFound) {
+  let fileSize = 0;
+  try { fileSize = fileFound.getSize(); } catch(e) {}
+  
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (fileSize > 0) {
+      break;
+    }
+    Utilities.sleep(1000);
+    try { fileSize = fileFound.getSize(); } catch(e) {}
+  }
+  // Jeda ekstra 1.5 detik agar Google Drive menutup stream penulisan & menyelesaikan rendering berkas
+  Utilities.sleep(1500);
+
+  const ocrText = performOcrOnDriveFile(fileFound.getId());
+  
+  // Hapus file gambar asli dari Google Drive agar penyimpanan tetap lega (0 MB)
+  try {
+    if (typeof Drive !== 'undefined') {
+      Drive.Files.remove(fileFound.getId());
+    } else {
+      fileFound.setTrashed(true);
+    }
+    Logger.log("[processFileWithOcrAndCleanup] Berhasil menghapus file asal dari Drive.");
+  } catch(e) {
+    Logger.log("[processFileWithOcrAndCleanup] Gagal menghapus file asal: " + e.toString());
+    logToSheet("system", "error", "removeOriginalFile", e.toString(), "Error");
+  }
+  
+  return ocrText;
+}
+
 // Mengonversi gambar menjadi Google Doc sementara untuk OCR dan mengekstrak teksnya
 // Dilengkapi dengan KOREKSI MIME TYPE otomatis (mengatasi application/octet-stream dari sinkronisasi FolderSync)
 // serta FALLBACK REST API menggunakan Binary Multipart Upload murni yang 100% memaksa konversi ke Google Doc (OCR)!
+// Menggunakan alur retry dengan exponential backoff untuk menangani pembatasan rate limit OCR.
 function performOcrOnDriveFile(fileId) {
   try {
     const file = DriveApp.getFileById(fileId);
@@ -568,70 +626,94 @@ function performOcrOnDriveFile(fileId) {
     }
     
     let docId = null;
+    let attempts = 0;
+    const maxAttempts = 3;
+    let lastError = "";
     
-    // 1. Coba gunakan Advanced Service (Drive) jika diaktifkan oleh pengguna di Editor Google Apps Script
-    if (typeof Drive !== 'undefined') {
-      Logger.log("[performOcrOnDriveFile] Menggunakan Advanced Service (Drive)...");
-      const resource = {
-        title: "OCR Temp Doc"
-      };
-      const doc = Drive.Files.insert(resource, blob, { ocr: true, ocrLanguage: "id" });
-      docId = doc.id;
-      Logger.log("[performOcrOnDriveFile] Berhasil membuat Temp Doc via Advanced Service. ID: " + docId);
-    } else {
-      // 2. Fallback REST API: Unggah berkas menggunakan Binary Multipart Upload asli
-      Logger.log("[performOcrOnDriveFile] Advanced Service dinonaktifkan. Menggunakan REST API Fallback...");
-      const metadata = {
-        title: "OCR Temp Doc"
-      };
-      
-      const boundary = "antigravity_ocr_boundary";
-      const delimiter = "\r\n--" + boundary + "\r\n";
-      const closeDelimiter = "\r\n--" + boundary + "--";
-      
-      const header = delimiter +
-        "Content-Type: application/json; charset=UTF-8\r\n\r\n" +
-        JSON.stringify(metadata) +
-        delimiter +
-        "Content-Type: " + blob.getContentType() + "\r\n" +
-        "Content-Transfer-Encoding: binary\r\n\r\n";
+    while (attempts < maxAttempts && !docId) {
+      try {
+        // 1. Coba gunakan Advanced Service (Drive) jika diaktifkan oleh pengguna di Editor Google Apps Script
+        if (typeof Drive !== 'undefined') {
+          Logger.log("[performOcrOnDriveFile] Menggunakan Advanced Service (Drive)... (Percobaan ke-" + (attempts + 1) + ")");
+          const resource = {
+            title: "OCR Temp Doc"
+          };
+          const doc = Drive.Files.insert(resource, blob, { ocr: true, ocrLanguage: "id" });
+          docId = doc.id;
+          Logger.log("[performOcrOnDriveFile] Berhasil membuat Temp Doc via Advanced Service. ID: " + docId);
+        } else {
+          // 2. Fallback REST API: Unggah berkas menggunakan Binary Multipart Upload asli
+          Logger.log("[performOcrOnDriveFile] Advanced Service dinonaktifkan. Menggunakan REST API Fallback... (Percobaan ke-" + (attempts + 1) + ")");
+          const metadata = {
+            title: "OCR Temp Doc"
+          };
+          
+          const boundary = "antigravity_ocr_boundary";
+          const delimiter = "\r\n--" + boundary + "\r\n";
+          const closeDelimiter = "\r\n--" + boundary + "--";
+          
+          const header = delimiter +
+            "Content-Type: application/json; charset=UTF-8\r\n\r\n" +
+            JSON.stringify(metadata) +
+            delimiter +
+            "Content-Type: " + blob.getContentType() + "\r\n" +
+            "Content-Transfer-Encoding: binary\r\n\r\n";
+            
+          const headerBytes = Utilities.newBlob(header).getBytes();
+          const fileBytes = blob.getBytes();
+          const footerBytes = Utilities.newBlob(closeDelimiter).getBytes();
+          
+          // Menggabungkan byte array secara efisien tanpa manipulasi string base64 yang merusak biner
+          const payloadBytes = [];
+          for (let i = 0; i < headerBytes.length; i++) payloadBytes.push(headerBytes[i]);
+          for (let i = 0; i < fileBytes.length; i++) payloadBytes.push(fileBytes[i]);
+          for (let i = 0; i < footerBytes.length; i++) payloadBytes.push(footerBytes[i]);
+          
+          const url = "https://www.googleapis.com/upload/drive/v2/files?uploadType=multipart&ocr=true&ocrLanguage=id";
+          const options = {
+            method: "post",
+            contentType: "multipart/related; boundary=" + boundary,
+            headers: {
+              "Authorization": "Bearer " + ScriptApp.getOAuthToken()
+            },
+            payload: payloadBytes,
+            muteHttpExceptions: true
+          };
+          
+          Logger.log("[performOcrOnDriveFile] Mengirim request UrlFetchApp ke Drive API...");
+          const response = UrlFetchApp.fetch(url, options);
+          Logger.log("[performOcrOnDriveFile] Respon HTTP Status: " + response.getResponseCode());
+          
+          if (response.getResponseCode() === 200) {
+            const docInfo = JSON.parse(response.getContentText());
+            docId = docInfo.id;
+            Logger.log("[performOcrOnDriveFile] Berhasil membuat Temp Doc via REST API. ID: " + docId);
+          } else {
+            throw new Error("HTTP OCR Fallback failed: [Status " + response.getResponseCode() + "] " + response.getContentText());
+          }
+        }
+      } catch (e) {
+        lastError = e.toString();
+        Logger.log("[performOcrOnDriveFile] ERROR pada percobaan ke-" + (attempts + 1) + ": " + lastError);
         
-      const headerBytes = Utilities.newBlob(header).getBytes();
-      const fileBytes = blob.getBytes();
-      const footerBytes = Utilities.newBlob(closeDelimiter).getBytes();
-      
-      // Menggabungkan byte array secara efisien tanpa manipulasi string base64 yang merusak biner
-      const payloadBytes = [];
-      for (let i = 0; i < headerBytes.length; i++) payloadBytes.push(headerBytes[i]);
-      for (let i = 0; i < fileBytes.length; i++) payloadBytes.push(fileBytes[i]);
-      for (let i = 0; i < footerBytes.length; i++) payloadBytes.push(footerBytes[i]);
-      
-      const url = "https://www.googleapis.com/upload/drive/v2/files?uploadType=multipart&ocr=true&ocrLanguage=id";
-      const options = {
-        method: "post",
-        contentType: "multipart/related; boundary=" + boundary,
-        headers: {
-          "Authorization": "Bearer " + ScriptApp.getOAuthToken()
-        },
-        payload: payloadBytes,
-        muteHttpExceptions: true
-      };
-      
-      Logger.log("[performOcrOnDriveFile] Mengirim request UrlFetchApp ke Drive API...");
-      const response = UrlFetchApp.fetch(url, options);
-      Logger.log("[performOcrOnDriveFile] Respon HTTP Status: " + response.getResponseCode());
-      
-      if (response.getResponseCode() === 200) {
-        const docInfo = JSON.parse(response.getContentText());
-        docId = docInfo.id;
-        Logger.log("[performOcrOnDriveFile] Berhasil membuat Temp Doc via REST API. ID: " + docId);
-      } else {
-        throw new Error("HTTP OCR Fallback failed: [Status " + response.getResponseCode() + "] " + response.getContentText());
+        // Cek jika error merupakan rate limit / kelebihan kuota
+        if (lastError.includes("rate limit") || lastError.includes("Rate Limit") || lastError.includes("exceeded") || lastError.includes("429") || lastError.includes("403")) {
+          const delay = (attempts + 1) * 2000;
+          Logger.log("[performOcrOnDriveFile] Terdeteksi Rate/Quota Limit. Menunggu " + delay + "ms sebelum mencoba kembali...");
+          Utilities.sleep(delay);
+        } else {
+          // Jika error lain, tetap coba lagi dengan jeda standar (atau lempar jika sudah maksimal)
+          if (attempts >= maxAttempts - 1) {
+            throw e;
+          }
+          Utilities.sleep(1000);
+        }
       }
+      attempts++;
     }
     
     if (!docId) {
-      Logger.log("[performOcrOnDriveFile] ID Temp Doc kosong!");
+      Logger.log("[performOcrOnDriveFile] ID Temp Doc kosong setelah " + maxAttempts + " percobaan!");
       return "";
     }
     
