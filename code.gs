@@ -600,14 +600,14 @@ function processFileWithOcrAndCleanup(fileFound) {
   return ocrText;
 }
 
-// Mengonversi gambar menjadi Google Doc sementara untuk OCR dan mengekstrak teksnya
-// Dilengkapi dengan KOREKSI MIME TYPE otomatis (mengatasi application/octet-stream dari sinkronisasi FolderSync)
-// serta FALLBACK REST API menggunakan Binary Multipart Upload murni yang 100% memaksa konversi ke Google Doc (OCR)!
-// Menggunakan alur retry dengan exponential backoff untuk menangani pembatasan rate limit OCR.
+// Mengonversi gambar menjadi Google Doc sementara untuk OCR dan mengekstrak teksnya.
+// Jika Google Drive OCR gagal atau terkena pembatasan (rate limit), sistem secara otomatis
+// beralih (fallback) ke multimodal Gemini API (jika kunci tersedia) atau OCR.space API.
 function performOcrOnDriveFile(fileId) {
+  let blob = null;
   try {
     const file = DriveApp.getFileById(fileId);
-    let blob = file.getBlob();
+    blob = file.getBlob();
     
     // Koreksi MIME Type jika bertipe application/octet-stream tetapi berformat gambar berdasarkan nama berkas
     let mimeType = blob.getContentType();
@@ -704,7 +704,7 @@ function performOcrOnDriveFile(fileId) {
         } else {
           // Jika error lain, tetap coba lagi dengan jeda standar (atau lempar jika sudah maksimal)
           if (attempts >= maxAttempts - 1) {
-            throw e;
+            break;
           }
           Utilities.sleep(1000);
         }
@@ -712,36 +712,147 @@ function performOcrOnDriveFile(fileId) {
       attempts++;
     }
     
-    if (!docId) {
-      Logger.log("[performOcrOnDriveFile] ID Temp Doc kosong setelah " + maxAttempts + " percobaan!");
-      return "";
-    }
-    
-    // 3. Baca konten teks hasil OCR dari berkas Google Doc yang baru terbentuk
-    Logger.log("[performOcrOnDriveFile] Membuka Google Doc ID: " + docId + " untuk ekstraksi teks...");
-    const docFile = DocumentApp.openById(docId);
-    const extractedText = docFile.getBody().getText().trim();
-    Logger.log("[performOcrOnDriveFile] Ekstraksi berhasil. Panjang teks: " + extractedText.length);
-    
-    // 4. Hapus dokumen Google Doc sementara agar tidak menyampah di Drive
-    try {
-      if (typeof Drive !== 'undefined') {
-        Drive.Files.remove(docId);
-      } else {
-        DriveApp.getFileById(docId).setTrashed(true);
+    if (docId) {
+      // 3. Baca konten teks hasil OCR dari berkas Google Doc yang baru terbentuk
+      Logger.log("[performOcrOnDriveFile] Membuka Google Doc ID: " + docId + " untuk ekstraksi teks...");
+      const docFile = DocumentApp.openById(docId);
+      const extractedText = docFile.getBody().getText().trim();
+      Logger.log("[performOcrOnDriveFile] Ekstraksi berhasil. Panjang teks: " + extractedText.length);
+      
+      // 4. Hapus dokumen Google Doc sementara agar tidak menyampah di Drive
+      try {
+        if (typeof Drive !== 'undefined') {
+          Drive.Files.remove(docId);
+        } else {
+          DriveApp.getFileById(docId).setTrashed(true);
+        }
+        Logger.log("[performOcrOnDriveFile] Berhasil menghapus Temp Doc.");
+      } catch (err) {
+        Logger.log("[performOcrOnDriveFile] Gagal menghapus Temp Doc: " + err.toString());
       }
-      Logger.log("[performOcrOnDriveFile] Berhasil menghapus Temp Doc.");
-    } catch (err) {
-      Logger.log("[performOcrOnDriveFile] Gagal menghapus Temp Doc: " + err.toString());
-      logToSheet("system", "error", "deleteTempDoc", err.toString(), "Error");
+      
+      return extractedText;
+    }
+  } catch (e) {
+    Logger.log("[performOcrOnDriveFile] Gagal menggunakan Google Drive OCR: " + e.toString());
+  }
+
+  // === JALUR PIPA OCR ALTERNATIF (FALLBACK PIPELINE) ===
+  Logger.log("[performOcrOnDriveFile] Memulai jalur pipa OCR alternatif (Gemini / OCR.space)...");
+  if (blob) {
+    // 1. Coba menggunakan Gemini API (Vision Multimodal)
+    const geminiKey = scriptProperties.getProperty("GEMINI_API_KEY");
+    if (geminiKey) {
+      const geminiText = performOcrWithGemini(blob, geminiKey);
+      if (geminiText) {
+        Logger.log("[performOcrOnDriveFile] OCR alternatif SUKSES menggunakan Gemini API!");
+        return geminiText;
+      }
+    } else {
+      Logger.log("[performOcrOnDriveFile] GEMINI_API_KEY tidak disetel di Script Properties.");
     }
     
-    return extractedText;
-  } catch (e) {
-    Logger.log("[performOcrOnDriveFile] CRITICAL ERROR: " + e.toString());
-    logToSheet("system", "error", "performOcrOnDriveFile", e.toString(), "Error");
-    return "";
+    // 2. Coba menggunakan OCR.space API
+    const ocrSpaceKey = scriptProperties.getProperty("OCR_SPACE_KEY") || "helloworld";
+    const ocrSpaceText = performOcrWithOcrSpace(blob, ocrSpaceKey);
+    if (ocrSpaceText) {
+      Logger.log("[performOcrOnDriveFile] OCR alternatif SUKSES menggunakan OCR.space API!");
+      return ocrSpaceText;
+    }
   }
+  
+  Logger.log("[performOcrOnDriveFile] ❌ SEMUA ALUR OCR GAGAL!");
+  return "";
+}
+
+// Fallback OCR menggunakan Gemini API (Vision Multimodal)
+function performOcrWithGemini(blob, key) {
+  try {
+    const base64Data = Utilities.base64Encode(blob.getBytes());
+    let mimeType = blob.getContentType();
+    if (!mimeType || mimeType === "application/octet-stream") {
+      mimeType = "image/jpeg";
+    }
+    
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+    const payload = {
+      contents: [{
+        parts: [
+          { text: "Tolong baca dan ketik ulang semua tulisan teks yang ada di dalam gambar ini secara utuh (terutama nama siswa, nominal uang, tanggal, dan status lunas jika ada bukti pembayaran). Jangan tambahkan komentar apa pun, cukup kembalikan teks yang terbaca." },
+          {
+            inlineData: {
+              mimeType: mimeType,
+              data: base64Data
+            }
+          }
+        ]
+      }]
+    };
+    
+    const options = {
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+    
+    Logger.log("[performOcrWithGemini] Mencoba OCR menggunakan Gemini 1.5 Flash...");
+    const response = UrlFetchApp.fetch(url, options);
+    
+    if (response.getResponseCode() === 200) {
+      const json = JSON.parse(response.getContentText());
+      if (json && json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts[0]) {
+        const text = json.candidates[0].content.parts[0].text.trim();
+        Logger.log("[performOcrWithGemini] Berhasil mengekstrak teks via Gemini. Panjang: " + text.length);
+        return text;
+      }
+    }
+    Logger.log("[performOcrWithGemini] Gagal. Respon: " + response.getContentText());
+  } catch (e) {
+    Logger.log("[performOcrWithGemini] Eror: " + e.toString());
+  }
+  return "";
+}
+
+// Fallback OCR menggunakan OCR.space API
+function performOcrWithOcrSpace(blob, apiKey) {
+  try {
+    const url = "https://api.ocr.space/Parse/Image";
+    const base64Data = Utilities.base64Encode(blob.getBytes());
+    let mimeType = blob.getContentType();
+    if (!mimeType || mimeType === "application/octet-stream") {
+      mimeType = "image/jpeg";
+    }
+    
+    const payload = {
+      apikey: apiKey,
+      base64Image: "data:" + mimeType + ";base64," + base64Data,
+      language: "ind",
+      isOverlayRequired: "false"
+    };
+    
+    const options = {
+      method: "post",
+      payload: payload,
+      muteHttpExceptions: true
+    };
+    
+    Logger.log("[performOcrWithOcrSpace] Mencoba OCR menggunakan OCR.space API...");
+    const response = UrlFetchApp.fetch(url, options);
+    
+    if (response.getResponseCode() === 200) {
+      const json = JSON.parse(response.getContentText());
+      if (json && json.ParsedResults && json.ParsedResults.length > 0) {
+        const text = json.ParsedResults[0].ParsedText || "";
+        Logger.log("[performOcrWithOcrSpace] Berhasil mengekstrak teks via OCR.space. Panjang: " + text.length);
+        return text.trim();
+      }
+    }
+    Logger.log("[performOcrWithOcrSpace] Gagal. Respon: " + response.getContentText());
+  } catch (e) {
+    Logger.log("[performOcrWithOcrSpace] Eror: " + e.toString());
+  }
+  return "";
 }
 
 // --- FUNGSI FILTRASI & VIP ---
