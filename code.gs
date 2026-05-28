@@ -545,7 +545,7 @@ function getNewestImageFromDrive(folderId, maxAgeSeconds) {
 
 // Mengonversi gambar menjadi Google Doc sementara untuk OCR dan mengekstrak teksnya
 // Dilengkapi dengan KOREKSI MIME TYPE otomatis (mengatasi application/octet-stream dari sinkronisasi FolderSync)
-// serta FALLBACK REST API tangguh menggunakan Simple Media Upload + convert=true yang binary-safe!
+// serta FALLBACK REST API menggunakan Binary Multipart Upload murni yang 100% memaksa konversi ke Google Doc (OCR)!
 function performOcrOnDriveFile(fileId) {
   try {
     const file = DriveApp.getFileById(fileId);
@@ -575,16 +575,42 @@ function performOcrOnDriveFile(fileId) {
       const doc = Drive.Files.insert(resource, blob, { ocr: true, ocrLanguage: "id" });
       docId = doc.id;
     } else {
-      // 2. Fallback REST API: Unggah blob dengan Simple Media Upload + Konversi Otomatis ke Google Doc
-      // Ini 100% aman dari masalah MIME tipe mentah karena header Content-Type diset manual ke tipe gambar
-      const url = "https://www.googleapis.com/upload/drive/v2/files?uploadType=media&convert=true&ocr=true&ocrLanguage=id";
+      // 2. Fallback REST API: Unggah berkas menggunakan Binary Multipart Upload asli
+      // Ini memaksa konversi berkas (convert=true) dengan mendaftarkan metadata mimeType Google Doc secara akurat
+      const metadata = {
+        title: "OCR Temp Doc",
+        mimeType: "application/vnd.google-apps.document"
+      };
+      
+      const boundary = "antigravity_ocr_boundary";
+      const delimiter = "\r\n--" + boundary + "\r\n";
+      const closeDelimiter = "\r\n--" + boundary + "--";
+      
+      const header = delimiter +
+        "Content-Type: application/json; charset=UTF-8\r\n\r\n" +
+        JSON.stringify(metadata) +
+        delimiter +
+        "Content-Type: " + blob.getContentType() + "\r\n" +
+        "Content-Transfer-Encoding: binary\r\n\r\n";
+        
+      const headerBytes = Utilities.newBlob(header).getBytes();
+      const fileBytes = blob.getBytes();
+      const footerBytes = Utilities.newBlob(closeDelimiter).getBytes();
+      
+      // Menggabungkan byte array secara efisien tanpa manipulasi string base64 yang merusak biner
+      const payloadBytes = [];
+      for (let i = 0; i < headerBytes.length; i++) payloadBytes.push(headerBytes[i]);
+      for (let i = 0; i < fileBytes.length; i++) payloadBytes.push(fileBytes[i]);
+      for (let i = 0; i < footerBytes.length; i++) payloadBytes.push(footerBytes[i]);
+      
+      const url = "https://www.googleapis.com/upload/drive/v2/files?uploadType=multipart&ocr=true&ocrLanguage=id";
       const options = {
         method: "post",
-        contentType: blob.getContentType(),
+        contentType: "multipart/related; boundary=" + boundary,
         headers: {
           "Authorization": "Bearer " + ScriptApp.getOAuthToken()
         },
-        payload: blob.getBytes(),
+        payload: payloadBytes,
         muteHttpExceptions: true
       };
       
@@ -593,7 +619,7 @@ function performOcrOnDriveFile(fileId) {
         const docInfo = JSON.parse(response.getContentText());
         docId = docInfo.id;
       } else {
-        throw new Error("HTTP OCR Fallback failed: " + response.getContentText());
+        throw new Error("HTTP OCR Fallback failed: [Status " + response.getResponseCode() + "] " + response.getContentText());
       }
     }
     
@@ -819,4 +845,64 @@ function initSetup() {
   // Ganti URL dengan URL web GradeMaster Anda yang asli jika nanti berubah.
   PropertiesService.getScriptProperties().setProperty('APP_URL', 'https://web-input-nilai.vercel.app/');
   Logger.log("APP_URL berhasil disetel!");
+}
+
+/**
+ * =========================================================================
+ * 🛠️ DIAGNOSTIC TOOL: UJI COBA OCR DRIVE & DIAGNOSIS OTORISASI (STEP-BY-STEP)
+ * =========================================================================
+ * FUNGSI INI DIGUNAKAN UNTUK MEMASTIKAN DRIVE API SUDAH DIAKTIFKAN DAN
+ * GAS MEMILIKI AKSES DRIVE WRITE SECARA PENUH.
+ * 
+ * Cara Penggunaan:
+ * 1. Unggah berkas gambar uji coba (.jpg/.png) ke folder Google Drive Anda.
+ * 2. Buka Editor Google Apps Script, pilih fungsi "testOcr" di dropdown atas.
+ * 3. Klik "Run" (Jalankan).
+ * 4. Jika ada pop-up "Otorisasi Diperlukan", selesaikan langkah perizinan.
+ * 5. Buka Execution Log (Log Eksekusi) di bagian bawah untuk membaca hasilnya.
+ */
+function testOcr() {
+  const folderId = DRIVE_FOLDER_ID;
+  Logger.log("=== MEMULAI DIAGNOSIS OCR DRIVER GRADEMASTER ===");
+  Logger.log("Menghubungi Folder Drive dengan ID: " + folderId);
+  
+  try {
+    const folder = DriveApp.getFolderById(folderId);
+    const files = folder.getFiles();
+    let fileFound = null;
+    
+    while (files.hasNext()) {
+      const file = files.next();
+      Logger.log("👉 Berkas terdeteksi di Drive: " + file.getName() + " (MIME: " + file.getMimeType() + ")");
+      fileFound = file;
+      break;
+    }
+    
+    if (!fileFound) {
+      Logger.log("❌ ERROR: TIDAK MENEMUKAN BERKAS DI FOLDER DRIVE!");
+      Logger.log("Solusi: Unggah satu file gambar bukti (.jpg/.png) apa saja secara manual ke folder Drive Anda terlebih dahulu, lalu jalankan ulang tes ini!");
+      return;
+    }
+    
+    Logger.log("🚀 Menjalankan proses ekstraksi OCR pada berkas: " + fileFound.getName() + " (ID: " + fileFound.getId() + ")");
+    const ocrText = performOcrOnDriveFile(fileFound.getId());
+    
+    Logger.log("📝 HASIL OCR YANG DIDETEKSI:");
+    Logger.log("=========================================");
+    Logger.log(ocrText ? ocrText : "[TEKS KOSONG / DRIVE API BELUM DIAKTIFKAN]");
+    Logger.log("=========================================");
+    
+    if (ocrText) {
+      Logger.log("✅ SUKSES BESAR! Sistem Google Drive OCR Anda berfungsi dengan sempurna!");
+    } else {
+      Logger.log("❌ GAGAL: OCR mengembalikan teks kosong.");
+      Logger.log("Rekomendasi Utama: Pastikan Anda sudah mengaktifkan 'Drive API' di menu 'Services' (+) di panel sebelah kiri!");
+    }
+  } catch (e) {
+    Logger.log("💥 CRITICAL ERROR SAAT PENGUJIAN: " + e.toString());
+    if (e.toString().includes("Drive")) {
+      Logger.log("👉 Analisis: Apps Script Anda tidak diizinkan mengakses Drive. Aktifkan 'Drive API' di panel Services sebelah kiri!");
+    }
+  }
+  Logger.log("=== DIAGNOSIS DIAGNOSTIK SELESAI ===");
 }
