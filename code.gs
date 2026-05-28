@@ -573,8 +573,7 @@ function performOcrOnDriveFile(fileId) {
     if (typeof Drive !== 'undefined') {
       Logger.log("[performOcrOnDriveFile] Menggunakan Advanced Service (Drive)...");
       const resource = {
-        title: "OCR Temp Doc",
-        mimeType: MimeType.GOOGLE_DOCS
+        title: "OCR Temp Doc"
       };
       const doc = Drive.Files.insert(resource, blob, { ocr: true, ocrLanguage: "id" });
       docId = doc.id;
@@ -583,8 +582,7 @@ function performOcrOnDriveFile(fileId) {
       // 2. Fallback REST API: Unggah berkas menggunakan Binary Multipart Upload asli
       Logger.log("[performOcrOnDriveFile] Advanced Service dinonaktifkan. Menggunakan REST API Fallback...");
       const metadata = {
-        title: "OCR Temp Doc",
-        mimeType: "application/vnd.google-apps.document"
+        title: "OCR Temp Doc"
       };
       
       const boundary = "antigravity_ocr_boundary";
