@@ -505,11 +505,26 @@ function getNewestImageFromDrive(folderId, maxAgeSeconds) {
 }
 
 // Mengonversi gambar menjadi Google Doc sementara untuk OCR dan mengekstrak teksnya
-// Dilengkapi dengan FALLBACK OTOMATIS via REST API HTTP jika Advanced Google Drive Service tidak aktif!
+// Dilengkapi dengan KOREKSI MIME TYPE otomatis (mengatasi application/octet-stream dari sinkronisasi FolderSync)
+// serta FALLBACK REST API tangguh menggunakan Simple Media Upload + convert=true yang binary-safe!
 function performOcrOnDriveFile(fileId) {
   try {
     const file = DriveApp.getFileById(fileId);
-    const blob = file.getBlob();
+    let blob = file.getBlob();
+    
+    // Koreksi MIME Type jika bertipe application/octet-stream tetapi berformat gambar berdasarkan nama berkas
+    let mimeType = blob.getContentType();
+    const fileName = file.getName().toLowerCase();
+    if (mimeType === "application/octet-stream" || !mimeType) {
+      let correctedMime = "image/jpeg";
+      if (fileName.endsWith(".png")) {
+        correctedMime = "image/png";
+      } else if (fileName.endsWith(".gif")) {
+        correctedMime = "image/gif";
+      }
+      blob = blob.setContentType(correctedMime);
+    }
+    
     let docId = null;
     
     // 1. Coba gunakan Advanced Service (Drive) jika diaktifkan oleh pengguna di Editor Google Apps Script
@@ -521,35 +536,16 @@ function performOcrOnDriveFile(fileId) {
       const doc = Drive.Files.insert(resource, blob, { ocr: true, ocrLanguage: "id" });
       docId = doc.id;
     } else {
-      // 2. Fallback: Request langsung ke Google Drive API v2 via REST Endpoint dengan token OAuth bawaan GAS
-      const metadata = {
-        title: "OCR Temp Doc",
-        mimeType: "application/vnd.google-apps.document"
-      };
-      
-      const boundary = "antigravity_ocr_boundary";
-      const delimiter = "\r\n--" + boundary + "\r\n";
-      const closeDelimiter = "\r\n--" + boundary + "--";
-      
-      const base64Data = Utilities.base64Encode(blob.getBytes());
-      const multipartRequestBody =
-        delimiter +
-        "Content-Type: application/json\r\n\r\n" +
-        JSON.stringify(metadata) +
-        delimiter +
-        "Content-Type: " + blob.getContentType() + "\r\n" +
-        "Content-Transfer-Encoding: base64\r\n\r\n" +
-        base64Data +
-        closeDelimiter;
-        
-      const url = "https://www.googleapis.com/upload/drive/v2/files?uploadType=multipart&ocr=true&ocrLanguage=id";
+      // 2. Fallback REST API: Unggah blob dengan Simple Media Upload + Konversi Otomatis ke Google Doc
+      // Ini 100% aman dari masalah MIME tipe mentah karena header Content-Type diset manual ke tipe gambar
+      const url = "https://www.googleapis.com/upload/drive/v2/files?uploadType=media&convert=true&ocr=true&ocrLanguage=id";
       const options = {
         method: "post",
-        contentType: "multipart/related; boundary=" + boundary,
+        contentType: blob.getContentType(),
         headers: {
           "Authorization": "Bearer " + ScriptApp.getOAuthToken()
         },
-        payload: multipartRequestBody,
+        payload: blob.getBytes(),
         muteHttpExceptions: true
       };
       
