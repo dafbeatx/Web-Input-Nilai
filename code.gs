@@ -26,6 +26,28 @@ function doPost(e) {
     const msgLower = userMessage.toLowerCase();
     const introKey = "intro_done_" + phone;
 
+    // --- DEDUPLIKASI REQUEST (Anti-Duplicate & Anti-Timeout Loop) ---
+    // Karena proses menunggu unggahan FolderSync bisa memakan waktu hingga belasan detik,
+    // WhatsAuto di Android mungkin melakukan timeout dan mengirim ulang request yang sama (retry storm).
+    // Kita filter request kembar dalam kurun waktu 20 detik untuk mencegah bot membalas berkali-kali.
+    const now = new Date().getTime();
+    const lastRequestKey = phone + "_last_req_time";
+    const lastMsgKey = phone + "_last_req_msg";
+    
+    const lastReqTime = scriptProperties.getProperty(lastRequestKey);
+    const lastReqMsg = scriptProperties.getProperty(lastMsgKey);
+    
+    if (lastReqTime && lastReqMsg === userMessage) {
+      const timeDiff = now - parseInt(lastReqTime);
+      if (timeDiff < 20000) { 
+        // Mengembalikan balasan kosong agar WhatsAuto mengabaikan request duplikat ini
+        return sendResponse(""); 
+      }
+    }
+    // Catat waktu dan pesan request saat ini untuk filter berikutnya
+    scriptProperties.setProperty(lastRequestKey, now.toString());
+    scriptProperties.setProperty(lastMsgKey, userMessage);
+
     // --- RESET COMMAND ---
     if (msgLower.includes("/reset")) {
       scriptProperties.deleteProperty(phone);
