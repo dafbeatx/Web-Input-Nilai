@@ -6,9 +6,11 @@ import {
   Trash2, AlertCircle, Eye, AlertOctagon, Users, Timer, Clock,
   Send, MonitorOff, Cpu, Edit2, Loader2, Globe, CheckCircle2, XCircle,
   MoreVertical, Check, Target, Trophy, TrendingUp, Info, BarChart3,
-  ClipboardList, ShieldCheck, DownloadCloud, FileText, Filter, ChevronRight
+  ClipboardList, ShieldCheck, DownloadCloud, FileText, Filter, ChevronRight,
+  FileSpreadsheet, FileDown
 } from 'lucide-react';
 import { GradedStudent, AnalyticsResult } from '@/lib/grademaster/types';
+import { exportToPDF, exportToExcel, exportToDOCX } from '@/lib/grademaster/reportExport';
 import { getCsiLabel, getLpsLabel } from '@/lib/grademaster/scoring';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
@@ -173,6 +175,54 @@ export default function DashboardLayer({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF({
+      sessionName: sessionName || 'Sesi',
+      teacherName,
+      subject,
+      studentClass,
+      schoolLevel,
+      kkm,
+      gradedStudents,
+      analytics,
+      academicYear,
+      semester,
+      examType
+    });
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel({
+      sessionName: sessionName || 'Sesi',
+      teacherName,
+      subject,
+      studentClass,
+      schoolLevel,
+      kkm,
+      gradedStudents,
+      analytics,
+      academicYear,
+      semester,
+      examType
+    });
+  };
+
+  const handleExportDOCX = () => {
+    exportToDOCX({
+      sessionName: sessionName || 'Sesi',
+      teacherName,
+      subject,
+      studentClass,
+      schoolLevel,
+      kkm,
+      gradedStudents,
+      analytics,
+      academicYear,
+      semester,
+      examType
+    });
   };
 
   const passCount = gradedStudents.filter(s => s.finalScore >= kkm).length;
@@ -537,22 +587,36 @@ export default function DashboardLayer({
                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                   <button onClick={handleExportXML} className="flex items-center justify-between p-5 bg-surface-bright rounded-2xl border border-outline-variant hover:border-primary/20 transition-all group active:scale-95">
-                      <div className="flex items-center gap-3">
-                         <DownloadCloud size={20} className="text-primary group-hover:animate-bounce" />
-                         <span className="text-xs font-black uppercase tracking-widest">Export SPSS/XML</span>
-                      </div>
-                      <ChevronRight size={16} className="text-on-surface-variant" />
-                   </button>
-                   <button className="flex items-center justify-between p-5 bg-surface-bright rounded-2xl border border-outline-variant hover:border-primary/20 transition-all group opacity-50 grayscale active:scale-95">
-                      <div className="flex items-center gap-3">
-                         <FileText size={20} className="text-primary" />
-                         <span className="text-xs font-black uppercase tracking-widest">PDF Report Full</span>
-                      </div>
-                      <ChevronRight size={16} className="text-on-surface-variant" />
-                   </button>
-                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <button onClick={handleExportXML} className="flex items-center justify-between p-5 bg-surface-bright rounded-2xl border border-outline-variant hover:border-primary/20 transition-all group active:scale-95">
+                       <div className="flex items-center gap-3">
+                          <DownloadCloud size={20} className="text-primary group-hover:scale-110 duration-200" />
+                          <span className="text-xs font-black uppercase tracking-widest">Export SPSS/XML</span>
+                       </div>
+                       <ChevronRight size={16} className="text-on-surface-variant" />
+                    </button>
+                    <button onClick={handleExportPDF} className="flex items-center justify-between p-5 bg-surface-bright rounded-2xl border border-outline-variant hover:border-rose-500/20 transition-all group active:scale-95">
+                       <div className="flex items-center gap-3">
+                          <FileText size={20} className="text-rose-500 group-hover:scale-110 duration-200" />
+                          <span className="text-xs font-black uppercase tracking-widest">PDF Report Full</span>
+                       </div>
+                       <ChevronRight size={16} className="text-on-surface-variant" />
+                    </button>
+                    <button onClick={handleExportDOCX} className="flex items-center justify-between p-5 bg-surface-bright rounded-2xl border border-outline-variant hover:border-blue-500/20 transition-all group active:scale-95">
+                       <div className="flex items-center gap-3">
+                          <FileDown size={20} className="text-blue-500 group-hover:scale-110 duration-200" />
+                          <span className="text-xs font-black uppercase tracking-widest">Download DOCX</span>
+                       </div>
+                       <ChevronRight size={16} className="text-on-surface-variant" />
+                    </button>
+                    <button onClick={handleExportExcel} className="flex items-center justify-between p-5 bg-surface-bright rounded-2xl border border-outline-variant hover:border-emerald-500/20 transition-all group active:scale-95">
+                       <div className="flex items-center gap-3">
+                          <FileSpreadsheet size={20} className="text-emerald-500 group-hover:scale-110 duration-200" />
+                          <span className="text-xs font-black uppercase tracking-widest">Download Excel</span>
+                       </div>
+                       <ChevronRight size={16} className="text-on-surface-variant" />
+                    </button>
+                 </div>
                 
                 <div className="mt-6">
                    <InsightPanel insights={analytics.insights} />
