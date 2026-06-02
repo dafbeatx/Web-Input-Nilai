@@ -77,6 +77,43 @@ export default function SetupLayer(props: SetupLayerProps) {
   const [smaClasses, setSmaClasses] = useState<string[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
 
+  const PREDEFINED_SUBJECTS = [
+    "Informatika",
+    "Matematika",
+    "IPA",
+    "IPS",
+    "Bahasa Indonesia",
+    "Bahasa Inggris",
+    "PAI",
+    "PJOK",
+    "Seni Budaya",
+    "PKn"
+  ];
+
+  const [isCustomSubject, setIsCustomSubject] = useState(() => {
+    return subject !== "" && !PREDEFINED_SUBJECTS.includes(subject);
+  });
+
+  useEffect(() => {
+    if (subject !== "" && !PREDEFINED_SUBJECTS.includes(subject)) {
+      setIsCustomSubject(true);
+    } else if (subject === "") {
+      // Keep custom input visible if user clears the custom subject value while editing/typing
+    } else {
+      setIsCustomSubject(false);
+    }
+  }, [subject]);
+
+  const handleSubjectChange = (val: string) => {
+    if (val === "__custom__") {
+      setIsCustomSubject(true);
+      setSubject("");
+    } else {
+      setIsCustomSubject(false);
+      setSubject(val);
+    }
+  };
+
   useEffect(() => {
     if (schoolLevel !== 'SMA') return;
     setIsLoadingClasses(true);
@@ -172,7 +209,11 @@ export default function SetupLayer(props: SetupLayerProps) {
                   </div>
                   <div>
                     <label className={labelClass}><BookOpen size={14} /> Mata Pelajaran</label>
-                    <select value={subject} onChange={(e) => setSubject(e.target.value)} className={`${inputClass} cursor-pointer`}>
+                    <select
+                      value={isCustomSubject ? "__custom__" : subject}
+                      onChange={(e) => handleSubjectChange(e.target.value)}
+                      className={`${inputClass} cursor-pointer mb-2`}
+                    >
                       <option value="">-- Pilih Mata Pelajaran --</option>
                       <option value="Informatika">Informatika</option>
                       <option value="Matematika">Matematika</option>
@@ -184,7 +225,19 @@ export default function SetupLayer(props: SetupLayerProps) {
                       <option value="PJOK">PJOK</option>
                       <option value="Seni Budaya">Seni Budaya</option>
                       <option value="PKn">PKn</option>
+                      <option value="__custom__">-- Ketik Manual (Lainnya) --</option>
                     </select>
+                    {isCustomSubject && (
+                      <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                        <input
+                          type="text"
+                          value={subject}
+                          onChange={(e) => setSubject(e.target.value)}
+                          placeholder="Ketik nama mata pelajaran manual..."
+                          className={inputClass}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
