@@ -159,7 +159,7 @@ export default function SetupLayer(props: SetupLayerProps) {
   const inputClass = "w-full bg-surface-variant border border-outline-variant rounded-xl p-3 text-sm font-bold text-on-surface focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-on-surface-variant";
   const labelClass = "flex items-center gap-2 text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2";
   const sectionTitleClass = "flex items-center gap-2 text-sm font-black text-on-surface uppercase tracking-widest mb-6 pb-4 border-b border-outline-variant";
-  const cardClass = "bg-surface premium-shadow backdrop-blur-xl rounded-2xl p-6 premium-shadow border border-outline-variant";
+  const cardClass = "bg-surface premium-shadow backdrop-blur-xl rounded-2xl p-4 sm:p-6 premium-shadow border border-outline-variant";
 
   return (
     <main className="min-h-dvh p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto page-pt md:pt-16 pb-24 font-outfit bg-transparent">
@@ -242,14 +242,14 @@ export default function SetupLayer(props: SetupLayerProps) {
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="col-span-2 md:col-span-1">
+                  <div className="col-span-1">
                     <label className={labelClass}><GraduationCap size={14} /> Tingkat</label>
                     <select value={schoolLevel} onChange={(e) => setSchoolLevel(e.target.value)} className={`${inputClass} cursor-pointer`}>
                       <option value="SMP">SMP</option>
                       <option value="SMA">SMA</option>
                     </select>
                   </div>
-                  <div className="col-span-2 md:col-span-1">
+                  <div className="col-span-1">
                     <label className={labelClass}><LayoutGrid size={14} /> Kelas</label>
                     <select value={studentClass} onChange={(e) => setStudentClass(e.target.value)} className={`${inputClass} cursor-pointer`}>
                       <option value="">-- Pilih Kelas --</option>
@@ -274,14 +274,14 @@ export default function SetupLayer(props: SetupLayerProps) {
                       )}
                     </select>
                   </div>
-                  <div className="col-span-2 md:col-span-1">
+                  <div className="col-span-1">
                     <label className={labelClass}><BookOpen size={14} /> Semester</label>
                     <select value={semester} onChange={(e) => setSemester(e.target.value)} className={`${inputClass} cursor-pointer`}>
                       <option value="Ganjil">Ganjil</option>
                       <option value="Genap">Genap</option>
                     </select>
                   </div>
-                  <div className="col-span-2 md:col-span-1">
+                  <div className="col-span-1">
                     <label className={labelClass}><BookOpen size={14} /> Thn Ajaran</label>
                     <select value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} className={`${inputClass} cursor-pointer`}>
                       <option value="2024/2025">2024/2025</option>
@@ -310,7 +310,7 @@ export default function SetupLayer(props: SetupLayerProps) {
             {/* 3. KUNCI JAWABAN PG */}
             <div className={cardClass}>
               <h2 className={sectionTitleClass}><Key className="text-primary" /> Kunci Jawaban Pilihan Ganda (PG)</h2>
-              <div>
+              <div className="space-y-4">
                 <textarea
                   value={keyInput}
                   onChange={(e) => setKeyInput(e.target.value)}
@@ -318,6 +318,25 @@ export default function SetupLayer(props: SetupLayerProps) {
                   rows={4}
                   className={`${inputClass} resize-y font-mono`}
                 />
+                
+                {parsedCount > 0 && (
+                  <div className="p-4 bg-surface-variant/40 rounded-xl border border-outline-variant/60 animate-in fade-in duration-300">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-primary">Preview Kunci PG</span>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-primary/20 text-primary">
+                        {parsedCount} Soal
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2 max-h-40 overflow-y-auto pr-1">
+                      {parsedPreview.map((ans, idx) => (
+                        <span key={idx} className="inline-flex justify-center items-center gap-1.5 px-2 py-1 bg-surface rounded-lg border border-outline-variant text-[10px] font-bold">
+                          <span className="text-on-surface-variant">{idx + 1}.</span>
+                          <span className="text-primary">{ans}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -331,18 +350,20 @@ export default function SetupLayer(props: SetupLayerProps) {
             <div className={cardClass}>
               <h2 className={sectionTitleClass}><Settings className="text-primary" /> Pengaturan</h2>
               <div className="space-y-5">
-                <div>
-                  <label className={labelClass}><CheckCircle2 size={14} /> Nilai Minimal (KKM)</label>
-                  <input type="number" min="0" max="100" value={kkm} onChange={(e) => setKkm(Number(e.target.value))} className={inputClass} />
-                </div>
-                <div>
-                  <label className={labelClass}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1 inline-block">
-                      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                    Waktu Ujian Remedial (Menit)
-                  </label>
-                  <input type="number" min="1" max="180" value={remedialTimer} onChange={(e) => setRemedialTimer(Number(e.target.value))} className={inputClass} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass}><CheckCircle2 size={14} className="shrink-0" /> KKM</label>
+                    <input type="number" min="0" max="100" value={kkm} onChange={(e) => setKkm(Number(e.target.value))} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1 inline-block shrink-0">
+                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                      </svg>
+                      Remedial (Mnt)
+                    </label>
+                    <input type="number" min="1" max="180" value={remedialTimer} onChange={(e) => setRemedialTimer(Number(e.target.value))} className={inputClass} />
+                  </div>
                 </div>
                 <div>
                   <label className={labelClass}>Sesi Publik</label>
@@ -389,49 +410,27 @@ export default function SetupLayer(props: SetupLayerProps) {
               </div>
             </div>
 
-            {/* PREVIEW CONTAINER */}
-            <div className="space-y-6 hidden lg:block">
-
-              {/* Preview PG Keys */}
-              {parsedCount > 0 && (
-                <div className="bg-surface premium-shadow backdrop-blur-xl rounded-2xl p-5 premium-shadow border border-primary/20 border-t-4 border-t-primary">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">Preview Kunci PG</span>
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-primary/20 text-primary">
-                      {parsedCount}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-60 overflow-y-auto pr-2">
-                    {parsedPreview.map((ans, idx) => (
-                      <span key={idx} className="inline-flex justify-center items-center gap-1.5 px-2 py-1.5 bg-surface-variant rounded-lg border border-outline-variant text-[10px] font-bold">
-                        <span className="text-on-surface-variant">{idx + 1}.</span>
-                        <span className="text-primary">{ans}</span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* ACTION BUTTON (Desktop Static, Mobile Sticky) */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900 border-t border-outline-variant z-50 lg:static lg:bg-transparent lg:border-none lg:p-0">
-              <button
-                onClick={handleSubmit}
-                disabled={isLoading}
-                className="w-full py-4 bg-primary text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />} Simpan & Mulai Sesi
-              </button>
-              <button 
-                onClick={onBack} 
-                className="w-full mt-3 py-3 bg-surface-variant text-on-surface-variant rounded-xl text-xs font-black uppercase tracking-widest hover:bg-surface-container-highest transition-colors lg:hidden flex items-center justify-center gap-2 border border-outline-variant"
-              >
-                <ArrowLeft size={14} /> Kembali
-              </button>
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-surface/90 backdrop-blur-md border-t border-outline-variant z-50 lg:static lg:bg-transparent lg:border-none lg:p-0">
+              <div className="flex gap-3 max-w-7xl mx-auto w-full">
+                <button 
+                  onClick={onBack} 
+                  className="px-4 py-3.5 bg-surface-variant text-on-surface-variant rounded-xl text-xs font-black uppercase tracking-widest hover:bg-surface-container-highest transition-colors lg:hidden flex items-center justify-center gap-2 border border-outline-variant active:scale-95"
+                >
+                  <ArrowLeft size={16} /> Kembali
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={isLoading}
+                  className="flex-1 py-3.5 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />} Simpan & Mulai
+                </button>
+              </div>
             </div>
             
             {/* Mobile padding spacer to prevent content blocking by sticky bottom */}
-            <div className="h-32 lg:hidden"></div>
+            <div className="h-28 lg:hidden"></div>
 
           </div>
 
