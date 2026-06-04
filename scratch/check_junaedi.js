@@ -1,5 +1,10 @@
 const { createClient } = require('@supabase/supabase-js');
-const supabase = createClient('https://fwhdjqvtjzesbdcqorsn.supabase.co', '[REDACTED_SUPABASE_SERVICE_ROLE_KEY]');
+require('dotenv').config({ path: '.env.local' });
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!supabaseUrl || !supabaseKey) { console.error('Missing SUPABASE env vars in .env.local'); process.exit(1); }
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function test() {
   const sessionId = 'a75f3a6f-d27e-4a33-a13f-5a54c1ffe841';

@@ -12,8 +12,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // Load environment variables
 dotenv.config({ path: join(__dirname, '../.env.local') });
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://fwhdjqvtjzesbdcqorsn.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_rwh41NF8iwUaRXL8A6t05g_sK7k5JL3';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+if (!SUPABASE_URL || !SUPABASE_KEY) { console.error('❌ Missing SUPABASE env vars. Pastikan .env.local terisi.'); process.exit(1); }
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 console.log('\n══════════════════════════════════════════════════════════');

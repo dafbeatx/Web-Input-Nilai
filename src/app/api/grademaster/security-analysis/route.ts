@@ -6,15 +6,9 @@ import { analyzeExploits, ExploitAnalysisInput, SessionLogAction } from '@/lib/g
 
 export async function POST(req: NextRequest) {
   try {
-    const bypassKey = req.headers.get('x-bypass-auth-key');
-    const expectedBypass = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const isBypassed = bypassKey && expectedBypass && bypassKey === expectedBypass;
-
-    if (!isBypassed) {
-      const adminSession = await getAdminSession();
-      if (!adminSession) {
-        return NextResponse.json({ error: 'Akses ditolak: Hanya admin yang diizinkan.' }, { status: 401 });
-      }
+    const adminSession = await getAdminSession();
+    if (!adminSession) {
+      return NextResponse.json({ error: 'Akses ditolak: Hanya admin yang diizinkan.' }, { status: 401 });
     }
 
     const ip = req.headers.get('x-forwarded-for') || 'unknown';

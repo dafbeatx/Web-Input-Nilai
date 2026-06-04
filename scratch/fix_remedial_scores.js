@@ -1,14 +1,15 @@
 const { createClient } = require('@supabase/supabase-js');
 const ws = require('ws');
+require('dotenv').config({ path: '.env.local' });
 
-const supabase = createClient(
-  'https://fwhdjqvtjzesbdcqorsn.supabase.co',
-  '[REDACTED_SUPABASE_SERVICE_ROLE_KEY]',
-  {
-    auth: { persistSession: false },
-    realtime: { transport: ws }
-  }
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!supabaseUrl || !supabaseKey) { console.error('Missing SUPABASE env vars in .env.local'); process.exit(1); }
+
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: { persistSession: false },
+  realtime: { transport: ws }
+});
 
 async function fixRemedialScores() {
   console.log('Fetching students with SUBMITTED or COMPLETED remedial status...');
