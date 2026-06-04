@@ -280,7 +280,7 @@ function processAIWithData(phone, senderName, userMsg, introKey, studentSummary)
   ATURAN PEMBUATAN DOKUMEN/FORMAT (.docx):
   1. Jika user meminta dibuatkan dokumen, template, format, atau surat (misal surat izin, invoice, draf tugas, dll.), JANGAN langsung membuat dokumen atau mengirimkan link.
   2. Tanya-jawab terlebih dahulu secara bertahap untuk mengumpulkan informasi spesifik yang dibutuhkan (seperti nama lengkap, tanggal, keperluan, dll) agar dokumennya nanti lengkap dan siap pakai.
-  3. Setelah semua informasi yang diperlukan telah diberikan oleh user, buat dokumen tersebut secara lengkap dan bungkus isi dokumennya dalam tag: [CREATE_DOCX: Judul Dokumen]Isi Dokumen Lengkap[/CREATE_DOCX].
+  3. Setelah semua informasi yang diperlukan telah diberikan oleh user, buat dokumen tersebut secara lengkap dan WAJIB bungkus seluruh isi dokumennya di dalam tag: [CREATE_DOCX: Judul Dokumen]Isi Dokumen Lengkap[/CREATE_DOCX]. JANGAN pernah menuliskan isi dokumen di luar tag tersebut atau langsung di chat, karena sistem memerlukan tag ini untuk memproses file Google Docs.
   
   ${perlakuanKhusus ? `[VIP ${senderName}]: ${perlakuanKhusus}` : ""}
 
@@ -1074,27 +1074,23 @@ function processAIRequest(history, userMsg, introKey, phone, senderName, systemC
         aiResponse = aiResponse.replace("[KONFIRMASI_LUNAS]", "").trim();
       }
 
-      // Parser Pembuatan Dokumen DOCX otomatis
-      if (aiResponse.indexOf("[CREATE_DOCX:") !== -1 && aiResponse.indexOf("[/CREATE_DOCX]") !== -1) {
-        const startIndex = aiResponse.indexOf("[CREATE_DOCX:");
-        const endIndex = aiResponse.indexOf("[/CREATE_DOCX]");
-        const titleCloseIndex = aiResponse.indexOf("]", startIndex);
+      // Parser Pembuatan Dokumen DOCX otomatis (Robust Regex Match)
+      const docxRegex = /\[CREATE_DOCX:\s*([^\]]+)\]([\s\S]*?)\[\/CREATE_DOCX\]/i;
+      const matchDocx = aiResponse.match(docxRegex);
+      if (matchDocx) {
+        const title = matchDocx[1].trim();
+        const docContent = matchDocx[2].trim();
         
-        if (titleCloseIndex !== -1 && titleCloseIndex < endIndex) {
-          const title = aiResponse.substring(startIndex + 13, titleCloseIndex).trim();
-          const docContent = aiResponse.substring(titleCloseIndex + 1, endIndex).trim();
-          
-          const docResult = createDocxFromText(title, docContent);
-          if (docResult) {
-            const replacementText = `📝 *Dokumen Telah Berhasil Dibuat!*\n` +
-                                    `*Judul:* ${title}\n\n` +
-                                    `👉 *Link Edit Google Docs:* ${docResult.viewUrl}\n` +
-                                    `👉 *Link Download .docx:* ${docResult.downloadUrl}\n\n` +
-                                    `Silakan klik salah satu link di atas untuk mengakses dokumen Anda.`;
-            aiResponse = aiResponse.substring(0, startIndex) + replacementText + aiResponse.substring(endIndex + 14);
-          } else {
-            aiResponse = aiResponse.substring(0, startIndex) + "\n*(Gagal membuat dokumen otomatis, mohon coba sesaat lagi)*\n" + aiResponse.substring(endIndex + 14);
-          }
+        const docResult = createDocxFromText(title, docContent);
+        if (docResult) {
+          const replacementText = `📝 *Dokumen Telah Berhasil Dibuat!*\n` +
+                                  `*Judul:* ${title}\n\n` +
+                                  `👉 *Link Edit Google Docs:* ${docResult.viewUrl}\n` +
+                                  `👉 *Link Download .docx:* ${docResult.downloadUrl}\n\n` +
+                                  `Silakan klik salah satu link di atas untuk mengakses dokumen Anda.`;
+          aiResponse = aiResponse.replace(matchDocx[0], replacementText);
+        } else {
+          aiResponse = aiResponse.replace(matchDocx[0], "\n*(Gagal membuat dokumen otomatis, mohon coba sesaat lagi)*\n");
         }
       }
 
