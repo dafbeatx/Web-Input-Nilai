@@ -275,7 +275,12 @@ function processAIWithData(phone, senderName, userMsg, introKey, studentSummary)
   
   ATURAN HEMAT TOKEN: 
   1. Jawab sangat SINGKAT & PADAT untuk obrolan umum/basa-basi. 
-  2. HANYA berikan jawaban panjang & detail jika membahas JASA (Skripsi, Turnitin, dsb), TUNGGAKAN, atau DATA SISWA.
+  2. HANYA berikan jawaban panjang & detail jika membahas JASA (Skripsi, Turnitin, dsb), TUNGGAKAN, DATA SISWA, atau PEMBUATAN DOKUMEN/FORMAT.
+  
+  ATURAN PEMBUATAN DOKUMEN/FORMAT (.docx):
+  1. Jika user meminta dibuatkan dokumen, template, format, atau surat (misal surat izin, invoice, draf tugas, dll.), JANGAN langsung membuat dokumen atau mengirimkan link.
+  2. Tanya-jawab terlebih dahulu secara bertahap untuk mengumpulkan informasi spesifik yang dibutuhkan (seperti nama lengkap, tanggal, keperluan, dll) agar dokumennya nanti lengkap dan siap pakai.
+  3. Setelah semua informasi yang diperlukan telah diberikan oleh user, buat dokumen tersebut secara lengkap dan bungkus isi dokumennya dalam tag: [CREATE_DOCX: Judul Dokumen]Isi Dokumen Lengkap[/CREATE_DOCX].
   
   ${perlakuanKhusus ? `[VIP ${senderName}]: ${perlakuanKhusus}` : ""}
 
@@ -528,6 +533,41 @@ function getStudentDataSummary(studentName) {
   }
   
   return summary;
+}
+
+// --- FUNGSI PEMBUATAN DOKUMEN .DOCX GRATIS ---
+
+function createDocxFromText(title, contentText) {
+  try {
+    const doc = DocumentApp.create(title);
+    const body = doc.getBody();
+    body.setText(contentText);
+    doc.saveAndClose();
+    
+    const docId = doc.getId();
+    const file = DriveApp.getFileById(docId);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    if (DRIVE_FOLDER_ID) {
+      try {
+        const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+        file.moveTo(folder);
+      } catch (err) {
+        logToSheet("system", "error", "moveDocToFolder", err.toString(), "Error");
+      }
+    }
+    
+    const viewUrl = "https://docs.google.com/document/d/" + docId + "/edit?usp=drivesdk";
+    const downloadUrl = "https://docs.google.com/document/d/" + docId + "/export?format=docx";
+    
+    return {
+      viewUrl: viewUrl,
+      downloadUrl: downloadUrl
+    };
+  } catch (e) {
+    logToSheet("system", "error", "createDocxFromText", e.toString(), "Error");
+    return null;
+  }
 }
 
 // --- FUNGSI DETEKSI & OCR DRIVE ---
@@ -1009,16 +1049,16 @@ function processAIRequest(history, userMsg, introKey, phone, senderName, systemC
 
     if (current.key === 'POLLINATIONS_API_KEY') {
       apiUrl = "https://gen.pollinations.ai/v1/chat/completions";
-      payload = { model: "openai", messages: [{ role: "system", content: dynamicSystem }, ...history], max_tokens: 300 };
+      payload = { model: "openai", messages: [{ role: "system", content: dynamicSystem }, ...history], max_tokens: 1200 };
     } else if (current.key === 'GEMINI_API_KEY') {
       apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
       payload = { contents: [{ role: "user", parts: [{ text: `SYSTEM: ${dynamicSystem}\nHISTORY: ${JSON.stringify(history)}\nUSER: ${userMsg}` }] }] };
     } else if (current.key === 'OPENROUTER_API_KEY') {
       apiUrl = "https://openrouter.ai/api/v1/chat/completions";
-      payload = { model: "meta-llama/llama-3.3-70b-instruct", messages: [{ role: "system", content: dynamicSystem }, ...history], max_tokens: 300 };
+      payload = { model: "meta-llama/llama-3.3-70b-instruct", messages: [{ role: "system", content: dynamicSystem }, ...history], max_tokens: 1200 };
     } else {
       apiUrl = "https://api.groq.com/openai/v1/chat/completions";
-      payload = { model: MODEL_NAME, messages: [{ role: "system", content: dynamicSystem }, ...history], max_tokens: 300 };
+      payload = { model: MODEL_NAME, messages: [{ role: "system", content: dynamicSystem }, ...history], max_tokens: 1200 };
     }
 
     options = { method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true };
@@ -1032,6 +1072,30 @@ function processAIRequest(history, userMsg, introKey, phone, senderName, systemC
       if (aiResponse.includes("[KONFIRMASI_LUNAS]")) {
         updateTunggakanKeLunas(senderName);
         aiResponse = aiResponse.replace("[KONFIRMASI_LUNAS]", "").trim();
+      }
+
+      // Parser Pembuatan Dokumen DOCX otomatis
+      if (aiResponse.indexOf("[CREATE_DOCX:") !== -1 && aiResponse.indexOf("[/CREATE_DOCX]") !== -1) {
+        const startIndex = aiResponse.indexOf("[CREATE_DOCX:");
+        const endIndex = aiResponse.indexOf("[/CREATE_DOCX]");
+        const titleCloseIndex = aiResponse.indexOf("]", startIndex);
+        
+        if (titleCloseIndex !== -1 && titleCloseIndex < endIndex) {
+          const title = aiResponse.substring(startIndex + 13, titleCloseIndex).trim();
+          const docContent = aiResponse.substring(titleCloseIndex + 1, endIndex).trim();
+          
+          const docResult = createDocxFromText(title, docContent);
+          if (docResult) {
+            const replacementText = `📝 *Dokumen Telah Berhasil Dibuat!*\n` +
+                                    `*Judul:* ${title}\n\n` +
+                                    `👉 *Link Edit Google Docs:* ${docResult.viewUrl}\n` +
+                                    `👉 *Link Download .docx:* ${docResult.downloadUrl}\n\n` +
+                                    `Silakan klik salah satu link di atas untuk mengakses dokumen Anda.`;
+            aiResponse = aiResponse.substring(0, startIndex) + replacementText + aiResponse.substring(endIndex + 14);
+          } else {
+            aiResponse = aiResponse.substring(0, startIndex) + "\n*(Gagal membuat dokumen otomatis, mohon coba sesaat lagi)*\n" + aiResponse.substring(endIndex + 14);
+          }
+        }
       }
 
       logToSheet(phone, senderName, "Assistant", aiResponse, current.name);
