@@ -1,5 +1,5 @@
 // Test script for Groq AI Copilot
-require('dotenv').config({ path: '.env.local' });
+require('dotenv').config({ path: require('path').join(__dirname, '../.env.local') });
 
 const apiKey = process.env.GROQ_API_KEY;
 

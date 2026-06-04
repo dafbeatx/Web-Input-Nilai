@@ -1,5 +1,5 @@
 // Test script for bulk remedial manager route
-require('dotenv').config({ path: '.env.local' });
+require('dotenv').config({ path: require('path').join(__dirname, '../.env.local') });
 const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

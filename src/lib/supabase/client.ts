@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr';
+import { type SupabaseClient } from '@supabase/supabase-js';
 
 // Safe storage polyfill for strict webviews (e.g. Telegram Mini Apps)
 if (typeof window !== 'undefined') {
@@ -19,10 +20,35 @@ if (typeof window !== 'undefined') {
   }
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-// Only initialize if keys are present to avoid build-time crashes
-export const supabase = (supabaseUrl && supabaseKey) 
-  ? createBrowserClient(supabaseUrl, supabaseKey)
-  : null as any;
+let clientInstance: SupabaseClient | null = null;
+
+/**
+ * Helper to retrieve the client-side Supabase Client.
+ * Throws an explicit error if the required environment variables are not configured.
+ */
+export function getSupabaseClient(): SupabaseClient {
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error(
+      "Supabase Client configuration is missing. " +
+      "Please ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY are set in your environment variables."
+    );
+  }
+
+  if (!clientInstance) {
+    clientInstance = createBrowserClient(supabaseUrl, supabaseKey);
+  }
+
+  return clientInstance;
+}
+
+// Guarded export for backward compatibility without using unsafe 'null as any'
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(target, prop) {
+    const client = getSupabaseClient();
+    const value = Reflect.get(client, prop);
+    return typeof value === 'function' ? value.bind(client) : value;
+  },
+});
