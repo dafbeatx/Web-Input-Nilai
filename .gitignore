@@ -35,3 +35,5 @@ next-env.d.ts
 # local documentation
 project-docs.md
 GRADEMASTER_ANTIGRAVIT_PERSONALIZATION.md
+
+database/*.json

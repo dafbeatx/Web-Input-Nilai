@@ -16,11 +16,15 @@ import { createClient } from '@supabase/supabase-js';
 import { writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const SUPABASE_URL = 'https://fwhdjqvtjzesbdcqorsn.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_rwh41NF8iwUaRXL8A6t05g_sK7k5JL3';
+// Load environment variables
+dotenv.config({ path: join(__dirname, '../.env.local') });
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://fwhdjqvtjzesbdcqorsn.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_rwh41NF8iwUaRXL8A6t05g_sK7k5JL3';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Session to REPURPOSE (empty, 0 students)

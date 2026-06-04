@@ -3,9 +3,17 @@
  * DIAGNOSTIC: Full scan of 9A/9B data across all tables
  */
 import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-const SUPABASE_URL = 'https://fwhdjqvtjzesbdcqorsn.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_rwh41NF8iwUaRXL8A6t05g_sK7k5JL3';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Load environment variables
+dotenv.config({ path: join(__dirname, '../.env.local') });
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://fwhdjqvtjzesbdcqorsn.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_rwh41NF8iwUaRXL8A6t05g_sK7k5JL3';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 console.log('\n══════════════════════════════════════════════════════════');
