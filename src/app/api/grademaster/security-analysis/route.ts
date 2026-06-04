@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { checkRateLimit } from '@/lib/grademaster/security';
+import { checkRateLimit, validateInternalToken } from '@/lib/grademaster/security';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { analyzeExploits, ExploitAnalysisInput, SessionLogAction } from '@/lib/grademaster/services/exploit-analyzer.service';
 
 export async function POST(req: NextRequest) {
   try {
-    const adminSession = await getAdminSession();
-    if (!adminSession) {
-      return NextResponse.json({ error: 'Akses ditolak: Hanya admin yang diizinkan.' }, { status: 401 });
+    // Authenticate via internal token or admin session
+    const isInternal = validateInternalToken(req);
+    if (!isInternal) {
+      const adminSession = await getAdminSession();
+      if (!adminSession) {
+        return NextResponse.json({ error: 'Akses ditolak: Hanya admin atau sistem internal yang diizinkan.' }, { status: 401 });
+      }
     }
 
     const ip = req.headers.get('x-forwarded-for') || 'unknown';

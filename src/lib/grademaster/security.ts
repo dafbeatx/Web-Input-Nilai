@@ -98,3 +98,29 @@ export function isEmailBlacklisted(email: string): boolean {
   return BLACKLISTED_EMAILS.has(email.toLowerCase().trim());
 }
 
+/**
+ * Validates if the request contains the correct internal API token.
+ * This is used for secure service-to-service communication.
+ */
+export function validateInternalToken(req: Request): boolean {
+  const authHeader = req.headers.get('Authorization');
+  const internalToken = process.env.GRADEMASTER_INTERNAL_TOKEN;
+
+  if (!internalToken) return false;
+
+  // Support both "Bearer <token>" and direct "<token>" comparison
+  if (authHeader) {
+    if (authHeader === internalToken || authHeader === `Bearer ${internalToken}`) {
+      return true;
+    }
+  }
+
+  // Also check custom header x-internal-token
+  const customHeader = req.headers.get('x-internal-token');
+  if (customHeader && customHeader === internalToken) {
+    return true;
+  }
+
+  return false;
+}
+
