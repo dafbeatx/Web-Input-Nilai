@@ -33,6 +33,7 @@ import StudentProfileLayer from "./grademaster/StudentProfileLayer";
 import StudentClaimLayer from "./grademaster/StudentClaimLayer";
 import TeacherClaimLayer from "./grademaster/TeacherClaimLayer";
 import LessonManagementLayer from "./grademaster/LessonManagementLayer";
+import StudentLessonLayer from "./grademaster/StudentLessonLayer";
 import RemedialManagementLayer from "@/components/grademaster/RemedialManagementLayer";
 import DataCenterLayer from "@/components/grademaster/DataCenterLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
@@ -1203,6 +1204,13 @@ export default function GradeMaster() {
           onLogout={handleAdminLogout}
           onAvatarUpdate={(url) => setStudentData({ ...studentData, avatar_url: url })}
           onStartRemedial={handleStudentRemedialFromProfile}
+        />
+      )}
+
+      {layer === "student_lesson" && ((isStudent && studentData && studentData.isGoogleLinked) || isParent) && (
+        <StudentLessonLayer
+          onBack={() => setLayer("home")}
+          setToast={setToast}
         />
       )}
 

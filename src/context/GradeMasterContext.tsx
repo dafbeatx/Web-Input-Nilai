@@ -136,7 +136,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       }
 
       const adminOnlyLayers = ['setup', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
-      const protectedLayers = ['remedial'];
+      const protectedLayers = ['remedial', 'student_lesson'];
       const authLayers = ['login', 'student_login'];
 
       if (adminOnlyLayers.includes(initialLayer) && !activeAdmin) {
@@ -161,7 +161,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       const newHash = window.location.hash.replace('#', '') as Layer;
       if (validLayers.includes(newHash)) {
         const adminOnlyLayers = ['setup', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
-        const protectedLayers = ['remedial'];
+        const protectedLayers = ['remedial', 'student_lesson'];
         const { isAdmin: curAdmin, isStudent: curStudent, isParent: curParent } = authStateRef.current;
 
         if (adminOnlyLayers.includes(newHash) && !curAdmin) {
@@ -198,7 +198,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   // Navigate and apply Auth guards dynamically
   const navigate = (newLayer: Layer) => {
     const adminOnlyLayers = ['setup', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
-    const protectedLayers = ['remedial'];
+    const protectedLayers = ['remedial', 'student_lesson'];
 
     if (adminOnlyLayers.includes(newLayer) && !isAdmin) {
       setLayer('student_login');

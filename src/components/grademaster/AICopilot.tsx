@@ -149,6 +149,7 @@ export default function AICopilot() {
       student_claim: "Klaim Akun Siswa",
       teacher_claim: "Klaim Akun Guru",
       lesson_management: "Kelola Mata Pelajaran",
+      student_lesson: "Pelajaran Saya",
       remedial_management: "Kelola Soal Remedial",
       data_center: "Pusat Data Terpadu"
     };

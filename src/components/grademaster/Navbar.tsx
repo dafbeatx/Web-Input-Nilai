@@ -71,6 +71,7 @@ export default function Navbar() {
     if (target === 'attendance') return layer === 'attendance';
     if (target === 'remedial') return layer === 'remedial_dashboard';
     if (target === 'data_center') return layer === 'data_center';
+    if (target === 'student_lesson') return layer === 'student_lesson';
     return false;
   };
 
@@ -141,6 +142,21 @@ export default function Navbar() {
             >
                 <Calendar size={18} /> Kehadiran
             </button>
+
+            {(isStudent || isParent) && (
+                <>
+                  <div className="my-2 border-t border-outline-variant"></div>
+                  <span className="text-[10px] text-on-surface-variant/50 font-bold uppercase tracking-widest px-2 mb-1">Portal Siswa</span>
+                  <button
+                    onClick={() => onNavigate('student_lesson')}
+                    className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 min-h-[44px] ${
+                      isActive('student_lesson') ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
+                    }`}
+                  >
+                    <BookOpen size={18} /> Pelajaran Saya
+                  </button>
+                </>
+            )}
 
             {isAdmin && (
                 <>
@@ -365,6 +381,21 @@ export default function Navbar() {
             </button>
 
 
+            {/* Pelajaran Saya (Mobile Bottom Item) */}
+            {(isStudent || isParent) && (
+              <button 
+                onClick={() => onNavigate('student_lesson')}
+                className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
+                  isActive('student_lesson') 
+                    ? 'bg-primary-container/20 text-on-primary-fixed' 
+                    : 'text-on-surface-variant/60 hover:text-on-surface-variant'
+                }`}
+              >
+                <BookOpen size={20} strokeWidth={isActive('student_lesson') ? 2.5 : 1.8} />
+                <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('student_lesson') ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>Materi</span>
+              </button>
+            )}
+
             {/* More Menu / Profile */}
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -518,6 +549,19 @@ export default function Navbar() {
                     <div>
                       <span className="text-[11px] font-bold text-on-surface block leading-tight">{isParent ? 'Profil Anak' : 'Profil Saya'}</span>
                       <span className="text-[9px] font-medium text-on-surface-variant">Lihat data & performa</span>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => { onNavigate('student_lesson'); setIsMobileMenuOpen(false); }}
+                    className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+                      <BookOpen size={18} className="text-emerald-500" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-on-surface block leading-tight">Pelajaran Saya</span>
+                      <span className="text-[9px] font-medium text-on-surface-variant">Lihat materi & kuis harian</span>
                     </div>
                   </button>
 
