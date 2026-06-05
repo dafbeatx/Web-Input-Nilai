@@ -322,6 +322,8 @@ export default function AICopilot() {
     ];
   };
 
+  if (layer === 'lesson_management') return null;
+
   return (
     <>
       {/* Floating Trigger Button */}

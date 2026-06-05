@@ -449,10 +449,19 @@ export default function LessonManagementLayer({
             <span className="text-[9px] font-black uppercase tracking-widest bg-violet-500/10 border border-violet-500/20 text-violet-400 px-2 py-0.5 rounded-md">AI Agent</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/[0.03] uppercase tracking-wider font-mono">
+        <div className="flex items-center gap-3">
+          <span className="hidden xs:inline text-xs font-bold text-slate-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/[0.03] uppercase tracking-wider font-mono">
             {academicYear}
           </span>
+          <button 
+            onClick={onBack}
+            className="flex items-center gap-2 px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 hover:border-rose-500/30 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 active:scale-95 shadow-lg shadow-rose-500/5 group"
+            title="Keluar ke Beranda"
+          >
+            <X size={14} className="group-hover:rotate-90 transition-transform duration-200" />
+            <span className="hidden sm:inline">Keluar ke Beranda</span>
+            <span className="sm:hidden">Keluar</span>
+          </button>
         </div>
       </header>
 
