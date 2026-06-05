@@ -23,6 +23,51 @@ import {
   deleteLesson 
 } from '@/lib/grademaster/lessonActions';
 
+const getSubjectExample = (subject: string): { daily: string; quiz: string } => {
+  const examples: Record<string, { daily: string; quiz: string }> = {
+    'Matematika': {
+      daily: 'Aljabar dasar dan persamaan linear',
+      quiz: '5 soal pilihan ganda tentang persamaan linear satu variabel'
+    },
+    'Bahasa Indonesia': {
+      daily: 'Struktur teks deskripsi dan unsur kebahasaannya',
+      quiz: '5 soal pilihan ganda mengenai struktur teks deskripsi'
+    },
+    'IPA': {
+      daily: 'Klasifikasi makhluk hidup atau sistem tata surya',
+      quiz: '5 soal pilihan ganda tentang klasifikasi makhluk hidup'
+    },
+    'IPS': {
+      daily: 'Kondisi geografis Indonesia dan interaksi antarruang',
+      quiz: '5 soal pilihan ganda tentang kondisi geografis Indonesia'
+    },
+    'Bahasa Inggris': {
+      daily: 'Introducing oneself and greeting others in formal situations',
+      quiz: '5 multiple choice questions on self-introduction greetings'
+    },
+    'PAI': {
+      daily: 'Perilaku jujur, amanah, dan istiqamah dalam kehidupan sehari-hari',
+      quiz: '5 soal pilihan ganda tentang perilaku jujur dan amanah'
+    },
+    'PJOK': {
+      daily: 'Teknik dasar sepak bola seperti passing dan dribbling',
+      quiz: '5 soal pilihan ganda tentang teknik dasar sepak bola'
+    },
+    'Seni Budaya': {
+      daily: 'Menggambar flora, fauna, dan benda alam dengan teknik arsir',
+      quiz: '5 soal pilihan ganda tentang teknik menggambar flora dan fauna'
+    },
+    'Informatika': {
+      daily: 'Pengenalan algoritma pemrograman dan flowchart dasar',
+      quiz: '5 soal pilihan ganda tentang algoritma dan flowchart dasar'
+    }
+  };
+  return examples[subject] || {
+    daily: 'Topik materi pelajaran yang ingin diajarkan hari ini',
+    quiz: 'Cakupan materi soal yang ingin diujikan'
+  };
+};
+
 interface LessonManagementLayerProps {
   onBack: () => void;
   setToast: (t: ToastType) => void;
@@ -233,13 +278,15 @@ export default function LessonManagementLayer({
     let fileUploadRequired = false;
 
     const activeFlow = chatStateRef.current.flowType;
+    const activeClass = chatStateRef.current.selectedClass;
+    const example = getSubjectExample(sub);
 
     if (activeFlow === 'daily') {
-      nextContent = `Pilihan Anda: **${sub}**. Silakan tulis deskripsi singkat atau topik materi pelajaran yang ingin dibuat (misalnya: *Pengenalan jaringan komputer dasar dan topologi star*):`;
+      nextContent = `Baik, Anda memilih ${sub} untuk ${activeClass}.\n\nSilakan tuliskan topik atau deskripsi singkat materi yang ingin dibuat (contoh: ${example.daily}).`;
     } else if (activeFlow === 'quiz') {
-      nextContent = `Pilihan Anda: **${sub}**. Tuliskan cakupan topik ujian atau kisi-kisi soal yang Anda inginkan (misalnya: *5 soal pilihan ganda tentang Hukum Newton 1 dan 2*):`;
+      nextContent = `Baik, Anda memilih ${sub} untuk ${activeClass}.\n\nSilakan tuliskan cakupan topik ujian atau kisi-kisi soal yang Anda inginkan (contoh: ${example.quiz}).`;
     } else if (activeFlow === 'notebook') {
-      nextContent = `Pilihan Anda: **${sub}**. Silakan unggah dokumen materi Anda (.pdf, .docx, atau .txt) untuk diolah AI:`;
+      nextContent = `Baik, Anda memilih ${sub} untuk ${activeClass}.\n\nSilakan unggah dokumen materi Anda (.pdf, .docx, atau .txt) untuk diolah AI:`;
       fileUploadRequired = true;
     }
 
