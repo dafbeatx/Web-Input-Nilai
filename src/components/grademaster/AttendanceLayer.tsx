@@ -249,21 +249,20 @@ export default function AttendanceLayer({
   };
 
   return (
-    
-    <div className="bg-surface-container-lowest text-on-surface antialiased min-h-screen pb-32">
+    <div className="min-h-screen bg-slate-50/50 text-slate-800 antialiased font-outfit pb-24">
       {/* TopAppBar */}
-      <header className="bg-white/80 backdrop-blur-lg fixed top-0 z-[60] w-full flex justify-between items-center px-6 py-4 shadow-[0_10px_40px_rgba(15,23,42,0.04)]">
+      <header className="hidden md:flex bg-white/80 backdrop-blur-lg fixed top-0 z-[60] w-full justify-between items-center px-6 py-4 shadow-sm border-b border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="bg-primary-container p-1.5 rounded-lg flex items-center justify-center">
-            <span className="material-symbols-outlined text-white text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>school</span>
+          <div className="bg-emerald-500 p-1.5 rounded-lg flex items-center justify-center text-white">
+            <span className="material-symbols-outlined text-white text-xl animate-pulse" style={{ fontVariationSettings: "'FILL' 1" }}>school</span>
           </div>
-          <span className="text-sm font-bold tracking-[0.05em] uppercase text-slate-950 font-outfit">GRADEMASTER OS</span>
+          <span className="text-sm font-bold tracking-[0.05em] uppercase text-slate-900 font-outfit">GradeMaster OS</span>
         </div>
         <div className="flex items-center gap-4">
           <button className="hover:opacity-70 transition-opacity text-slate-400 hidden sm:block">
             <span className="material-symbols-outlined shrink-0">notifications</span>
           </button>
-          <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center font-bold text-on-surface-variant overflow-hidden border-2 border-surface-container shadow-sm object-cover">
+          <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 overflow-hidden border border-slate-200 shadow-sm object-cover">
              {isAdmin ? (
                 adminUser?.[0] || 'A'
              ) : (
@@ -273,45 +272,76 @@ export default function AttendanceLayer({
         </div>
       </header>
 
-      <main className="pt-24 max-w-7xl mx-auto px-6">
+      <main className="page-pt md:pt-24 max-w-7xl mx-auto px-4 md:px-6">
         {/* Navigation Tabs */}
-        <nav className="hidden md:flex items-center gap-8 mb-12 border-b border-surface-container overflow-x-auto no-scrollbar">
+        <nav className="hidden md:flex items-center gap-8 mb-8 border-b border-slate-100 overflow-x-auto no-scrollbar">
           <button onClick={onBack} className="pb-4 text-xs font-bold uppercase tracking-[0.05em] text-slate-400 hover:text-slate-600 transition-colors whitespace-nowrap">Beranda</button>
           <button onClick={() => setLayer('behavior')} className="pb-4 text-xs font-bold uppercase tracking-[0.05em] text-slate-400 hover:text-slate-600 transition-colors whitespace-nowrap">Sikap</button>
-          <button className="pb-4 text-xs font-bold uppercase tracking-[0.05em] text-on-primary-fixed border-b-2 border-on-primary-fixed whitespace-nowrap">Kehadiran</button>
+          <button className="pb-4 text-xs font-bold uppercase tracking-[0.05em] text-emerald-600 border-b-2 border-emerald-600 whitespace-nowrap">Kehadiran</button>
         </nav>
 
         {/* Info Banner */}
         {!isAdmin && isLoaded && (
-          <div className="bg-[#EBF5FF] p-5 rounded-xl mb-10 flex items-start gap-4 shadow-sm border border-blue-100">
-            <span className="material-symbols-outlined text-[#0061FF] mt-0.5 shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>shield</span>
-            <p className="text-[13px] font-bold text-[#0061FF] leading-relaxed tracking-tight">
-              TRANSPARANSI: DAFTAR KEHADIRAN INI DAPAT DIPANTAU OLEH WALI MURID.
+          <div className="bg-blue-50/50 p-4 rounded-xl mb-6 flex items-start gap-3 border border-blue-100 shadow-sm">
+            <span className="material-symbols-outlined text-blue-500 mt-0.5 shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>shield</span>
+            <p className="text-xs font-bold text-blue-600 leading-relaxed tracking-tight">
+              Transparansi: Daftar kehadiran ini dapat dipantau oleh wali murid.
             </p>
           </div>
         )}
 
         {/* Title Section */}
-        <div className="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-on-surface-variant mb-2 block">TAHUN AJARAN {academicYear}</span>
-            <div className="flex items-center gap-4">
-              <button onClick={onBack} className="w-10 h-10 shrink-0 rounded-full border border-surface-container flex items-center justify-center hover:bg-surface-container transition-colors active:scale-95">
-                <span className="material-symbols-outlined text-on-surface shrink-0">arrow_back</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 mb-1 block">Tahun Ajaran {academicYear}</span>
+            <div className="flex items-center gap-3">
+              <button onClick={onBack} className="w-9 h-9 shrink-0 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors active:scale-95">
+                <span className="material-symbols-outlined text-slate-600 shrink-0">arrow_back</span>
               </button>
-              <h1 className="text-3xl sm:text-4xl font-headline font-semibold tracking-[-0.04em] text-on-primary-fixed">Kehadiran</h1>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">Kehadiran</h1>
             </div>
           </div>
-          <div className="flex bg-surface-container-highest rounded-2xl p-1 gap-1">
-             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="bg-white border-none rounded-xl px-4 py-2.5 text-sm font-bold outline-none text-on-surface focus:ring-2 focus:ring-primary/20 shadow-sm transition-all text-center w-[160px]" />
+          <div className="hidden sm:flex bg-slate-100 rounded-xl p-1 gap-1 border border-slate-200">
+             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold outline-none text-slate-700 focus:ring-2 focus:ring-emerald-500/20 shadow-sm transition-all text-center w-[150px]" />
           </div>
         </div>
 
-        {/* Horizontal Filters (Classes & Subjects) */}
-        <div className="space-y-4 mb-8 -mx-6 px-6 sm:mx-0 sm:px-0">
-          <div className="overflow-x-auto no-scrollbar flex items-center gap-3 py-2">
-            <div className="bg-surface-container-high px-4 py-2.5 rounded-full text-xs font-bold text-on-surface-variant shrink-0 border border-outline-variant/30 uppercase tracking-widest flex items-center gap-2">
-              <Users size={14} /> Kelas {'>'}
+        {/* Compact Filters for Mobile */}
+        <div className="grid grid-cols-3 gap-2 mb-6 md:hidden">
+          <select
+            value={className}
+            onChange={(e) => setClassName(e.target.value)}
+            className="w-full h-11 bg-white border border-slate-200 rounded-xl px-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 min-h-[44px]"
+          >
+            <option value="">Kelas...</option>
+            {availableClasses.map(cls => (
+              <option key={cls} value={cls}>{cls}</option>
+            ))}
+          </select>
+          
+          <select
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            className="w-full h-11 bg-white border border-slate-200 rounded-xl px-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 min-h-[44px]"
+          >
+            {subjects.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+
+          <input 
+            type="date" 
+            value={selectedDate} 
+            onChange={(e) => setSelectedDate(e.target.value)} 
+            className="w-full h-11 bg-white border border-slate-200 rounded-xl px-1 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-center min-h-[44px]" 
+          />
+        </div>
+
+        {/* Desktop Filters */}
+        <div className="hidden md:block space-y-4 mb-6">
+          <div className="overflow-x-auto no-scrollbar flex items-center gap-2 py-1">
+            <div className="bg-slate-100 px-3 py-1.5 rounded-full text-[10px] font-black text-slate-500 shrink-0 border border-slate-200 uppercase tracking-widest flex items-center gap-1.5">
+              <Users size={12} /> Kelas
             </div>
             {availableClasses.map((cls) => {
               const isActive = className === cls;
@@ -319,7 +349,9 @@ export default function AttendanceLayer({
                 <button
                   key={cls}
                   onClick={() => setClassName(cls)}
-                  className={"px-6 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap outline-none flex-shrink-0 " + (isActive ? 'bg-on-primary-fixed text-white shadow-lg shadow-on-primary-fixed/20' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container')}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap outline-none ${
+                    isActive ? 'bg-[#0F172A] text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
                 >
                   {cls}
                 </button>
@@ -327,15 +359,17 @@ export default function AttendanceLayer({
             })}
           </div>
 
-          <div className="overflow-x-auto no-scrollbar flex items-center gap-3 py-1">
-            <div className="bg-surface-container-high px-4 py-2.5 rounded-full text-xs font-bold text-on-surface-variant shrink-0 border border-outline-variant/30 uppercase tracking-widest flex items-center gap-2">
-              <BookOpen size={14} /> Mapel {'>'}
+          <div className="overflow-x-auto no-scrollbar flex items-center gap-2 py-1">
+            <div className="bg-slate-100 px-3 py-1.5 rounded-full text-[10px] font-black text-slate-500 shrink-0 border border-slate-200 uppercase tracking-widest flex items-center gap-1.5">
+              <BookOpen size={12} /> Mapel
             </div>
             {subjects.map((s) => (
               <button 
                 key={s}
                 onClick={() => setSubject(s)}
-                className={"px-5 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap outline-none flex-shrink-0 " + (subject === s ? 'bg-surface-variant border border-surface-container-highest text-on-surface shadow-sm font-bold' : 'bg-transparent text-on-surface-variant hover:bg-surface-container-low')}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap outline-none ${
+                  subject === s ? 'bg-slate-200 text-slate-800 font-bold' : 'bg-transparent text-slate-600 hover:bg-slate-100'
+                }`}
               >
                 {s}
               </button>
@@ -345,79 +379,79 @@ export default function AttendanceLayer({
 
         {/* Stats and Batch Action */}
         {!isLoading && isLoaded && (
-          <div className="flex flex-col sm:flex-row justify-between items-center bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-surface-container mb-6 gap-4">
-             <div className="flex items-center gap-3 w-full sm:w-auto overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+          <div className="flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-xl border border-slate-100 mb-6 gap-4 shadow-sm">
+             <div className="flex items-center gap-2.5 w-full sm:w-auto overflow-x-auto no-scrollbar pb-1 sm:pb-0">
                {[
-                 { label: 'Hadir', count: stats.hadir, color: 'text-[#006C49]', bg: 'bg-[#E6F4EF]' },
-                 { label: 'Izin', count: stats.izin, color: 'text-[#0061FF]', bg: 'bg-[#EBF5FF]' },
-                 { label: 'Sakit', count: stats.sakit, color: 'text-[#B45309]', bg: 'bg-[#FFF9E6]' },
-                 { label: 'Alpa', count: stats.alpa, color: 'text-[#93000A]', bg: 'bg-[#FFDAD6]' }
+                 { label: 'Hadir', count: stats.hadir, color: 'text-emerald-700', bg: 'bg-emerald-50 border border-emerald-100' },
+                 { label: 'Izin', count: stats.izin, color: 'text-blue-700', bg: 'bg-blue-50 border border-blue-100' },
+                 { label: 'Sakit', count: stats.sakit, color: 'text-amber-700', bg: 'bg-amber-50 border border-amber-100' },
+                 { label: 'Alpa', count: stats.alpa, color: 'text-rose-700', bg: 'bg-rose-50 border border-rose-100' }
                ].map(st => (
-                 <div key={st.label} className={"flex-none flex items-center gap-2 px-4 py-1.5 rounded-full " + st.bg}>
-                   <span className={"text-sm font-black " + st.color}>{st.count}</span>
-                   <span className="text-[10px] font-bold text-on-surface-variant/70 uppercase tracking-wider">{st.label}</span>
+                 <div key={st.label} className={"flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-lg " + st.bg}>
+                   <span className={"text-xs font-black " + st.color}>{st.count}</span>
+                   <span className="text-[10px] font-bold text-slate-500">{st.label}</span>
                  </div>
                ))}
                {stats.belum > 0 && (
-                 <div className="flex-none flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-container-low">
-                   <span className="text-sm font-black text-on-surface-variant">{stats.belum}</span>
-                   <span className="text-[10px] font-bold text-on-surface-variant/70 uppercase tracking-wider">Belum Set</span>
+                 <div className="flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200">
+                   <span className="text-xs font-black text-slate-600">{stats.belum}</span>
+                   <span className="text-[10px] font-bold text-slate-500">Belum Set</span>
                  </div>
                )}
              </div>
              {isAdmin && stats.belum > 0 && (
-               <button onClick={setAllHadir} className="px-5 py-2.5 w-full sm:w-auto shrink-0 bg-[#006C49] hover:bg-[#005236] text-white rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-[#006C49]/20 transition-all flex justify-center items-center gap-2">
-                 <CheckCircle2 size={16} /> Tandai Semua Hadir
+               <button onClick={setAllHadir} className="px-4 py-2.5 w-full sm:w-auto shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex justify-center items-center gap-2 min-h-[44px] sm:min-h-0">
+                 <CheckCircle2 size={15} /> Tandai Semua Hadir
                </button>
              )}
           </div>
         )}
 
         {/* Student Cards List */}
-        <section className="grid grid-cols-1 gap-4">
+        <section className="grid grid-cols-1 gap-3">
           {isLoading ? (
-             <div className="py-24 flex flex-col items-center justify-center gap-4">
-                <Loader2 size={32} className="animate-spin text-primary" />
-                <span className="text-sm font-bold text-on-surface-variant uppercase tracking-widest">Memuat Presensi...</span>
+             <div className="py-24 flex flex-col items-center justify-center gap-3">
+                <Loader2 size={28} className="animate-spin text-emerald-500" />
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Memuat Presensi...</span>
              </div>
           ) : !isLoaded ? (
-             <div className="text-center py-24 bg-white rounded-[16px] border border-surface-container flex flex-col items-center justify-center px-6 shadow-sm">
-               <LayoutGrid size={48} className="text-on-surface-variant/30 mb-4" />
-               <h3 className="text-lg font-bold text-on-primary-fixed mb-2 tracking-tight">Belum Ada Presensi Aktif</h3>
-               <p className="text-sm text-on-surface-variant leading-relaxed max-w-sm">Pilih Kelas, Mapel, dan Tanggal untuk memuat daftar absensi.</p>
+             <div className="text-center py-24 bg-white rounded-2xl border border-slate-100 flex flex-col items-center justify-center px-4 shadow-sm">
+               <LayoutGrid size={40} className="text-slate-300 mb-3" />
+               <h3 className="text-base font-black text-slate-800 mb-1">Belum Ada Presensi Aktif</h3>
+               <p className="text-xs text-slate-400 max-w-xs leading-relaxed">Pilih Kelas, Mapel, dan Tanggal untuk memuat daftar absensi.</p>
              </div>
           ) : (
             students.map((s) => {
               const currentStatus = attendanceMap[s.student_name];
               const isSavingThis = savingStudents[s.student_name];
               const safeColors: Record<string, { id: string; label: string; text: string; bg: string; }> = {
-                 Hadir: { id: 'Hadir', label: 'Hadir', text: 'text-[#006C49]', bg: 'bg-[#E6F4EF]' },
-                 Izin: { id: 'Izin', label: 'Izin', text: 'text-[#0061FF]', bg: 'bg-[#EBF5FF]' },
-                 Sakit: { id: 'Sakit', label: 'Sakit', text: 'text-[#B45309]', bg: 'bg-[#FFF9E6]' },
-                 Alpa: { id: 'Alpa', label: 'Alpa', text: 'text-[#93000A]', bg: 'bg-[#FFDAD6]' }
+                 Hadir: { id: 'Hadir', label: 'Hadir', text: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
+                 Izin: { id: 'Izin', label: 'Izin', text: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
+                 Sakit: { id: 'Sakit', label: 'Sakit', text: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
+                 Alpa: { id: 'Alpa', label: 'Alpa', text: 'text-rose-700', bg: 'bg-rose-50 border-rose-200' }
               };
 
               return (
-                <div key={s.id} className="group bg-white rounded-[16px] p-5 sm:p-6 shadow-[0_10px_40px_rgba(15,23,42,0.04)] border border-transparent hover:border-surface-container transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                  <div className="flex items-center gap-4 sm:gap-5 w-full sm:w-auto">
-                    <div className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-white font-semibold text-lg tracking-wider relative overflow-hidden bg-on-primary-fixed ring-2 ring-surface-bright shadow-sm">
+                <div key={s.id} className="group bg-white rounded-xl p-3 md:p-5 border border-slate-100 hover:border-slate-200 transition-all flex flex-row items-center justify-between gap-3 md:gap-6 shadow-sm">
+                  <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
+                    <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-full flex items-center justify-center text-white font-semibold text-sm md:text-lg tracking-wider relative overflow-hidden bg-slate-900 border border-slate-100 shadow-sm">
                       {s.avatar_url ? (
                          <img src={s.avatar_url} alt={s.student_name} className="w-full h-full object-cover" />
                       ) : s.student_name.slice(0, 2).toUpperCase()}
                     </div>
-                    <div className="min-w-0 pr-4 flex-1">
-                      <h3 className="text-base sm:text-lg font-headline font-bold tracking-tight text-on-primary-fixed mb-1 uppercase truncate w-full" title={formatStudentName(s.student_name)}>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm md:text-base font-bold text-slate-900 leading-tight truncate w-full" title={formatStudentName(s.student_name)}>
                          {formatStudentName(s.student_name)}
                       </h3>
-                      <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.05em] text-on-surface-variant flex items-center gap-2">
-                        {isSavingThis ? <Loader2 size={12} className="animate-spin text-primary" /> : <span className="w-1.5 h-1.5 bg-surface-container-highest rounded-full"></span>}
-                        Status: {currentStatus || 'BELUM DISET'}
+                      <p className="text-[10px] md:text-xs font-medium text-slate-400 mt-1 flex items-center gap-1.5">
+                        {isSavingThis ? <Loader2 size={12} className="animate-spin text-emerald-500" /> : <span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span>}
+                        Status: {currentStatus || 'Belum Diset'}
                       </p>
                     </div>
                   </div>
                   
                   {/* Status Toggles */}
-                  <div className="flex flex-row items-center w-full sm:w-auto gap-2">
+                  <div className="flex flex-row items-center gap-1.5 shrink-0">
                     {isAdmin ? (
                       ['Hadir', 'Izin', 'Sakit', 'Alpa'].map(opt => {
                         const styleInfo = safeColors[opt];
@@ -427,20 +461,24 @@ export default function AttendanceLayer({
                             key={opt}
                             onClick={() => handleStatusChange(s.student_name, opt)}
                             disabled={isSavingThis}
-                            className={"flex-1 sm:flex-none px-4 sm:px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.05em] transition-all outline-none border flex items-center justify-center min-w-[70px] " + (isActive ? styleInfo.bg + ' ' + styleInfo.text + ' border-transparent shadow-sm' : 'bg-transparent border-surface-container text-on-surface-variant hover:bg-surface-container-lowest hover:border-outline-variant')}
+                            className={`h-11 w-11 md:h-9 md:w-16 rounded-lg text-xs font-bold transition-all outline-none border flex items-center justify-center min-h-[44px] sm:min-h-0 ${
+                              isActive 
+                                ? styleInfo.bg + ' ' + styleInfo.text
+                                : 'bg-transparent border-slate-200 text-slate-500 hover:bg-slate-50'
+                            }`}
                           >
-                            <span className="sm:hidden">{opt.slice(0, 1)}</span>
-                            <span className="hidden sm:inline">{opt}</span>
+                            <span className="md:hidden">{opt.slice(0, 1)}</span>
+                            <span className="hidden md:inline">{opt}</span>
                           </button>
                         );
                       })
                     ) : (
                       currentStatus ? (
-                         <div className={"px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-[0.05em] " + safeColors[currentStatus].bg + ' ' + safeColors[currentStatus].text}>
+                         <div className={"px-3.5 py-1.5 rounded-lg text-xs font-bold border " + safeColors[currentStatus].bg + ' ' + safeColors[currentStatus].text}>
                            {currentStatus}
                          </div>
                       ) : (
-                         <div className="px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-[0.05em] bg-surface-container-highest text-on-surface-variant/50">
+                         <div className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-50 text-slate-400 border border-slate-100">
                            N/A
                          </div>
                       )
@@ -452,22 +490,6 @@ export default function AttendanceLayer({
           )}
         </section>
       </main>
-
-      {/* BottomNavBar */}
-      <nav id="mobile-bottom-nav" className="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 sm:px-8 pb-8 pt-4 bg-white/90 backdrop-blur-xl border-t border-surface-container shadow-[0_-10px_40px_rgba(15,23,42,0.04)] z-50 md:hidden">
-        <button onClick={onBack} className="flex flex-col items-center justify-center text-slate-400 hover:text-slate-900 transition-colors w-16">
-          <span className="material-symbols-outlined">home</span>
-          <span className="font-['Inter'] text-[9px] font-bold uppercase tracking-[0.05em] mt-1">Beranda</span>
-        </button>
-        <button onClick={() => setLayer('behavior')} className="flex flex-col items-center justify-center text-slate-400 hover:text-slate-900 transition-colors w-16">
-          <span className="material-symbols-outlined">star_rate</span>
-          <span className="font-['Inter'] text-[9px] font-bold uppercase tracking-[0.05em] mt-1">Sikap</span>
-        </button>
-        <button className="flex flex-col items-center justify-center text-slate-950 scale-110 transition-transform w-16">
-          <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>event_available</span>
-          <span className="font-['Inter'] text-[9px] font-bold uppercase tracking-[0.05em] mt-1 text-primary">Kehadiran</span>
-        </button>
-      </nav>
     </div>
   );
 }
