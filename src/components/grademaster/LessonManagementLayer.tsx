@@ -3,26 +3,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowLeft, 
-  BookOpen, 
   Sparkles, 
-  Calendar, 
-  ChevronRight, 
   CheckCircle2, 
   FileText, 
-  MessageSquare, 
-  Plus, 
-  History, 
-  Clock, 
   Loader2,
   Send,
   CloudUpload,
   Bot,
-  RefreshCw,
   Search,
   Trash2,
-  X,
-  HelpCircle,
-  Award
+  X
 } from 'lucide-react';
 import { DailyLesson, Quiz, ToastType } from '@/lib/grademaster/types';
 import { supabase } from '@/lib/supabase/client';
@@ -321,6 +311,8 @@ export default function LessonManagementLayer({
     } finally {
       setIsUploading(false);
       setIsAiResponding(false);
+      // Reset file input so the same file can be re-uploaded
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 

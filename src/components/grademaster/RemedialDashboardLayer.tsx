@@ -2,9 +2,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { 
-  ArrowLeft, Search, CheckCircle2, AlertTriangle, AlertCircle, 
-  Clock, ShieldAlert, Check, RotateCcw, X, Save, Wand2, 
-  MapPin, FileText, ChevronDown, ChevronUp, User, LayoutGrid
+  Clock, RotateCcw, X, Save, User
 } from 'lucide-react';
 import { GradedStudent, ScoringConfig, SessionMeta } from '@/lib/grademaster/types';
 import { useGradeMaster } from '@/context/GradeMasterContext';
