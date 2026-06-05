@@ -530,27 +530,27 @@ export default function LessonManagementLayer({
       <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-emerald-600/10 blur-[80px] rounded-full pointer-events-none" />
 
       {/* Header */}
-      <header className="h-16 shrink-0 border-b border-white/5 bg-[#12161f]/80 backdrop-blur-xl px-6 flex items-center justify-between z-30">
-        <div className="flex items-center gap-3">
+      <header className="h-16 shrink-0 border-b border-white/5 bg-[#12161f]/80 backdrop-blur-xl px-4 sm:px-6 flex items-center justify-between z-30">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button 
             onClick={onBack}
-            className="p-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all"
+            className="p-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all min-w-[36px] min-h-[36px] flex items-center justify-center"
             title="Kembali"
           >
             <ArrowLeft size={16} />
           </button>
-          <div className="flex items-center gap-2">
-            <h1 className="text-sm font-black uppercase tracking-wider text-slate-100">Manajemen Pelajaran</h1>
-            <span className="text-[9px] font-black uppercase tracking-widest bg-violet-500/10 border border-violet-500/20 text-violet-400 px-2 py-0.5 rounded-md">AI Agent</span>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <h1 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-100 truncate max-w-[110px] xs:max-w-none">Manajemen Pelajaran</h1>
+            <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest bg-violet-500/10 border border-violet-500/20 text-violet-400 px-1.5 sm:px-2 py-0.5 rounded-md shrink-0">AI Agent</span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="hidden xs:inline text-xs font-bold text-slate-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/[0.03] uppercase tracking-wider font-mono">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <span className="hidden xs:inline text-[10px] sm:text-xs font-bold text-slate-400 bg-white/5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-white/[0.03] uppercase tracking-wider font-mono">
             {academicYear}
           </span>
           <button 
             onClick={onBack}
-            className="flex items-center gap-2 px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 hover:border-rose-500/30 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 active:scale-95 shadow-lg shadow-rose-500/5 group"
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 hover:border-rose-500/30 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wider transition-all duration-200 active:scale-95 shadow-lg shadow-rose-500/5 group"
             title="Keluar ke Beranda"
           >
             <X size={14} className="group-hover:rotate-90 transition-transform duration-200" />
@@ -618,17 +618,17 @@ export default function LessonManagementLayer({
               return (
                 <div 
                   key={idx} 
-                  className={`flex gap-4 max-w-[85%] ${isAI ? 'self-start' : 'self-end ml-auto flex-row-reverse'}`}
+                  className={`flex gap-2.5 sm:gap-4 max-w-[92%] sm:max-w-[85%] ${isAI ? 'self-start' : 'self-end ml-auto flex-row-reverse'}`}
                 >
                   {isAI && (
-                    <div className="w-8 h-8 rounded-lg bg-violet-600/10 border border-violet-500/20 text-violet-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(155,114,203,0.15)] mt-1">
-                      <Bot size={16} />
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-violet-600/10 border border-violet-500/20 text-violet-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(155,114,203,0.15)] mt-1">
+                      <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </div>
                   )}
 
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-2.5 sm:gap-3">
                     {/* Speech Bubble */}
-                    <div className={`p-4 rounded-3xl text-sm leading-relaxed whitespace-pre-line ${
+                    <div className={`p-3 sm:p-4 rounded-2xl sm:rounded-3xl text-xs sm:text-sm leading-relaxed whitespace-pre-line ${
                       isAI 
                         ? 'bg-[#121620] text-slate-300 border border-white/[0.03] rounded-tl-none font-medium'
                         : 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-tr-none font-bold'
@@ -644,7 +644,7 @@ export default function LessonManagementLayer({
                             key={oIdx}
                             onClick={opt.action}
                             disabled={isAiResponding}
-                            className="px-4 py-2 bg-white/5 hover:bg-violet-500/10 hover:text-violet-300 border border-white/5 hover:border-violet-500/30 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 active:scale-95 disabled:opacity-40"
+                            className="px-3.5 sm:px-4 py-2 bg-white/5 hover:bg-violet-500/10 hover:text-violet-300 border border-white/5 hover:border-violet-500/30 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-200 active:scale-95 disabled:opacity-40 min-h-[44px] sm:min-h-0 flex items-center justify-center text-center"
                           >
                             {opt.label}
                           </button>
@@ -699,23 +699,23 @@ export default function LessonManagementLayer({
 
             {/* AI Result Review Panel inside Chat */}
             {aiResult && (
-              <div className="border border-violet-500/20 bg-gradient-to-tr from-[#121620] to-[#161a29]/95 rounded-[32px] p-6 space-y-6 shadow-2xl animate-in zoom-in-95 duration-500 mt-4 relative overflow-hidden">
+              <div className="border border-violet-500/20 bg-gradient-to-tr from-[#121620] to-[#161a29]/95 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-2xl animate-in zoom-in-95 duration-500 mt-4 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/5 rounded-bl-full pointer-events-none" />
                 
-                <div className="flex items-center justify-between pb-4 border-b border-white/5">
-                  <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-violet-400">
-                    <Sparkles size={16} /> Hasil Formulasi Groq AI
+                <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-white/5">
+                  <h3 className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-black uppercase tracking-wider text-violet-400">
+                    <Sparkles size={14} className="sm:w-4 sm:h-4" /> Hasil Formulasi Groq AI
                   </h3>
-                  <span className="text-[9px] font-black px-2 py-0.5 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-md">
+                  <span className="text-[8px] sm:text-[9px] font-black px-1.5 sm:px-2 py-0.5 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-md">
                     Llama 70B
                   </span>
                 </div>
 
-                <div className="space-y-5">
+                <div className="space-y-4 sm:space-y-5">
                   {/* Material summary preview */}
                   <div>
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">1. Preview Ringkasan</h4>
-                    <p className="text-slate-300 text-xs leading-relaxed font-medium bg-white/[0.01] p-4 rounded-xl border border-white/[0.03]">
+                    <h4 className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5 sm:mb-2">1. Preview Ringkasan</h4>
+                    <p className="text-slate-300 text-xs leading-relaxed font-medium bg-white/[0.01] p-3 sm:p-4 rounded-xl border border-white/[0.03]">
                       {aiResult.preview}
                     </p>
                   </div>
@@ -723,13 +723,13 @@ export default function LessonManagementLayer({
                   {/* MCQ & Essay Questions preview */}
                   {aiResult.questions && aiResult.questions.length > 0 && (
                     <div>
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">2. Butir Soal Kuis AI ({aiResult.questions.length})</h4>
-                      <div className="space-y-3 max-h-48 overflow-y-auto no-scrollbar pr-1">
+                      <h4 className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5 sm:mb-2">2. Butir Soal Kuis AI ({aiResult.questions.length})</h4>
+                      <div className="space-y-2.5 sm:space-y-3 max-h-48 overflow-y-auto no-scrollbar pr-1">
                         {aiResult.questions.map((q, qIdx) => (
-                          <div key={qIdx} className="bg-white/[0.02] border border-white/[0.02] p-3 rounded-xl space-y-2 text-xs">
+                          <div key={qIdx} className="bg-white/[0.02] border border-white/[0.02] p-2.5 sm:p-3 rounded-xl space-y-2 text-xs">
                             <p className="font-bold text-slate-200">{qIdx+1}. {q.text || q.question}</p>
                             {q.type === 'mcq' && q.options && (
-                              <div className="grid grid-cols-2 gap-2 pl-4">
+                              <div className="grid grid-cols-1 xs:grid-cols-2 gap-1.5 pl-2 sm:pl-4">
                                 {q.options.map((opt: string) => (
                                   <span key={opt} className={`text-[10px] p-1.5 rounded-lg border ${
                                     opt === q.answer ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-bold' : 'bg-white/5 border-transparent text-slate-400'
@@ -747,20 +747,20 @@ export default function LessonManagementLayer({
                 </div>
 
                 {/* Final actions */}
-                <div className="flex gap-3 pt-4 border-t border-white/5">
-                  <button
-                    onClick={() => handleSaveAction(false)}
-                    disabled={isAiResponding}
-                    className="flex-1 h-12 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-colors border border-white/5"
-                  >
-                    Simpan Draft
-                  </button>
+                <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-4 border-t border-white/5">
                   <button
                     onClick={() => handleSaveAction(true)}
                     disabled={isAiResponding}
-                    className="flex-1 h-12 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2"
+                    className="w-full sm:flex-1 h-11 sm:h-12 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 order-1 sm:order-2 active:scale-[0.98]"
                   >
                     <CheckCircle2 size={14} /> Terbitkan (Publish)
+                  </button>
+                  <button
+                    onClick={() => handleSaveAction(false)}
+                    disabled={isAiResponding}
+                    className="w-full sm:flex-1 h-11 sm:h-12 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-colors border border-white/5 order-2 sm:order-1 active:scale-[0.98]"
+                  >
+                    Simpan Draft
                   </button>
                   <button
                     onClick={() => {
@@ -768,7 +768,7 @@ export default function LessonManagementLayer({
                       resetChatToInit();
                     }}
                     disabled={isAiResponding}
-                    className="px-4 h-12 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors"
+                    className="w-full sm:w-auto sm:px-6 h-11 sm:h-12 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors order-3 active:scale-[0.98]"
                   >
                     Batal
                   </button>
@@ -780,7 +780,7 @@ export default function LessonManagementLayer({
           </div>
 
           {/* Quick Input Bar (Only enabled when awaiting custom description input) */}
-          <div className="p-4 bg-[#0f121a] border-t border-white/5">
+          <div className="p-3 sm:p-4 bg-[#0f121a] border-t border-white/5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-4">
             <form onSubmit={handleFormSubmit} className="flex gap-2 max-w-4xl mx-auto">
               <input
                 type="text"
@@ -791,15 +791,15 @@ export default function LessonManagementLayer({
                     ? "Pilih opsi di atas untuk memulai..." 
                     : isAiResponding 
                     ? "Asisten sedang memproses..." 
-                    : "Tuliskan topik, materi, atau deskripsi naskah..."
+                    : "Tuliskan topik, materi..."
                 }
                 disabled={!flowType || isAiResponding || !!aiResult}
-                className="flex-1 h-12 bg-white/5 border border-white/5 rounded-xl px-4 text-xs font-bold outline-none focus:ring-1 focus:ring-violet-500/30 transition-all placeholder:text-slate-500 disabled:opacity-40"
+                className="flex-1 h-11 sm:h-12 bg-white/5 border border-white/5 rounded-xl px-3.5 sm:px-4 text-sm sm:text-xs font-bold outline-none focus:ring-1 focus:ring-violet-500/30 transition-all placeholder:text-slate-500 disabled:opacity-40"
               />
               <button
                 type="submit"
                 disabled={!inputValue.trim() || isAiResponding || !flowType || !!aiResult}
-                className="w-12 h-12 bg-violet-600 hover:bg-violet-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-violet-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-30"
+                className="w-11 h-11 sm:w-12 sm:h-12 bg-violet-600 hover:bg-violet-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-violet-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 shrink-0"
               >
                 <Send size={16} />
               </button>
@@ -812,31 +812,31 @@ export default function LessonManagementLayer({
       {previewingLesson && (
         <div className="fixed inset-0 z-[999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-300" onClick={() => setPreviewingLesson(null)}>
           <div 
-            className="w-full max-w-2xl bg-[#121620] border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[85vh] overflow-y-auto flex flex-col gap-6 custom-scrollbar relative"
+            className="w-full max-w-2xl bg-[#121620] border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[85vh] overflow-y-auto flex flex-col gap-4 sm:gap-6 custom-scrollbar relative"
             onClick={(e) => e.stopPropagation()}
           >
             
-            <div className="flex justify-between items-start border-b border-white/5 pb-4">
+            <div className="flex justify-between items-start border-b border-white/5 pb-3 sm:pb-4">
               <div>
                 <span className="text-[9px] font-black uppercase tracking-widest text-violet-400">
                   {previewingLesson.class_name} • {previewingLesson.date}
                 </span>
-                <h3 className="font-headline font-black text-xl text-slate-100 uppercase tracking-tight mt-1">
+                <h3 className="font-headline font-black text-lg sm:text-xl text-slate-100 uppercase tracking-tight mt-1">
                   {previewingLesson.subject}
                 </h3>
               </div>
               <button 
                 onClick={() => setPreviewingLesson(null)} 
-                className="w-9 h-9 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center"
+                className="w-11 h-11 sm:w-9 sm:h-9 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-transform"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-5 sm:space-y-6">
               {/* Summary */}
               {previewingLesson.ai_reading_preview && (
-                <div className="bg-violet-500/5 rounded-2xl p-5 border border-violet-500/10">
+                <div className="bg-violet-500/5 rounded-2xl p-4 sm:p-5 border border-violet-500/10">
                   <h4 className="text-violet-400 text-xs font-black uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                     <Sparkles size={14} /> Ringkasan Materi AI
                   </h4>
@@ -848,15 +848,15 @@ export default function LessonManagementLayer({
 
               {/* Full Content */}
               <div className="space-y-2">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Cakupan Isi Materi</h4>
-                <div className="bg-white/[0.01] border border-white/[0.03] p-5 rounded-2xl text-xs leading-relaxed text-slate-300 whitespace-pre-wrap max-h-60 overflow-y-auto custom-scrollbar">
+                <h4 className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500">Cakupan Isi Materi</h4>
+                <div className="bg-white/[0.01] border border-white/[0.03] p-4 sm:p-5 rounded-2xl text-xs leading-relaxed text-slate-300 whitespace-pre-wrap max-h-60 overflow-y-auto custom-scrollbar">
                   {previewingLesson.content}
                 </div>
               </div>
 
               {/* Quizzes list inside modal */}
               <div className="space-y-3">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Kuis Evaluasi AI</h4>
+                <h4 className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500">Kuis Evaluasi AI</h4>
                 
                 {isLoadingPreviewQuizzes ? (
                   <div className="flex items-center gap-2 py-4 justify-center">
@@ -868,7 +868,7 @@ export default function LessonManagementLayer({
                 ) : (
                   <div className="space-y-3">
                     {previewingQuizzes.map((quiz) => (
-                      <div key={quiz.id} className="bg-white/[0.02] border border-white/[0.03] p-4 rounded-xl space-y-3">
+                      <div key={quiz.id} className="bg-white/[0.02] border border-white/[0.03] p-3.5 sm:p-4 rounded-xl space-y-3">
                         <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-wider">
                           <span>{quiz.title}</span>
                           <span>Durasi: {quiz.duration_minutes} Menit</span>
@@ -878,7 +878,7 @@ export default function LessonManagementLayer({
                             <div key={qIdx} className="bg-white/[0.01] p-2.5 rounded-lg text-xs space-y-1">
                               <p className="font-bold text-slate-300">{qIdx+1}. {q.text || q.question}</p>
                               {q.type === 'mcq' && q.options && (
-                                <div className="grid grid-cols-2 gap-1.5 pl-4 pt-1">
+                                <div className="grid grid-cols-1 xs:grid-cols-2 gap-1.5 pl-2 sm:pl-4 pt-1">
                                   {q.options.map((opt: string) => (
                                     <span key={opt} className={`text-[10px] px-2 py-1 rounded border ${
                                       opt === q.answer ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 font-bold' : 'bg-transparent border-transparent text-slate-500'
@@ -898,16 +898,16 @@ export default function LessonManagementLayer({
               </div>
             </div>
 
-            <div className="flex gap-3 pt-4 border-t border-white/5 justify-between">
+            <div className="flex gap-2.5 sm:gap-3 pt-4 border-t border-white/5 justify-between">
               <button
                 onClick={() => handleDeleteLesson(previewingLesson.id, previewingLesson.subject)}
-                className="px-4 h-12 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors flex items-center gap-2"
+                className="px-3 sm:px-4 h-11 sm:h-12 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wider transition-colors flex items-center gap-1.5 sm:gap-2 active:scale-95 duration-200"
               >
                 <Trash2 size={14} /> Hapus Materi
               </button>
               <button
                 onClick={() => setPreviewingLesson(null)}
-                className="px-6 h-12 bg-white/5 hover:bg-white/10 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-colors border border-white/5"
+                className="px-5 sm:px-6 h-11 sm:h-12 bg-white/5 hover:bg-white/10 text-white rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest transition-colors border border-white/5 active:scale-95 duration-200"
               >
                 Tutup
               </button>
