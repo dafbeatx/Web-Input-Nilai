@@ -58,6 +58,26 @@ export default function RemedialDashboardLayer({
 }: RemedialDashboardLayerProps) {
   const { isAdmin, studentClass: contextClass, studentData } = useGradeMaster();
   const displayClass = studentClass || contextClass || (studentData && studentData.class_name) || "N/A";
+  
+  // Group sessions by class name
+  const groupedSessions = useMemo(() => {
+    const groups: Record<string, SessionMeta[]> = {};
+    (sessions || []).forEach(s => {
+      const cls = s.class_name || 'Umum';
+      if (!groups[cls]) {
+        groups[cls] = [];
+      }
+      groups[cls].push(s);
+    });
+    // Sort classes alphabetically (numerical sorting e.g. 7A, 8A, 9A)
+    return Object.keys(groups)
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+      .reduce((acc, key) => {
+        acc[key] = groups[key];
+        return acc;
+      }, {} as Record<string, SessionMeta[]>);
+  }, [sessions]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -358,11 +378,21 @@ export default function RemedialDashboardLayer({
                   value={activeSessionId || ""}
                   disabled={!isAdmin}
                 >
-                  <option value="" disabled>-- Pilih Kelas & Sesi --</option>
-                  {sessions.map(s => (
-                    <option key={s.id} value={s.id}>
-                      Kelas {s.class_name || 'Umum'} - {s.session_name}
-                    </option>
+                  <option value="" disabled className="text-on-surface-variant/40 bg-surface-container-high">-- Pilih Kelas & Sesi --</option>
+                  {Object.entries(groupedSessions).map(([className, classSessions]) => (
+                    <optgroup key={className} label={`KELAS ${className.toUpperCase()}`} className="font-extrabold text-[10px] tracking-wider text-slate-400 bg-slate-900 border-b border-white/5 py-1">
+                      {classSessions.map(s => {
+                        // Create clean display values: e.g. "Matematika — UTS • Sem. Ganjil (2025/2026)"
+                        const cleanExam = s.exam_type || 'Ujian';
+                        const cleanSem = s.semester || 'I';
+                        const cleanYear = s.academic_year || '2025/2026';
+                        return (
+                          <option key={s.id} value={s.id} className="text-xs font-semibold text-slate-200 bg-slate-950 py-1.5 px-3">
+                            {s.subject} — {cleanExam} • Sem. {cleanSem} ({cleanYear})
+                          </option>
+                        );
+                      })}
+                    </optgroup>
                   ))}
                 </select>
                 <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
