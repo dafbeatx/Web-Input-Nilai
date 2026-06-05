@@ -235,7 +235,7 @@ export default function GradingLayer(props: GradingLayerProps) {
     <main className="min-h-dvh p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto page-pt md:pt-16 pb-24 font-outfit bg-transparent">
       <header className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
         <div>
-          <button onClick={onBack} className="flex items-center gap-1.5 md:gap-2 text-on-surface-variant hover:text-primary font-bold text-[10px] md:text-xs uppercase tracking-widest transition-colors mb-2 md:mb-3 border border-transparent hover:border-primary/20 px-3 py-1.5 rounded-xl hover:bg-primary/10 w-fit">
+          <button onClick={onBack} className="flex items-center justify-center gap-1.5 md:gap-2 text-on-surface-variant hover:text-primary font-bold text-[10px] md:text-xs uppercase tracking-widest transition-colors mb-2 md:mb-3 border border-transparent hover:border-primary/20 px-3 py-1.5 rounded-xl hover:bg-primary/10 w-fit min-h-[44px]">
             <ArrowLeft size={12} className="md:w-[14px] md:h-[14px]" /> Kembali ke Dashboard
           </button>
           <div className="flex items-center gap-2 md:gap-3 text-primary mb-1">
@@ -247,10 +247,10 @@ export default function GradingLayer(props: GradingLayerProps) {
         </div>
 
         <div className="flex items-center gap-2 md:gap-3">
-          <button onClick={handleUndo} disabled={undoStack.current.length === 0} className="px-3 py-2.5 md:px-4 md:py-3 bg-surface-variant border border-outline-variant rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-on-surface-variant hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/20 transition-all flex items-center gap-1.5 disabled:opacity-30">
+          <button onClick={handleUndo} disabled={undoStack.current.length === 0} className="px-3 py-2.5 md:px-4 md:py-3 bg-surface-variant border border-outline-variant rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-on-surface-variant hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/20 transition-all flex items-center justify-center gap-1.5 disabled:opacity-30 min-h-[44px]">
             <Undo2 size={12} className="md:w-[14px] md:h-[14px]" /> Undo
           </button>
-          <button onClick={onReset} className="px-3 py-2.5 md:px-4 md:py-3 bg-surface-variant border border-outline-variant rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-on-surface-variant hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20 transition-all flex items-center gap-1.5">
+          <button onClick={onReset} className="px-3 py-2.5 md:px-4 md:py-3 bg-surface-variant border border-outline-variant rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-on-surface-variant hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20 transition-all flex items-center justify-center gap-1.5 min-h-[44px]">
             <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Reset
           </button>
         </div>
@@ -279,7 +279,7 @@ export default function GradingLayer(props: GradingLayerProps) {
             </div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-[10px] md:text-xs font-bold text-on-surface-variant uppercase tracking-widest">Nama Siswa</label>
-              <label className="cursor-pointer flex items-center gap-1.5 text-primary hover:text-white transition-all bg-primary/10 hover:bg-primary px-3 py-1.5 rounded-full border border-primary/20 shadow-sm active:scale-95 group">
+              <label className="cursor-pointer flex items-center justify-center gap-1.5 text-primary hover:text-white transition-all bg-primary/10 hover:bg-primary px-3 py-1.5 rounded-full border border-primary/20 shadow-sm active:scale-95 group min-h-[44px]">
                 <ScanSearch size={12} className="md:w-3.5 md:h-3.5 group-hover:scale-110 transition-transform" />
                 <span className="text-[9px] md:text-[10px] font-black uppercase tracking-wider">Auto-Detect LJK</span>
                 <input type="file" accept="image/*,.pdf,.doc,.docx" className="hidden" onChange={handleAutoDetect} />
@@ -302,7 +302,7 @@ export default function GradingLayer(props: GradingLayerProps) {
                       if (!isNewStudent) setIsDropdownOpen(true);
                     }}
                     placeholder="Cari atau ketik nama siswa..."
-                    className="w-full bg-white border border-surface-container-high rounded-xl py-3.5 pl-11 pr-4 text-sm font-bold text-on-surface outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all placeholder:text-on-surface-variant/40 shadow-sm"
+                    className="w-full bg-white border border-surface-container-high rounded-xl py-3.5 pl-11 pr-4 text-sm font-bold text-on-surface outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all placeholder:text-on-surface-variant/40 shadow-sm min-h-[44px]"
                   />
                 </div>
                 
@@ -319,7 +319,7 @@ export default function GradingLayer(props: GradingLayerProps) {
                               <button
                                 type="button"
                                 onClick={() => selectStudent(s.id, s.name)}
-                                className="w-full text-left px-4 py-3 text-sm font-bold text-on-surface-variant hover:bg-primary/5 hover:text-primary rounded-xl transition-all flex items-center justify-between group/item"
+                                className="w-full text-left px-4 py-3 text-sm font-bold text-on-surface-variant hover:bg-primary/5 hover:text-primary rounded-xl transition-all flex items-center justify-between group/item min-h-[44px]"
                               >
                                 <span>{s.name}</span>
                                 <CheckCircle2 size={14} className="opacity-0 group-hover/item:opacity-100 transition-opacity text-primary" />
@@ -334,7 +334,7 @@ export default function GradingLayer(props: GradingLayerProps) {
                                 setIsNewStudent(true);
                                 setIsDropdownOpen(false);
                               }}
-                              className="w-full text-left px-4 py-3 text-sm font-black text-primary hover:bg-primary/10 rounded-xl transition-all flex items-center gap-3"
+                              className="w-full text-left px-4 py-3 text-sm font-black text-primary hover:bg-primary/10 rounded-xl transition-all flex items-center gap-3 min-h-[44px]"
                             >
                               <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
                                 <AlertCircle size={14} />
@@ -356,7 +356,7 @@ export default function GradingLayer(props: GradingLayerProps) {
                             setIsNewStudent(true);
                             setIsDropdownOpen(false);
                           }}
-                          className="w-full py-3 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20"
+                          className="w-full py-3 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20 min-h-[44px]"
                         >
                           Tambah Sebagai Siswa Baru
                         </button>
@@ -370,7 +370,7 @@ export default function GradingLayer(props: GradingLayerProps) {
                 <AlertCircle size={12} /> Mode tambah siswa baru
                 <button 
                   onClick={() => setIsNewStudent(false)} 
-                  className="text-on-surface-variant hover:text-slate-600 underline ml-1"
+                  className="inline-flex items-center justify-center text-on-surface-variant hover:text-slate-600 underline ml-1 px-2 min-h-[44px]"
                 >
                   Batal
                 </button>
@@ -410,7 +410,7 @@ export default function GradingLayer(props: GradingLayerProps) {
                         <button
                           key={opt}
                           onClick={() => handleAnswerSelect(qNum, opt)}
-                          className={`w-9 h-9 md:w-10 md:h-10 rounded-lg border font-bold text-xs md:text-sm transition-all ${
+                          className={`w-11 h-11 md:w-10 md:h-10 rounded-lg border font-bold text-xs md:text-sm transition-all ${
                             studentAns === opt
                               ? (isCorrect ? 'bg-emerald-500 border-emerald-500 text-white scale-110 shadow-lg shadow-emerald-500/20' : 'bg-rose-500 border-rose-500 text-white scale-110 shadow-lg shadow-rose-500/20')
                               : 'bg-surface-variant border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary'
@@ -500,7 +500,7 @@ export default function GradingLayer(props: GradingLayerProps) {
                     <input
                       type="number" min="0" max="4" value={score}
                       onChange={(e) => handleEssayChange(idx, e.target.value)}
-                      className="w-full bg-surface-variant rounded-xl border border-outline-variant p-2 text-center font-black text-lg text-primary focus:border-primary outline-none transition-all"
+                      className="w-full bg-surface-variant rounded-xl border border-outline-variant p-2 text-center font-black text-lg text-primary focus:border-primary outline-none transition-all min-h-[44px]"
                     />
                   </div>
                 ))}
@@ -511,14 +511,52 @@ export default function GradingLayer(props: GradingLayerProps) {
               </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-outline-variant">
-              <button onClick={handleSave} className="w-full py-4 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2">
+            <div className="mt-6 pt-4 border-t border-outline-variant hidden lg:block">
+              <button onClick={handleSave} className="w-full py-4 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 min-h-[44px]">
                 <Save size={16} /> Simpan Nilai
               </button>
             </div>
           </div>
         </aside>
       </main>
+
+      {/* Sticky Bottom Action Bar for Mobile */}
+      <div className="fixed bottom-0 left-0 right-0 z-[60] bg-surface/90 backdrop-blur-xl border-t border-outline-variant p-4 lg:hidden shadow-[0_-10px_30px_rgba(0,0,0,0.08)] pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+            <div className="flex flex-col">
+              <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant">Siswa</span>
+              <span className="text-xs font-bold text-on-surface truncate max-w-[150px]">
+                {studentName.trim() ? studentName : "Pilih Siswa"}
+              </span>
+            </div>
+            <div className="h-8 w-px bg-outline-variant" />
+            <div className="flex items-center gap-1.5">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant">Skor</span>
+                <span className="text-lg font-black text-on-surface leading-none">
+                  {result.finalScore}<span className="text-[10px] text-slate-500 font-bold">/100</span>
+                </span>
+              </div>
+            </div>
+            <div className="h-8 w-px bg-outline-variant" />
+            <div className="flex flex-col">
+              <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant">Status</span>
+              {result.finalScore < kkm ? (
+                <span className="text-[9px] font-black text-rose-500 uppercase tracking-wider">Belum Tuntas</span>
+              ) : (
+                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-wider">Tuntas</span>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={handleSave}
+            className="w-full sm:w-auto min-h-[44px] px-6 py-3 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+          >
+            <Save size={16} /> Simpan Nilai
+          </button>
+        </div>
+      </div>
     </main>
   );
 }

@@ -206,3 +206,65 @@ body.hide-mobile-header #mobile-bottom-nav {
     padding-left: 16rem !important;
   }
 }
+
+/* ── MOBILE SHELL & INTERACTION OPTIMIZATIONS ── */
+
+/* Mobile shell layout padding rules to prevent overlap with fixed headers and bottom navigation bar */
+.mobile-shell-padding {
+  padding-top: calc(3.5rem + max(1rem, env(safe-area-inset-top, 0px))) !important;
+  padding-bottom: calc(5rem + max(1.5rem, env(safe-area-inset-bottom, 0px))) !important;
+}
+
+@media (min-width: 768px) {
+  .mobile-shell-padding {
+    padding-top: max(1.5rem, env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* Touch targets safety - P1 requirement */
+@media (max-width: 767px) {
+  button, select, input, a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  input[type="checkbox"], input[type="radio"] {
+    min-width: 20px;
+    min-height: 20px;
+  }
+}
+
+/* Focus-aware opacity helper for PIP / floating elements to prevent overlapping inputs */
+body:has(input:focus, textarea:focus) #draggable-pip-container {
+  opacity: 0.10 !important;
+  pointer-events: none !important;
+  transition: opacity 0.3s ease;
+}
+
+/* Mobile Bottom Sheet styling */
+.mobile-bottom-sheet-overlay {
+  @apply fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-xl flex items-end md:items-center justify-center p-0 md:p-4 transition-all duration-300;
+}
+
+.mobile-bottom-sheet-container {
+  @apply relative w-full bg-slate-900 border-t border-white/10 rounded-t-[2rem] md:rounded-[2.5rem] md:border md:border-white/10 md:max-w-md p-6 md:p-8 max-h-[85vh] overflow-y-auto md:max-h-none shadow-2xl;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+  animation: slideUpMobile 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@media (min-width: 768px) {
+  .mobile-bottom-sheet-container {
+    animation: zoomInDesktop 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+}
+
+@keyframes slideUpMobile {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes zoomInDesktop {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}

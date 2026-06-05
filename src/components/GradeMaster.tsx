@@ -282,6 +282,20 @@ export default function GradeMaster() {
   useEffect(() => {
     fetchSessions();
     checkAdmin();
+
+    // Register Service Worker for PWA
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      const handleRegister = () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          .then((reg) => console.log('[PWA] Service Worker registered successfully:', reg.scope))
+          .catch((err) => console.error('[PWA] Service Worker registration failed:', err));
+      };
+      if (document.readyState === 'complete') {
+        handleRegister();
+      } else {
+        window.addEventListener('load', handleRegister);
+      }
+    }
   }, []);
 
   // Tele-log: Catch when user reaches dashboard/home for the first time

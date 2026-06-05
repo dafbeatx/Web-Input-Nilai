@@ -2880,11 +2880,12 @@ export default function StudentRemedialLayer({
       </header>
 
       {/* ── MAIN CONTENT ── */}
-      <main className={`max-w-7xl mx-auto px-6 pt-28 md:pt-36 pb-20 flex flex-col lg:flex-row gap-8 transition-opacity duration-700 ${(isTabHidden || isPermanentlyBlocked || isOffline || isConnectionLocked) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+      <main className={`max-w-7xl mx-auto px-6 mobile-shell-padding flex flex-col lg:flex-row gap-8 transition-opacity duration-700 ${(isTabHidden || isPermanentlyBlocked || isOffline || isConnectionLocked) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         
         {/* Monitoring Panel */}
-        <aside className="w-full lg:w-72 lg:sticky lg:top-32 h-fit space-y-6">
-          <div className="bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant p-6 rounded-[2rem] shadow-xl">
+        <aside className="w-full lg:w-72 lg:sticky lg:top-32 h-fit lg:space-y-6">
+          {/* Desktop/Tablet Panel */}
+          <div className="hidden lg:block bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant p-6 rounded-[2rem] shadow-xl">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface">Telemetri</h2>
               <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
@@ -2929,7 +2930,7 @@ export default function StudentRemedialLayer({
             </div>
           </div>
 
-          <div className="bg-primary/5 border border-primary/20 p-6 rounded-[2rem] shadow-xl relative overflow-hidden group">
+          <div className="hidden lg:block bg-primary/5 border border-primary/20 p-6 rounded-[2rem] shadow-xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/20 transition-colors"></div>
             <p className="text-[9px] font-black text-primary uppercase tracking-[0.3em] mb-4">Statistik Progres</p>
             <div className="flex items-baseline justify-between mb-4">
@@ -2943,6 +2944,41 @@ export default function StudentRemedialLayer({
                 className="h-full bg-primary shadow-[0_0_12px_rgba(59,130,246,0.5)] transition-all duration-1000 ease-out" 
                 style={{ width: `${(answers.filter(a => a.trim() !== '').length / remedialEssayCount) * 100}%` }}
               />
+            </div>
+          </div>
+
+          {/* Compact Mobile Panel */}
+          <div className="block lg:hidden w-full bg-surface/80 backdrop-blur-md border border-outline-variant p-4 rounded-2xl premium-shadow space-y-3">
+            {/* Row 1: Status pills */}
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[9px] font-black uppercase tracking-wider">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 animate-in fade-in">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>AI Aktif</span>
+              </div>
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full ${tabWarningCount > 0 ? 'bg-rose-500/10 text-rose-400 border-rose-500/15' : 'bg-surface-variant text-on-surface-variant border border-outline-variant'}`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${tabWarningCount > 0 ? 'bg-rose-500 animate-pulse' : 'bg-on-surface-variant'}`} />
+                <span>Layar: {tabWarningCount}/{MAX_TAB_WARNINGS}</span>
+              </div>
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full ${isOffline ? 'bg-rose-500/10 text-rose-400 border-rose-500/15' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/15'}`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`} />
+                <span>{isOffline ? 'Offline' : 'Server Aktif'}</span>
+              </div>
+            </div>
+
+            {/* Row 2: Progress */}
+            <div className="flex items-center justify-between gap-4 border-t border-outline-variant/50 pt-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Progres:</span>
+                <span className="text-xs font-black font-outfit text-on-surface">
+                  {answers.filter(a => a.trim() !== '').length} / {remedialEssayCount} Soal
+                </span>
+              </div>
+              <div className="flex-1 max-w-[150px] h-1 bg-surface-variant rounded-full overflow-hidden border border-outline-variant">
+                <div 
+                  className="h-full bg-primary shadow-[0_0_12px_rgba(59,130,246,0.5)] transition-all duration-1000 ease-out" 
+                  style={{ width: `${(answers.filter(a => a.trim() !== '').length / remedialEssayCount) * 100}%` }}
+                />
+              </div>
             </div>
           </div>
         </aside>
@@ -3041,132 +3077,166 @@ export default function StudentRemedialLayer({
 
       {/* ── DRAGGABLE CAMERA (GradeMaster PiP) ── */}
       {step === 'EXAM' && (
-        <>
-          {/* Hidden camera wrapper for proctoring */}
-          <div 
-            className="fixed pointer-events-none opacity-[0.001] z-[-50] overflow-hidden" 
-            style={{ width: '1px', height: '1px', left: '0px', top: '0px' }}
-          >
-            <ProctoringCamera 
-              ref={videoRef} 
-              onViolation={handleCameraViolation} 
-              onCameraError={handleCameraErrorDuringExam}
-              onCameraReady={handleCameraReadyDuringExam}
-            />
-          </div>
+        <div
+          ref={pipRef}
+          id="draggable-pip-container"
+          className="fixed z-[90] rounded-2xl border border-white/10 bg-slate-950/85 backdrop-blur-md px-4 py-2.5 premium-shadow animate-in slide-in-from-right duration-500 cursor-grab active:cursor-grabbing select-none touch-none flex flex-col gap-1.5 min-w-[140px] md:w-48 md:h-72 md:p-0 md:rounded-3xl md:border-2 md:border-white/20 md:bg-slate-900 md:overflow-hidden md:gap-0"
+          style={pipPos
+            ? { left: `${pipPos.x}px`, top: `${pipPos.y}px`, transition: isDraggingRef.current ? 'none' : 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)' }
+            : { right: '32px', bottom: '32px' }
+          }
+          onMouseDown={(e) => {
+            if (!pipRef.current) return;
+            const rect = pipRef.current.getBoundingClientRect();
+            isDraggingRef.current = true;
+            wasDraggedRef.current = false;
+            dragOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            dragStartPosRef.current = { x: e.clientX, y: e.clientY };
+            e.preventDefault();
 
-          {/* Floating Indicator "Kamera Aktif" */}
-          <div
-            ref={pipRef}
-            className="fixed z-[90] rounded-2xl border border-white/10 bg-slate-950/85 backdrop-blur-md px-4 py-2.5 premium-shadow animate-in slide-in-from-right duration-500 cursor-grab active:cursor-grabbing select-none touch-none flex flex-col gap-1.5 min-w-[140px]"
-            style={pipPos
-              ? { left: `${pipPos.x}px`, top: `${pipPos.y}px`, transition: isDraggingRef.current ? 'none' : 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)' }
-              : { right: '32px', bottom: '32px' }
-            }
-            onMouseDown={(e) => {
-              if (!pipRef.current) return;
-              const rect = pipRef.current.getBoundingClientRect();
-              isDraggingRef.current = true;
-              wasDraggedRef.current = false;
-              dragOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-              dragStartPosRef.current = { x: e.clientX, y: e.clientY };
-              e.preventDefault();
-
-              const onMove = (ev: MouseEvent) => {
-                const dx = Math.abs(ev.clientX - dragStartPosRef.current.x);
-                const dy = Math.abs(ev.clientY - dragStartPosRef.current.y);
-                if (dx > 3 || dy > 3) wasDraggedRef.current = true;
-                const elW = pipRef.current?.offsetWidth || 112;
-                const elH = pipRef.current?.offsetHeight || 160;
-                const newX = Math.min(Math.max(12, ev.clientX - dragOffsetRef.current.x), window.innerWidth - elW - 12);
-                const newY = Math.min(Math.max(12, ev.clientY - dragOffsetRef.current.y), window.innerHeight - elH - 12);
-                setPipPos({ x: newX, y: newY });
-              };
-              const onUp = (ev: MouseEvent) => {
-                isDraggingRef.current = false;
-                window.removeEventListener('mousemove', onMove);
-                window.removeEventListener('mouseup', onUp);
-                if (pipRef.current) {
-                  const elW = pipRef.current.offsetWidth;
-                  const rectInner = pipRef.current.getBoundingClientRect();
-                  const centerX = rectInner.left + elW / 2;
-                  const snapX = centerX < window.innerWidth / 2 ? 24 : window.innerWidth - elW - 24;
-                  const curY = Math.min(Math.max(24, rectInner.top), window.innerHeight - pipRef.current.offsetHeight - 24);
-                  setPipPos({ x: snapX, y: curY });
-                }
-              };
-              window.addEventListener('mousemove', onMove);
-              window.addEventListener('mouseup', onUp);
-            }}
-            onTouchStart={(e) => {
-              if (!pipRef.current) return;
-              const touch = e.touches[0];
-              const rect = pipRef.current.getBoundingClientRect();
-              isDraggingRef.current = true;
-              wasDraggedRef.current = false;
-              dragOffsetRef.current = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
-              dragStartPosRef.current = { x: touch.clientX, y: touch.clientY };
-            }}
-            onTouchMove={(e) => {
-              if (!isDraggingRef.current || !pipRef.current) return;
-              const touch = e.touches[0];
-              const dx = Math.abs(touch.clientX - dragStartPosRef.current.x);
-              const dy = Math.abs(touch.clientY - dragStartPosRef.current.y);
+            const onMove = (ev: MouseEvent) => {
+              const dx = Math.abs(ev.clientX - dragStartPosRef.current.x);
+              const dy = Math.abs(ev.clientY - dragStartPosRef.current.y);
               if (dx > 3 || dy > 3) wasDraggedRef.current = true;
               const elW = pipRef.current?.offsetWidth || 112;
               const elH = pipRef.current?.offsetHeight || 160;
-              const newX = Math.min(Math.max(12, touch.clientX - dragOffsetRef.current.x), window.innerWidth - elW - 12);
-              const newY = Math.min(Math.max(12, touch.clientY - dragOffsetRef.current.y), window.innerHeight - elH - 12);
+              const newX = Math.min(Math.max(12, ev.clientX - dragOffsetRef.current.x), window.innerWidth - elW - 12);
+              const newY = Math.min(Math.max(12, ev.clientY - dragOffsetRef.current.y), window.innerHeight - elH - 12);
               setPipPos({ x: newX, y: newY });
-            }}
-            onTouchEnd={(e) => {
+            };
+            const onUp = (ev: MouseEvent) => {
               isDraggingRef.current = false;
+              window.removeEventListener('mousemove', onMove);
+              window.removeEventListener('mouseup', onUp);
               if (pipRef.current) {
                 const elW = pipRef.current.offsetWidth;
                 const rectInner = pipRef.current.getBoundingClientRect();
                 const centerX = rectInner.left + elW / 2;
                 const snapX = centerX < window.innerWidth / 2 ? 24 : window.innerWidth - elW - 24;
-                const snapY = Math.min(Math.max(24, rectInner.top), window.innerHeight - pipRef.current.offsetHeight - 24);
-                setPipPos({ x: snapX, y: snapY });
+                const curY = Math.min(Math.max(24, rectInner.top), window.innerHeight - pipRef.current.offsetHeight - 24);
+                setPipPos({ x: snapX, y: curY });
               }
-            }}
-          >
-            <div className="flex flex-col gap-1.5 w-full">
-              {/* Camera Active Row */}
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.7)]" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 font-outfit">
-                  Kamera Aktif
+            };
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onUp);
+          }}
+          onTouchStart={(e) => {
+            if (!pipRef.current) return;
+            const touch = e.touches[0];
+            const rect = pipRef.current.getBoundingClientRect();
+            isDraggingRef.current = true;
+            wasDraggedRef.current = false;
+            dragOffsetRef.current = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+            dragStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+          }}
+          onTouchMove={(e) => {
+            if (!isDraggingRef.current || !pipRef.current) return;
+            const touch = e.touches[0];
+            const dx = Math.abs(touch.clientX - dragStartPosRef.current.x);
+            const dy = Math.abs(touch.clientY - dragStartPosRef.current.y);
+            if (dx > 3 || dy > 3) wasDraggedRef.current = true;
+            const elW = pipRef.current?.offsetWidth || 112;
+            const elH = pipRef.current?.offsetHeight || 160;
+            const newX = Math.min(Math.max(12, touch.clientX - dragOffsetRef.current.x), window.innerWidth - elW - 12);
+            const newY = Math.min(Math.max(12, touch.clientY - dragOffsetRef.current.y), window.innerHeight - elH - 12);
+            setPipPos({ x: newX, y: newY });
+          }}
+          onTouchEnd={(e) => {
+            isDraggingRef.current = false;
+            if (pipRef.current) {
+              const elW = pipRef.current.offsetWidth;
+              const rectInner = pipRef.current.getBoundingClientRect();
+              const centerX = rectInner.left + elW / 2;
+              const snapX = centerX < window.innerWidth / 2 ? 24 : window.innerWidth - elW - 24;
+              const snapY = Math.min(Math.max(24, rectInner.top), window.innerHeight - pipRef.current.offsetHeight - 24);
+              setPipPos({ x: snapX, y: snapY });
+            }
+          }}
+        >
+          {/* Mobile View Content */}
+          <div className="flex flex-col gap-1.5 w-full md:hidden">
+            {/* Camera Active Row */}
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.7)]" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 font-outfit">
+                Kamera Aktif
+              </span>
+            </div>
+            
+            {/* AI Status and Timer Row */}
+            <div className="flex items-center justify-between border-t border-white/10 pt-1.5 gap-4">
+              <div className="flex items-center gap-1.5">
+                <div className={`w-1.5 h-1.5 rounded-full ${
+                  aiProctorStatus === 'scanning' ? 'bg-blue-400 shadow-blue-400/50 animate-pulse' :
+                  aiProctorStatus === 'warning' ? 'bg-amber-400 shadow-amber-400/50 animate-pulse' :
+                  aiProctorStatus === 'critical' ? 'bg-rose-500 shadow-rose-500/50 animate-bounce' :
+                  'bg-emerald-500 shadow-emerald-500/50 animate-pulse'
+                }`} />
+                <span className={`text-[8px] font-black uppercase tracking-wider ${
+                  aiProctorStatus === 'scanning' ? 'text-blue-400' :
+                  aiProctorStatus === 'warning' ? 'text-amber-400 font-black' :
+                  aiProctorStatus === 'critical' ? 'text-rose-400 font-black animate-pulse' :
+                  'text-emerald-400'
+                }`}>
+                  {aiProctorStatus === 'scanning' ? 'AI: Scan...' :
+                   aiProctorStatus === 'safe' ? 'AI: Aman' :
+                   aiProctorStatus === 'warning' ? 'AI: Rawan' :
+                   aiProctorStatus === 'critical' ? 'AI: Kritis' :
+                   'AI: Aktif'}
                 </span>
               </div>
-              
-              {/* AI Status and Timer Row */}
-              <div className="flex items-center justify-between border-t border-white/10 pt-1.5 gap-4">
-                <div className="flex items-center gap-1.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${
-                    aiProctorStatus === 'scanning' ? 'bg-blue-400 shadow-blue-400/50 animate-pulse' :
-                    aiProctorStatus === 'warning' ? 'bg-amber-400 shadow-amber-400/50 animate-pulse' :
-                    aiProctorStatus === 'critical' ? 'bg-rose-500 shadow-rose-500/50 animate-bounce' :
-                    'bg-emerald-500 shadow-emerald-500/50 animate-pulse'
-                  }`} />
-                  <span className={`text-[8px] font-black uppercase tracking-wider ${
-                    aiProctorStatus === 'scanning' ? 'text-blue-400' :
-                    aiProctorStatus === 'warning' ? 'text-amber-400 font-black' :
-                    aiProctorStatus === 'critical' ? 'text-rose-400 font-black animate-pulse' :
-                    'text-emerald-400'
-                  }`}>
-                    {aiProctorStatus === 'scanning' ? 'AI: Scan...' :
-                     aiProctorStatus === 'safe' ? 'AI: Aman' :
-                     aiProctorStatus === 'warning' ? 'AI: Rawan' :
-                     aiProctorStatus === 'critical' ? 'AI: Kritis' :
-                     'AI: Aktif'}
-                  </span>
-                </div>
-                <span className="text-[9px] font-bold font-mono text-slate-400">{formatTime(timeLeft)}</span>
-              </div>
+              <span className="text-[9px] font-bold font-mono text-slate-400">{formatTime(timeLeft)}</span>
             </div>
           </div>
-        </>
+
+          {/* Desktop/Camera View Wrapper: visible on desktop, hidden/1px on mobile */}
+          <div className="w-full h-full md:relative pointer-events-none transition-all duration-500 overflow-hidden absolute md:static left-0 top-0 w-[1px] h-[1px] opacity-[0.001] md:w-full md:h-full md:opacity-100">
+            <div className="w-full h-full pointer-events-auto">
+              <ProctoringCamera 
+                ref={videoRef} 
+                onViolation={handleCameraViolation} 
+                onCameraError={handleCameraErrorDuringExam}
+                onCameraReady={handleCameraReadyDuringExam}
+              />
+            </div>
+            
+            {/* Desktop-only overlays */}
+            <div className="hidden md:block absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
+            <div className="hidden md:flex absolute bottom-3 left-3 flex-col gap-1">
+              <div className="flex items-center gap-1.5">
+                <div className={`w-1.5 h-1.5 rounded-full animate-pulse shadow-lg ${
+                  aiProctorStatus === 'scanning' ? 'bg-blue-400 shadow-blue-400/50' :
+                  aiProctorStatus === 'warning' ? 'bg-amber-400 shadow-amber-400/50' :
+                  aiProctorStatus === 'critical' ? 'bg-rose-500 shadow-rose-500/50' :
+                  aiProctorStatus === 'safe' ? 'bg-emerald-500 shadow-emerald-500/50' :
+                  'bg-emerald-500 shadow-emerald-500/50'
+                }`} />
+                <span className={`text-[8px] font-black uppercase tracking-widest ${
+                  aiProctorStatus === 'scanning' ? 'text-blue-400' :
+                  aiProctorStatus === 'warning' ? 'text-amber-400' :
+                  aiProctorStatus === 'critical' ? 'text-rose-400' :
+                  'text-on-surface'
+                }`}>
+                  {aiProctorStatus === 'scanning' ? 'AI Scan...' :
+                   aiProctorStatus === 'safe' ? 'AI: Aman ✓' :
+                   aiProctorStatus === 'warning' ? 'AI: Peringatan ⚠' :
+                   aiProctorStatus === 'critical' ? 'AI: Kritis ✕' :
+                   'Live AI'}
+                </span>
+              </div>
+            </div>
+            {/* AI scanning ring indicator */}
+            {aiProctorStatus === 'scanning' && (
+              <div className="hidden md:block absolute inset-0 rounded-3xl border-2 border-blue-400/40 animate-pulse pointer-events-none" />
+            )}
+            {aiProctorStatus === 'critical' && (
+              <div className="hidden md:block absolute inset-0 rounded-3xl border-2 border-rose-500/60 animate-pulse pointer-events-none" />
+            )}
+            <div className="hidden md:block absolute top-3 right-3 bg-surface/60 backdrop-blur-md px-2 py-1 rounded-lg border border-outline-variant">
+              <span className="text-[10px] font-black font-mono text-on-surface/90">{formatTime(timeLeft)}</span>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── MODALS & OVERLAYS ── */}

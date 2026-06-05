@@ -156,7 +156,7 @@ export default function SetupLayer(props: SetupLayerProps) {
     }
   };
 
-  const inputClass = "w-full bg-surface-variant border border-outline-variant rounded-xl p-3 text-sm font-bold text-on-surface focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-on-surface-variant";
+  const inputClass = "w-full bg-surface-variant border border-outline-variant rounded-xl p-3 text-sm font-bold text-on-surface focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-on-surface-variant min-h-[44px]";
   const labelClass = "flex items-center gap-2 text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2";
   const sectionTitleClass = "flex items-center gap-2 text-sm font-black text-on-surface uppercase tracking-widest mb-6 pb-4 border-b border-outline-variant";
   const cardClass = "bg-surface premium-shadow backdrop-blur-xl rounded-2xl p-4 sm:p-6 premium-shadow border border-outline-variant";
@@ -175,7 +175,7 @@ export default function SetupLayer(props: SetupLayerProps) {
             <p className="text-on-surface-variant text-sm mt-1">Atur parameter dan soal untuk sesi ujian baru secara lengkap.</p>
           </div>
           <div className="hidden lg:block">
-            <button onClick={onBack} className="inline-flex items-center gap-2 text-xs font-black text-on-surface-variant hover:text-primary uppercase tracking-widest transition-colors bg-surface-variant px-4 py-2 rounded-xl border border-outline-variant shadow-sm hover:premium-shadow">
+            <button onClick={onBack} className="inline-flex items-center justify-center gap-2 text-xs font-black text-on-surface-variant hover:text-primary uppercase tracking-widest transition-colors bg-surface-variant px-4 py-2 rounded-xl border border-outline-variant shadow-sm hover:premium-shadow min-h-[44px]">
               <ArrowLeft size={14} /> Kembali ke Menu
             </button>
           </div>
@@ -379,9 +379,9 @@ export default function SetupLayer(props: SetupLayerProps) {
                     </div>
                     <button
                       onClick={() => setIsPublic(!isPublic)}
-                      className={`w-12 h-6 rounded-full transition-all relative ${isPublic ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                      className={`w-14 h-7 rounded-full transition-all relative ${isPublic ? 'bg-emerald-500' : 'bg-slate-700'} min-h-[44px] flex items-center px-1`}
                     >
-                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isPublic ? 'left-7' : 'left-1'}`} />
+                      <div className={`w-5 h-5 bg-white rounded-full transition-all shadow ${isPublic ? 'translate-x-7' : 'translate-x-0'}`} />
                     </button>
                   </div>
                 </div>
@@ -400,9 +400,9 @@ export default function SetupLayer(props: SetupLayerProps) {
                       </div>
                       <button
                         onClick={() => setIsDemo(!isDemo)}
-                        className={`w-12 h-6 rounded-full transition-all relative ${isDemo ? 'bg-amber-500' : 'bg-slate-700'}`}
+                        className={`w-14 h-7 rounded-full transition-all relative ${isDemo ? 'bg-amber-500' : 'bg-slate-700'} min-h-[44px] flex items-center px-1`}
                       >
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isDemo ? 'left-7' : 'left-1'}`} />
+                        <div className={`w-5 h-5 bg-white rounded-full transition-all shadow ${isDemo ? 'translate-x-7' : 'translate-x-0'}`} />
                       </button>
                     </div>
                   </div>
@@ -411,18 +411,18 @@ export default function SetupLayer(props: SetupLayerProps) {
             </div>
 
             {/* ACTION BUTTON (Desktop Static, Mobile Sticky) */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-surface/90 backdrop-blur-md border-t border-outline-variant z-50 lg:static lg:bg-transparent lg:border-none lg:p-0">
+            <div className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-surface/90 backdrop-blur-md border-t border-outline-variant z-50 lg:static lg:bg-transparent lg:border-none lg:p-0">
               <div className="flex gap-3 max-w-7xl mx-auto w-full">
                 <button 
                   onClick={onBack} 
-                  className="px-4 py-3.5 bg-surface-variant text-on-surface-variant rounded-xl text-xs font-black uppercase tracking-widest hover:bg-surface-container-highest transition-colors lg:hidden flex items-center justify-center gap-2 border border-outline-variant active:scale-95"
+                  className="px-4 py-3.5 bg-surface-variant text-on-surface-variant rounded-xl text-xs font-black uppercase tracking-widest hover:bg-surface-container-highest transition-colors lg:hidden flex items-center justify-center gap-2 border border-outline-variant active:scale-95 min-h-[44px]"
                 >
                   <ArrowLeft size={16} /> Kembali
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={isLoading}
-                  className="flex-1 py-3.5 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 py-3.5 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
                 >
                   {isLoading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />} Simpan & Mulai
                 </button>
