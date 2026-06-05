@@ -715,10 +715,11 @@ export default function LessonManagementLayer({
 
       {/* DETAILED LESSON PREVIEW MODAL */}
       {previewingLesson && (
-        <div className="fixed inset-0 z-[100] animate-in fade-in duration-300">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewingLesson(null)} />
-          
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-[#121620] border border-white/10 rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto flex flex-col gap-6 custom-scrollbar">
+        <div className="fixed inset-0 z-[999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-300" onClick={() => setPreviewingLesson(null)}>
+          <div 
+            className="w-full max-w-2xl bg-[#121620] border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[85vh] overflow-y-auto flex flex-col gap-6 custom-scrollbar relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             
             <div className="flex justify-between items-start border-b border-white/5 pb-4">
               <div>
