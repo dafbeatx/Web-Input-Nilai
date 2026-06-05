@@ -523,7 +523,7 @@ export default function LessonManagementLayer({
   );
 
   return (
-    <div className="min-h-dvh bg-[#0d0f14] text-slate-100 flex flex-col font-outfit relative overflow-hidden">
+    <div className="h-full w-full bg-[#0d0f14] text-slate-100 flex flex-col font-outfit relative overflow-hidden">
       
       {/* Background radial glow */}
       <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-violet-600/10 blur-[100px] rounded-full pointer-events-none" />

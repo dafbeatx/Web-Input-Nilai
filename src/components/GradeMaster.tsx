@@ -1022,8 +1022,8 @@ export default function GradeMaster() {
   }
 
   return (
-    <div className={`relative flex flex-col min-h-[100dvh] ${layer !== 'lesson_management' ? 'pb-safe' : ''} transition-colors duration-500`}>
-      <div className="w-full font-outfit">
+    <div className={`relative flex flex-col ${layer === 'lesson_management' ? 'h-dvh overflow-hidden' : 'min-h-[100dvh] pb-safe'} transition-colors duration-500`}>
+      <div className={`w-full ${layer === 'lesson_management' ? 'h-full flex flex-col' : ''} font-outfit`}>
         {layer === "home" && (
         <HomeLayer
           sessions={sessions}
