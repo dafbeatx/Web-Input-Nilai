@@ -593,7 +593,9 @@ export default function GradeMaster() {
       setIsDemo(data.isDemo === true);
       setShowRemedialButton(!!data.showRemedialButton);
       setIsPublicView(true);
-      setLayer("dashboard");
+      if (layer !== "remedial_dashboard") {
+        setLayer("dashboard");
+      }
       closeModal();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal memuat sesi publik";
@@ -705,7 +707,9 @@ export default function GradeMaster() {
       }
 
       setToast({ message: `Sesi "${data.sessionName}" berhasil dimuat!`, type: "success" });
-      setLayer("dashboard");
+      if (layer !== "remedial_dashboard") {
+        setLayer("dashboard");
+      }
       closeModal();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal memuat";
