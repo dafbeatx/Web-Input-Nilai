@@ -66,6 +66,26 @@ export default function LessonManagementLayer({
     questions: any[];
   } | null>(null);
 
+  // Ref to store the latest states and avoid stale closures in saved state actions
+  const chatStateRef = useRef({
+    flowType: null as 'daily' | 'quiz' | 'notebook' | null,
+    selectedClass: '',
+    selectedSubject: '',
+    extractedText: '',
+    aiResult: null as any
+  });
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    chatStateRef.current = {
+      flowType,
+      selectedClass,
+      selectedSubject,
+      extractedText,
+      aiResult
+    };
+  }, [flowType, selectedClass, selectedSubject, extractedText, aiResult]);
+
   // Lesson Preview Modal
   const [previewingLesson, setPreviewingLesson] = useState<DailyLesson | null>(null);
   const [previewingQuizzes, setPreviewingQuizzes] = useState<Quiz[]>([]);
@@ -111,6 +131,13 @@ export default function LessonManagementLayer({
     setSelectedSubject('');
     setExtractedText('');
     setAiResult(null);
+    chatStateRef.current = {
+      flowType: null,
+      selectedClass: '',
+      selectedSubject: '',
+      extractedText: '',
+      aiResult: null
+    };
     setMessages([
       {
         role: 'assistant',
@@ -127,6 +154,7 @@ export default function LessonManagementLayer({
   // Option 1: Daily Lesson Flow
   const startDailyLessonFlow = () => {
     setFlowType('daily');
+    chatStateRef.current.flowType = 'daily';
     setMessages(prev => [
       ...prev,
       { role: 'user', content: "Saya ingin membuat pelajaran harian." },
@@ -145,6 +173,7 @@ export default function LessonManagementLayer({
   // Option 2: Quiz Flow
   const startQuizFlow = () => {
     setFlowType('quiz');
+    chatStateRef.current.flowType = 'quiz';
     setMessages(prev => [
       ...prev,
       { role: 'user', content: "Saya ingin membuat ulangan/kuis harian." },
@@ -163,6 +192,7 @@ export default function LessonManagementLayer({
   // Option 3: NotebookLM Flow
   const startNotebookFlow = () => {
     setFlowType('notebook');
+    chatStateRef.current.flowType = 'notebook';
     setMessages(prev => [
       ...prev,
       { role: 'user', content: "Saya ingin memproses dokumen pelajaran." },
@@ -180,6 +210,7 @@ export default function LessonManagementLayer({
 
   const selectClass = (cls: string) => {
     setSelectedClass(cls);
+    chatStateRef.current.selectedClass = cls;
     setMessages(prev => [
       ...prev,
       { role: 'user', content: cls },
@@ -196,15 +227,18 @@ export default function LessonManagementLayer({
 
   const selectSubject = (sub: string) => {
     setSelectedSubject(sub);
+    chatStateRef.current.selectedSubject = sub;
     
     let nextContent = '';
     let fileUploadRequired = false;
 
-    if (flowType === 'daily') {
+    const activeFlow = chatStateRef.current.flowType;
+
+    if (activeFlow === 'daily') {
       nextContent = `Pilihan Anda: **${sub}**. Silakan tulis deskripsi singkat atau topik materi pelajaran yang ingin dibuat (misalnya: *Pengenalan jaringan komputer dasar dan topologi star*):`;
-    } else if (flowType === 'quiz') {
+    } else if (activeFlow === 'quiz') {
       nextContent = `Pilihan Anda: **${sub}**. Tuliskan cakupan topik ujian atau kisi-kisi soal yang Anda inginkan (misalnya: *5 soal pilihan ganda tentang Hukum Newton 1 dan 2*):`;
-    } else if (flowType === 'notebook') {
+    } else if (activeFlow === 'notebook') {
       nextContent = `Pilihan Anda: **${sub}**. Silakan unggah dokumen materi Anda (.pdf, .docx, atau .txt) untuk diolah AI:`;
       fileUploadRequired = true;
     }
@@ -235,10 +269,14 @@ export default function LessonManagementLayer({
 
     setIsAiResponding(true);
 
+    const activeFlow = chatStateRef.current.flowType;
+    const activeSubject = chatStateRef.current.selectedSubject;
+
     try {
-      if (flowType === 'daily' || flowType === 'quiz') {
-        const result = await generateAILessonContent(userText, selectedSubject);
+      if (activeFlow === 'daily' || activeFlow === 'quiz') {
+        const result = await generateAILessonContent(userText, activeSubject);
         setAiResult(result);
+        chatStateRef.current.aiResult = result;
 
         setMessages(prev => [
           ...prev,
@@ -270,6 +308,8 @@ export default function LessonManagementLayer({
       { role: 'user', content: `Mengunggah berkas: ${file.name}` }
     ]);
 
+    const activeSubject = chatStateRef.current.selectedSubject;
+
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -283,6 +323,7 @@ export default function LessonManagementLayer({
       if (!res.ok) throw new Error(data.error || 'Gagal membaca isi dokumen.');
 
       setExtractedText(data.text);
+      chatStateRef.current.extractedText = data.text;
       setMessages(prev => [
         ...prev,
         { 
@@ -292,8 +333,9 @@ export default function LessonManagementLayer({
       ]);
 
       setIsAiResponding(true);
-      const result = await generateAILessonContent(data.text.substring(0, 15000), selectedSubject); // Safety slice text length
+      const result = await generateAILessonContent(data.text.substring(0, 15000), activeSubject); // Safety slice text length
       setAiResult(result);
+      chatStateRef.current.aiResult = result;
 
       setMessages(prev => [
         ...prev,
@@ -318,24 +360,29 @@ export default function LessonManagementLayer({
 
   // Publish or Save Draft Action
   const handleSaveAction = async (publish: boolean) => {
-    if (!aiResult || !selectedClass || !selectedSubject) return;
+    const activeAiResult = chatStateRef.current.aiResult;
+    const activeClass = chatStateRef.current.selectedClass;
+    const activeSubject = chatStateRef.current.selectedSubject;
+    const activeText = chatStateRef.current.extractedText;
+
+    if (!activeAiResult || !activeClass || !activeSubject) return;
 
     setIsAiResponding(true);
     try {
       // 1. Create Daily Lesson Row
       const newLesson = await createLesson({
-        class_name: selectedClass,
-        subject: selectedSubject,
+        class_name: activeClass,
+        subject: activeSubject,
         date: new Date().toISOString().split('T')[0],
-        content: extractedText || `Pembahasan materi mata pelajaran ${selectedSubject} kelas ${selectedClass}`,
-        ai_reading_preview: aiResult.preview,
-        ai_chat_prompt: aiResult.chatPrompt,
+        content: activeText || `Pembahasan materi mata pelajaran ${activeSubject} kelas ${activeClass}`,
+        ai_reading_preview: activeAiResult.preview,
+        ai_chat_prompt: activeAiResult.chatPrompt,
         is_published: publish
       });
 
       // 2. Create Quizzes Row if AI returned questions
-      if (newLesson && aiResult.questions && aiResult.questions.length > 0) {
-        const formattedQuestions = aiResult.questions.map((q: any) => ({
+      if (newLesson && activeAiResult.questions && activeAiResult.questions.length > 0) {
+        const formattedQuestions = activeAiResult.questions.map((q: any) => ({
           question: q.text || q.question || "",
           text: q.text || q.question || "",
           options: q.options || [],
@@ -348,7 +395,7 @@ export default function LessonManagementLayer({
           .from('quizzes')
           .insert({
             lesson_id: newLesson.id,
-            title: `Kuis Evaluasi - ${selectedSubject}`,
+            title: `Kuis Evaluasi - ${activeSubject}`,
             quiz_type: 'DAILY',
             duration_minutes: 15,
             questions: formattedQuestions
@@ -378,6 +425,7 @@ export default function LessonManagementLayer({
       ]);
 
       setAiResult(null);
+      chatStateRef.current.aiResult = null;
       loadHistory();
     } catch (err: any) {
       setToast({ message: "Gagal menyimpan: " + err.message, type: 'error' });
