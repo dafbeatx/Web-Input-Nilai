@@ -57,12 +57,32 @@ export default function AICopilot() {
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const [showBubble, setShowBubble] = useState(false);
+  const hasShownBubble = useRef(false);
+
   // Auto-scroll to bottom of chat
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isLoading]);
+
+  // Show "ada yang bisa saya bantu" bubble when entering remedial dashboard
+  useEffect(() => {
+    if (layer === 'remedial_dashboard') {
+      if (!hasShownBubble.current) {
+        setShowBubble(true);
+        hasShownBubble.current = true;
+        const timer = setTimeout(() => {
+          setShowBubble(false);
+        }, 5000); // 5 seconds
+        return () => clearTimeout(timer);
+      }
+    } else {
+      hasShownBubble.current = false;
+      setShowBubble(false);
+    }
+  }, [layer]);
 
   // Determine current active user details
   const getActiveUserLabel = () => {
@@ -305,14 +325,23 @@ export default function AICopilot() {
   return (
     <>
       {/* Floating Trigger Button */}
-      <div className="fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-[9999]">
+      <div className="fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-[9999] flex flex-col items-end">
+        {/* Chat Bubble */}
+        {showBubble && (
+          <div className="mb-3 mr-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold px-4 py-2.5 rounded-2xl rounded-br-none shadow-xl border border-white/10 animate-in fade-in slide-in-from-bottom-2 duration-300 whitespace-nowrap select-none relative">
+            Ada yang bisa saya bantu?
+            {/* Small arrow pointing to the AI button */}
+            <div className="absolute -bottom-1.5 right-4 w-3 h-3 bg-indigo-600 rotate-45 border-r border-b border-white/10" />
+          </div>
+        )}
+
         <button
           onClick={() => {
             setIsOpen(!isOpen);
             setHasNewMessage(false);
           }}
           className="relative flex items-center justify-center active:scale-95 transition-all duration-300 group outline-none focus:outline-none"
-          title="GradeMaster AI Copilot"
+          title={layer === 'remedial_dashboard' ? undefined : "GradeMaster AI Copilot"}
         >
           {/* Sparkle Glow and notification badge */}
           {hasNewMessage && !isOpen && (
