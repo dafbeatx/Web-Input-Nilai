@@ -7,6 +7,7 @@ interface ProctoringCameraProps {
   onViolation: (type: 'NO_FACE' | 'MULTIPLE_FACES' | 'FACE_UNALIGNED' | 'PHONE_DETECTED') => void;
   onCameraError?: (error: string) => void;
   onCameraReady?: () => void;
+  onFaceStatus?: (status: 'calibrating' | 'detected' | 'not_detected') => void;
 }
 
 function loadScript(src: string, timeoutMs = 10000): Promise<void> {
@@ -76,13 +77,20 @@ const MAX_SETUP_RETRIES = 3;
 const RETRY_DELAY_MS = 2000;
 const FACE_CHECK_INTERVAL = 1500;
 
+// Calibration: require 3 consecutive frames with exactly 1 face
+const CALIBRATION_REQUIRED_FRAMES = 3;
+
+// Tolerance: 15 seconds of continuous "no face" before firing violation
+const NO_FACE_TOLERANCE_MS = 15000;
+
 const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
-  ({ onViolation, onCameraError, onCameraReady }, ref) => {
+  ({ onViolation, onCameraError, onCameraReady, onFaceStatus }, ref) => {
     const internalVideoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const onViolationRef = useRef(onViolation);
     const onCameraErrorRef = useRef(onCameraError);
     const onCameraReadyRef = useRef(onCameraReady);
+    const onFaceStatusRef = useRef(onFaceStatus);
     const [isLoading, setIsLoading] = useState(true);
     const [permissionDenied, setPermissionDenied] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -96,6 +104,7 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
     useEffect(() => { onViolationRef.current = onViolation; });
     useEffect(() => { onCameraErrorRef.current = onCameraError; });
     useEffect(() => { onCameraReadyRef.current = onCameraReady; });
+    useEffect(() => { onFaceStatusRef.current = onFaceStatus; });
 
     const stopCurrentStream = useCallback(() => {
       if (intervalRef.current) {
@@ -181,7 +190,8 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
         setPermissionDenied(false);
         setErrorMessage(null);
         setRetryCount(0);
-        onCameraReadyRef.current?.();
+        // Signal calibrating — camera is live but not yet calibrated
+        onFaceStatusRef.current?.('calibrating');
 
         stream.getVideoTracks().forEach(track => {
           track.onended = () => {
@@ -210,43 +220,106 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
                 `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`
             });
 
+            // Start with higher confidence for calibration
             faceDetection.setOptions({
               model: 'short',
               minDetectionConfidence: 0.5
             });
 
+            // ── Calibration + Tolerance State ──
+            let isCalibrated = false;
+            let calibrationConsecutive = 0;
+            let noFaceSinceTs: number | null = null; // timestamp when face was first lost
             const violationsRef = { type: '', count: 0 };
 
             faceDetection.onResults((results: { detections: unknown[] }) => {
               if (!isActiveRef.current) return;
               const count = results.detections.length;
+
+              // ── CALIBRATION PHASE ──
+              if (!isCalibrated) {
+                if (count === 1) {
+                  calibrationConsecutive++;
+                  if (calibrationConsecutive >= CALIBRATION_REQUIRED_FRAMES) {
+                    isCalibrated = true;
+                    // Lower confidence for relaxed post-calibration detection
+                    // (accepts partial face / eyes / upper face)
+                    faceDetection.setOptions({
+                      model: 'short',
+                      minDetectionConfidence: 0.3
+                    });
+                    onFaceStatusRef.current?.('detected');
+                    onCameraReadyRef.current?.();
+                  }
+                } else {
+                  calibrationConsecutive = 0;
+                }
+                return; // Don't fire violations during calibration
+              }
+
+              // ── POST-CALIBRATION DETECTION ──
               let currentViolation = '';
 
               if (count === 0) {
                 currentViolation = 'NO_FACE';
+                onFaceStatusRef.current?.('not_detected');
               } else if (count > 1) {
                 currentViolation = 'MULTIPLE_FACES';
+                onFaceStatusRef.current?.('detected');
+              } else {
+                // Exactly 1 face detected (including partial/eye-only)
+                onFaceStatusRef.current?.('detected');
               }
 
-              if (currentViolation) {
+              if (currentViolation === 'NO_FACE') {
+                // ── TOLERANCE TIMER for NO_FACE ──
+                if (noFaceSinceTs === null) {
+                  noFaceSinceTs = Date.now();
+                }
+                const elapsed = Date.now() - noFaceSinceTs;
+                if (elapsed >= NO_FACE_TOLERANCE_MS) {
+                  // Tolerance exhausted — fire violation
+                  onViolationRef.current('NO_FACE');
+                  // Reset timer so next violation fires after another full tolerance period
+                  noFaceSinceTs = Date.now();
+                }
+                // Don't fire yet — still within tolerance
+              } else if (currentViolation === 'MULTIPLE_FACES') {
+                // Multiple faces: use existing consecutive-frame logic (no tolerance)
+                noFaceSinceTs = null;
                 if (violationsRef.type === currentViolation) {
                   violationsRef.count++;
                 } else {
                   violationsRef.type = currentViolation;
                   violationsRef.count = 1;
                 }
-
                 if (violationsRef.count >= 2) {
-                  onViolationRef.current(currentViolation as 'NO_FACE' | 'MULTIPLE_FACES');
+                  onViolationRef.current('MULTIPLE_FACES');
                   violationsRef.count = 0;
                 }
               } else {
+                // Face detected — reset all violation trackers
+                noFaceSinceTs = null;
                 violationsRef.type = '';
                 violationsRef.count = 0;
               }
             });
 
             await faceDetection.initialize();
+
+            // If calibration hasn't happened yet, signal readiness after timeout
+            // (fallback: don't block exam start forever if face detection is flaky)
+            const calibrationTimeout = setTimeout(() => {
+              if (!isCalibrated && isActiveRef.current) {
+                isCalibrated = true;
+                faceDetection.setOptions({
+                  model: 'short',
+                  minDetectionConfidence: 0.3
+                });
+                onFaceStatusRef.current?.('detected');
+                onCameraReadyRef.current?.();
+              }
+            }, 8000); // 8s fallback
 
             intervalRef.current = setInterval(async () => {
               if (!isActiveRef.current || !internalVideoRef.current || internalVideoRef.current.readyState < 2) return;
@@ -256,9 +329,21 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
                 // Silently ignore send errors
               }
             }, FACE_CHECK_INTERVAL);
+
+            // Cleanup calibration timeout alongside interval
+            const origCleanupInterval = intervalRef.current;
+            // Store calibration timeout for cleanup
+            (intervalRef as any)._calibrationTimeout = calibrationTimeout;
           } catch (fdErr) {
             console.warn('FaceDetection init failed, camera still active without face detection:', fdErr);
+            // Fire ready anyway so exam isn't blocked
+            onFaceStatusRef.current?.('detected');
+            onCameraReadyRef.current?.();
           }
+        } else {
+          // No FaceDetection available — fire ready
+          onFaceStatusRef.current?.('detected');
+          onCameraReadyRef.current?.();
         }
         
         // ── Object Detection (Phone) ──
@@ -278,14 +363,6 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
               }
             }, 5000); // Check for phone every 5 seconds to save battery
             
-            // Cleanup interval when component unmounts
-            const originalCleanup = stopCurrentStream;
-            const newCleanup = () => {
-              clearInterval(objectInterval);
-              originalCleanup();
-            };
-            // Update the effect's cleanup if we could, but here we just add to the ref
-            // Actually better to store it in a ref
             (intervalRef as any).currentObject = objectInterval;
           } catch (objErr) {
             console.warn('Object detection init failed:', objErr);
@@ -343,6 +420,13 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
 
       return () => {
         isActiveRef.current = false;
+        // Cleanup calibration timeout
+        if ((intervalRef as any)?._calibrationTimeout) {
+          clearTimeout((intervalRef as any)._calibrationTimeout);
+        }
+        if ((intervalRef as any)?.currentObject) {
+          clearInterval((intervalRef as any).currentObject);
+        }
         stopCurrentStream();
       };
     }, [setupCamera, stopCurrentStream]);
@@ -391,6 +475,9 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
 
     return (
       <div className="w-full h-full relative">
+        {/* Video element is kept for MediaPipe frame reading.
+            On mobile it's hidden via parent wrapper (1×1px / opacity hack).
+            On desktop, the parent shows the feed normally. */}
         <video
           ref={internalVideoRef}
           className="w-full h-full object-cover rounded-xl"

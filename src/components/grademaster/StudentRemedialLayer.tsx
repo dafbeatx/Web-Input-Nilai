@@ -164,6 +164,7 @@ export default function StudentRemedialLayer({
   const [examMode, setExamMode] = useState<'STRICT' | 'LIMITED'>('STRICT');
   const [cameraStatus, setCameraStatus] = useState<'ACTIVE' | 'FAILED'>('ACTIVE');
   const [isCameraActive, setIsCameraActive] = useState(true);
+  const [faceStatus, setFaceStatus] = useState<'calibrating' | 'detected' | 'not_detected'>('calibrating');
   const MAX_CAMERA_RETRIES = 5;
   
   const [warningCount, setWarningCount] = useState(0);
@@ -3155,11 +3156,21 @@ export default function StudentRemedialLayer({
         >
           {/* Mobile View Content */}
           <div className="flex flex-col gap-1.5 w-full md:hidden">
-            {/* Camera Active Row */}
+            {/* Camera + Face Status Row */}
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.7)]" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 font-outfit">
-                Kamera Aktif
+              <div className={`w-2 h-2 rounded-full animate-pulse ${
+                faceStatus === 'calibrating' ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.7)]' :
+                faceStatus === 'not_detected' ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.7)]' :
+                'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]'
+              }`} />
+              <span className={`text-[10px] font-black tracking-widest font-outfit ${
+                faceStatus === 'calibrating' ? 'text-blue-400' :
+                faceStatus === 'not_detected' ? 'text-amber-400' :
+                'text-emerald-400'
+              }`}>
+                {faceStatus === 'calibrating' ? 'Kamera aktif · Kalibrasi...' :
+                 faceStatus === 'not_detected' ? 'Kamera aktif · Wajah tidak terlihat' :
+                 'Kamera aktif · Mata terdeteksi'}
               </span>
             </div>
             
@@ -3197,6 +3208,7 @@ export default function StudentRemedialLayer({
                 onViolation={handleCameraViolation} 
                 onCameraError={handleCameraErrorDuringExam}
                 onCameraReady={handleCameraReadyDuringExam}
+                onFaceStatus={setFaceStatus}
               />
             </div>
             
