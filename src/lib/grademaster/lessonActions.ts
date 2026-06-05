@@ -43,16 +43,24 @@ export const publishLesson = async (lessonId: string) => {
  * This should eventually call a Supabase Edge Function or direct Gemini API.
  */
 export const generateAILessonContent = async (material: string, subject: string) => {
-  // Simulate AI Processing
-  // In reality, you'd fetch from /api/ai/generate
   console.log(`Generating AI lesson for ${subject} with content length: ${material.length}`);
   
+  const response = await fetch('/api/grademaster/lessons/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ material, subject })
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Gagal generate AI.');
+  }
+
   return {
-    preview: `Berhasil merangkum materi ${subject}. Fokus utama: Implementasi dan Pemahaman Konsep Dasar.`,
-    chatPrompt: `Halo! Saya asisten AI. Hari ini kita bahas ${subject}. Apa yang ingin kamu tanyakan?`,
-    questions: [
-      { text: "Jelaskan konsep utama dari materi ini!", type: 'essay' },
-      { text: "Apa hubungan antara variabel X dan Y?", type: 'mcq', options: ['A', 'B', 'C', 'D'], answer: 'B' }
-    ]
+    preview: data.preview,
+    chatPrompt: data.chatPrompt,
+    questions: data.questions
   };
 };

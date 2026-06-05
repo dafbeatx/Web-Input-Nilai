@@ -16,7 +16,8 @@ import {
   Loader2,
   Send,
   CloudUpload,
-  Bot
+  Bot,
+  RefreshCw
 } from 'lucide-react';
 import { DailyLesson, Quiz, ToastType } from '@/lib/grademaster/types';
 import { supabase } from '@/lib/supabase/client';
@@ -94,20 +95,21 @@ export default function LessonManagementLayer({
     fetchClasses();
   }, [schoolLevel, academicYear]);
 
-  // Placeholder AI Function
+  // AI Function using Groq
   const generateAILesson = async (content: string) => {
+    if (!subject) {
+      setToast({ message: "Pilih mata pelajaran terlebih dahulu", type: 'error' });
+      return;
+    }
     setIsGenerating(true);
     try {
       const result = await generateAILessonContent(content, subject);
-      // Simulate API Delay for premium feel
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
       setAiResult({
         preview: result.preview,
         chatPreview: result.chatPrompt,
         questions: result.questions
       });
-      setToast({ message: "AI berhasil mengolah materi pelajaran!", type: 'success' });
+      setToast({ message: "AI Groq berhasil merumuskan materi & kuis pelajaran!", type: 'success' });
     } catch (err: any) {
       setToast({ message: "Gagal generate AI: " + err.message, type: 'error' });
     } finally {
@@ -123,26 +125,55 @@ export default function LessonManagementLayer({
 
     setIsSaving(true);
     try {
-      await createLesson({
+      // 1. Save Lesson
+      const newLesson = await createLesson({
         class_name: selectedClass,
         subject,
         date,
         content: material,
-        ai_reading_preview: aiResult?.preview,
-        ai_chat_prompt: aiResult?.chatPreview,
+        ai_reading_preview: aiResult?.preview || '',
+        ai_chat_prompt: aiResult?.chatPreview || '',
         is_published: publish
       });
 
+      // 2. Save linked Quiz if questions exist
+      if (newLesson && aiResult?.questions && aiResult.questions.length > 0) {
+        const formattedQuestions = aiResult.questions.map((q: any) => ({
+          question: q.text || q.question || "",
+          text: q.text || q.question || "",
+          options: q.options || [],
+          correctAnswer: q.answer || q.correctAnswer || "",
+          answer: q.answer || q.correctAnswer || "",
+          type: q.type || 'mcq'
+        }));
+
+        const { error: quizError } = await supabase
+          .from('quizzes')
+          .insert({
+            lesson_id: newLesson.id,
+            title: `Kuis Evaluasi - ${subject}`,
+            quiz_type: 'DAILY',
+            duration_minutes: 15,
+            questions: formattedQuestions
+          });
+
+        if (quizError) {
+          console.error("Failed to save quiz:", quizError);
+          setToast({ message: "Pelajaran disimpan, namun gagal menyimpan kuis AI: " + quizError.message, type: 'error' });
+          setIsSaving(false);
+          return;
+        }
+      }
+
       setToast({ 
-        message: publish ? "Pelajaran berhasil dipublikasikan ke siswa!" : "Pelajaran berhasil disimpan!", 
+        message: publish ? "Pelajaran & Kuis AI berhasil dipublikasikan ke siswa!" : "Pelajaran & Kuis AI berhasil disimpan!", 
         type: 'success' 
       });
-      // Reset form if published
-      if (publish) {
-        setSubject('');
-        setMaterial('');
-        setAiResult(null);
-      }
+
+      // Reset form if successfully saved/published
+      setSubject('');
+      setMaterial('');
+      setAiResult(null);
     } catch (err: any) {
       setToast({ message: "Gagal menyimpan: " + err.message, type: 'error' });
     } finally {
@@ -294,9 +325,17 @@ export default function LessonManagementLayer({
               ) : (
                 <div className="bg-slate-900 rounded-[32px] p-8 shadow-2xl animate-in zoom-in-95 duration-500 flex flex-col h-full ring-1 ring-white/10">
                   <div className="flex items-center justify-between mb-8">
-                     <span className="px-4 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-500/30 flex items-center gap-2">
-                       <Bot size={12} /> AI Engine Active
-                     </span>
+                     <div className="flex items-center gap-2">
+                       <span className="px-4 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-500/30 flex items-center gap-2">
+                         <Bot size={12} /> AI Engine Active
+                       </span>
+                       <button
+                         onClick={() => generateAILesson(material)}
+                         className="flex items-center gap-1.5 px-3 py-1 bg-white/5 hover:bg-white/10 active:scale-95 text-emerald-400 border border-white/10 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all"
+                       >
+                         <RefreshCw size={12} /> Regenerate
+                       </button>
+                     </div>
                      <Sparkles className="text-emerald-500" size={20} />
                   </div>
 
@@ -306,9 +345,11 @@ export default function LessonManagementLayer({
                       <h4 className="text-emerald-400 text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2">
                         <FileText size={14} /> Preview Materi
                       </h4>
-                      <p className="text-slate-300 text-sm leading-relaxed bg-white/5 border border-white/5 p-5 rounded-2xl">
-                        {aiResult.preview}
-                      </p>
+                      <textarea
+                        value={aiResult.preview}
+                        onChange={(e) => setAiResult({ ...aiResult, preview: e.target.value })}
+                        className="w-full min-h-[140px] bg-white/5 border border-white/10 rounded-2xl p-4 text-slate-300 text-xs leading-relaxed outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all resize-y"
+                      />
                     </section>
 
                     {/* Chat Preview */}
@@ -316,21 +357,11 @@ export default function LessonManagementLayer({
                       <h4 className="text-emerald-400 text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2">
                         <MessageSquare size={14} /> AI Chat Assistant
                       </h4>
-                      <div className="bg-white/5 rounded-2xl p-4 border border-white/5 space-y-4">
-                         <div className="flex items-start gap-3">
-                           <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center shrink-0">
-                             <Bot size={16} className="text-white" />
-                           </div>
-                           <div className="bg-white/10 p-3 rounded-2xl rounded-tl-none text-xs text-white max-w-[80%] leading-relaxed">
-                             {aiResult.chatPreview}
-                           </div>
-                         </div>
-                         <div className="flex justify-end pr-2">
-                            <div className="bg-emerald-500/20 p-3 rounded-2xl rounded-tr-none text-xs text-emerald-400 max-w-[80%] border border-emerald-500/20 italic font-medium">
-                              (Jawaban Siswa Akan Muncul di Sini)
-                            </div>
-                         </div>
-                      </div>
+                      <textarea
+                        value={aiResult.chatPreview}
+                        onChange={(e) => setAiResult({ ...aiResult, chatPreview: e.target.value })}
+                        className="w-full min-h-[100px] bg-white/5 border border-white/10 rounded-2xl p-4 text-slate-300 text-xs leading-relaxed outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all resize-y"
+                      />
                     </section>
 
                     {/* Questions Preview */}
@@ -338,14 +369,72 @@ export default function LessonManagementLayer({
                       <h4 className="text-emerald-400 text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2">
                         <History size={14} /> Daftar Soal ({aiResult.questions.length})
                       </h4>
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         {aiResult.questions.map((q, i) => (
-                          <div key={q.id} className="bg-white/5 p-4 rounded-xl flex items-start gap-3 border border-white/5 group hover:bg-white/10 transition-colors">
-                            <span className="w-6 h-6 bg-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">{i+1}</span>
-                            <div className="flex-1">
-                              <p className="text-slate-200 text-xs font-bold leading-relaxed">{q.text}</p>
-                              <span className="text-[9px] text-slate-500 uppercase font-black mt-2 block tracking-widest">{q.type === 'mcq' ? 'PILIHAN GANDA' : 'ESSAY'}</span>
+                          <div key={i} className="bg-white/5 p-4 rounded-xl space-y-3 border border-white/5 group hover:bg-white/10 transition-colors">
+                            <div className="flex items-start gap-3">
+                              <span className="w-6 h-6 bg-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">{i+1}</span>
+                              <div className="flex-1">
+                                <textarea
+                                  value={q.text || q.question}
+                                  onChange={(e) => {
+                                    const updatedQs = [...aiResult.questions];
+                                    updatedQs[i] = { ...q, text: e.target.value, question: e.target.value };
+                                    setAiResult({ ...aiResult, questions: updatedQs });
+                                  }}
+                                  className="w-full bg-transparent text-slate-200 text-xs font-bold leading-relaxed border-b border-white/10 focus:border-emerald-500/50 pb-1 outline-none resize-none"
+                                  rows={2}
+                                />
+                                <span className="text-[9px] text-slate-500 uppercase font-black mt-2 block tracking-widest">{q.type === 'mcq' ? 'PILIHAN GANDA' : 'ESSAY'}</span>
+                              </div>
                             </div>
+
+                            {/* MCQ options editing */}
+                            {q.type === 'mcq' && q.options && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-9 pt-1">
+                                {q.options.map((opt: string, optIdx: number) => (
+                                  <div key={optIdx} className="flex gap-2 items-center bg-white/5 rounded-lg border border-white/10 px-2.5 py-1.5 focus-within:border-emerald-500/30 transition-colors">
+                                    <span className="text-[9px] font-black text-slate-500">{String.fromCharCode(65 + optIdx)}</span>
+                                    <input
+                                      type="text"
+                                      value={opt}
+                                      onChange={(e) => {
+                                        const updatedQs = [...aiResult.questions];
+                                        const updatedOpts = [...(q.options || [])];
+                                        updatedOpts[optIdx] = e.target.value;
+                                        let updatedAns = q.answer || q.correctAnswer;
+                                        if ((q.answer || q.correctAnswer) === opt) {
+                                          updatedAns = e.target.value;
+                                        }
+                                        updatedQs[i] = { ...q, options: updatedOpts, answer: updatedAns, correctAnswer: updatedAns };
+                                        setAiResult({ ...aiResult, questions: updatedQs });
+                                      }}
+                                      className="bg-transparent text-[11px] text-slate-300 outline-none w-full border-none p-0 focus:ring-0"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* MCQ correct answer selector */}
+                            {q.type === 'mcq' && q.options && (
+                              <div className="pl-9 flex items-center gap-2">
+                                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Kunci Jawaban:</span>
+                                <select
+                                  value={q.answer || q.correctAnswer}
+                                  onChange={(e) => {
+                                    const updatedQs = [...aiResult.questions];
+                                    updatedQs[i] = { ...q, answer: e.target.value, correctAnswer: e.target.value };
+                                    setAiResult({ ...aiResult, questions: updatedQs });
+                                  }}
+                                  className="bg-slate-800 border border-white/10 text-emerald-400 text-[10px] font-bold rounded-lg px-2 py-1 outline-none cursor-pointer focus:ring-1 focus:ring-emerald-500"
+                                >
+                                  {q.options.map((opt: string) => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
