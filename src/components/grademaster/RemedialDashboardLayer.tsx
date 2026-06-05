@@ -31,6 +31,8 @@ interface RemedialDashboardLayerProps {
   activeSessionId?: string;
   onSessionSelect?: (session: SessionMeta) => void;
   onRefresh?: () => void;
+  onDeleteSession?: (id: string, name: string) => Promise<void>;
+  onClearActiveSession?: () => void;
 }
 
 export default function RemedialDashboardLayer({
@@ -54,7 +56,9 @@ export default function RemedialDashboardLayer({
   sessions = [],
   activeSessionId,
   onSessionSelect,
-  onRefresh
+  onRefresh,
+  onDeleteSession,
+  onClearActiveSession
 }: RemedialDashboardLayerProps) {
   const { isAdmin, studentClass: contextClass, studentData } = useGradeMaster();
   const displayClass = studentClass || contextClass || (studentData && studentData.class_name) || "N/A";
@@ -89,6 +93,24 @@ export default function RemedialDashboardLayer({
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isExtending, setIsExtending] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [openEditorOnLoad, setOpenEditorOnLoad] = useState(false);
+
+  // Auto-open editor once the selected session is loaded
+  React.useEffect(() => {
+    if (activeSessionId && openEditorOnLoad) {
+      setIsEditing(true);
+      setOpenEditorOnLoad(false);
+    }
+  }, [activeSessionId, openEditorOnLoad]);
+
+  // Sync local config values when active session is updated
+  React.useEffect(() => {
+    setLocalTimer(remedialTimer);
+  }, [remedialTimer]);
+
+  React.useEffect(() => {
+    setLocalDeadline(scoringConfig.remedialDeadline || "");
+  }, [scoringConfig.remedialDeadline]);
 
   const [aiForensicResult, setAiForensicResult] = useState<Record<string, any>>({});
   const [forensicLoading, setForensicLoading] = useState<string | null>(null);
@@ -194,6 +216,21 @@ export default function RemedialDashboardLayer({
   }, [activeSessionId]);
 
   // Stats Logic
+  const filteredSessions = useMemo(() => {
+    if (!searchQuery) return sessions;
+    const q = searchQuery.toLowerCase();
+    return sessions.filter(s => 
+      s.session_name.toLowerCase().includes(q) ||
+      (s.subject && s.subject.toLowerCase().includes(q)) ||
+      (s.class_name && s.class_name.toLowerCase().includes(q))
+    );
+  }, [sessions, searchQuery]);
+
+  const handleEditSession = (session: SessionMeta) => {
+    setOpenEditorOnLoad(true);
+    onSessionSelect?.(session);
+  };
+
   const remedialStudents = useMemo(() => {
     return gradedStudents.filter(s => 
       s.remedialStatus && s.remedialStatus !== 'NONE' && !deletedIds.includes(s.id)
@@ -356,6 +393,16 @@ export default function RemedialDashboardLayer({
         
         {/* Editorial Header & Session Picker */}
         <section className="flex flex-col gap-4">
+          {activeSessionId && (
+            <button 
+              onClick={() => onClearActiveSession?.()}
+              className="self-start flex items-center gap-2 px-4 py-2 bg-surface-container hover:bg-surface-container-high border border-outline-variant/20 rounded-xl text-on-surface-variant hover:text-primary transition-all text-xs font-bold font-outfit tracking-wide"
+            >
+              <span className="material-symbols-outlined text-sm font-black">arrow_back</span>
+              Kembali ke Daftar Sesi
+            </button>
+          )}
+
           <div className="space-y-3">
             <span className="font-label text-[10px] uppercase tracking-[0.15em] text-tertiary-dim font-black">Data Management</span>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -420,11 +467,15 @@ export default function RemedialDashboardLayer({
 
         {/* Dynamic Stats Cards */}
         <section className="grid grid-cols-3 gap-3">
-          {[
+          {(!activeSessionId ? [
+            { label: 'Total Sesi', value: sessions.length, color: 'text-primary' },
+            { label: 'Telah Dikonfigurasi', value: sessions.filter(s => (s.scoring_config?.remedialQuestions?.length || 0) > 0).length, color: 'text-emerald-500' },
+            { label: 'Belum Dikonfigurasi', value: sessions.filter(s => !(s.scoring_config?.remedialQuestions?.length || 0)).length, color: 'text-amber-500' },
+          ] : [
             { label: 'Total', value: stats.total, color: 'text-primary' },
-            { label: 'Antrean', value: stats.waitingReview, color: 'text-tertiary-dim' },
+            { label: 'Antrean', value: stats.waitingReview, color: 'text-slate-400' },
             { label: 'Isu', value: stats.issue, color: 'text-error' },
-          ].map(st => (
+          ]).map(st => (
             <div key={st.label} className="bg-surface-container p-4 rounded-3xl flex flex-col gap-1 items-center border border-white/[0.03] shadow-sm">
               <span className={`text-3xl font-headline font-black ${st.color}`}>{st.value}</span>
               <span className="font-label text-[9px] uppercase tracking-[0.15em] text-on-surface-variant/60 font-black">{st.label}</span>
@@ -437,7 +488,7 @@ export default function RemedialDashboardLayer({
           <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-tertiary transition-colors">search</span>
           <input 
             type="text"
-            placeholder="Cari nama siswa..."
+            placeholder={activeSessionId ? "Cari nama siswa..." : "Cari sesi remedial (mata pelajaran, kelas, dll)..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             disabled={!isAdmin}
@@ -445,17 +496,111 @@ export default function RemedialDashboardLayer({
           />
         </div>
 
-        {/* Student List Section */}
+        {/* Main Content List Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           {!activeSessionId ? (
-            <div className="lg:col-span-2 flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-outline-variant/30 rounded-3xl bg-surface-container-lowest">
-               <div className="w-16 h-16 rounded-3xl bg-surface-container-high text-on-surface-variant flex items-center justify-center mb-6">
-                 <span className="material-symbols-outlined text-4xl">inventory_2</span>
-               </div>
-               <h3 className="font-headline text-lg font-bold text-on-surface mb-2 uppercase tracking-tight">Pilih Sesi Ujian</h3>
-               <p className="text-on-surface-variant/70 text-[11px] font-bold max-w-[250px] leading-relaxed uppercase tracking-widest">
-                 Pilih kelas dan sesi ujian dari dropdown di atas untuk mengelola data remedial.
-               </p>
+            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+              {filteredSessions.length === 0 ? (
+                <div className="md:col-span-2 flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-outline-variant/30 rounded-3xl bg-surface-container-lowest animate-in fade-in duration-300">
+                  <div className="w-16 h-16 rounded-3xl bg-surface-container-high text-on-surface-variant flex items-center justify-center mb-6">
+                    <span className="material-symbols-outlined text-4xl">inventory_2</span>
+                  </div>
+                  <h3 className="font-headline text-lg font-bold text-on-surface mb-2 uppercase tracking-tight">Data Sesi Kosong</h3>
+                  <p className="text-on-surface-variant/70 text-[11px] font-bold max-w-[250px] leading-relaxed uppercase tracking-widest">
+                    Belum ada sesi ujian yang cocok dengan filter atau pencarian Anda.
+                  </p>
+                </div>
+              ) : (
+                filteredSessions.map((session) => {
+                  const qCount = session.scoring_config?.remedialQuestions?.length || 0;
+                  const isConfigured = qCount > 0;
+                  
+                  return (
+                    <div 
+                      key={session.id}
+                      className="bg-surface-container border border-white/[0.03] hover:border-tertiary/10 rounded-[28px] p-6 flex flex-col justify-between gap-6 transition-all duration-300 group hover:shadow-lg hover:bg-surface-container-high animate-in fade-in slide-in-from-bottom-2 duration-300"
+                    >
+                      {/* Top Row: Session Title and Status Badge */}
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40 leading-none">
+                              {session.academic_year || "2025/2026"} • Sem. {session.semester || "Ganjil"}
+                            </span>
+                            <h4 className="font-headline font-bold text-base text-primary uppercase tracking-tight mt-1 truncate group-hover:text-tertiary transition-colors">
+                              {session.session_name}
+                            </h4>
+                          </div>
+                          <div className={`shrink-0 px-2.5 py-1 rounded-xl border text-[9px] font-black uppercase tracking-widest leading-none ${
+                            isConfigured 
+                              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' 
+                              : 'bg-amber-500/10 border-amber-500/20 text-amber-500'
+                          }`}>
+                            {isConfigured ? 'Telah Dikonfigurasi' : 'Belum Dikonfigurasi'}
+                          </div>
+                        </div>
+
+                        {/* Middle Row: Meta Information (Subject, Class, Timer) */}
+                        <div className="grid grid-cols-2 gap-3 pt-2">
+                          <div className="bg-surface-container-low p-3 rounded-2xl flex items-center gap-2.5">
+                            <span className="material-symbols-outlined text-tertiary-dim text-base">book</span>
+                            <div className="min-w-0">
+                              <p className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/40 leading-none mb-1">Mata Pelajaran / Kelas</p>
+                              <p className="text-[10px] font-bold text-on-surface-variant truncate">
+                                {session.subject} ({session.class_name})
+                              </p>
+                            </div>
+                          </div>
+                          <div className="bg-surface-container-low p-3 rounded-2xl flex items-center gap-2.5">
+                            <span className="material-symbols-outlined text-tertiary-dim text-base">hourglass_empty</span>
+                            <div className="min-w-0">
+                              <p className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/40 leading-none mb-1">Durasi / Jumlah Soal</p>
+                              <p className="text-[10px] font-bold text-on-surface-variant">
+                                {session.remedial_timer || 15} Menit • {qCount} Soal
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Deadline info */}
+                        {session.scoring_config?.remedialDeadline && (
+                          <div className="flex items-center gap-1.5 px-3 py-2 bg-error/5 border border-error/10 text-error rounded-xl text-[10px] font-bold">
+                            <span className="material-symbols-outlined text-[12px]">alarm</span>
+                            <span>Tenggat: {new Date(session.scoring_config.remedialDeadline).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Bottom Row: Actions */}
+                      <div className="flex items-center gap-2.5 pt-2 border-t border-white/[0.03]">
+                        <button
+                          onClick={() => onSessionSelect?.(session)}
+                          className="flex-1 h-11 bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/30 text-primary rounded-xl font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
+                        >
+                          <span className="material-symbols-outlined text-base">visibility</span>
+                          Lihat Detail
+                        </button>
+                        
+                        <button
+                          onClick={() => handleEditSession(session)}
+                          className="flex-1 h-11 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
+                        >
+                          <span className="material-symbols-outlined text-base">edit</span>
+                          Edit Soal
+                        </button>
+                        
+                        <button
+                          onClick={() => onDeleteSession?.(session.id, session.session_name)}
+                          className="h-11 px-4 bg-error/10 hover:bg-error/20 text-error border border-error/20 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center"
+                          title="Hapus Sesi Ujian"
+                        >
+                          <span className="material-symbols-outlined text-base">delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           ) : remedialStudents.length === 0 ? (
             <div className="lg:col-span-2 flex flex-col items-center justify-center py-16 text-center">
@@ -858,39 +1003,41 @@ export default function RemedialDashboardLayer({
       </main>
 
       {/* Sticky Bottom Actions */}
-      <div className="fixed bottom-0 w-full z-40 px-6 pb-6 pt-4 bg-gradient-to-t from-surface via-surface/90 to-transparent pointer-events-none">
-         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 flex flex-col md:flex-row gap-3 pointer-events-auto items-center">
-            <div className="flex gap-3 w-full md:w-auto flex-1">
+      {activeSessionId && (
+        <div className="fixed bottom-0 w-full z-40 px-6 pb-6 pt-4 bg-gradient-to-t from-surface via-surface/90 to-transparent pointer-events-none">
+           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 flex flex-col md:flex-row gap-3 pointer-events-auto items-center">
+              <div className="flex gap-3 w-full md:w-auto flex-1">
+                <button 
+                  onClick={() => setIsEditing(true)}
+                  disabled={!activeSessionId}
+                  className="flex-1 h-14 bg-gradient-to-br from-[#f9f9f9] to-[#a0a1a1] text-on-primary-container rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 premium-shadow active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale"
+                >
+                  <span className="material-symbols-outlined">auto_fix_high</span>
+                  Atur Soal
+                </button>
+                <button 
+                  onClick={generateAndCopyPendingList}
+                  disabled={!activeSessionId || isEditing}
+                  className={`flex-1 h-14 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50 premium-shadow ${
+                    copied 
+                      ? 'bg-tertiary text-on-tertiary' 
+                      : 'bg-surface-container border-2 border-error/40 text-error hover:bg-error/10'
+                  }`}
+                >
+                  <span className="material-symbols-outlined">{copied ? 'check_circle' : 'content_copy'}</span>
+                  {copied ? 'Tersalin' : 'Tagih Siswa'}
+                </button>
+              </div>
               <button 
-                onClick={() => setIsEditing(true)}
-                disabled={!activeSessionId}
-                className="flex-1 h-14 bg-gradient-to-br from-[#f9f9f9] to-[#a0a1a1] text-on-primary-container rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 premium-shadow active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale"
+                onClick={onBack}
+                className="w-full md:w-auto px-6 py-4 text-on-surface-variant/70 hover:text-primary transition-colors text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 bg-surface-container hover:bg-surface-container-high rounded-2xl"
               >
-                <span className="material-symbols-outlined">auto_fix_high</span>
-                Atur Soal
+                 <span className="material-symbols-outlined text-sm">arrow_back</span>
+                 Menu Utama
               </button>
-              <button 
-                onClick={generateAndCopyPendingList}
-                disabled={!activeSessionId || isEditing}
-                className={`flex-1 h-14 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50 premium-shadow ${
-                  copied 
-                    ? 'bg-tertiary text-on-tertiary' 
-                    : 'bg-surface-container border-2 border-error/40 text-error hover:bg-error/10'
-                }`}
-              >
-                <span className="material-symbols-outlined">{copied ? 'check_circle' : 'content_copy'}</span>
-                {copied ? 'Tersalin' : 'Tagih Siswa'}
-              </button>
-            </div>
-            <button 
-              onClick={onBack}
-              className="w-full md:w-auto px-6 py-4 text-on-surface-variant/70 hover:text-primary transition-colors text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 bg-surface-container hover:bg-surface-container-high rounded-2xl"
-            >
-               <span className="material-symbols-outlined text-sm">arrow_back</span>
-               Menu Utama
-            </button>
-         </div>
-      </div>
+           </div>
+        </div>
+      )}
 
       {/* Premium Slide-Up Sheet for Editor */}
       {isEditing && (

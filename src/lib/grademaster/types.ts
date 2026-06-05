@@ -99,6 +99,7 @@ export interface SessionMeta {
   student_count?: number;
   is_public: boolean;
   is_demo?: boolean;
+  scoring_config?: ScoringConfig;
 }
 
 export interface QuestionDifficulty {

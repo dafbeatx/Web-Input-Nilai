@@ -204,7 +204,7 @@ export async function POST(req: NextRequest) {
       if (!name && !password) {
         let query = supabaseAdmin
           .from('gm_sessions')
-          .select('id, session_name, teacher, subject, class_name, school_level, exam_type, academic_year, updated_at, kkm, remedial_essay_count, remedial_timer, is_public, is_demo')
+          .select('id, session_name, teacher, subject, class_name, school_level, exam_type, academic_year, updated_at, kkm, remedial_essay_count, remedial_timer, is_public, is_demo, scoring_config')
           .order('updated_at', { ascending: false });
 
         // Hide demo sessions from non-admin users (students see real sessions only)
@@ -224,7 +224,13 @@ export async function POST(req: NextRequest) {
               .from('gm_students')
               .select('*', { count: 'exact', head: true })
               .eq('session_id', s.id);
-            return { ...s, student_count: count || 0 };
+            
+            let parsedConfig = s.scoring_config;
+            if (typeof parsedConfig === 'string') {
+              try { parsedConfig = JSON.parse(parsedConfig); } catch (e) {}
+            }
+            
+            return { ...s, student_count: count || 0, scoring_config: parsedConfig };
           } catch (err) {
             console.error(`Error fetching student count for session ${s.id}:`, err);
             return { ...s, student_count: 0 };

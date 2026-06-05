@@ -562,6 +562,81 @@ export default function GradeMaster() {
     }
   };
 
+  const handleLoadSessionDirectly = async (name: string) => {
+    setIsUpdatingQuestions(true);
+    try {
+      const res = await fetch(`/api/grademaster?name=${encodeURIComponent(name)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setSessionId(data.sessionId || "");
+      setSessionName(data.sessionName);
+      setTeacherName(data.teacher || "");
+      setSubject(data.subject || "");
+      setStudentClass(data.className || "");
+      setSchoolLevel(data.schoolLevel || "SMA");
+      setExamType(data.examType || "UTS");
+      setAcademicYear(data.academicYear || "2025/2026");
+      setSemester(data.semester || "Ganjil");
+      setStudentList(data.studentList || []);
+      setGradedStudents(data.gradedStudents || []);
+      setKkm(data.kkm || 70);
+      setRemedialEssayCount(data.remedialEssayCount || 5);
+      setRemedialTimer(data.remedialTimer || 15);
+      const questions = data.scoringConfig?.remedialQuestions || [];
+      setRemedialQuestions(questions);
+      setRemedialQuestionsInput(formatEssayQuestions(questions));
+      const ansKeys = data.scoringConfig?.remedialAnswerKeys || [];
+      setRemedialAnswerKeys(ansKeys);
+      setRemedialAnswerKeysInput(formatEssayQuestions(ansKeys));
+      setApiQuestionDifficulties(data.questionDifficulties || []);
+      setIsSessionPublic(data.isPublic);
+      setIsDemo(data.isDemo === true);
+      setShowRemedialButton(!!data.showRemedialButton);
+      setIsPublicView(false); // Enable full operations for admin
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal memuat sesi";
+      setToast({ message: msg, type: "error" });
+    } finally {
+      setIsUpdatingQuestions(false);
+    }
+  };
+
+  const handleAdminDeleteSession = async (id: string, name: string) => {
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus sesi "${name}" beserta seluruh data nilai dan remedial siswa? Tindakan ini tidak dapat dibatalkan.`)) {
+      return;
+    }
+    setIsUpdatingQuestions(true);
+    try {
+      const res = await fetch("/api/grademaster", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: id,
+          sessionName: name,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setToast({ message: data.message || "Sesi berhasil dihapus!", type: "success" });
+      
+      // Clear current active session if it's the deleted one
+      if (sessionId === id) {
+        setSessionId("");
+        setSessionName("");
+        setGradedStudents([]);
+      }
+      
+      // Refresh sessions list
+      await fetchSessions();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal menghapus sesi";
+      setToast({ message: msg, type: "error" });
+    } finally {
+      setIsUpdatingQuestions(false);
+    }
+  };
+
   const handleLoadPublicSession = async (name?: string) => {
     const targetName = name || sessionName.trim();
     if (!targetName) {
@@ -1181,13 +1256,12 @@ export default function GradeMaster() {
           isSaving={isUpdatingQuestions}
           sessions={sessions}
           activeSessionId={sessionId}
-          onSessionSelect={(session) => {
-            if (isAdmin) {
-              setSessionName(session.session_name);
-              setModal("load");
-            } else {
-              handleLoadPublicSession(session.session_name);
-            }
+          onSessionSelect={(session) => handleLoadSessionDirectly(session.session_name)}
+          onDeleteSession={handleAdminDeleteSession}
+          onClearActiveSession={() => {
+            setSessionId("");
+            setSessionName("");
+            setGradedStudents([]);
           }}
           onRefresh={refreshSessionData}
         />
