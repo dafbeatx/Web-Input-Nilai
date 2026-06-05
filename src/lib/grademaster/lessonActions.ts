@@ -38,15 +38,15 @@ export const publishLesson = async (lessonId: string) => {
   return data?.[0];
 };
 
-export const generateAILessonContent = async (material: string, subject: string) => {
-  console.log(`Generating AI lesson for ${subject} with content length: ${material.length}`);
+export const generateAILessonContent = async (material: string, subject: string, mode: 'daily' | 'quiz' | 'notebook') => {
+  console.log(`Generating AI lesson for ${subject} with mode: ${mode}, content length: ${material.length}`);
   
   const response = await fetch('/api/grademaster/lessons/generate', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ material, subject })
+    body: JSON.stringify({ material, subject, mode })
   });
 
   const data = await response.json();

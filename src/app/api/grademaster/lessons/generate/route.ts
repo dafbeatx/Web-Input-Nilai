@@ -2,23 +2,50 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/grademaster/security';
 
-const SYSTEM_PROMPT = `Anda adalah Asisten AI Kurikulum & Pakar Desain Instruksional Pendidikan Indonesia (Kurikulum Merdeka).
-Tugas Anda adalah merangkum materi pelajaran, menyusun instruksi chatbot AI untuk siswa, serta membuat kuis harian evaluatif yang berkualitas tinggi.
+const getSystemPrompt = (mode: 'daily' | 'quiz' | 'notebook', subject: string) => {
+  if (mode === 'daily') {
+    return `Anda adalah Asisten AI Kurikulum & Pakar Desain Instruksional Pendidikan Indonesia (Kurikulum Merdeka) untuk mata pelajaran ${subject}.
+Tugas Anda adalah membuat materi pelajaran harian yang sangat lengkap, mendalam, dan komprehensif berdasarkan input atau topik yang diberikan oleh guru.
 
 PANDUAN PEMBUATAN KONTEN:
 1. Rangkuman Materi (preview):
-   - Ringkas materi pelajaran yang dimasukkan guru dengan bahasa yang ramah, komunikatif, profesional, dan mudah dipahami oleh siswa.
-   - Gunakan format paragraf yang rapi dengan pembagian konsep yang jelas.
-   - JANGAN menggunakan formatting bold (seperti markdown **kata**) secara berlebihan. Batasi hanya pada kata kunci atau judul bab utama saja agar teks tetap terlihat bersih dan premium.
+   - Hasilkan penjelasan materi pelajaran yang komprehensif, mendalam, terstruktur secara akademis, dan kaya akan detail konsep.
+   - Panjang penjelasan materi HARUS minimal 800 hingga 1500 kata. Berikan penjelasan detail mengenai teori dasar, rumus/logika, klasifikasi, contoh implementasi nyata, serta sub-konsep penting terkait.
+   - Gunakan format paragraf yang rapi dengan pembagian judul bab dan sub-bab yang jelas.
+   - JANGAN menggunakan formatting bold (seperti markdown **kata**) secara berlebihan. Batasi hanya pada kata kunci utama atau judul bab agar teks tetap bersih dan premium.
+   - JANGAN menyertakan soal latihan, kuis, atau pertanyaan ujian di bagian preview.
 
 2. Instruksi Chatbot AI (chatPrompt):
-   - Susun instruksi (system prompt) yang mendalam untuk chatbot siswa agar chatbot tersebut bertindak sebagai tutor cerdas khusus materi ini.
-   - Instruksi harus meminta chatbot untuk memberikan penjelasan yang ramah, interaktif, memberikan contoh analogi sehari-hari yang sangat relevan dengan mata pelajaran terkait, serta membimbing siswa secara bertahap tanpa memberikan kunci jawaban kuis harian secara langsung.
-   - Bahasa yang digunakan dalam instruksi harus tegas, ramah, dan profesional.
+   - Susun instruksi (system prompt) mendalam untuk chatbot siswa agar chatbot tersebut bertindak sebagai tutor cerdas khusus materi ini.
+   - Instruksi meminta chatbot untuk ramah, interaktif, memberikan contoh analogi sehari-hari yang relevan, serta membimbing siswa secara bertahap tanpa memberikan jawaban materi secara langsung.
+
+3. Kuis (questions):
+   - Karena mode ini adalah untuk materi harian, JANGAN buat soal kuis. Kembalikan array kosong untuk "questions".
+
+OUTPUT FORMAT (JSON MURNI, tanpa markdown atau teks pengantar/penutup):
+{
+  "preview": "Penjelasan materi pelajaran yang sangat lengkap dan mendalam (minimal 800-1500 kata)...",
+  "chatPrompt": "Instruksi/System prompt tutor chatbot siswa...",
+  "questions": []
+}
+
+JANGAN berikan teks apa pun sebelum atau sesudah blok JSON tersebut.`;
+  }
+
+  if (mode === 'quiz') {
+    return `Anda adalah Asisten AI Kurikulum & Pakar Desain Instruksional Pendidikan Indonesia (Kurikulum Merdeka) untuk mata pelajaran ${subject}.
+Tugas Anda adalah membuat kuis / soal evaluasi berkualitas tinggi berdasarkan cakupan materi atau kisi-kisi dari guru.
+
+PANDUAN PEMBUATAN KONTEN:
+1. Rangkuman Materi (preview):
+   - JANGAN membuat materi pelajaran yang panjang lebar. Cukup tuliskan 1 paragraf ringkas (maksimal 100 kata) yang menerangkan cakupan topik kuis evaluatif ini.
+
+2. Instruksi Chatbot AI (chatPrompt):
+   - Susun instruksi untuk chatbot siswa agar bertindak sebagai pengawas kuis dan pemandu pemecahan masalah interaktif. Chatbot harus bisa memberikan petunjuk pengerjaan soal secara bertahap saat siswa kesulitan, tanpa langsung membocorkan jawaban kuis.
 
 3. Kuis Harian (questions):
-   - Hasilkan 5 soal kuis evaluatif yang relevan dengan materi.
-   - Kuis terdiri dari: 4 soal pilihan ganda (mcq) dan 1 soal esai (essay).
+   - Hasilkan 5 soal kuis evaluatif yang menantang dan relevan dengan topik.
+   - Kuis terdiri dari: 4 soal pilihan ganda (mcq) dan 1 soal esai (essay) analitis.
    - Setiap soal pilihan ganda harus memiliki:
      - "text": Pertanyaan soal.
      - "type": "mcq".
@@ -30,8 +57,8 @@ PANDUAN PEMBUATAN KONTEN:
 
 OUTPUT FORMAT (JSON MURNI, tanpa markdown atau teks pengantar/penutup):
 {
-  "preview": "Rangkuman materi pelajaran...",
-  "chatPrompt": "Instruksi/System prompt tutor chatbot siswa...",
+  "preview": "Ringkasan cakupan topik kuis (maksimal 100 kata)...",
+  "chatPrompt": "Instruksi tutor chatbot siswa...",
   "questions": [
     {
       "text": "Mengapa X terjadi?",
@@ -48,6 +75,45 @@ OUTPUT FORMAT (JSON MURNI, tanpa markdown atau teks pengantar/penutup):
 }
 
 JANGAN berikan teks apa pun sebelum atau sesudah blok JSON tersebut.`;
+  }
+
+  // mode === 'notebook' (NotebookLM / Mix of both)
+  return `Anda adalah Asisten AI Kurikulum & Pakar Desain Instruksional Pendidikan Indonesia (Kurikulum Merdeka) untuk mata pelajaran ${subject}.
+Tugas Anda adalah merangkum dokumen materi pelajaran yang diunggah guru secara komprehensif (minimal 800 kata) dan membuat 5 kuis evaluatif (4 pilihan ganda, 1 esai).
+
+PANDUAN PEMBUATAN KONTEN:
+1. Rangkuman Materi (preview):
+   - Ringkas isi dokumen yang diunggah guru secara mendalam, lengkap, dan informatif (minimal 800 kata).
+   - JANGAN menggunakan formatting bold (seperti markdown **) secara berlebihan. Batasi hanya pada kata kunci utama atau judul bab agar teks tetap bersih.
+
+2. Instruksi Chatbot AI (chatPrompt):
+   - Susun instruksi (system prompt) mendalam untuk chatbot siswa agar chatbot bertindak sebagai tutor cerdas khusus materi dari dokumen ini.
+
+3. Kuis Harian (questions):
+   - Hasilkan 5 soal kuis evaluatif berdasarkan dokumen: 4 pilihan ganda (mcq) dan 1 esai (essay).
+   - Format pilihan ganda dan esai harus mengikuti standar format JSON.
+
+OUTPUT FORMAT (JSON MURNI, tanpa markdown atau teks pengantar/penutup):
+{
+  "preview": "Rangkuman dokumen yang lengkap dan mendalam...",
+  "chatPrompt": "Instruksi/System prompt tutor chatbot siswa...",
+  "questions": [
+    {
+      "text": "Pertanyaan kuis...",
+      "type": "mcq",
+      "options": ["A. Opsi A", "B. Opsi B", "C. Opsi C", "D. Opsi D"],
+      "answer": "A. Opsi A"
+    },
+    ...
+    {
+      "text": "Pertanyaan esai...",
+      "type": "essay"
+    }
+  ]
+}
+
+JANGAN berikan teks apa pun sebelum atau sesudah blok JSON tersebut.`;
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -78,7 +144,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { material, subject } = body;
+    const { material, subject, mode = 'notebook' } = body;
 
     // Call Groq API (Llama 3.3 70B)
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -90,7 +156,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: getSystemPrompt(mode, subject) },
           {
             role: 'user',
             content: `Mata Pelajaran: ${subject}\n\nMateri Pelajaran:\n${material}`

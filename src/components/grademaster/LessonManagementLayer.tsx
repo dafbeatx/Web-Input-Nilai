@@ -321,7 +321,7 @@ export default function LessonManagementLayer({
 
     try {
       if (activeFlow === 'daily' || activeFlow === 'quiz') {
-        const result = await generateAILessonContent(userText, activeSubject);
+        const result = await generateAILessonContent(userText, activeSubject, activeFlow);
         setAiResult(result);
         chatStateRef.current.aiResult = result;
 
@@ -380,7 +380,7 @@ export default function LessonManagementLayer({
       ]);
 
       setIsAiResponding(true);
-      const result = await generateAILessonContent(data.text.substring(0, 15000), activeSubject); // Safety slice text length
+      const result = await generateAILessonContent(data.text.substring(0, 15000), activeSubject, 'notebook'); // Safety slice text length
       setAiResult(result);
       chatStateRef.current.aiResult = result;
 
