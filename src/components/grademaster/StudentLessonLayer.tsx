@@ -35,7 +35,7 @@ interface ChatMessage {
 
 export default function StudentLessonLayer({ onBack, setToast }: StudentLessonLayerProps) {
   const { studentData, studentClass } = useGradeMaster();
-  const activeClassName = studentClass || studentData?.class_name || "";
+  const activeClassName = studentData?.class_name || studentClass || "";
 
   // Core State
   const [lessons, setLessons] = useState<DailyLesson[]>([]);

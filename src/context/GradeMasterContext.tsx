@@ -120,71 +120,77 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
           });
 
           if (session) {
-            console.log("[AuthInit] Supabase session resolved successfully for email:", session.user?.email);
-            
-            // Helper for retrying fetches
-            const fetchWithRetry = async (url: string, retries = 3, delay = 350): Promise<Response> => {
-              for (let i = 0; i < retries; i++) {
-                try {
-                  console.log(`[AuthInit Fetch] ${url} (attempt ${i + 1}/${retries})...`);
-                  const res = await fetch(url);
-                  if (res.ok) return res;
-                } catch (e) {
-                  console.warn(`[AuthInit Fetch] ${url} failed on attempt ${i + 1}:`, e);
-                }
-                await new Promise(r => setTimeout(r, delay * (i + 1)));
+            console.log("[AuthInit] Client-side Supabase session resolved successfully for email:", session.user?.email);
+          } else {
+            console.log("[AuthInit] No client-side Supabase session detected yet, checking backend cookies directly...");
+          }
+
+          // Helper for retrying fetches
+          const fetchWithRetry = async (url: string, retries = 3, delay = 350): Promise<Response> => {
+            for (let i = 0; i < retries; i++) {
+              try {
+                console.log(`[AuthInit Fetch] ${url} (attempt ${i + 1}/${retries})...`);
+                const res = await fetch(url);
+                if (res.ok) return res;
+              } catch (e) {
+                console.warn(`[AuthInit Fetch] ${url} failed on attempt ${i + 1}:`, e);
               }
-              return fetch(url);
-            };
+              await new Promise(r => setTimeout(r, delay * (i + 1)));
+            }
+            return fetch(url);
+          };
 
-            // Check student status first
-            const studentRes = await fetchWithRetry("/api/student/check");
-            const studentCheckData = await studentRes.json();
-            console.log("[AuthInit] Student check response:", studentCheckData);
+          // Check student status first
+          const studentRes = await fetchWithRetry("/api/student/check");
+          const studentCheckData = await studentRes.json();
+          console.log("[AuthInit] Student check response:", studentCheckData);
 
-            if (studentCheckData.authenticated) {
+          if (studentCheckData.authenticated) {
+            activeStudent = true;
+            setIsStudent(true);
+            resolvedStudentData = { ...studentCheckData.student, isGoogleLinked: true };
+            setStudentData(resolvedStudentData);
+            if (resolvedStudentData.class_name) {
+              setStudentClass(resolvedStudentData.class_name);
+            }
+            console.log("[AuthInit] User is authenticated student:", resolvedStudentData.name);
+          } else {
+            // Fallback to check admin (which also handles unlinked student_google role)
+            const adminRes = await fetchWithRetry("/api/admin/check");
+            const adminData = await adminRes.json();
+            console.log("[AuthInit] Admin check response:", adminData);
+
+            if (adminData.authenticated && adminData.role === 'admin') {
+              activeAdmin = true;
+              setIsAdmin(true);
+              activeAdminUser = adminData.displayName || adminData.username;
+              setAdminUser(activeAdminUser);
+              console.log("[AuthInit] User is authenticated admin:", activeAdminUser);
+            } else if (adminData.authenticated && adminData.role === 'student') {
               activeStudent = true;
               setIsStudent(true);
-              resolvedStudentData = { ...studentCheckData.student, isGoogleLinked: true };
+              resolvedStudentData = adminData.student;
               setStudentData(resolvedStudentData);
-              console.log("[AuthInit] User is authenticated student:", resolvedStudentData.name);
-            } else {
-              // Fallback to check admin (which also handles unlinked student_google role)
-              const adminRes = await fetchWithRetry("/api/admin/check");
-              const adminData = await adminRes.json();
-              console.log("[AuthInit] Admin check response:", adminData);
-
-              if (adminData.authenticated && adminData.role === 'admin') {
-                activeAdmin = true;
-                setIsAdmin(true);
-                activeAdminUser = adminData.displayName || adminData.username;
-                setAdminUser(activeAdminUser);
-                console.log("[AuthInit] User is authenticated admin:", activeAdminUser);
-              } else if (adminData.authenticated && adminData.role === 'student') {
-                activeStudent = true;
-                setIsStudent(true);
-                resolvedStudentData = adminData.student;
-                setStudentData(resolvedStudentData);
-                console.log("[AuthInit] User is authenticated student (via admin/check):", resolvedStudentData.name);
-              } else if (adminData.role === 'student_google') {
-                activeStudent = true;
-                setIsStudent(true);
-                resolvedStudentData = {
-                  name: adminData.username,
-                  username: adminData.email,
-                  photo_url: adminData.avatar_url,
-                  email: adminData.email,
-                  id: adminData.email,
-                  isGoogleLinked: false
-                };
-                setStudentData(resolvedStudentData);
-                console.log("[AuthInit] User is unlinked student_google:", adminData.email);
-              } else {
-                console.log("[AuthInit] User has session but resolved no specific role");
+              if (resolvedStudentData.class_name) {
+                setStudentClass(resolvedStudentData.class_name);
               }
+              console.log("[AuthInit] User is authenticated student (via admin/check):", resolvedStudentData.name);
+            } else if (adminData.role === 'student_google') {
+              activeStudent = true;
+              setIsStudent(true);
+              resolvedStudentData = {
+                name: adminData.username,
+                username: adminData.email,
+                photo_url: adminData.avatar_url,
+                email: adminData.email,
+                id: adminData.email,
+                isGoogleLinked: false
+              };
+              setStudentData(resolvedStudentData);
+              console.log("[AuthInit] User is unlinked student_google:", adminData.email);
+            } else {
+              console.log("[AuthInit] User has session but resolved no specific role");
             }
-          } else {
-            console.log("[AuthInit] No Supabase session detected after wait timeout");
           }
         } catch (err) {
           console.error("[AuthInit] Error during session/auth routing check:", err);

@@ -214,7 +214,11 @@ export default function GradeMaster() {
       if (studentCheckData.authenticated) {
         setIsAdmin(false);
         setIsStudent(true);
-        setStudentData({ ...studentCheckData.student, isGoogleLinked: true });
+        const resolvedStudent = { ...studentCheckData.student, isGoogleLinked: true };
+        setStudentData(resolvedStudent);
+        if (resolvedStudent.class_name) {
+          setStudentClass(resolvedStudent.class_name);
+        }
         // Navigate away from login page if session is already active
         if (layer === 'student_login' || layer === 'student_claim' || layer === 'login') {
           setLayer('home');
@@ -250,6 +254,9 @@ export default function GradeMaster() {
         setIsAdmin(false);
         setIsStudent(true);
         setStudentData(data.student);
+        if (data.student?.class_name) {
+          setStudentClass(data.student.class_name);
+        }
         if (layer === 'student_login' || layer === 'student_claim') {
           setLayer('home');
         }
