@@ -3041,124 +3041,132 @@ export default function StudentRemedialLayer({
 
       {/* ── DRAGGABLE CAMERA (GradeMaster PiP) ── */}
       {step === 'EXAM' && (
-        <div
-          ref={pipRef}
-          className="fixed z-[90] rounded-3xl overflow-hidden border-2 border-white/20 premium-shadow bg-slate-900 w-28 h-40 md:w-48 md:h-72 animate-in slide-in-from-right duration-500 cursor-grab active:cursor-grabbing select-none touch-none opacity-0 pointer-events-none absolute"
-          style={pipPos
-            ? { left: `${pipPos.x}px`, top: `${pipPos.y}px`, transition: isDraggingRef.current ? 'none' : 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)' }
-            : { right: '32px', bottom: '32px' }
-          }
-          onMouseDown={(e) => {
-            if (!pipRef.current) return;
-            const rect = pipRef.current.getBoundingClientRect();
-            isDraggingRef.current = true;
-            wasDraggedRef.current = false;
-            dragOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-            dragStartPosRef.current = { x: e.clientX, y: e.clientY };
-            e.preventDefault();
-
-            const onMove = (ev: MouseEvent) => {
-              const dx = Math.abs(ev.clientX - dragStartPosRef.current.x);
-              const dy = Math.abs(ev.clientY - dragStartPosRef.current.y);
-              if (dx > 3 || dy > 3) wasDraggedRef.current = true;
-              const elW = pipRef.current?.offsetWidth || 112;
-              const elH = pipRef.current?.offsetHeight || 160;
-              const newX = Math.min(Math.max(12, ev.clientX - dragOffsetRef.current.x), window.innerWidth - elW - 12);
-              const newY = Math.min(Math.max(12, ev.clientY - dragOffsetRef.current.y), window.innerHeight - elH - 12);
-              setPipPos({ x: newX, y: newY });
-            };
-            const onUp = (ev: MouseEvent) => {
-              isDraggingRef.current = false;
-              window.removeEventListener('mousemove', onMove);
-              window.removeEventListener('mouseup', onUp);
-              if (pipRef.current) {
-                const elW = pipRef.current.offsetWidth;
-                const rectInner = pipRef.current.getBoundingClientRect();
-                const centerX = rectInner.left + elW / 2;
-                const snapX = centerX < window.innerWidth / 2 ? 24 : window.innerWidth - elW - 24;
-                const curY = Math.min(Math.max(24, rectInner.top), window.innerHeight - pipRef.current.offsetHeight - 24);
-                setPipPos({ x: snapX, y: curY });
-              }
-            };
-            window.addEventListener('mousemove', onMove);
-            window.addEventListener('mouseup', onUp);
-          }}
-          onTouchStart={(e) => {
-            if (!pipRef.current) return;
-            const touch = e.touches[0];
-            const rect = pipRef.current.getBoundingClientRect();
-            isDraggingRef.current = true;
-            wasDraggedRef.current = false;
-            dragOffsetRef.current = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
-            dragStartPosRef.current = { x: touch.clientX, y: touch.clientY };
-          }}
-          onTouchMove={(e) => {
-            if (!isDraggingRef.current || !pipRef.current) return;
-            const touch = e.touches[0];
-            const dx = Math.abs(touch.clientX - dragStartPosRef.current.x);
-            const dy = Math.abs(touch.clientY - dragStartPosRef.current.y);
-            if (dx > 3 || dy > 3) wasDraggedRef.current = true;
-            const elW = pipRef.current?.offsetWidth || 112;
-            const elH = pipRef.current?.offsetHeight || 160;
-            const newX = Math.min(Math.max(12, touch.clientX - dragOffsetRef.current.x), window.innerWidth - elW - 12);
-            const newY = Math.min(Math.max(12, touch.clientY - dragOffsetRef.current.y), window.innerHeight - elH - 12);
-            setPipPos({ x: newX, y: newY });
-          }}
-          onTouchEnd={(e) => {
-            isDraggingRef.current = false;
-            if (pipRef.current) {
-              const elW = pipRef.current.offsetWidth;
-              const rectInner = pipRef.current.getBoundingClientRect();
-              const centerX = rectInner.left + elW / 2;
-              const snapX = centerX < window.innerWidth / 2 ? 24 : window.innerWidth - elW - 24;
-              const snapY = Math.min(Math.max(24, rectInner.top), window.innerHeight - pipRef.current.offsetHeight - 24);
-              setPipPos({ x: snapX, y: snapY });
-            }
-          }}
-        >
-          <div className="w-full h-full relative pointer-events-none transition-all duration-500 overflow-hidden">
+        <>
+          {/* Hidden camera wrapper for proctoring */}
+          <div 
+            className="fixed pointer-events-none opacity-[0.001] z-[-50] overflow-hidden" 
+            style={{ width: '1px', height: '1px', left: '0px', top: '0px' }}
+          >
             <ProctoringCamera 
               ref={videoRef} 
               onViolation={handleCameraViolation} 
               onCameraError={handleCameraErrorDuringExam}
               onCameraReady={handleCameraReadyDuringExam}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
-            <div className="absolute bottom-3 left-3 flex flex-col gap-1">
-              <div className="flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full animate-pulse shadow-lg ${
-                  aiProctorStatus === 'scanning' ? 'bg-blue-400 shadow-blue-400/50' :
-                  aiProctorStatus === 'warning' ? 'bg-amber-400 shadow-amber-400/50' :
-                  aiProctorStatus === 'critical' ? 'bg-rose-500 shadow-rose-500/50' :
-                  aiProctorStatus === 'safe' ? 'bg-emerald-500 shadow-emerald-500/50' :
-                  'bg-emerald-500 shadow-emerald-500/50'
-                }`} />
-                <span className={`text-[8px] font-black uppercase tracking-widest ${
-                  aiProctorStatus === 'scanning' ? 'text-blue-400' :
-                  aiProctorStatus === 'warning' ? 'text-amber-400' :
-                  aiProctorStatus === 'critical' ? 'text-rose-400' :
-                  'text-on-surface'
-                }`}>
-                  {aiProctorStatus === 'scanning' ? 'AI Scan...' :
-                   aiProctorStatus === 'safe' ? 'AI: Aman ✓' :
-                   aiProctorStatus === 'warning' ? 'AI: Peringatan ⚠' :
-                   aiProctorStatus === 'critical' ? 'AI: Kritis ✕' :
-                   'Live AI'}
+          </div>
+
+          {/* Floating Indicator "Kamera Aktif" */}
+          <div
+            ref={pipRef}
+            className="fixed z-[90] rounded-2xl border border-white/10 bg-slate-950/85 backdrop-blur-md px-4 py-2.5 premium-shadow animate-in slide-in-from-right duration-500 cursor-grab active:cursor-grabbing select-none touch-none flex flex-col gap-1.5 min-w-[140px]"
+            style={pipPos
+              ? { left: `${pipPos.x}px`, top: `${pipPos.y}px`, transition: isDraggingRef.current ? 'none' : 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)' }
+              : { right: '32px', bottom: '32px' }
+            }
+            onMouseDown={(e) => {
+              if (!pipRef.current) return;
+              const rect = pipRef.current.getBoundingClientRect();
+              isDraggingRef.current = true;
+              wasDraggedRef.current = false;
+              dragOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+              dragStartPosRef.current = { x: e.clientX, y: e.clientY };
+              e.preventDefault();
+
+              const onMove = (ev: MouseEvent) => {
+                const dx = Math.abs(ev.clientX - dragStartPosRef.current.x);
+                const dy = Math.abs(ev.clientY - dragStartPosRef.current.y);
+                if (dx > 3 || dy > 3) wasDraggedRef.current = true;
+                const elW = pipRef.current?.offsetWidth || 112;
+                const elH = pipRef.current?.offsetHeight || 160;
+                const newX = Math.min(Math.max(12, ev.clientX - dragOffsetRef.current.x), window.innerWidth - elW - 12);
+                const newY = Math.min(Math.max(12, ev.clientY - dragOffsetRef.current.y), window.innerHeight - elH - 12);
+                setPipPos({ x: newX, y: newY });
+              };
+              const onUp = (ev: MouseEvent) => {
+                isDraggingRef.current = false;
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onUp);
+                if (pipRef.current) {
+                  const elW = pipRef.current.offsetWidth;
+                  const rectInner = pipRef.current.getBoundingClientRect();
+                  const centerX = rectInner.left + elW / 2;
+                  const snapX = centerX < window.innerWidth / 2 ? 24 : window.innerWidth - elW - 24;
+                  const curY = Math.min(Math.max(24, rectInner.top), window.innerHeight - pipRef.current.offsetHeight - 24);
+                  setPipPos({ x: snapX, y: curY });
+                }
+              };
+              window.addEventListener('mousemove', onMove);
+              window.addEventListener('mouseup', onUp);
+            }}
+            onTouchStart={(e) => {
+              if (!pipRef.current) return;
+              const touch = e.touches[0];
+              const rect = pipRef.current.getBoundingClientRect();
+              isDraggingRef.current = true;
+              wasDraggedRef.current = false;
+              dragOffsetRef.current = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+              dragStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+            }}
+            onTouchMove={(e) => {
+              if (!isDraggingRef.current || !pipRef.current) return;
+              const touch = e.touches[0];
+              const dx = Math.abs(touch.clientX - dragStartPosRef.current.x);
+              const dy = Math.abs(touch.clientY - dragStartPosRef.current.y);
+              if (dx > 3 || dy > 3) wasDraggedRef.current = true;
+              const elW = pipRef.current?.offsetWidth || 112;
+              const elH = pipRef.current?.offsetHeight || 160;
+              const newX = Math.min(Math.max(12, touch.clientX - dragOffsetRef.current.x), window.innerWidth - elW - 12);
+              const newY = Math.min(Math.max(12, touch.clientY - dragOffsetRef.current.y), window.innerHeight - elH - 12);
+              setPipPos({ x: newX, y: newY });
+            }}
+            onTouchEnd={(e) => {
+              isDraggingRef.current = false;
+              if (pipRef.current) {
+                const elW = pipRef.current.offsetWidth;
+                const rectInner = pipRef.current.getBoundingClientRect();
+                const centerX = rectInner.left + elW / 2;
+                const snapX = centerX < window.innerWidth / 2 ? 24 : window.innerWidth - elW - 24;
+                const snapY = Math.min(Math.max(24, rectInner.top), window.innerHeight - pipRef.current.offsetHeight - 24);
+                setPipPos({ x: snapX, y: snapY });
+              }
+            }}
+          >
+            <div className="flex flex-col gap-1.5 w-full">
+              {/* Camera Active Row */}
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.7)]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 font-outfit">
+                  Kamera Aktif
                 </span>
               </div>
-            </div>
-            {/* AI scanning ring indicator */}
-            {aiProctorStatus === 'scanning' && (
-              <div className="absolute inset-0 rounded-3xl border-2 border-blue-400/40 animate-pulse pointer-events-none" />
-            )}
-            {aiProctorStatus === 'critical' && (
-              <div className="absolute inset-0 rounded-3xl border-2 border-rose-500/60 animate-pulse pointer-events-none" />
-            )}
-            <div className="absolute top-3 right-3 bg-surface/60 backdrop-blur-md px-2 py-1 rounded-lg border border-outline-variant">
-              <span className="text-[10px] font-black font-mono text-on-surface/90">{formatTime(timeLeft)}</span>
+              
+              {/* AI Status and Timer Row */}
+              <div className="flex items-center justify-between border-t border-white/10 pt-1.5 gap-4">
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${
+                    aiProctorStatus === 'scanning' ? 'bg-blue-400 shadow-blue-400/50 animate-pulse' :
+                    aiProctorStatus === 'warning' ? 'bg-amber-400 shadow-amber-400/50 animate-pulse' :
+                    aiProctorStatus === 'critical' ? 'bg-rose-500 shadow-rose-500/50 animate-bounce' :
+                    'bg-emerald-500 shadow-emerald-500/50 animate-pulse'
+                  }`} />
+                  <span className={`text-[8px] font-black uppercase tracking-wider ${
+                    aiProctorStatus === 'scanning' ? 'text-blue-400' :
+                    aiProctorStatus === 'warning' ? 'text-amber-400 font-black' :
+                    aiProctorStatus === 'critical' ? 'text-rose-400 font-black animate-pulse' :
+                    'text-emerald-400'
+                  }`}>
+                    {aiProctorStatus === 'scanning' ? 'AI: Scan...' :
+                     aiProctorStatus === 'safe' ? 'AI: Aman' :
+                     aiProctorStatus === 'warning' ? 'AI: Rawan' :
+                     aiProctorStatus === 'critical' ? 'AI: Kritis' :
+                     'AI: Aktif'}
+                  </span>
+                </div>
+                <span className="text-[9px] font-bold font-mono text-slate-400">{formatTime(timeLeft)}</span>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* ── MODALS & OVERLAYS ── */}
