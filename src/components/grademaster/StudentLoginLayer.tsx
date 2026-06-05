@@ -32,6 +32,21 @@ export default function StudentLoginLayer({
   
   const [error, setError] = useState('');
 
+  const [rememberMe, setRememberMe] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('gm_remember_me') !== 'false';
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (localStorage.getItem('gm_remember_me') === null) {
+        localStorage.setItem('gm_remember_me', 'true');
+      }
+    }
+  }, []);
+
   const { setLayer, setIsParent, setStudentData } = useGradeMaster();
   const [isParentMode, setIsParentMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -301,6 +316,24 @@ export default function StudentLoginLayer({
                 </>
               )}
             </button>
+            <div className="flex items-center justify-start px-2 py-1">
+              <label className="flex items-center gap-2.5 cursor-pointer group select-none min-h-[44px]">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => {
+                    setRememberMe(e.target.checked);
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('gm_remember_me', e.target.checked ? 'true' : 'false');
+                    }
+                  }}
+                  className="w-5 h-5 rounded-lg border-2 border-slate-200 text-[#0F172A] focus:ring-[#0F172A] transition-all cursor-pointer accent-[#0F172A]"
+                />
+                <span className="text-xs font-bold text-slate-400 group-hover:text-slate-600 transition-colors uppercase tracking-widest">
+                  Ingat Sesi Saya
+                </span>
+              </label>
+            </div>
             <button
                onClick={() => setIsParentMode(true)}
                className="

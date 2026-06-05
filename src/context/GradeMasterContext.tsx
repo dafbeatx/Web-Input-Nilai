@@ -1,6 +1,5 @@
 "use client";
-
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { Layer, ToastType, ModalType } from '@/lib/grademaster/types';
 import { supabase } from '@/lib/supabase/client';
 
@@ -25,6 +24,7 @@ interface GradeMasterContextType {
   setStudentClass: (className: string) => void;
   academicYear: string;
   setAcademicYear: (year: string) => void;
+  isAuthLoading: boolean;
   logout: () => void;
 }
 
@@ -41,76 +41,133 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   const [modal, setModal] = useState<ModalType>(null);
   const [studentClass, setStudentClass] = useState("");
   const [academicYear, setAcademicYear] = useState("2025/2026");
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  // Synchronization with URL Hash & LocalStorage
+  // Ref to track roles for the popstate handler to avoid stale closures
+  const authStateRef = useRef({ isAdmin, isStudent, isParent });
+  useEffect(() => {
+    authStateRef.current = { isAdmin, isStudent, isParent };
+  }, [isAdmin, isStudent, isParent]);
+
+  // Synchronize authentication and layer state on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const hash = window.location.hash.replace('#', '');
-    const validLayers: Layer[] = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login', 'attendance', 'student_accounts', 'student_login', 'student_claim', 'teacher_claim', 'lesson_management', 'remedial_management'];
-    
-    // 1. Restore Admin State
-    const savedAdmin = localStorage.getItem('gm_isAdmin') === 'true';
-    const savedUser = localStorage.getItem('gm_adminUser');
-    const savedStudent = localStorage.getItem('gm_isStudent') === 'true';
+    const validLayers: Layer[] = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login', 'attendance', 'student_accounts', 'student_login', 'student_claim', 'teacher_claim', 'lesson_management', 'remedial_management', 'data_center'];
+
     const savedParent = localStorage.getItem('gm_isParent') === 'true';
     const savedStudentData = localStorage.getItem('gm_studentData');
     const savedClass = localStorage.getItem('gm_studentClass');
     const savedYear = localStorage.getItem('gm_academicYear') || "2025/2026";
-    
-    if (savedAdmin) {
-      setIsAdmin(true);
-      setAdminUser(savedUser);
-    }
-    if (savedStudent || savedParent) {
-      setIsStudent(savedStudent);
-      setIsParent(savedParent);
-      if (savedStudentData) {
-        try { setStudentData(JSON.parse(savedStudentData)); } catch(e) {}
-      }
-    }
+
     if (savedClass) setStudentClass(savedClass);
     setAcademicYear(savedYear);
 
-    // 2. Determine Initial Layer
-    let initialLayer: Layer = 'home';
-    
-    // We only respect specific hashes during refresh, preventing 'dashboard' 
-    // from automatically taking over the screen on reload or root access.
-    // Local storage fallback is removed so the app always lands cleanly on 'home'.
-    if (validLayers.includes(hash as Layer) && hash !== 'dashboard') {
-      initialLayer = hash as Layer;
-    }
+    const checkAuthAndRoute = async () => {
+      let activeAdmin = false;
+      let activeStudent = false;
+      let activeParent = false;
+      let resolvedStudentData: any = null;
+      let activeAdminUser: string | null = null;
 
-    // 3. Auth Guards
-    const adminOnlyLayers = ['setup', 'grading', 'student_accounts', 'lesson_management', 'remedial_management'];
-    const protectedLayers = ['remedial'];
-    const authLayers = ['login', 'student_login'];
-    
-    if (adminOnlyLayers.includes(initialLayer) && !savedAdmin) {
-      initialLayer = 'login';
-    } else if (protectedLayers.includes(initialLayer) && !savedAdmin && !savedStudent && !savedParent) {
-      initialLayer = 'student_login';
-    } else if (authLayers.includes(initialLayer) && (savedAdmin || savedStudent || savedParent)) {
-      initialLayer = savedAdmin ? 'home' : 'dashboard';
-    } else if (initialLayer === 'home' && !savedAdmin && !savedStudent && !savedParent) {
-      // Default unauthenticated landing to student_login per user request for shared links
-      initialLayer = 'student_login';
-    }
+      if (savedParent) {
+        activeParent = true;
+        setIsParent(true);
+        if (savedStudentData) {
+          try {
+            resolvedStudentData = JSON.parse(savedStudentData);
+            setStudentData(resolvedStudentData);
+          } catch (e) {}
+        }
+      } else {
+        // Authenticate with Google/Supabase Auth as source of truth
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            // Check student status first
+            const studentRes = await fetch("/api/student/check");
+            const studentCheckData = await studentRes.json();
 
-    setLayer(initialLayer);
-    window.history.replaceState({ layer: initialLayer }, '', `#${initialLayer}`);
+            if (studentCheckData.authenticated) {
+              activeStudent = true;
+              setIsStudent(true);
+              resolvedStudentData = { ...studentCheckData.student, isGoogleLinked: true };
+              setStudentData(resolvedStudentData);
+            } else {
+              // Fallback to check admin
+              const adminRes = await fetch("/api/admin/check");
+              const adminData = await adminRes.json();
 
-    // 4. History PopState Listener
+              if (adminData.authenticated && adminData.role === 'admin') {
+                activeAdmin = true;
+                setIsAdmin(true);
+                activeAdminUser = adminData.displayName || adminData.username;
+                setAdminUser(activeAdminUser);
+              } else if (adminData.authenticated && adminData.role === 'student') {
+                activeStudent = true;
+                setIsStudent(true);
+                resolvedStudentData = adminData.student;
+                setStudentData(resolvedStudentData);
+              } else if (adminData.role === 'student_google') {
+                activeStudent = true;
+                setIsStudent(true);
+                resolvedStudentData = {
+                  name: adminData.username,
+                  username: adminData.email,
+                  photo_url: adminData.avatar_url,
+                  email: adminData.email,
+                  id: adminData.email,
+                  isGoogleLinked: false
+                };
+                setStudentData(resolvedStudentData);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Auth initialization check failed:", err);
+        }
+      }
+
+      // Determine initial layer
+      let initialLayer: Layer = 'home';
+      if (validLayers.includes(hash as Layer) && hash !== 'dashboard') {
+        initialLayer = hash as Layer;
+      }
+
+      const adminOnlyLayers = ['setup', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
+      const protectedLayers = ['remedial'];
+      const authLayers = ['login', 'student_login'];
+
+      if (adminOnlyLayers.includes(initialLayer) && !activeAdmin) {
+        initialLayer = 'student_login';
+      } else if (protectedLayers.includes(initialLayer) && !activeAdmin && !activeStudent && !activeParent) {
+        initialLayer = 'student_login';
+      } else if (authLayers.includes(initialLayer) && (activeAdmin || activeStudent || activeParent)) {
+        initialLayer = activeAdmin ? 'home' : 'dashboard';
+      } else if (initialLayer === 'home' && !activeAdmin && !activeStudent && !activeParent) {
+        initialLayer = 'student_login';
+      }
+
+      setLayer(initialLayer);
+      window.history.replaceState({ layer: initialLayer }, '', `#${initialLayer}`);
+      setIsAuthLoading(false);
+    };
+
+    checkAuthAndRoute();
+
+    // History popstate listener
     const handlePopState = () => {
       const newHash = window.location.hash.replace('#', '') as Layer;
       if (validLayers.includes(newHash)) {
-        const adminOnlyLayers = ['setup', 'grading', 'student_accounts'];
+        const adminOnlyLayers = ['setup', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
         const protectedLayers = ['remedial'];
-        if (adminOnlyLayers.includes(newHash) && !localStorage.getItem('gm_isAdmin')) {
-          setLayer('login');
-          window.history.replaceState({ layer: 'login' }, '', '#login');
-        } else if (protectedLayers.includes(newHash) && !localStorage.getItem('gm_isAdmin') && !localStorage.getItem('gm_isStudent') && !localStorage.getItem('gm_isParent')) {
+        const { isAdmin: curAdmin, isStudent: curStudent, isParent: curParent } = authStateRef.current;
+
+        if (adminOnlyLayers.includes(newHash) && !curAdmin) {
+          setLayer('student_login');
+          window.history.replaceState({ layer: 'student_login' }, '', '#student_login');
+        } else if (protectedLayers.includes(newHash) && !curAdmin && !curStudent && !curParent) {
           setLayer('student_login');
           window.history.replaceState({ layer: 'student_login' }, '', '#student_login');
         } else {
@@ -123,47 +180,39 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Sync state to LocalStorage
+  // Sync parent session & configurations to LocalStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
-    localStorage.setItem("gm_isAdmin", isAdmin.toString());
-    if (adminUser) localStorage.setItem("gm_adminUser", adminUser);
-    else localStorage.removeItem("gm_adminUser");
-    
-    localStorage.setItem("gm_isStudent", isStudent.toString());
+
     localStorage.setItem("gm_isParent", isParent.toString());
-    if (studentData) localStorage.setItem("gm_studentData", JSON.stringify(studentData));
-    else localStorage.removeItem("gm_studentData");
+    if (isParent && studentData) {
+      localStorage.setItem("gm_studentData", JSON.stringify(studentData));
+    } else if (!isStudent) {
+      localStorage.removeItem("gm_studentData");
+    }
 
     localStorage.setItem("gm_studentClass", studentClass);
     localStorage.setItem("gm_academicYear", academicYear);
-  }, [isAdmin, adminUser, isStudent, isParent, studentData, studentClass, academicYear]);
+  }, [isParent, isStudent, studentData, studentClass, academicYear]);
 
-  // Update URL and LocalStorage on Layer change
+  // Navigate and apply Auth guards dynamically
   const navigate = (newLayer: Layer) => {
-    // Auth Guards
-    const adminOnlyLayers = ['setup', 'grading', 'student_accounts'];
+    const adminOnlyLayers = ['setup', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
     const protectedLayers = ['remedial'];
 
     if (adminOnlyLayers.includes(newLayer) && !isAdmin) {
-      console.warn(`[Guard] Admin access required for layer: ${newLayer}`);
-      setLayer('login');
-      window.history.pushState({ layer: 'login' }, '', '#login');
-      localStorage.setItem("gm_layer", 'login');
+      setLayer('student_login');
+      window.history.pushState({ layer: 'student_login' }, '', '#student_login');
       return;
     }
 
     if (protectedLayers.includes(newLayer) && !isAdmin && !isStudent && !isParent) {
-      console.warn(`[Guard] Student/Parent access required for layer: ${newLayer}`);
       setLayer('student_login');
       window.history.pushState({ layer: 'student_login' }, '', '#student_login');
-      localStorage.setItem("gm_layer", 'student_login');
       return;
     }
 
     setLayer(newLayer);
-    localStorage.setItem("gm_layer", newLayer);
-    
     if (window.location.hash.replace('#', '') !== newLayer) {
       window.history.pushState({ layer: newLayer }, '', `#${newLayer}`);
     }
@@ -174,23 +223,17 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       await fetch('/api/admin/logout', { method: 'POST' }).catch(() => {});
       setIsAdmin(false);
       setAdminUser(null);
-      localStorage.removeItem('gm_isAdmin');
-      localStorage.removeItem('gm_adminUser');
     } else if (isStudent || isParent) {
       await fetch('/api/student/logout', { method: 'POST' }).catch(() => {});
       setIsStudent(false);
       setIsParent(false);
       setStudentData(null);
-      localStorage.removeItem('gm_isStudent');
       localStorage.removeItem('gm_isParent');
       localStorage.removeItem('gm_studentData');
     }
 
-    // 3. Global Sign Out (Supabase/Google)
     await supabase.auth.signOut();
-
     setLayer("student_login");
-    localStorage.setItem("gm_layer", "student_login");
     window.history.pushState({ layer: 'student_login' }, '', '#student_login');
   };
 
@@ -206,6 +249,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       modal, setModal,
       studentClass, setStudentClass,
       academicYear, setAcademicYear,
+      isAuthLoading,
       logout
     }}>
       {children}

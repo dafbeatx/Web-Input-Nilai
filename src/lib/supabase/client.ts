@@ -24,6 +24,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 let clientInstance: SupabaseClient | null = null;
+let currentStorageType: 'local' | 'session' | null = null;
 
 /**
  * Helper to retrieve the client-side Supabase Client.
@@ -37,8 +38,21 @@ export function getSupabaseClient(): SupabaseClient {
     );
   }
 
-  if (!clientInstance) {
-    clientInstance = createBrowserClient(supabaseUrl, supabaseKey);
+  const targetStorageType = typeof window !== 'undefined' && localStorage.getItem('gm_remember_me') === 'false' ? 'session' : 'local';
+
+  if (!clientInstance || currentStorageType !== targetStorageType) {
+    currentStorageType = targetStorageType;
+    clientInstance = createBrowserClient(supabaseUrl, supabaseKey, {
+      auth: {
+        storage: typeof window !== 'undefined'
+          ? (targetStorageType === 'local' ? window.localStorage : window.sessionStorage)
+          : undefined,
+        persistSession: true,
+      },
+      cookieOptions: {
+        maxAge: targetStorageType === 'local' ? 60 * 60 * 24 * 365 : undefined,
+      }
+    });
   }
 
   return clientInstance;

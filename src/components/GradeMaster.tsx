@@ -84,6 +84,7 @@ export default function GradeMaster() {
     modal, setModal, 
     studentClass, setStudentClass,
     academicYear, setAcademicYear,
+    isAuthLoading,
     logout 
   } = useGradeMaster();
 
@@ -907,9 +908,31 @@ export default function GradeMaster() {
 
   // ── Render ──
 
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center animate-in fade-in duration-700">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative">
+            <div className="w-16 h-16 border-[3px] border-slate-100 border-t-[#0F172A] rounded-full animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <svg className="w-5 h-5 text-[#0F172A]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
+              </svg>
+            </div>
+          </div>
+          <div className="text-center">
+            <h2 className="text-sm font-black text-[#0F172A] uppercase tracking-[0.3em] mb-2 font-outfit">GradeMaster OS</h2>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Memuat Sesi...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex flex-col min-h-[100dvh] pb-safe transition-colors duration-500">
-      <div className="w-full">
+      <div className="w-full font-outfit">
         {layer === "home" && (
         <HomeLayer
           sessions={sessions}
