@@ -38,10 +38,6 @@ export const publishLesson = async (lessonId: string) => {
   return data?.[0];
 };
 
-/**
- * Placeholder for Gemini AI Lesson Generation.
- * This should eventually call a Supabase Edge Function or direct Gemini API.
- */
 export const generateAILessonContent = async (material: string, subject: string) => {
   console.log(`Generating AI lesson for ${subject} with content length: ${material.length}`);
   
@@ -63,4 +59,24 @@ export const generateAILessonContent = async (material: string, subject: string)
     chatPrompt: data.chatPrompt,
     questions: data.questions
   };
+};
+
+export const fetchAllLessons = async (): Promise<DailyLesson[]> => {
+  const { data, error } = await supabase
+    .from('daily_lessons')
+    .select('*')
+    .order('date', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+};
+
+export const deleteLesson = async (lessonId: string) => {
+  const { error } = await supabase
+    .from('daily_lessons')
+    .delete()
+    .eq('id', lessonId);
+
+  if (error) throw error;
+  return true;
 };

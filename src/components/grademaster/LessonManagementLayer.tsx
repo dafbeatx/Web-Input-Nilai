@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowLeft, 
   BookOpen, 
@@ -17,11 +17,21 @@ import {
   Send,
   CloudUpload,
   Bot,
-  RefreshCw
+  RefreshCw,
+  Search,
+  Trash2,
+  X,
+  HelpCircle,
+  Award
 } from 'lucide-react';
 import { DailyLesson, Quiz, ToastType } from '@/lib/grademaster/types';
 import { supabase } from '@/lib/supabase/client';
-import { generateAILessonContent, createLesson } from '@/lib/grademaster/lessonActions';
+import { 
+  generateAILessonContent, 
+  createLesson, 
+  fetchAllLessons, 
+  deleteLesson 
+} from '@/lib/grademaster/lessonActions';
 
 interface LessonManagementLayerProps {
   onBack: () => void;
@@ -31,7 +41,12 @@ interface LessonManagementLayerProps {
   schoolLevel?: string;
 }
 
-type TabType = 'daily' | 'exams' | 'ai_materials';
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  options?: { label: string; action: () => void }[];
+  fileUpload?: boolean;
+}
 
 export default function LessonManagementLayer({
   onBack,
@@ -40,104 +55,294 @@ export default function LessonManagementLayer({
   academicYear = '2025/2026',
   schoolLevel = 'SMA'
 }: LessonManagementLayerProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('daily');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  
-  // Class State
-  const [selectedClass, setSelectedClass] = useState(activeClass);
-  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
-  const [isLoadingClasses, setIsLoadingClasses] = useState(false);
-  
-  // Lesson Form State
-  const [subject, setSubject] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [material, setMaterial] = useState('');
-  
-  // AI Output Preview State
+  // Conversational Flow States
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isAiResponding, setIsAiResponding] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [historyLessons, setHistoryLessons] = useState<DailyLesson[]>([]);
+  const [historySearchQuery, setHistorySearchQuery] = useState('');
+
+  // Selected config during chat
+  const [flowType, setFlowType] = useState<'daily' | 'quiz' | 'notebook' | null>(null);
+  const [selectedClass, setSelectedClass] = useState<string>('');
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [extractedText, setExtractedText] = useState<string>('');
+
+  // AI Generated Results (Pending Publish/Draft)
   const [aiResult, setAiResult] = useState<{
     preview: string;
-    chatPreview: string;
+    chatPrompt: string;
     questions: any[];
   } | null>(null);
+
+  // Lesson Preview Modal
+  const [previewingLesson, setPreviewingLesson] = useState<DailyLesson | null>(null);
+  const [previewingQuizzes, setPreviewingQuizzes] = useState<Quiz[]>([]);
+  const [isLoadingPreviewQuizzes, setIsLoadingPreviewQuizzes] = useState(false);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const subjects = [
     'Matematika', 'Bahasa Indonesia', 'IPA', 'IPS', 
     'Bahasa Inggris', 'PAI', 'PJOK', 'Seni Budaya', 'Informatika'
   ];
-  
-  const smpClasses = ['7A', '7B', '7C', '8A', '8B', '8C', '9A', '9B', '9C'];
 
+  // Auto-scroll chat to bottom
   useEffect(() => {
-    const fetchClasses = async () => {
-      if (schoolLevel === 'SMP') {
-        setAvailableClasses(smpClasses);
-        return;
-      }
-      
-      setIsLoadingClasses(true);
-      try {
-        const res = await fetch(`/api/grademaster/behaviors?year=${encodeURIComponent(academicYear)}`);
-        const data = await res.json();
-        if (data.classes && data.classes.length > 0) {
-          setAvailableClasses(data.classes);
-        } else {
-          setAvailableClasses(['SMA']);
-        }
-      } catch (err) {
-        console.error("Failed to fetch classes:", err);
-        setAvailableClasses(['SMA']);
-      } finally {
-        setIsLoadingClasses(false);
-      }
-    };
-    
-    fetchClasses();
-  }, [schoolLevel, academicYear]);
-
-  // AI Function using Groq
-  const generateAILesson = async (content: string) => {
-    if (!subject) {
-      setToast({ message: "Pilih mata pelajaran terlebih dahulu", type: 'error' });
-      return;
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-    setIsGenerating(true);
+  }, [messages, isAiResponding]);
+
+  // Load history list on mount
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = async () => {
     try {
-      const result = await generateAILessonContent(content, subject);
-      setAiResult({
-        preview: result.preview,
-        chatPreview: result.chatPrompt,
-        questions: result.questions
-      });
-      setToast({ message: "AI Groq berhasil merumuskan materi & kuis pelajaran!", type: 'success' });
-    } catch (err: any) {
-      setToast({ message: "Gagal generate AI: " + err.message, type: 'error' });
-    } finally {
-      setIsGenerating(false);
+      const data = await fetchAllLessons();
+      setHistoryLessons(data);
+    } catch (err) {
+      console.error("Gagal memuat riwayat pelajaran:", err);
     }
   };
 
-  const handleSaveLesson = async (publish: boolean = false) => {
-    if (!subject || !material) {
-      setToast({ message: "Lengkapi data pelajaran terlebih dahulu", type: 'error' });
-      return;
+  // Initialize Welcome Message
+  useEffect(() => {
+    resetChatToInit();
+  }, []);
+
+  const resetChatToInit = () => {
+    setFlowType(null);
+    setSelectedClass('');
+    setSelectedSubject('');
+    setExtractedText('');
+    setAiResult(null);
+    setMessages([
+      {
+        role: 'assistant',
+        content: `Halo Guru/Admin! Saya adalah **Asisten Kurikulum AI GradeMaster**. 🤖🎓\n\nSaya di sini untuk membantu Anda membuat materi pelajaran harian, kuis interaktif, atau merangkum naskah dokumen menggunakan mesin cerdas Groq Llama.\n\nSilakan pilih opsi kerja yang ingin Anda lakukan hari ini:`,
+        options: [
+          { label: "📘 Buat Pelajaran Harian", action: () => startDailyLessonFlow() },
+          { label: "📝 Manajemen Ulangan Harian", action: () => startQuizFlow() },
+          { label: "📂 NotebookLM (Upload PDF/DOCX)", action: () => startNotebookFlow() }
+        ]
+      }
+    ]);
+  };
+
+  // Option 1: Daily Lesson Flow
+  const startDailyLessonFlow = () => {
+    setFlowType('daily');
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: "Saya ingin membuat pelajaran harian." },
+      {
+        role: 'assistant',
+        content: "Bagus! Silakan pilih tingkatan kelas pelajaran ini:",
+        options: [
+          { label: "Kelas 7", action: () => selectClass('Kelas 7') },
+          { label: "Kelas 8", action: () => selectClass('Kelas 8') },
+          { label: "Kelas 9", action: () => selectClass('Kelas 9') }
+        ]
+      }
+    ]);
+  };
+
+  // Option 2: Quiz Flow
+  const startQuizFlow = () => {
+    setFlowType('quiz');
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: "Saya ingin membuat ulangan/kuis harian." },
+      {
+        role: 'assistant',
+        content: "Baik, silakan tentukan tingkatan kelas kuis:",
+        options: [
+          { label: "Kelas 7", action: () => selectClass('Kelas 7') },
+          { label: "Kelas 8", action: () => selectClass('Kelas 8') },
+          { label: "Kelas 9", action: () => selectClass('Kelas 9') }
+        ]
+      }
+    ]);
+  };
+
+  // Option 3: NotebookLM Flow
+  const startNotebookFlow = () => {
+    setFlowType('notebook');
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: "Saya ingin memproses dokumen pelajaran." },
+      {
+        role: 'assistant',
+        content: "Baik, silakan tentukan tingkatan kelas materi dokumen:",
+        options: [
+          { label: "Kelas 7", action: () => selectClass('Kelas 7') },
+          { label: "Kelas 8", action: () => selectClass('Kelas 8') },
+          { label: "Kelas 9", action: () => selectClass('Kelas 9') }
+        ]
+      }
+    ]);
+  };
+
+  const selectClass = (cls: string) => {
+    setSelectedClass(cls);
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: cls },
+      {
+        role: 'assistant',
+        content: `Materi berlaku untuk semua section di **${cls}**. Sekarang, pilih mata pelajaran:`,
+        options: subjects.map(sub => ({
+          label: sub,
+          action: () => selectSubject(sub)
+        }))
+      }
+    ]);
+  };
+
+  const selectSubject = (sub: string) => {
+    setSelectedSubject(sub);
+    
+    let nextContent = '';
+    let fileUploadRequired = false;
+
+    if (flowType === 'daily') {
+      nextContent = `Pilihan Anda: **${sub}**. Silakan tulis deskripsi singkat atau topik materi pelajaran yang ingin dibuat (misalnya: *Pengenalan jaringan komputer dasar dan topologi star*):`;
+    } else if (flowType === 'quiz') {
+      nextContent = `Pilihan Anda: **${sub}**. Tuliskan cakupan topik ujian atau kisi-kisi soal yang Anda inginkan (misalnya: *5 soal pilihan ganda tentang Hukum Newton 1 dan 2*):`;
+    } else if (flowType === 'notebook') {
+      nextContent = `Pilihan Anda: **${sub}**. Silakan unggah dokumen materi Anda (.pdf, .docx, atau .txt) untuk diolah AI:`;
+      fileUploadRequired = true;
     }
 
-    setIsSaving(true);
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: sub },
+      {
+        role: 'assistant',
+        content: nextContent,
+        fileUpload: fileUploadRequired
+      }
+    ]);
+  };
+
+  // Handle standard user text submit (during prompt input)
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim() || isAiResponding) return;
+
+    const userText = inputValue.trim();
+    setInputValue('');
+
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: userText }
+    ]);
+
+    setIsAiResponding(true);
+
     try {
-      // 1. Save Lesson
+      if (flowType === 'daily' || flowType === 'quiz') {
+        const result = await generateAILessonContent(userText, selectedSubject);
+        setAiResult(result);
+
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `✨ **Groq AI berhasil merumuskan materi pelajaran!**\n\nSilakan tinjau draf materi di bawah ini sebelum mempublikasikannya ke siswa.`
+          }
+        ]);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setMessages(prev => [
+        ...prev,
+        { role: 'assistant', content: `⚠️ Gagal memproses AI: ${err.message}` }
+      ]);
+    } finally {
+      setIsAiResponding(false);
+    }
+  };
+
+  // Handle Notebook File Upload & Extraction
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: `Mengunggah berkas: ${file.name}` }
+    ]);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/grademaster/lessons/parse-content', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal membaca isi dokumen.');
+
+      setExtractedText(data.text);
+      setMessages(prev => [
+        ...prev,
+        { 
+          role: 'assistant', 
+          content: `📄 **File berhasil dibaca!**\nEkstraksi: ${data.charCount} karakter dari file *${file.name}*.\n\nSedang merangkum dan membuat kuis dengan Groq Llama AI...` 
+        }
+      ]);
+
+      setIsAiResponding(true);
+      const result = await generateAILessonContent(data.text.substring(0, 15000), selectedSubject); // Safety slice text length
+      setAiResult(result);
+
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `✨ **Materi berbasis dokumen berhasil disusun oleh Groq AI!**\nSilakan cek rangkuman dan kuis di bawah ini.`
+        }
+      ]);
+    } catch (err: any) {
+      console.error(err);
+      setMessages(prev => [
+        ...prev,
+        { role: 'assistant', content: `⚠️ Gagal mengekstrak berkas: ${err.message}` }
+      ]);
+    } finally {
+      setIsUploading(false);
+      setIsAiResponding(false);
+    }
+  };
+
+  // Publish or Save Draft Action
+  const handleSaveAction = async (publish: boolean) => {
+    if (!aiResult || !selectedClass || !selectedSubject) return;
+
+    setIsAiResponding(true);
+    try {
+      // 1. Create Daily Lesson Row
       const newLesson = await createLesson({
         class_name: selectedClass,
-        subject,
-        date,
-        content: material,
-        ai_reading_preview: aiResult?.preview || '',
-        ai_chat_prompt: aiResult?.chatPreview || '',
+        subject: selectedSubject,
+        date: new Date().toISOString().split('T')[0],
+        content: extractedText || `Pembahasan materi mata pelajaran ${selectedSubject} kelas ${selectedClass}`,
+        ai_reading_preview: aiResult.preview,
+        ai_chat_prompt: aiResult.chatPrompt,
         is_published: publish
       });
 
-      // 2. Save linked Quiz if questions exist
-      if (newLesson && aiResult?.questions && aiResult.questions.length > 0) {
+      // 2. Create Quizzes Row if AI returned questions
+      if (newLesson && aiResult.questions && aiResult.questions.length > 0) {
         const formattedQuestions = aiResult.questions.map((q: any) => ({
           question: q.text || q.question || "",
           text: q.text || q.question || "",
@@ -151,407 +356,476 @@ export default function LessonManagementLayer({
           .from('quizzes')
           .insert({
             lesson_id: newLesson.id,
-            title: `Kuis Evaluasi - ${subject}`,
+            title: `Kuis Evaluasi - ${selectedSubject}`,
             quiz_type: 'DAILY',
             duration_minutes: 15,
             questions: formattedQuestions
           });
 
         if (quizError) {
-          console.error("Failed to save quiz:", quizError);
-          setToast({ message: "Pelajaran disimpan, namun gagal menyimpan kuis AI: " + quizError.message, type: 'error' });
-          setIsSaving(false);
-          return;
+          throw new Error("Gagal mengaitkan Kuis AI: " + quizError.message);
         }
       }
 
-      setToast({ 
-        message: publish ? "Pelajaran & Kuis AI berhasil dipublikasikan ke siswa!" : "Pelajaran & Kuis AI berhasil disimpan!", 
-        type: 'success' 
+      setToast({
+        message: publish 
+          ? "Pelajaran & Kuis berhasil dipublikasikan ke semua section siswa!" 
+          : "Draf pelajaran berhasil disimpan!",
+        type: 'success'
       });
 
-      // Reset form if successfully saved/published
-      setSubject('');
-      setMaterial('');
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `✅ **Pelajaran berhasil ${publish ? 'diterbitkan secara live!' : 'disimpan sebagai draft.'}**\n\nRiwayat pelajaran Anda telah diperbarui. Apakah ada hal lain yang ingin Anda kerjakan?`,
+          options: [
+            { label: "Mulai Percakapan Baru", action: () => resetChatToInit() }
+          ]
+        }
+      ]);
+
       setAiResult(null);
+      loadHistory();
     } catch (err: any) {
       setToast({ message: "Gagal menyimpan: " + err.message, type: 'error' });
     } finally {
-      setIsSaving(false);
+      setIsAiResponding(false);
     }
   };
 
+  // Open Preview Modal of old lesson
+  const handleOpenPreview = async (lesson: DailyLesson) => {
+    setPreviewingLesson(lesson);
+    setIsLoadingPreviewQuizzes(true);
+    setPreviewingQuizzes([]);
+
+    try {
+      const { data, error } = await supabase
+        .from('quizzes')
+        .select('*')
+        .eq('lesson_id', lesson.id);
+
+      if (error) throw error;
+      setPreviewingQuizzes(data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingPreviewQuizzes(false);
+    }
+  };
+
+  // Delete lesson from history
+  const handleDeleteLesson = async (lessonId: string, subjectName: string) => {
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus materi "${subjectName}" beserta kuisnya? Tindakan ini permanen.`)) return;
+
+    try {
+      await deleteLesson(lessonId);
+      setToast({ message: "Materi berhasil dihapus dari sistem", type: 'success' });
+      setPreviewingLesson(null);
+      loadHistory();
+    } catch (err: any) {
+      setToast({ message: "Gagal menghapus: " + err.message, type: 'error' });
+    }
+  };
+
+  // Filter History Lessons
+  const filteredHistory = historyLessons.filter(lesson => 
+    lesson.subject.toLowerCase().includes(historySearchQuery.toLowerCase()) ||
+    lesson.class_name.toLowerCase().includes(historySearchQuery.toLowerCase())
+  );
+
   return (
-    <div className="min-h-dvh bg-white p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto page-pt md:pt-16 pb-24 font-outfit">
+    <div className="min-h-dvh bg-[#0d0f14] text-slate-100 flex flex-col font-outfit relative overflow-hidden">
       
-      {/* Loading Overlay */}
-      {(isGenerating || isSaving) && (
-        <div className="fixed inset-0 z-[1100] bg-white/80 backdrop-blur-md flex flex-col items-center justify-center animate-in fade-in duration-500">
-          <div className="relative">
-            <div className="w-20 h-20 border-4 border-emerald-100 border-t-emerald-500 rounded-full animate-spin"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Sparkles className="text-emerald-500 animate-pulse" size={24} />
-            </div>
-          </div>
-          <p className="mt-6 text-slate-800 font-bold text-lg animate-pulse">
-            {isGenerating ? "AI sedang merumuskan materi..." : "Menyimpan data ke sistem..."}
-          </p>
-          <p className="text-slate-500 text-sm mt-2">Mohon tunggu sebentar, GradeMaster sedang bekerja.</p>
-        </div>
-      )}
+      {/* Background radial glow */}
+      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-violet-600/10 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-emerald-600/10 blur-[80px] rounded-full pointer-events-none" />
 
       {/* Header */}
-      <header className="mb-8 md:mb-12 animate-in fade-in slide-in-from-top-4 duration-700">
-        <button 
-          onClick={onBack}
-          className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium text-sm transition-all mb-6 group"
-        >
-          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Beranda
-        </button>
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <h1 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight leading-none mb-3">
-              Manajemen Pelajaran
-            </h1>
-            <p className="text-slate-500 text-base md:text-lg max-w-2xl font-medium leading-relaxed">
-              Buat, kelola, dan pantau pelajaran harian, ulangan ASTS/ASAJ, serta materi AI untuk siswa.
-            </p>
+      <header className="h-16 shrink-0 border-b border-white/5 bg-[#12161f]/80 backdrop-blur-xl px-6 flex items-center justify-between z-30">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={onBack}
+            className="p-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all"
+            title="Kembali"
+          >
+            <ArrowLeft size={16} />
+          </button>
+          <div className="flex items-center gap-2">
+            <h1 className="text-sm font-black uppercase tracking-wider text-slate-100">Manajemen Pelajaran</h1>
+            <span className="text-[9px] font-black uppercase tracking-widest bg-violet-500/10 border border-violet-500/20 text-violet-400 px-2 py-0.5 rounded-md">AI Agent</span>
           </div>
-          <div className="bg-slate-50 self-start md:self-auto p-2 rounded-2xl border border-slate-100 flex items-center gap-3">
-             <span className="text-xs font-bold text-slate-400 px-3 uppercase tracking-widest hidden sm:inline">Kelas</span>
-             <select 
-               value={selectedClass}
-               onChange={(e) => setSelectedClass(e.target.value)}
-               className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-lg font-black text-slate-900 shadow-sm min-w-[100px] text-center outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer appearance-none"
-             >
-               {availableClasses.map(cls => (
-                 <option key={cls} value={cls}>{cls}</option>
-               ))}
-             </select>
-          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-slate-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/[0.03] uppercase tracking-wider font-mono">
+            {academicYear}
+          </span>
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="flex border-b border-slate-100 mb-8 overflow-x-auto no-scrollbar">
-        {[
-          { id: 'daily', label: 'Pelajaran Harian', icon: BookOpen },
-          { id: 'exams', label: 'Manajemen Ulangan', icon: Clock },
-          { id: 'ai_materials', label: 'Manajemen Materi AI', icon: Bot }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as TabType)}
-            className={`flex items-center gap-2.5 px-6 py-4 border-b-2 transition-all whitespace-nowrap text-sm font-bold tracking-tight ${
-              activeTab === tab.id 
-              ? 'border-emerald-500 text-emerald-600 bg-emerald-50/30' 
-              : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            <tab.icon size={18} /> {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Main Content Area */}
-      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Main Workspace split */}
+      <main className="flex-1 flex overflow-hidden relative z-10">
         
-        {/* TAB: DAILY LESSONS */}
-        {activeTab === 'daily' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Input Card */}
-            <div className="bg-white border border-slate-200 rounded-[32px] p-8 shadow-sm hover:shadow-md transition-shadow">
-               <div className="flex items-center gap-3 mb-8">
-                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
-                    <Plus size={24} />
-                  </div>
-                  <h2 className="text-2xl font-black text-slate-900">Buat Pelajaran Baru</h2>
-               </div>
-
-               <div className="space-y-6">
-                 <div className="grid grid-cols-2 gap-4">
-                   <div className="space-y-2">
-                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">Mata Pelajaran</label>
-                     <select 
-                       value={subject}
-                       onChange={(e) => setSubject(e.target.value)}
-                       className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                     >
-                       <option value="">Pilih Pelajaran</option>
-                       {subjects.map(s => <option key={s} value={s}>{s}</option>)}
-                     </select>
-                   </div>
-                   <div className="space-y-2">
-                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
-                     <input 
-                       type="date"
-                       value={date}
-                       onChange={(e) => setDate(e.target.value)}
-                       className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all font-sans"
-                     />
-                   </div>
-                 </div>
-
-                 <div className="space-y-2">
-                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">Materi Pelajaran</label>
-                   <textarea 
-                     placeholder="Masukkan materi pelajaran hari ini atau tempel teks panjang..."
-                     value={material}
-                     onChange={(e) => setMaterial(e.target.value)}
-                     className="w-full min-h-[250px] bg-slate-50 border border-slate-200 rounded-2xl p-5 text-base font-medium outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all resize-none leading-relaxed"
-                   ></textarea>
-                 </div>
-
-                 <button 
-                   onClick={() => generateAILesson(material)}
-                   disabled={!material || isGenerating}
-                   className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all transform active:scale-[0.98] shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-3 disabled:opacity-50"
-                 >
-                   <Sparkles size={20} /> Generate AI Lesson
-                 </button>
-               </div>
+        {/* LEFT COLUMN: HISTORY SIDEBAR */}
+        <section className="w-80 border-r border-white/5 bg-[#0f121a] flex flex-col shrink-0 hidden md:flex">
+          <div className="p-4 border-b border-white/5 flex flex-col gap-3">
+            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Riwayat Pelajaran</h3>
+            <div className="relative group">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-violet-400 transition-colors" size={14} />
+              <input 
+                type="text" 
+                placeholder="Cari materi / kelas..."
+                value={historySearchQuery}
+                onChange={(e) => setHistorySearchQuery(e.target.value)}
+                className="w-full h-10 bg-white/5 border border-white/5 rounded-xl pl-9 pr-4 text-xs font-bold placeholder:text-slate-500 focus:ring-1 focus:ring-violet-500/30 outline-none transition-all"
+              />
             </div>
+          </div>
 
-            {/* AI Result Card */}
-            <div className="relative">
-              {!aiResult ? (
-                <div className="h-full min-h-[400px] border-2 border-dashed border-slate-200 rounded-[32px] flex flex-col items-center justify-center p-10 text-center bg-slate-50/30">
-                  <div className="w-16 h-16 bg-white border border-slate-200 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
-                    <Sparkles size={32} className="text-slate-300" />
+          <div className="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
+            {filteredHistory.length === 0 ? (
+              <div className="text-center py-10 text-slate-500 text-xs font-bold">
+                Tidak ada materi terbit.
+              </div>
+            ) : (
+              filteredHistory.map((lesson) => (
+                <button
+                  key={lesson.id}
+                  onClick={() => handleOpenPreview(lesson)}
+                  className="w-full p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.02] text-left transition-all duration-300 flex items-start gap-3.5 group active:scale-[0.98]"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-white/5 text-slate-400 flex items-center justify-center shrink-0 group-hover:bg-violet-500/10 group-hover:text-violet-400 transition-colors">
+                    <FileText size={16} />
                   </div>
-                  <h3 className="text-xl font-black text-slate-900 mb-2">Belum ada hasil AI</h3>
-                  <p className="text-slate-400 text-sm font-medium max-w-[280px]">Input materi di samping dan klik Generate untuk memulai sihir AI GradeMaster.</p>
-                </div>
-              ) : (
-                <div className="bg-slate-900 rounded-[32px] p-8 shadow-2xl animate-in zoom-in-95 duration-500 flex flex-col h-full ring-1 ring-white/10">
-                  <div className="flex items-center justify-between mb-8">
-                     <div className="flex items-center gap-2">
-                       <span className="px-4 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-500/30 flex items-center gap-2">
-                         <Bot size={12} /> AI Engine Active
-                       </span>
-                       <button
-                         onClick={() => generateAILesson(material)}
-                         className="flex items-center gap-1.5 px-3 py-1 bg-white/5 hover:bg-white/10 active:scale-95 text-emerald-400 border border-white/10 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all"
-                       >
-                         <RefreshCw size={12} /> Regenerate
-                       </button>
-                     </div>
-                     <Sparkles className="text-emerald-500" size={20} />
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-xs font-black text-slate-200 group-hover:text-violet-400 transition-colors truncate uppercase tracking-wide leading-normal">
+                      {lesson.subject}
+                    </h4>
+                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1">
+                      {lesson.class_name} • {lesson.date}
+                    </p>
                   </div>
+                </button>
+              ))
+            )}
+          </div>
+        </section>
 
-                  <div className="flex-1 space-y-8 overflow-y-auto pr-2 custom-scrollbar">
-                    {/* Materi Preview */}
-                    <section>
-                      <h4 className="text-emerald-400 text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <FileText size={14} /> Preview Materi
-                      </h4>
-                      <textarea
-                        value={aiResult.preview}
-                        onChange={(e) => setAiResult({ ...aiResult, preview: e.target.value })}
-                        className="w-full min-h-[140px] bg-white/5 border border-white/10 rounded-2xl p-4 text-slate-300 text-xs leading-relaxed outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all resize-y"
-                      />
-                    </section>
+        {/* RIGHT COLUMN: AI CONVERSATION */}
+        <section className="flex-1 flex flex-col bg-[#0d0f14]/80">
+          
+          {/* Chat Window Messages */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 no-scrollbar">
+            {messages.map((msg, idx) => {
+              const isAI = msg.role === 'assistant';
+              return (
+                <div 
+                  key={idx} 
+                  className={`flex gap-4 max-w-[85%] ${isAI ? 'self-start' : 'self-end ml-auto flex-row-reverse'}`}
+                >
+                  {isAI && (
+                    <div className="w-8 h-8 rounded-lg bg-violet-600/10 border border-violet-500/20 text-violet-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(155,114,203,0.15)] mt-1">
+                      <Bot size={16} />
+                    </div>
+                  )}
 
-                    {/* Chat Preview */}
-                    <section>
-                      <h4 className="text-emerald-400 text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <MessageSquare size={14} /> AI Chat Assistant
-                      </h4>
-                      <textarea
-                        value={aiResult.chatPreview}
-                        onChange={(e) => setAiResult({ ...aiResult, chatPreview: e.target.value })}
-                        className="w-full min-h-[100px] bg-white/5 border border-white/10 rounded-2xl p-4 text-slate-300 text-xs leading-relaxed outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all resize-y"
-                      />
-                    </section>
+                  <div className="flex flex-col gap-3">
+                    {/* Speech Bubble */}
+                    <div className={`p-4 rounded-3xl text-sm leading-relaxed whitespace-pre-line ${
+                      isAI 
+                        ? 'bg-[#121620] text-slate-300 border border-white/[0.03] rounded-tl-none font-medium'
+                        : 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-tr-none font-bold'
+                    }`}>
+                      {msg.content}
+                    </div>
 
-                    {/* Questions Preview */}
-                    <section>
-                      <h4 className="text-emerald-400 text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <History size={14} /> Daftar Soal ({aiResult.questions.length})
-                      </h4>
-                      <div className="space-y-4">
-                        {aiResult.questions.map((q, i) => (
-                          <div key={i} className="bg-white/5 p-4 rounded-xl space-y-3 border border-white/5 group hover:bg-white/10 transition-colors">
-                            <div className="flex items-start gap-3">
-                              <span className="w-6 h-6 bg-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">{i+1}</span>
-                              <div className="flex-1">
-                                <textarea
-                                  value={q.text || q.question}
-                                  onChange={(e) => {
-                                    const updatedQs = [...aiResult.questions];
-                                    updatedQs[i] = { ...q, text: e.target.value, question: e.target.value };
-                                    setAiResult({ ...aiResult, questions: updatedQs });
-                                  }}
-                                  className="w-full bg-transparent text-slate-200 text-xs font-bold leading-relaxed border-b border-white/10 focus:border-emerald-500/50 pb-1 outline-none resize-none"
-                                  rows={2}
-                                />
-                                <span className="text-[9px] text-slate-500 uppercase font-black mt-2 block tracking-widest">{q.type === 'mcq' ? 'PILIHAN GANDA' : 'ESSAY'}</span>
-                              </div>
+                    {/* Quick options/reply chips */}
+                    {isAI && msg.options && msg.options.length > 0 && (
+                      <div className="flex flex-wrap gap-2 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                        {msg.options.map((opt, oIdx) => (
+                          <button
+                            key={oIdx}
+                            onClick={opt.action}
+                            disabled={isAiResponding}
+                            className="px-4 py-2 bg-white/5 hover:bg-violet-500/10 hover:text-violet-300 border border-white/5 hover:border-violet-500/30 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 active:scale-95 disabled:opacity-40"
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Document Upload Input */}
+                    {isAI && msg.fileUpload && (
+                      <div className="p-5 border border-dashed border-white/10 rounded-2xl bg-white/[0.01] flex flex-col items-center justify-center text-center gap-3 hover:bg-white/[0.02] transition-colors cursor-pointer"
+                           onClick={() => fileInputRef.current?.click()}>
+                        <input 
+                          type="file" 
+                          ref={fileInputRef} 
+                          onChange={handleFileUpload} 
+                          accept=".pdf,.docx,.txt" 
+                          className="hidden" 
+                        />
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="animate-spin text-violet-400" size={32} />
+                            <span className="text-xs font-bold text-slate-400">Mengekstraksi konten file...</span>
+                          </>
+                        ) : (
+                          <>
+                            <CloudUpload className="text-violet-400 animate-bounce" size={36} />
+                            <div>
+                              <span className="text-xs font-black uppercase tracking-wider text-slate-200">Unggah Berkas</span>
+                              <p className="text-[10px] text-slate-500 mt-1">Mendukung PDF, DOCX, dan TXT (Maks. 10MB)</p>
                             </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
 
-                            {/* MCQ options editing */}
+            {/* AI Response Loader */}
+            {isAiResponding && !isUploading && (
+              <div className="flex gap-4 max-w-[80%] self-start animate-pulse">
+                <div className="w-8 h-8 rounded-lg bg-violet-600/10 text-violet-400 flex items-center justify-center shrink-0">
+                  <Bot size={16} />
+                </div>
+                <div className="p-4 bg-[#121620] text-slate-400 rounded-3xl rounded-tl-none border border-white/[0.03] flex items-center gap-2">
+                  <Loader2 className="animate-spin text-violet-400" size={14} />
+                  <span className="text-xs font-black uppercase tracking-widest text-slate-400">Groq AI sedang berpikir...</span>
+                </div>
+              </div>
+            )}
+
+            {/* AI Result Review Panel inside Chat */}
+            {aiResult && (
+              <div className="border border-violet-500/20 bg-gradient-to-tr from-[#121620] to-[#161a29]/95 rounded-[32px] p-6 space-y-6 shadow-2xl animate-in zoom-in-95 duration-500 mt-4 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/5 rounded-bl-full pointer-events-none" />
+                
+                <div className="flex items-center justify-between pb-4 border-b border-white/5">
+                  <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-violet-400">
+                    <Sparkles size={16} /> Hasil Formulasi Groq AI
+                  </h3>
+                  <span className="text-[9px] font-black px-2 py-0.5 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-md">
+                    Llama 70B
+                  </span>
+                </div>
+
+                <div className="space-y-5">
+                  {/* Material summary preview */}
+                  <div>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">1. Preview Ringkasan</h4>
+                    <p className="text-slate-300 text-xs leading-relaxed font-medium bg-white/[0.01] p-4 rounded-xl border border-white/[0.03]">
+                      {aiResult.preview}
+                    </p>
+                  </div>
+
+                  {/* MCQ & Essay Questions preview */}
+                  {aiResult.questions && aiResult.questions.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">2. Butir Soal Kuis AI ({aiResult.questions.length})</h4>
+                      <div className="space-y-3 max-h-48 overflow-y-auto no-scrollbar pr-1">
+                        {aiResult.questions.map((q, qIdx) => (
+                          <div key={qIdx} className="bg-white/[0.02] border border-white/[0.02] p-3 rounded-xl space-y-2 text-xs">
+                            <p className="font-bold text-slate-200">{qIdx+1}. {q.text || q.question}</p>
                             {q.type === 'mcq' && q.options && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-9 pt-1">
-                                {q.options.map((opt: string, optIdx: number) => (
-                                  <div key={optIdx} className="flex gap-2 items-center bg-white/5 rounded-lg border border-white/10 px-2.5 py-1.5 focus-within:border-emerald-500/30 transition-colors">
-                                    <span className="text-[9px] font-black text-slate-500">{String.fromCharCode(65 + optIdx)}</span>
-                                    <input
-                                      type="text"
-                                      value={opt}
-                                      onChange={(e) => {
-                                        const updatedQs = [...aiResult.questions];
-                                        const updatedOpts = [...(q.options || [])];
-                                        updatedOpts[optIdx] = e.target.value;
-                                        let updatedAns = q.answer || q.correctAnswer;
-                                        if ((q.answer || q.correctAnswer) === opt) {
-                                          updatedAns = e.target.value;
-                                        }
-                                        updatedQs[i] = { ...q, options: updatedOpts, answer: updatedAns, correctAnswer: updatedAns };
-                                        setAiResult({ ...aiResult, questions: updatedQs });
-                                      }}
-                                      className="bg-transparent text-[11px] text-slate-300 outline-none w-full border-none p-0 focus:ring-0"
-                                    />
-                                  </div>
+                              <div className="grid grid-cols-2 gap-2 pl-4">
+                                {q.options.map((opt: string) => (
+                                  <span key={opt} className={`text-[10px] p-1.5 rounded-lg border ${
+                                    opt === q.answer ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-bold' : 'bg-white/5 border-transparent text-slate-400'
+                                  }`}>
+                                    {opt}
+                                  </span>
                                 ))}
-                              </div>
-                            )}
-
-                            {/* MCQ correct answer selector */}
-                            {q.type === 'mcq' && q.options && (
-                              <div className="pl-9 flex items-center gap-2">
-                                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Kunci Jawaban:</span>
-                                <select
-                                  value={q.answer || q.correctAnswer}
-                                  onChange={(e) => {
-                                    const updatedQs = [...aiResult.questions];
-                                    updatedQs[i] = { ...q, answer: e.target.value, correctAnswer: e.target.value };
-                                    setAiResult({ ...aiResult, questions: updatedQs });
-                                  }}
-                                  className="bg-slate-800 border border-white/10 text-emerald-400 text-[10px] font-bold rounded-lg px-2 py-1 outline-none cursor-pointer focus:ring-1 focus:ring-emerald-500"
-                                >
-                                  {q.options.map((opt: string) => (
-                                    <option key={opt} value={opt}>{opt}</option>
-                                  ))}
-                                </select>
                               </div>
                             )}
                           </div>
                         ))}
                       </div>
-                    </section>
-                  </div>
+                    </div>
+                  )}
+                </div>
 
-                  <div className="grid grid-cols-2 gap-4 mt-8 pt-6 border-t border-white/10">
-                    <button 
-                      onClick={() => handleSaveLesson(false)}
-                      className="h-12 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold text-xs transition-all border border-white/10"
-                    >
-                      Simpan Draft
-                    </button>
-                    <button 
-                      onClick={() => handleSaveLesson(true)}
-                      className="h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black text-sm transition-all shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2"
-                    >
-                      Publish <ChevronRight size={16} />
-                    </button>
-                  </div>
+                {/* Final actions */}
+                <div className="flex gap-3 pt-4 border-t border-white/5">
+                  <button
+                    onClick={() => handleSaveAction(false)}
+                    disabled={isAiResponding}
+                    className="flex-1 h-12 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-colors border border-white/5"
+                  >
+                    Simpan Draft
+                  </button>
+                  <button
+                    onClick={() => handleSaveAction(true)}
+                    disabled={isAiResponding}
+                    className="flex-1 h-12 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle2 size={14} /> Terbitkan (Publish)
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAiResult(null);
+                      resetChatToInit();
+                    }}
+                    disabled={isAiResponding}
+                    className="px-4 h-12 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Quick Input Bar (Only enabled when awaiting custom description input) */}
+          <div className="p-4 bg-[#0f121a] border-t border-white/5">
+            <form onSubmit={handleFormSubmit} className="flex gap-2 max-w-4xl mx-auto">
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder={
+                  !flowType 
+                    ? "Pilih opsi di atas untuk memulai..." 
+                    : isAiResponding 
+                    ? "Asisten sedang memproses..." 
+                    : "Tuliskan topik, materi, atau deskripsi naskah..."
+                }
+                disabled={!flowType || isAiResponding || !!aiResult}
+                className="flex-1 h-12 bg-white/5 border border-white/5 rounded-xl px-4 text-xs font-bold outline-none focus:ring-1 focus:ring-violet-500/30 transition-all placeholder:text-slate-500 disabled:opacity-40"
+              />
+              <button
+                type="submit"
+                disabled={!inputValue.trim() || isAiResponding || !flowType || !!aiResult}
+                className="w-12 h-12 bg-violet-600 hover:bg-violet-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-violet-600/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-30"
+              >
+                <Send size={16} />
+              </button>
+            </form>
+          </div>
+        </section>
+      </main>
+
+      {/* DETAILED LESSON PREVIEW MODAL */}
+      {previewingLesson && (
+        <div className="fixed inset-0 z-[100] animate-in fade-in duration-300">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewingLesson(null)} />
+          
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-[#121620] border border-white/10 rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto flex flex-col gap-6 custom-scrollbar">
+            
+            <div className="flex justify-between items-start border-b border-white/5 pb-4">
+              <div>
+                <span className="text-[9px] font-black uppercase tracking-widest text-violet-400">
+                  {previewingLesson.class_name} • {previewingLesson.date}
+                </span>
+                <h3 className="font-headline font-black text-xl text-slate-100 uppercase tracking-tight mt-1">
+                  {previewingLesson.subject}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setPreviewingLesson(null)} 
+                className="w-9 h-9 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Summary */}
+              {previewingLesson.ai_reading_preview && (
+                <div className="bg-violet-500/5 rounded-2xl p-5 border border-violet-500/10">
+                  <h4 className="text-violet-400 text-xs font-black uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                    <Sparkles size={14} /> Ringkasan Materi AI
+                  </h4>
+                  <p className="text-slate-300 text-xs font-medium leading-relaxed">
+                    {previewingLesson.ai_reading_preview}
+                  </p>
                 </div>
               )}
+
+              {/* Full Content */}
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Cakupan Isi Materi</h4>
+                <div className="bg-white/[0.01] border border-white/[0.03] p-5 rounded-2xl text-xs leading-relaxed text-slate-300 whitespace-pre-wrap max-h-60 overflow-y-auto custom-scrollbar">
+                  {previewingLesson.content}
+                </div>
+              </div>
+
+              {/* Quizzes list inside modal */}
+              <div className="space-y-3">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Kuis Evaluasi AI</h4>
+                
+                {isLoadingPreviewQuizzes ? (
+                  <div className="flex items-center gap-2 py-4 justify-center">
+                    <Loader2 size={16} className="animate-spin text-violet-400" />
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Memuat kuis...</span>
+                  </div>
+                ) : previewingQuizzes.length === 0 ? (
+                  <p className="text-slate-500 text-xs font-bold italic">Kuis evaluasi tidak dilampirkan pada materi ini.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {previewingQuizzes.map((quiz) => (
+                      <div key={quiz.id} className="bg-white/[0.02] border border-white/[0.03] p-4 rounded-xl space-y-3">
+                        <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                          <span>{quiz.title}</span>
+                          <span>Durasi: {quiz.duration_minutes} Menit</span>
+                        </div>
+                        <div className="space-y-2.5">
+                          {(quiz.questions || []).map((q: any, qIdx: number) => (
+                            <div key={qIdx} className="bg-white/[0.01] p-2.5 rounded-lg text-xs space-y-1">
+                              <p className="font-bold text-slate-300">{qIdx+1}. {q.text || q.question}</p>
+                              {q.type === 'mcq' && q.options && (
+                                <div className="grid grid-cols-2 gap-1.5 pl-4 pt-1">
+                                  {q.options.map((opt: string) => (
+                                    <span key={opt} className={`text-[10px] px-2 py-1 rounded border ${
+                                      opt === q.answer ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 font-bold' : 'bg-transparent border-transparent text-slate-500'
+                                    }`}>
+                                      {opt}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4 border-t border-white/5 justify-between">
+              <button
+                onClick={() => handleDeleteLesson(previewingLesson.id, previewingLesson.subject)}
+                className="px-4 h-12 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors flex items-center gap-2"
+              >
+                <Trash2 size={14} /> Hapus Materi
+              </button>
+              <button
+                onClick={() => setPreviewingLesson(null)}
+                className="px-6 h-12 bg-white/5 hover:bg-white/10 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-colors border border-white/5"
+              >
+                Tutup
+              </button>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* TAB: EXAMS */}
-        {activeTab === 'exams' && (
-          <div className="max-w-2xl">
-            <div className="bg-white border border-slate-200 rounded-[32px] p-8 shadow-sm">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center">
-                    <History size={24} />
-                  </div>
-                  <h2 className="text-2xl font-black text-slate-900">Buat Ulangan Baru</h2>
-               </div>
-               
-               <div className="space-y-6">
-                 <div className="space-y-2">
-                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">Nama Ulangan</label>
-                   <input type="text" placeholder="Contoh: ASTS Semester Ganjil" className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all" />
-                 </div>
-
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">Tipe</label>
-                      <select className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-500/20 transition-all">
-                        <option>ASTS</option>
-                        <option>ASAJ</option>
-                        <option>UH</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">Durasi (Menit)</label>
-                      <input type="number" defaultValue={60} className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-500/20 transition-all" />
-                    </div>
-                 </div>
-
-                 <button className="w-full h-14 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-lg shadow-amber-500/20">
-                   Buat Ulangan
-                 </button>
-               </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB: AI MATERIALS */}
-        {activeTab === 'ai_materials' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-1">
-               <div className="bg-white border border-slate-200 rounded-[32px] p-6 shadow-sm">
-                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
-                    <CloudUpload size={24} />
-                  </div>
-                  <h3 className="text-lg font-black text-slate-900 mb-2">Upload Materi</h3>
-                  <p className="text-slate-400 text-xs font-medium mb-6">Upload PDF, Gambar, atau Dokumen untuk diproses AI GradeMaster.</p>
-                  
-                  <div className="h-40 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center group hover:bg-slate-50 transition-colors cursor-pointer mb-6">
-                    <Bot className="text-slate-300 group-hover:text-blue-400 transition-colors mb-2" size={32} />
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Drop Files Here</span>
-                  </div>
-
-                  <button className="w-full h-12 bg-slate-900 text-white rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2">
-                    <Sparkles size={14} className="text-blue-400" /> Proses dengan AI
-                  </button>
-               </div>
-            </div>
-
-            <div className="md:col-span-2 space-y-4">
-               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 mb-4">Materi Terdaftar</h3>
-               {[1, 2, 3].map(i => (
-                 <div key={i} className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 hover:shadow-md transition-shadow group">
-                   <div className="w-12 h-12 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
-                     <FileText size={22} />
-                   </div>
-                   <div className="flex-1">
-                     <h4 className="text-sm font-black text-slate-900">Materi Pelajaran #{i} - Struktur Atom</h4>
-                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Diproses pada 20 Apr 2026</p>
-                   </div>
-                   <button className="p-2 text-slate-300 hover:text-slate-900 transition-colors">
-                     <ChevronRight size={20} />
-                   </button>
-                 </div>
-               ))}
-            </div>
-          </div>
-        )}
-
-      </div>
-
+      {/* Styled scrollbar classes */}
       <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.2); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(16, 185, 129, 0.4); }
       `}</style>
     </div>
   );

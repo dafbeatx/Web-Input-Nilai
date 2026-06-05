@@ -66,10 +66,15 @@ export default function StudentLessonLayer({ onBack, setToast }: StudentLessonLa
       }
       setIsLoadingLessons(true);
       try {
+        const baseClass = activeClassName.startsWith('7') ? 'Kelas 7' 
+                        : activeClassName.startsWith('8') ? 'Kelas 8' 
+                        : activeClassName.startsWith('9') ? 'Kelas 9' 
+                        : activeClassName;
+
         const { data, error } = await supabase
           .from('daily_lessons')
           .select('*')
-          .eq('class_name', activeClassName)
+          .in('class_name', [activeClassName, baseClass])
           .eq('is_published', true)
           .order('date', { ascending: false });
 
