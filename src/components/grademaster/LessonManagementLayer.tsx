@@ -494,16 +494,16 @@ export default function LessonManagementLayer({
                 <button
                   key={lesson.id}
                   onClick={() => handleOpenPreview(lesson)}
-                  className="w-full p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.02] text-left transition-all duration-300 flex items-start gap-3.5 group active:scale-[0.98]"
+                  className="w-full p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.02] hover:border-violet-500/30 text-left transition-all duration-300 flex items-center gap-3.5 group hover:scale-[1.02] active:scale-[0.98] hover:shadow-[0_8px_30px_rgba(155,114,203,0.06)] overflow-visible relative focus:outline-none focus:ring-1 focus:ring-violet-500/30"
                 >
                   <div className="w-8 h-8 rounded-lg bg-white/5 text-slate-400 flex items-center justify-center shrink-0 group-hover:bg-violet-500/10 group-hover:text-violet-400 transition-colors">
                     <FileText size={16} />
                   </div>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 overflow-visible">
                     <h4 className="text-xs font-black text-slate-200 group-hover:text-violet-400 transition-colors truncate uppercase tracking-wide leading-normal">
                       {lesson.subject}
                     </h4>
-                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1">
+                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1.5 leading-normal pb-0.5">
                       {lesson.class_name} • {lesson.date}
                     </p>
                   </div>
