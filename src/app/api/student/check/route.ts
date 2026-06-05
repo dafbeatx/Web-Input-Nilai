@@ -1,20 +1,66 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from 'next/server';
-import { getStudentSession } from '@/lib/grademaster/studentAuth';
+import { getStudentSession, createStudentSession } from '@/lib/grademaster/studentAuth';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET() {
   try {
+    // 1. Check for standard student cookie session
     const session = await getStudentSession();
 
-    if (!session) {
-      return NextResponse.json({ authenticated: false, role: null });
+    if (session) {
+      return NextResponse.json({
+        authenticated: true,
+        role: 'student',
+        student: session.student,
+      });
     }
 
-    return NextResponse.json({
-      authenticated: true,
-      role: 'student',
-      student: session.student,
-    });
+    // 2. Fallback: check if there is an active Supabase user session (Google Login)
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user && user.email) {
+      const email = user.email.toLowerCase();
+
+      // Look up student account bound to this Google email
+      const { data: boundAccount, error: boundError } = await supabase
+        .from('gm_student_accounts')
+        .select('id, student_name, class_name, academic_year, username, profile_photo_url')
+        .eq('google_email', email)
+        .single();
+
+      if (boundAccount && !boundError) {
+        // Find corresponding behavior record
+        const { data: behaviorRecord } = await supabase
+          .from('gm_behaviors')
+          .select('id, total_points')
+          .eq('student_name', boundAccount.student_name)
+          .eq('class_name', boundAccount.class_name)
+          .single();
+
+        // Establish the application-specific session cookie
+        await createStudentSession(boundAccount.id);
+
+        return NextResponse.json({
+          authenticated: true,
+          role: 'student',
+          student: {
+            id: boundAccount.id,
+            student_id: behaviorRecord?.id, // Link to behavior logs
+            total_points: behaviorRecord?.total_points || 0,
+            name: boundAccount.student_name,
+            class_name: boundAccount.class_name,
+            academic_year: boundAccount.academic_year,
+            username: boundAccount.username,
+            photo_url: boundAccount.profile_photo_url,
+            isGoogleLinked: true
+          },
+        });
+      }
+    }
+
+    return NextResponse.json({ authenticated: false, role: null });
   } catch (err) {
     console.error('Student check error:', err);
     return NextResponse.json({ authenticated: false, role: null });

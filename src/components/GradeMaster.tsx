@@ -283,8 +283,12 @@ export default function GradeMaster() {
 
   useEffect(() => {
     fetchSessions();
-    checkAdmin();
+    if (!isAuthLoading) {
+      checkAdmin();
+    }
+  }, [isAuthLoading]);
 
+  useEffect(() => {
     // Register Service Worker for PWA
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       const handleRegister = () => {

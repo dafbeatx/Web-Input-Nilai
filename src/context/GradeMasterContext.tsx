@@ -65,6 +65,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     setAcademicYear(savedYear);
 
     const checkAuthAndRoute = async () => {
+      console.log("[AuthInit] checkAuthAndRoute: Starting auth initialization check...");
       let activeAdmin = false;
       let activeStudent = false;
       let activeParent = false;
@@ -72,43 +73,99 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       let activeAdminUser: string | null = null;
 
       if (savedParent) {
+        console.log("[AuthInit] Parent mode detected via localStorage");
         activeParent = true;
         setIsParent(true);
         if (savedStudentData) {
           try {
             resolvedStudentData = JSON.parse(savedStudentData);
             setStudentData(resolvedStudentData);
-          } catch (e) {}
+            console.log("[AuthInit] Restored parent's student data:", resolvedStudentData.name);
+          } catch (e) {
+            console.error("[AuthInit] Failed to parse saved student data:", e);
+          }
         }
       } else {
         // Authenticate with Google/Supabase Auth as source of truth
         try {
-          const { data: { session } } = await supabase.auth.getSession();
+          console.log("[AuthInit] Waiting for Supabase session initialization...");
+          
+          // Wait for Supabase to resolve the session with a timeout of 2000ms
+          const session = await new Promise<any>(async (resolve) => {
+            // Check current session
+            const { data: { session: immediateSession } } = await supabase.auth.getSession();
+            if (immediateSession) {
+              resolve(immediateSession);
+              return;
+            }
+
+            // Listen for auth state change
+            let resolved = false;
+            const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+              if (resolved) return;
+              console.log(`[AuthInit Listener] event: ${event}, session: ${!!currentSession}`);
+              resolved = true;
+              subscription.unsubscribe();
+              resolve(currentSession);
+            });
+
+            // Timeout fallback
+            setTimeout(() => {
+              if (!resolved) {
+                resolved = true;
+                subscription.unsubscribe();
+                resolve(null);
+              }
+            }, 2000);
+          });
+
           if (session) {
+            console.log("[AuthInit] Supabase session resolved successfully for email:", session.user?.email);
+            
+            // Helper for retrying fetches
+            const fetchWithRetry = async (url: string, retries = 3, delay = 350): Promise<Response> => {
+              for (let i = 0; i < retries; i++) {
+                try {
+                  console.log(`[AuthInit Fetch] ${url} (attempt ${i + 1}/${retries})...`);
+                  const res = await fetch(url);
+                  if (res.ok) return res;
+                } catch (e) {
+                  console.warn(`[AuthInit Fetch] ${url} failed on attempt ${i + 1}:`, e);
+                }
+                await new Promise(r => setTimeout(r, delay * (i + 1)));
+              }
+              return fetch(url);
+            };
+
             // Check student status first
-            const studentRes = await fetch("/api/student/check");
+            const studentRes = await fetchWithRetry("/api/student/check");
             const studentCheckData = await studentRes.json();
+            console.log("[AuthInit] Student check response:", studentCheckData);
 
             if (studentCheckData.authenticated) {
               activeStudent = true;
               setIsStudent(true);
               resolvedStudentData = { ...studentCheckData.student, isGoogleLinked: true };
               setStudentData(resolvedStudentData);
+              console.log("[AuthInit] User is authenticated student:", resolvedStudentData.name);
             } else {
-              // Fallback to check admin
-              const adminRes = await fetch("/api/admin/check");
+              // Fallback to check admin (which also handles unlinked student_google role)
+              const adminRes = await fetchWithRetry("/api/admin/check");
               const adminData = await adminRes.json();
+              console.log("[AuthInit] Admin check response:", adminData);
 
               if (adminData.authenticated && adminData.role === 'admin') {
                 activeAdmin = true;
                 setIsAdmin(true);
                 activeAdminUser = adminData.displayName || adminData.username;
                 setAdminUser(activeAdminUser);
+                console.log("[AuthInit] User is authenticated admin:", activeAdminUser);
               } else if (adminData.authenticated && adminData.role === 'student') {
                 activeStudent = true;
                 setIsStudent(true);
                 resolvedStudentData = adminData.student;
                 setStudentData(resolvedStudentData);
+                console.log("[AuthInit] User is authenticated student (via admin/check):", resolvedStudentData.name);
               } else if (adminData.role === 'student_google') {
                 activeStudent = true;
                 setIsStudent(true);
@@ -121,11 +178,16 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
                   isGoogleLinked: false
                 };
                 setStudentData(resolvedStudentData);
+                console.log("[AuthInit] User is unlinked student_google:", adminData.email);
+              } else {
+                console.log("[AuthInit] User has session but resolved no specific role");
               }
             }
+          } else {
+            console.log("[AuthInit] No Supabase session detected after wait timeout");
           }
         } catch (err) {
-          console.error("Auth initialization check failed:", err);
+          console.error("[AuthInit] Error during session/auth routing check:", err);
         }
       }
 
@@ -144,11 +206,28 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       } else if (protectedLayers.includes(initialLayer) && !activeAdmin && !activeStudent && !activeParent) {
         initialLayer = 'student_login';
       } else if (authLayers.includes(initialLayer) && (activeAdmin || activeStudent || activeParent)) {
-        initialLayer = activeAdmin ? 'home' : 'dashboard';
+        if (activeAdmin) {
+          initialLayer = 'home';
+        } else if (activeStudent) {
+          if (resolvedStudentData && resolvedStudentData.isGoogleLinked === false) {
+            initialLayer = 'student_claim';
+          } else {
+            initialLayer = 'dashboard';
+          }
+        } else {
+          initialLayer = 'dashboard'; // parent
+        }
       } else if (initialLayer === 'home' && !activeAdmin && !activeStudent && !activeParent) {
         initialLayer = 'student_login';
+      } else if (initialLayer === 'home' && activeStudent) {
+        if (resolvedStudentData && resolvedStudentData.isGoogleLinked === false) {
+          initialLayer = 'student_claim';
+        } else {
+          initialLayer = 'dashboard';
+        }
       }
 
+      console.log(`[AuthInit] Final resolved initialLayer: ${initialLayer}`);
       setLayer(initialLayer);
       window.history.replaceState({ layer: initialLayer }, '', `#${initialLayer}`);
       setIsAuthLoading(false);
