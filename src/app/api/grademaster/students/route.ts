@@ -244,3 +244,43 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const supabase = await createClient();
+    const body = await req.json();
+    const { studentId, name } = body;
+
+    if (!studentId || !name) {
+      return NextResponse.json({ error: 'Student ID dan nama baru wajib diisi' }, { status: 400 });
+    }
+
+    const adminSession = await getAdminSession();
+    if (!adminSession) {
+      return NextResponse.json({ error: 'Akses ditolak: Hanya admin yang dapat mengubah data siswa' }, { status: 403 });
+    }
+
+    const { error } = await supabase
+      .from('gm_students')
+      .update({ name: name.trim() })
+      .eq('id', studentId);
+
+    if (error) throw error;
+
+    logActivity({
+      adminId: adminSession.user_id,
+      adminUsername: adminSession.admin_users.username,
+      actionType: 'UPDATE_GRADE',
+      entityType: 'STUDENT',
+      entityId: studentId,
+      payload: { newName: name.trim() },
+      ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+    });
+
+    return NextResponse.json({ message: 'Nama siswa berhasil diperbarui' });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Gagal memperbarui nama siswa';
+    console.error('Student update name error:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

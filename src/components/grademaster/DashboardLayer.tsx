@@ -68,6 +68,7 @@ export default function DashboardLayer({
   const [similarityReports, setSimilarityReports] = useState<any[] | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isEditingScore, setIsEditingScore] = useState<string | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [aiInsights, setAiInsights] = useState<any>(null);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [insightsError, setInsightsError] = useState<string | null>(null);
@@ -143,6 +144,22 @@ export default function DashboardLayer({
       if (!res.ok) throw new Error('Gagal menghapus');
       window.location.reload(); 
     } catch (err) { alert('Gagal menghapus'); } finally { setIsDeleting(null); }
+  };
+
+  const handleRenameStudent = async (studentId: string, currentName: string) => {
+    const newName = window.prompt("Ubah Nama Siswa:", currentName);
+    if (newName === null) return;
+    if (!newName.trim()) return alert("Nama tidak boleh kosong");
+    setIsEditingScore(studentId);
+    try {
+      const res = await fetch('/api/grademaster/students', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, name: newName.trim() })
+      });
+      if (!res.ok) throw new Error('Gagal mengubah nama');
+      window.location.reload();
+    } catch (err) { alert('Gagal mengubah nama'); } finally { setIsEditingScore(null); }
   };
 
   const handleEditScore = async (studentId: string, currentScore: number) => {
@@ -475,9 +492,58 @@ export default function DashboardLayer({
                         <span className={`text-2xl font-black font-headline ${isPassing ? 'text-primary' : 'text-error'}`}>{s.finalScore}</span>
                       </div>
                       {isAdmin && (
-                        <button onClick={() => handleEditScore(s.id, s.finalScore)} className="p-2 bg-surface-bright rounded-xl text-on-surface-variant hover:text-primary transition-all active:scale-90">
-                           <MoreVertical size={18} />
-                        </button>
+                        isDeleting === s.id || isEditingScore === s.id ? (
+                          <div className="p-2 text-primary">
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          </div>
+                        ) : (
+                          <div className="relative">
+                            <button 
+                              onClick={() => setActiveDropdown(activeDropdown === s.id ? null : s.id)} 
+                              className="p-2 bg-surface-bright rounded-xl text-on-surface-variant hover:text-primary transition-all active:scale-90"
+                            >
+                               <MoreVertical size={18} />
+                            </button>
+                            {activeDropdown === s.id && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={() => setActiveDropdown(null)} />
+                                <div className="absolute right-0 mt-2 w-40 bg-white border border-surface-container-high shadow-xl rounded-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveDropdown(null);
+                                      handleRenameStudent(s.id, s.name);
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-xs font-bold text-on-surface-variant hover:bg-primary/5 hover:text-primary rounded-xl transition-all flex items-center gap-2 min-h-[44px]"
+                                  >
+                                    <Edit2 size={14} /> Ubah Nama
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveDropdown(null);
+                                      handleEditScore(s.id, s.finalScore);
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-xs font-bold text-on-surface-variant hover:bg-primary/5 hover:text-primary rounded-xl transition-all flex items-center gap-2 min-h-[44px]"
+                                  >
+                                    <Target size={14} /> Ubah Nilai
+                                  </button>
+                                  <div className="h-px bg-surface-container-high my-1" />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveDropdown(null);
+                                      handleDeleteStudent(s.name);
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-xs font-bold text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all flex items-center gap-2 min-h-[44px]"
+                                  >
+                                    <Trash2 size={14} /> Hapus Data
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )
                       )}
                       {/* Student Remedial Button — on their own card */}
                       {isStudent && !isPassing && canStartRemedial && currentStudentName && 
