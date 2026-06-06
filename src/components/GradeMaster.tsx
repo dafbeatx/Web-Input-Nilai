@@ -100,6 +100,14 @@ export default function GradeMaster() {
   const [pushStatus, setPushStatus] = useState<'GRANTED' | 'DENIED' | 'DEFAULT' | 'UNSUPPORTED'>('DEFAULT');
 
   useEffect(() => {
+    if (/^[789]/i.test(studentClass)) {
+      setSchoolLevel("SMP");
+    } else if (studentClass && studentClass !== "SMA" && studentClass !== "SMP") {
+      setSchoolLevel("SMA");
+    }
+  }, [studentClass]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
 
     const savedSessionId = localStorage.getItem("gm_sessionId");

@@ -150,6 +150,14 @@ export default function SetupLayer(props: SetupLayerProps) {
       .finally(() => setIsLoadingClasses(false));
   }, [schoolLevel, academicYear]);
 
+  useEffect(() => {
+    if (/^[789]/i.test(studentClass)) {
+      setSchoolLevel("SMP");
+    } else if (studentClass && studentClass !== "SMA" && studentClass !== "SMP") {
+      setSchoolLevel("SMA");
+    }
+  }, [studentClass, setSchoolLevel]);
+
   const parsedPreview = parseAnswerKey(keyInput);
   const parsedCount = parsedPreview.length;
 
