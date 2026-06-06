@@ -408,7 +408,7 @@ export default function HomeLayer(props: HomeLayerProps) {
   }, [expandedGroup]);
 
   return (
-    <main className="flex-1 min-h-screen pt-[env(safe-area-inset-top,20px)] mt-24 pb-32 px-4 sm:px-6 flex flex-col gap-8 max-w-7xl mx-auto w-full animate-in fade-in transition-all duration-300">
+    <main className="flex-1 min-h-screen pt-2 md:pt-[env(safe-area-inset-top,20px)] mt-2 md:mt-24 pb-4 md:pb-32 px-2 sm:px-6 flex flex-col gap-4 md:gap-8 max-w-7xl mx-auto w-full animate-in fade-in transition-all duration-300">
       
       {/* Personalized Identity Section */}
       {!expandedGroup && (

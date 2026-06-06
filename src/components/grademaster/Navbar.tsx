@@ -281,7 +281,7 @@ export default function Navbar() {
        ═══════════════════════════════════════════════════════════ */}
       <div 
         id="mobile-navbar"
-        className="md:hidden fixed top-0 left-0 right-0 z-[100] bg-white/85 backdrop-blur-2xl border-b border-surface-container-high/60 flex items-center justify-between px-5 transition-all duration-300"
+        className={`md:hidden fixed top-0 left-0 right-0 z-[100] bg-white/85 backdrop-blur-2xl border-b border-surface-container-high/60 flex items-center justify-between px-5 transition-all duration-300 ${layer === 'home' ? 'hidden pointer-events-none' : ''}`}
         style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingBottom: '0.75rem' }}
       >
         <div className="flex items-center gap-3 overflow-hidden">
@@ -335,7 +335,7 @@ export default function Navbar() {
        ═══════════════════════════════════════════════════════════ */}
       <nav 
         id="mobile-bottom-nav" 
-        className="md:hidden fixed bottom-0 left-0 right-0 z-[1001] transition-all duration-300"
+        className={`md:hidden fixed bottom-0 left-0 right-0 z-[1001] transition-all duration-300 ${layer === 'home' ? 'hidden pointer-events-none' : ''}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* Floating container */}
