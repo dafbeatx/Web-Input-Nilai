@@ -64,8 +64,52 @@ export default function GradingLayer(props: GradingLayerProps) {
   const [dbStudents, setDbStudents] = React.useState<{id: string, name: string}[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [isNewStudent, setIsNewStudent] = React.useState(false);
+  const [manualScore, setManualScore] = React.useState<number | null>(null);
 
   const result = calculateStudentResult(answerKey, userAnswers, essayScores, scoringConfig);
+
+  const handleReset = useCallback(() => {
+    onReset();
+    setManualScore(null);
+  }, [onReset]);
+
+  const handleManualScoreInput = useCallback((score: number | null) => {
+    setManualScore(score);
+    if (score === null) {
+      setUserAnswers({});
+      setEssayScores(new Array(essayScores.length).fill(0));
+      return;
+    }
+
+    const totalQuestions = answerKey.length;
+    const nCorrect = Math.round((score / 100) * totalQuestions);
+
+    const newAnswers: Record<number, string> = {};
+    for (let i = 0; i < totalQuestions; i++) {
+      const qNum = i + 1;
+      if (i < nCorrect) {
+        newAnswers[qNum] = answerKey[i];
+      } else {
+        const correctKey = answerKey[i] || 'A';
+        newAnswers[qNum] = correctKey === 'A' ? 'B' : 'A';
+      }
+    }
+
+    const essayCount = essayScores.length;
+    const newEssayScores = new Array(essayCount).fill(0);
+    if (essayCount > 0) {
+      const maxScorePerEssay = 4;
+      let remainingPoints = Math.round((score / 100) * (essayCount * maxScorePerEssay));
+      for (let i = 0; i < essayCount; i++) {
+        const allocated = Math.min(maxScorePerEssay, remainingPoints);
+        newEssayScores[i] = allocated;
+        remainingPoints -= allocated;
+      }
+    }
+
+    setUserAnswers(newAnswers);
+    setEssayScores(newEssayScores);
+  }, [answerKey, essayScores.length, setUserAnswers, setEssayScores]);
 
   React.useEffect(() => {
     if (!studentClass || !academicYear) return;
@@ -169,6 +213,7 @@ export default function GradingLayer(props: GradingLayerProps) {
     undoStack.current.push({ qNum: questionNum, prev: userAnswers[questionNum] });
 
     setUserAnswers({ ...userAnswers, [questionNum]: option });
+    setManualScore(null);
 
     // Auto-advance to next unanswered question
     const nextQ = questionNum + 1;
@@ -192,6 +237,7 @@ export default function GradingLayer(props: GradingLayerProps) {
       newAnswers[last.qNum] = last.prev;
     }
     setUserAnswers(newAnswers);
+    setManualScore(null);
   }, [userAnswers, setUserAnswers]);
 
   const handleEssayChange = (index: number, val: string) => {
@@ -200,6 +246,7 @@ export default function GradingLayer(props: GradingLayerProps) {
     const newScores = [...essayScores];
     newScores[index] = score;
     setEssayScores(newScores);
+    setManualScore(null);
   };
 
   const handleSave = () => {
@@ -208,6 +255,13 @@ export default function GradingLayer(props: GradingLayerProps) {
       return;
     }
 
+    const finalScoreToSave = manualScore !== null ? manualScore : result.finalScore;
+    const mcqScoreToSave = manualScore !== null ? manualScore : Math.round(result.score);
+    const essayScoreToSave = manualScore !== null ? manualScore : Math.round(result.essayScore);
+    const percentageToSave = manualScore !== null ? manualScore : result.percentage;
+    const csiToSave = manualScore !== null ? manualScore : result.csi;
+    const lpsToSave = manualScore !== null ? manualScore : result.lps;
+
     const student: GradedStudent = {
       id: Date.now().toString(),
       name: studentName.trim(),
@@ -215,17 +269,17 @@ export default function GradingLayer(props: GradingLayerProps) {
       essayScores: [...essayScores],
       correct: result.correct,
       wrong: result.wrong,
-      mcqScore: Math.round(result.score),
-      essayScore: Math.round(result.essayScore),
-      finalScore: result.finalScore,
-      percentage: result.percentage,
-      csi: result.csi,
-      lps: result.lps,
+      mcqScore: mcqScoreToSave,
+      essayScore: essayScoreToSave,
+      finalScore: finalScoreToSave,
+      percentage: percentageToSave,
+      csi: csiToSave,
+      lps: lpsToSave,
     };
 
     onSaveStudent(student);
     setToast({ message: `Nilai ${studentName} berhasil disimpan!`, type: 'success' });
-    onReset();
+    handleReset();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -251,7 +305,7 @@ export default function GradingLayer(props: GradingLayerProps) {
           <button onClick={handleUndo} disabled={undoStack.current.length === 0} className="px-3 py-2.5 md:px-4 md:py-3 bg-surface-variant border border-outline-variant rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-on-surface-variant hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/20 transition-all flex items-center justify-center gap-1.5 disabled:opacity-30 min-h-[44px]">
             <Undo2 size={12} className="md:w-[14px] md:h-[14px]" /> Undo
           </button>
-          <button onClick={onReset} className="px-3 py-2.5 md:px-4 md:py-3 bg-surface-variant border border-outline-variant rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-on-surface-variant hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20 transition-all flex items-center justify-center gap-1.5 min-h-[44px]">
+          <button onClick={handleReset} className="px-3 py-2.5 md:px-4 md:py-3 bg-surface-variant border border-outline-variant rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-on-surface-variant hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20 transition-all flex items-center justify-center gap-1.5 min-h-[44px]">
             <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Reset
           </button>
         </div>
@@ -444,17 +498,47 @@ export default function GradingLayer(props: GradingLayerProps) {
             <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1.5">Skor Akhir</p>
             <div className="flex items-end gap-2 mb-1">
               <span className="text-5xl md:text-7xl font-black text-on-surface leading-none">
-                {result.finalScore}
+                {manualScore !== null ? manualScore : result.finalScore}
               </span>
               <span className="text-slate-600 font-bold mb-1">/ 100</span>
             </div>
-            {result.finalScore < kkm ? (
+            {(manualScore !== null ? manualScore : result.finalScore) < kkm ? (
               <p className="text-[10px] font-black text-rose-500 mb-4 uppercase tracking-widest flex items-center gap-1.5 animate-pulse">
                 <AlertOctagon size={12} /> BELUM TUNTAS (REMEDIAL)
               </p>
             ) : (
-              <p className="text-xs font-bold text-primary mb-4">{getScoreLabel(result.finalScore)}</p>
+              <p className="text-xs font-bold text-primary mb-4">{getScoreLabel(manualScore !== null ? manualScore : result.finalScore)}</p>
             )}
+
+            {/* Input Nilai Manual */}
+            <div className="mb-4">
+              <label className="block text-[9px] font-black uppercase tracking-widest text-on-surface-variant mb-1">
+                Input Nilai Manual (Opsional)
+              </label>
+              <div className="relative flex items-center">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={manualScore === null ? '' : manualScore}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? null : Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                    handleManualScoreInput(val);
+                  }}
+                  placeholder="Ketik nilai langsung..."
+                  className="w-full bg-white border border-surface-container-high rounded-xl py-2.5 pl-3.5 pr-12 text-sm font-bold text-on-surface outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all placeholder:text-on-surface-variant/40 shadow-sm min-h-[44px]"
+                />
+                {manualScore !== null && (
+                  <button
+                    type="button"
+                    onClick={() => handleManualScoreInput(null)}
+                    className="absolute right-3 text-[10px] font-black text-rose-500 uppercase tracking-wider hover:text-rose-700 min-h-[44px] flex items-center justify-center"
+                  >
+                    Batal
+                  </button>
+                )}
+              </div>
+            </div>
 
             {studentName.trim() && studentClass.trim() && (
               <div className="mb-4 p-3 rounded-xl bg-primary/10 border border-primary/20">
@@ -468,10 +552,10 @@ export default function GradingLayer(props: GradingLayerProps) {
             <div className="mb-6 p-4 bg-surface-variant rounded-2xl text-on-surface border border-outline-variant">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant">Persentase</span>
-                <span className="text-xl font-black">{result.percentage}%</span>
+                <span className="text-xl font-black">{manualScore !== null ? manualScore : result.percentage}%</span>
               </div>
               <div className="h-3 bg-surface-variant rounded-full overflow-hidden p-0.5">
-                <div className="h-full bg-gradient-to-r from-primary to-sky-400 rounded-full transition-all duration-500" style={{ width: `${result.percentage}%` }}></div>
+                <div className="h-full bg-gradient-to-r from-primary to-sky-400 rounded-full transition-all duration-500" style={{ width: `${manualScore !== null ? manualScore : result.percentage}%` }}></div>
               </div>
             </div>
 
@@ -535,13 +619,13 @@ export default function GradingLayer(props: GradingLayerProps) {
             <div className="flex flex-col flex-shrink-0">
               <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant leading-none mb-1.5">Skor</span>
               <span className="text-sm font-black text-on-surface leading-none">
-                {result.finalScore}<span className="text-[10px] text-slate-500 font-bold">/100</span>
+                {manualScore !== null ? manualScore : result.finalScore}<span className="text-[10px] text-slate-500 font-bold">/100</span>
               </span>
             </div>
             <div className="h-8 w-px bg-outline-variant flex-shrink-0" />
             <div className="flex flex-col flex-shrink-0">
               <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant leading-none mb-1.5">Status</span>
-              {result.finalScore < kkm ? (
+              {(manualScore !== null ? manualScore : result.finalScore) < kkm ? (
                 <span className="text-[9px] font-black text-rose-500 uppercase tracking-wider leading-none">Remedial</span>
               ) : (
                 <span className="text-[9px] font-black text-emerald-500 uppercase tracking-wider leading-none">Tuntas</span>
