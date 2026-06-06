@@ -75,12 +75,13 @@ export default function HomeLayer(props: HomeLayerProps) {
   const [isAiResponding, setIsAiResponding] = useState(false);
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const [activeMobileTab, setActiveMobileTab] = useState<'ai' | 'classes'>('ai');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showTraditionalClasses, setShowTraditionalClasses] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom of chat
+  // Auto-scroll to bottom of chat internally (prevents outer window/body scroll jumps)
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages, isAiResponding]);
 
@@ -115,16 +116,16 @@ export default function HomeLayer(props: HomeLayerProps) {
   const getPresetChips = () => {
     if (isAdmin) {
       return [
+        "Lihat Daftar Kelas Tradisional",
         "Absen kelas 7A",
         "Buat ujian susulan UTS Matematika",
-        "Buka hasil nilai kelas 7B",
-        "Di mana letak rekap data sikap?"
+        "Buka hasil nilai kelas 7B"
       ];
     }
     return [
+      "Lihat Daftar Kelas Tradisional",
       "Bagaimana cara mengerjakan remedial?",
-      "Tampilkan rapor nilai saya",
-      "Buka daftar pelajaran kelas saya"
+      "Tampilkan rapor nilai saya"
     ];
   };
 
@@ -169,6 +170,23 @@ export default function HomeLayer(props: HomeLayerProps) {
     setMessages(prev => [...prev, userMsg]);
     setInputValue('');
     setIsAiResponding(true);
+
+    // Intercept manual class list requests directly to avoid API roundtrip
+    if (text.trim() === "Lihat Daftar Kelas Tradisional" || text.trim() === "Tampilkan Daftar Kelas Manual") {
+      setTimeout(() => {
+        setMessages(prev => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: "Menampilkan daftar kelas tradisional sesuai permintaan Anda. Klik tombol **Kembali ke AI Assistant** di atas untuk berinteraksi dengan asisten cerdas kembali."
+          }
+        ]);
+        setShowTraditionalClasses(true);
+        setIsAiResponding(false);
+      }, 400);
+      return;
+    }
 
     const matchedClass = matchAndSetClass(text);
 
@@ -228,6 +246,19 @@ export default function HomeLayer(props: HomeLayerProps) {
   };
 
   const handleActionClick = (targetLayer: any, label: string) => {
+    if (targetLayer === 'home') {
+      setShowTraditionalClasses(true);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Math.random().toString(),
+          role: 'assistant',
+          content: "Memuat daftar kelas tradisional secara manual..."
+        }
+      ]);
+      return;
+    }
+
     setLayer(targetLayer);
     
     const pageNames: Record<string, string> = {
@@ -577,70 +608,175 @@ export default function HomeLayer(props: HomeLayerProps) {
             </div>
           ))}
         </div>
-      ) : (
-        /* --- SPLIT LAYOUT (Home / Default View) --- */
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* LEFT PANEL: AI Navigator Chat Space */}
-          <div className={`lg:col-span-7 flex flex-col gap-4 ${activeMobileTab === 'ai' ? 'flex' : 'hidden lg:flex'}`}>
-            <div className="bg-slate-950/45 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden h-[580px] relative">
-              
-              {/* AI Chat Header */}
-              <div className="p-4 bg-gradient-to-r from-violet-950/20 via-slate-950 to-slate-950 border-b border-white/5 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-violet-500/10 rounded-xl flex items-center justify-center border border-violet-500/20 shadow-[0_0_12px_rgba(155,114,203,0.15)] shrink-0">
-                    <GeminiLogo className="w-6 h-6 animate-pulse" />
+      ) : showTraditionalClasses ? (
+        /* --- DAFTAR KELAS TRADISIONAL (Full Screen View) --- */
+        <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+          <div className="flex items-center justify-between border-b border-outline-variant/10 pb-4">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setShowTraditionalClasses(false)} 
+                className="w-10 h-10 rounded-full bg-surface-container-low hover:bg-surface-container-high flex items-center justify-center transition-all active:scale-90 border border-outline-variant/10 shadow-sm"
+              >
+                <span className="material-symbols-outlined text-on-surface text-xl">arrow_back</span>
+              </button>
+              <div>
+                <h2 className="font-headline text-2xl font-bold text-on-surface">Daftar Kelas Tradisional</h2>
+                <p className="text-xs text-on-surface-variant leading-none mt-1">Pilih kelas di bawah ini untuk melihat sesi evaluasi & presensi secara manual.</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowTraditionalClasses(false)}
+              className="px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-md flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
+            >
+              <Sparkles size={14} />
+              <span>Kembali ke AI Assistant</span>
+            </button>
+          </div>
+
+          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {classGroups.map((g, index) => {
+              const key = `${g.className}__${g.academicYear}`;
+              const bData = behaviorSummary[key] || { count: 0 };
+              const isActive = index === 0;
+
+              return (
+                <button 
+                  key={key} 
+                  onClick={() => setExpandedClass(key)} 
+                  className={`bg-surface-container-lowest ambient-shadow rounded-2xl p-6 text-left w-full group hover:bg-surface-container-low transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] border border-outline-variant/10 relative overflow-hidden`}
+                >
+                  {isActive && (
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-primary-fixed/30 rounded-bl-full -mr-4 -mt-4 opacity-50 z-0"></div>
+                  )}
+                  
+                  <div className="flex justify-between items-start mb-6 relative z-10">
+                    <div className="flex items-center space-x-3">
+                      <h2 className={`text-3xl font-headline font-bold tracking-tight ${isActive ? 'text-primary' : 'text-on-surface'}`}>
+                        {g.className}
+                      </h2>
+                      {isActive ? (
+                        <span className="bg-secondary-container/20 text-on-secondary-container text-[10px] font-bold px-2 py-1 rounded-sm uppercase tracking-wider flex items-center border border-secondary-container/30">
+                          <span className="material-symbols-outlined text-[14px] mr-1" style={{ fontVariationSettings: "'FILL' 1" }}>star</span> Aktif
+                        </span>
+                      ) : (
+                        <span className="material-symbols-outlined text-on-surface-variant/40" style={{ fontSize: '20px' }}>person</span>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest bg-surface-container-low px-3 py-1.5 rounded-full border border-outline-variant/5">
+                      {g.schoolLevel}
+                    </span>
                   </div>
-                  <div>
-                    <h3 className="font-headline font-black text-xs sm:text-sm text-slate-100 uppercase tracking-wide">Navigator Asisten AI</h3>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      <span className="text-[9px] font-black bg-gradient-to-r from-[#1ba1e3] via-[#9b72cb] to-[#f49c46] bg-clip-text text-transparent uppercase tracking-widest leading-none">Online & Cerdas</span>
+                  
+                  <div className="flex justify-between items-end relative z-10 border-t border-surface-container-low pt-4">
+                    <div>
+                      <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1 font-semibold">Sesi Ujian</p>
+                      <p className="text-sm font-extrabold text-on-surface leading-none">{g.sessions.length} Sesi</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1 font-semibold">Total Siswa</p>
+                      <p className="text-sm font-extrabold text-on-surface leading-none">{bData.count} Siswa</p>
                     </div>
                   </div>
+                </button>
+              );
+            })}
+          </section>
+
+          {/* Info Card - Bento Style */}
+          <section className="bg-surface-container-low/50 p-6 rounded-2xl flex flex-col gap-4 border border-outline-variant/10 shadow-sm mt-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center border border-primary/10">
+                <span className="material-symbols-outlined text-primary text-xl">insights</span>
+              </div>
+              <h4 className="font-headline font-bold text-on-surface tracking-tight">
+                {isAdmin ? 'Ringkasan Sistem' : 'Info Akademik'}
+              </h4>
+            </div>
+            <p className="font-body text-xs text-on-surface-variant leading-relaxed opacity-80">
+              {isAdmin ? (
+                <>Terdeteksi <span className="text-primary font-bold">{classGroups.length} Kelas</span> aktif dengan total <span className="text-primary font-bold">{sessions.length} Sesi</span>. Sinkronisasi berjalan otomatis untuk memastikan integritas data.</>
+              ) : (
+                <>Terdapat <span className="text-primary font-bold">{classGroups.length} Kelas</span> terbuka dengan <span className="text-primary font-bold">{sessions.length} Sesi</span> aktif. Pilih kelas Anda untuk melihat laporan lengkap.</>
+              )}
+            </p>
+          </section>
+        </div>
+      ) : (
+        /* --- FULL SCREEN AI CHAT ASSISTANT (Default View) --- */
+        <div className="w-full max-w-4xl mx-auto flex flex-col gap-4 animate-in fade-in duration-300">
+          <div className="bg-slate-950/45 backdrop-blur-xl border border-white/10 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden h-[620px] relative">
+            
+            {/* AI Chat Header */}
+            <div className="p-5 bg-gradient-to-r from-violet-950/20 via-slate-950 to-slate-950 border-b border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 bg-violet-500/10 rounded-xl flex items-center justify-center border border-violet-500/20 shadow-[0_0_15px_rgba(155,114,203,0.2)] shrink-0">
+                  <GeminiLogo className="w-7 h-7 animate-pulse" />
                 </div>
+                <div>
+                  <h3 className="font-headline font-black text-sm sm:text-base text-slate-100 uppercase tracking-wide">Navigator Asisten AI</h3>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span className="text-[9px] font-black bg-gradient-to-r from-[#1ba1e3] via-[#9b72cb] to-[#f49c46] bg-clip-text text-transparent uppercase tracking-widest leading-none">Online & Cerdas</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowTraditionalClasses(true)}
+                  className="px-3.5 py-2 bg-white/5 hover:bg-white/10 text-slate-200 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 border border-white/5"
+                  title="Tampilkan Daftar Kelas Tradisional"
+                >
+                  <span className="material-symbols-outlined text-xs">grid_view</span>
+                  <span className="hidden sm:inline">Daftar Kelas Manual</span>
+                </button>
                 
                 <button
                   onClick={() => {
                     setMessages([getInitialMessage()]);
                     setSuggestedQuestions(getPresetChips());
                   }}
-                  className="p-2 bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 rounded-xl text-slate-400 transition-all active:scale-95"
+                  className="p-2 bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 rounded-xl text-slate-400 transition-all active:scale-95 border border-white/5"
                   title="Reset Percakapan"
                 >
                   <RotateCcw size={15} />
                 </button>
               </div>
+            </div>
 
-              {/* Chat Message Scrollable Container */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-                {messages.map((msg) => {
-                  const isAI = msg.role === 'assistant';
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex gap-3 max-w-[88%] ${isAI ? 'self-start' : 'self-end ml-auto flex-row-reverse'}`}
-                    >
-                      {isAI && (
-                        <div className="w-8 h-8 bg-slate-900 rounded-xl flex items-center justify-center border border-white/5 shrink-0 shadow-sm mt-0.5">
-                          <GeminiLogo className="w-5 h-5" />
-                        </div>
-                      )}
-                      
-                      <div className="flex flex-col gap-1.5">
-                        <div className={`p-4 rounded-2xl ${
-                          isAI
-                            ? 'bg-slate-900/80 text-slate-200 rounded-tl-none border border-white/[0.03]'
-                            : 'bg-gradient-to-r from-sky-600 via-indigo-600 to-violet-600 text-white rounded-tr-none shadow-md shadow-violet-600/10 font-medium'
-                        }`}>
-                          {formatMessageText(msg.content)}
+            {/* Chat Message Scrollable Container */}
+            <div 
+              ref={chatContainerRef}
+              className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar scroll-smooth"
+            >
+              {messages.map((msg) => {
+                const isAI = msg.role === 'assistant';
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex gap-3 max-w-[85%] ${isAI ? 'self-start' : 'self-end ml-auto flex-row-reverse'}`}
+                  >
+                    {isAI && (
+                      <div className="w-8 h-8 bg-slate-900 rounded-xl flex items-center justify-center border border-white/5 shrink-0 shadow-sm mt-0.5">
+                        <GeminiLogo className="w-5 h-5" />
+                      </div>
+                    )}
+                    
+                    <div className="flex flex-col gap-1.5">
+                      <div className={`p-4 rounded-2xl ${
+                        isAI
+                          ? 'bg-slate-900/80 text-slate-200 rounded-tl-none border border-white/[0.03]'
+                          : 'bg-gradient-to-r from-sky-600 via-indigo-600 to-violet-600 text-white rounded-tr-none shadow-md shadow-violet-600/10 font-medium'
+                      }`}>
+                        {formatMessageText(msg.content)}
 
-                          {/* Suggested Action Cards inside the bubble */}
-                          {isAI && msg.actions && msg.actions.length > 0 && (
-                            <div className="mt-4 pt-4 border-t border-white/5 space-y-2">
-                              <span className="text-[9px] font-black text-violet-400 uppercase tracking-widest block mb-1">Kemudahan Akses Navigasi:</span>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {msg.actions.map((act: any) => (
+                        {/* Suggested Action Cards inside the bubble */}
+                        {isAI && msg.actions && msg.actions.length > 0 && (
+                          <div className="mt-4 pt-4 border-t border-white/5 space-y-2">
+                            <span className="text-[9px] font-black text-violet-400 uppercase tracking-widest block mb-1">Kemudahan Akses Navigasi:</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {msg.actions.map((act: any) => (
                                   <button
                                     key={act.layer}
                                     onClick={() => handleActionClick(act.layer, act.label)}
@@ -652,146 +788,68 @@ export default function HomeLayer(props: HomeLayerProps) {
                                     </div>
                                     <ArrowRight size={12} className="text-slate-500 group-hover:translate-x-1 transition-transform shrink-0" />
                                   </button>
-                                ))}
-                              </div>
+                              ))}
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  );
-                })}
-
-                {/* AI typing state */}
-                {isAiResponding && (
-                  <div className="flex gap-3 max-w-[80%] self-start">
-                    <div className="w-8 h-8 bg-slate-900 rounded-xl flex items-center justify-center border border-white/5 shrink-0 mt-0.5">
-                      <GeminiLogo className="w-5 h-5 animate-pulse" />
-                    </div>
-                    <div className="p-3.5 bg-slate-900/80 text-slate-400 rounded-2xl rounded-tl-none border border-white/[0.03] flex items-center gap-2 shadow-sm">
-                      <Loader2 size={14} className="animate-spin text-violet-400" />
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">Asisten sedang memikirkan navigasi...</span>
                     </div>
                   </div>
-                )}
-                
-                <div ref={messagesEndRef} />
-              </div>
+                );
+              })}
 
-              {/* Quick suggestions chips bar */}
-              <div className="px-4 py-3 bg-slate-950/50 border-t border-white/5 flex flex-col gap-1.5">
-                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Saran pertanyaan / perintah:</span>
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                  {suggestedQuestions.map((q, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleSendMessage(q)}
-                      className="flex-none px-3.5 py-2 bg-white/5 hover:bg-violet-500/10 hover:text-violet-300 border border-white/5 hover:border-violet-500/30 rounded-xl text-[10px] sm:text-xs font-bold text-slate-300 transition-all whitespace-nowrap active:scale-95"
-                    >
-                      {q}
-                    </button>
-                  ))}
+              {/* AI typing state */}
+              {isAiResponding && (
+                <div className="flex gap-3 max-w-[80%] self-start">
+                  <div className="w-8 h-8 bg-slate-900 rounded-xl flex items-center justify-center border border-white/5 shrink-0 mt-0.5">
+                    <GeminiLogo className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <div className="p-3.5 bg-slate-900/80 text-slate-400 rounded-2xl rounded-tl-none border border-white/[0.03] flex items-center gap-2 shadow-sm">
+                    <Loader2 size={14} className="animate-spin text-violet-400" />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">Asisten sedang memikirkan navigasi...</span>
+                  </div>
                 </div>
-              </div>
+              )}
+            </div>
 
-              {/* Input Form Panel */}
-              <form 
-                onSubmit={(e) => { e.preventDefault(); handleSendMessage(inputValue); }} 
-                className="p-3 bg-slate-950 border-t border-white/5 flex gap-2"
+            {/* Quick suggestions chips bar */}
+            <div className="px-5 py-3 bg-slate-950/50 border-t border-white/5 flex flex-col gap-1.5">
+              <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest font-semibold">Saran pertanyaan / perintah:</span>
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                {suggestedQuestions.map((q, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSendMessage(q)}
+                    className="flex-none px-3.5 py-2 bg-white/5 hover:bg-violet-500/10 hover:text-violet-300 border border-white/5 hover:border-violet-500/30 rounded-xl text-[10px] sm:text-xs font-bold text-slate-300 transition-all whitespace-nowrap active:scale-95"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Input Form Panel */}
+            <form 
+              onSubmit={(e) => { e.preventDefault(); handleSendMessage(inputValue); }} 
+              className="p-3 bg-slate-950 border-t border-white/5 flex gap-2"
+            >
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder={isAiResponding ? "Sedang memproses instruksi..." : "Ketik instruksi navigasi Anda..."}
+                disabled={isAiResponding}
+                className="flex-1 px-4 py-3 bg-slate-900 border border-white/5 focus:border-violet-500/50 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-500 outline-none transition-all focus:ring-1 focus:ring-violet-500/25"
+              />
+              <button
+                type="submit"
+                disabled={isAiResponding || !inputValue.trim()}
+                className="p-3 bg-gradient-to-r from-sky-600 to-violet-600 hover:from-sky-500 hover:to-violet-500 disabled:opacity-40 text-white rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-lg shadow-violet-600/20"
               >
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder={isAiResponding ? "Sedang memproses instruksi..." : "Ketik instruksi navigasi Anda..."}
-                  disabled={isAiResponding}
-                  className="flex-1 px-4 py-3 bg-slate-900 border border-white/5 focus:border-violet-500/50 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-500 outline-none transition-all focus:ring-1 focus:ring-violet-500/25"
-                />
-                <button
-                  type="submit"
-                  disabled={isAiResponding || !inputValue.trim()}
-                  className="p-3 bg-gradient-to-r from-sky-600 to-violet-600 hover:from-sky-500 hover:to-violet-500 disabled:opacity-40 text-white rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-lg shadow-violet-600/20"
-                >
-                  <Send size={15} />
-                </button>
-              </form>
-            </div>
+                <Send size={15} />
+              </button>
+            </form>
           </div>
-
-          {/* RIGHT PANEL: Traditional Class Groups & Session Counts */}
-          <div className={`lg:col-span-5 flex flex-col gap-6 ${activeMobileTab === 'classes' ? 'flex' : 'hidden lg:flex'}`}>
-            <div className="flex flex-col gap-4">
-              <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/70">Daftar Kelas Tradisional</span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-                {classGroups.map((g, index) => {
-                  const key = `${g.className}__${g.academicYear}`;
-                  const bData = behaviorSummary[key] || { count: 0 };
-                  const isActive = index === 0;
-
-                  return (
-                    <button 
-                      key={key} 
-                      onClick={() => setExpandedClass(key)} 
-                      className={`bg-surface-container-lowest ambient-shadow rounded-2xl p-5 text-left w-full group hover:bg-surface-container-low transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] border border-outline-variant/10 relative overflow-hidden`}
-                    >
-                      {isActive && (
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-primary-fixed/20 rounded-bl-full -mr-4 -mt-4 opacity-50 z-0"></div>
-                      )}
-                      
-                      <div className="flex justify-between items-start mb-4 relative z-10">
-                        <div className="flex items-center space-x-3">
-                          <h2 className={`text-2xl font-headline font-bold tracking-tight ${isActive ? 'text-primary' : 'text-on-surface'}`}>
-                            {g.className}
-                          </h2>
-                          {isActive ? (
-                            <span className="bg-secondary-container/20 text-on-secondary-container text-[9px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider flex items-center border border-secondary-container/30">
-                              <span className="material-symbols-outlined text-[12px] mr-1" style={{ fontVariationSettings: "'FILL' 1" }}>star</span> Aktif
-                            </span>
-                          ) : (
-                            <span className="material-symbols-outlined text-on-surface-variant/40" style={{ fontSize: '18px' }}>person</span>
-                          )}
-                        </div>
-                        <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest bg-surface-container-low px-2 py-1 rounded-full border border-outline-variant/5">
-                          {g.schoolLevel}
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between items-end relative z-10 border-t border-surface-container-low pt-3">
-                        <div>
-                          <p className="text-[9px] text-on-surface-variant uppercase tracking-widest mb-0.5 font-semibold">Sesi Ujian</p>
-                          <p className="text-xs font-extrabold text-on-surface leading-none">{g.sessions.length} Sesi</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[9px] text-on-surface-variant uppercase tracking-widest mb-0.5 font-semibold">Total Siswa</p>
-                          <p className="text-xs font-extrabold text-on-surface leading-none">{bData.count} Siswa</p>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Info Card - Bento Style */}
-            <section className="bg-surface-container-low/50 p-5 rounded-2xl flex flex-col gap-3 border border-outline-variant/10 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-primary/5 flex items-center justify-center border border-primary/10">
-                  <span className="material-symbols-outlined text-primary text-lg">insights</span>
-                </div>
-                <h4 className="font-headline font-bold text-on-surface tracking-tight text-sm">
-                  {isAdmin ? 'Ringkasan Sistem' : 'Info Akademik'}
-                </h4>
-              </div>
-              <p className="font-body text-[11px] text-on-surface-variant leading-relaxed opacity-85">
-                {isAdmin ? (
-                  <>Terdeteksi <span className="text-primary font-bold">{classGroups.length} Kelas</span> aktif dengan total <span className="text-primary font-bold">{sessions.length} Sesi</span>. Sinkronisasi berjalan otomatis untuk memastikan integritas data.</>
-                ) : (
-                  <>Terdapat <span className="text-primary font-bold">{classGroups.length} Kelas</span> terbuka dengan <span className="text-primary font-bold">{sessions.length} Sesi</span> aktif. Pilih kelas Anda untuk melihat laporan lengkap.</>
-                )}
-              </p>
-            </section>
-          </div>
-
         </div>
       )}
     </main>
