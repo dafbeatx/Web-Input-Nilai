@@ -49,7 +49,7 @@ export default function Navbar() {
   const [isLinking, setIsLinking] = useState(false);
 
   // Hidden in behavior page (uses its own nav), exam, and auth layers
-  const isHidden = pathname?.startsWith('/behavior') || ['login', 'student_login', 'student_claim', 'teacher_claim', 'remedial', 'lesson_management'].includes(layer);
+  const isHidden = pathname?.startsWith('/behavior') || ['login', 'student_login', 'student_claim', 'teacher_claim', 'remedial', 'lesson_management', 'grading'].includes(layer);
 
   useEffect(() => {
     if (!isHidden) {

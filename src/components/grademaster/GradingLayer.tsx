@@ -521,39 +521,37 @@ export default function GradingLayer(props: GradingLayerProps) {
       </main>
 
       {/* Sticky Bottom Action Bar for Mobile */}
-      <div className="fixed bottom-0 left-0 right-0 z-[60] bg-surface/90 backdrop-blur-xl border-t border-outline-variant p-4 lg:hidden shadow-[0_-10px_30px_rgba(0,0,0,0.08)] pb-[calc(1rem+env(safe-area-inset-bottom))]">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center justify-between w-full sm:w-auto gap-4">
-            <div className="flex flex-col">
-              <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant">Siswa</span>
-              <span className="text-xs font-bold text-on-surface truncate max-w-[150px]">
+      <div className="fixed bottom-0 left-0 right-0 z-[100] bg-surface/90 backdrop-blur-xl border-t border-outline-variant p-4 lg:hidden shadow-[0_-10px_30px_rgba(0,0,0,0.08)] pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex flex-col min-w-0">
+              <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant leading-none mb-1.5">Siswa</span>
+              <span className="text-xs font-extrabold text-on-surface truncate max-w-[80px] sm:max-w-[150px] leading-none">
                 {studentName.trim() ? studentName : "Pilih Siswa"}
               </span>
             </div>
-            <div className="h-8 w-px bg-outline-variant" />
-            <div className="flex items-center gap-1.5">
-              <div className="flex flex-col">
-                <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant">Skor</span>
-                <span className="text-lg font-black text-on-surface leading-none">
-                  {result.finalScore}<span className="text-[10px] text-slate-500 font-bold">/100</span>
-                </span>
-              </div>
+            <div className="h-8 w-px bg-outline-variant flex-shrink-0" />
+            <div className="flex flex-col flex-shrink-0">
+              <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant leading-none mb-1.5">Skor</span>
+              <span className="text-sm font-black text-on-surface leading-none">
+                {result.finalScore}<span className="text-[10px] text-slate-500 font-bold">/100</span>
+              </span>
             </div>
-            <div className="h-8 w-px bg-outline-variant" />
-            <div className="flex flex-col">
-              <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant">Status</span>
+            <div className="h-8 w-px bg-outline-variant flex-shrink-0" />
+            <div className="flex flex-col flex-shrink-0">
+              <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant leading-none mb-1.5">Status</span>
               {result.finalScore < kkm ? (
-                <span className="text-[9px] font-black text-rose-500 uppercase tracking-wider">Belum Tuntas</span>
+                <span className="text-[9px] font-black text-rose-500 uppercase tracking-wider leading-none">Remedial</span>
               ) : (
-                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-wider">Tuntas</span>
+                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-wider leading-none">Tuntas</span>
               )}
             </div>
           </div>
           <button
             onClick={handleSave}
-            className="w-full sm:w-auto min-h-[44px] px-6 py-3 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+            className="flex-shrink-0 min-h-[44px] px-5 py-3 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5"
           >
-            <Save size={16} /> Simpan Nilai
+            <Save size={14} /> Simpan Nilai
           </button>
         </div>
       </div>
