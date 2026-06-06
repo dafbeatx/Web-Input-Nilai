@@ -43,6 +43,7 @@ interface GradingLayerProps {
   onReset: () => void;
   setToast: (t: ToastType) => void;
   kkm?: number;
+  gradedStudents?: GradedStudent[];
 }
 
 export default function GradingLayer(props: GradingLayerProps) {
@@ -52,7 +53,8 @@ export default function GradingLayer(props: GradingLayerProps) {
     studentClass, academicYear, schoolLevel, studentList,
     userAnswers, setUserAnswers,
     essayScores, setEssayScores,
-    scoringConfig, onSaveStudent, onBack, onReset, setToast, kkm = 70
+    scoringConfig, onSaveStudent, onBack, onReset, setToast, kkm = 70,
+    gradedStudents = []
   } = props;
 
   const totalQuestions = answerKey.length;
@@ -148,14 +150,25 @@ export default function GradingLayer(props: GradingLayerProps) {
   }, []);
 
   const filteredStudents = React.useMemo(() => {
-    // 1. Start with database-backed students from behavior logs
-    const seen = new Set(dbStudents.map(s => s.name.toLowerCase().trim()));
-    const combined = [...dbStudents];
+    // 1. Get the names of students who are already graded in this session
+    const gradedNames = new Set((gradedStudents || []).map(s => s.name.toLowerCase().trim()));
 
-    // 2. Add names from studentList if they aren't already represented
+    // 2. Start with database-backed students from behavior logs (excluding already graded)
+    const seen = new Set<string>();
+    const combined: { id: string; name: string }[] = [];
+
+    dbStudents.forEach(s => {
+      const normalized = s.name.toLowerCase().trim();
+      if (normalized && !gradedNames.has(normalized) && !seen.has(normalized)) {
+        combined.push({ id: s.id, name: s.name.trim() });
+        seen.add(normalized);
+      }
+    });
+
+    // 3. Add names from studentList if they aren't already represented or graded
     (studentList || []).forEach((name, idx) => {
       const normalized = name.toLowerCase().trim();
-      if (normalized && !seen.has(normalized)) {
+      if (normalized && !gradedNames.has(normalized) && !seen.has(normalized)) {
         combined.push({ id: `list-${idx}`, name: name.trim() });
         seen.add(normalized);
       }
@@ -163,7 +176,7 @@ export default function GradingLayer(props: GradingLayerProps) {
 
     if (!studentName) return combined;
     return combined.filter(s => s.name.toLowerCase().includes(studentName.toLowerCase()));
-  }, [dbStudents, studentName, studentList]);
+  }, [dbStudents, studentName, studentList, gradedStudents]);
 
   const selectStudent = (id: string, name: string) => {
     setStudentName(name);
@@ -252,6 +265,13 @@ export default function GradingLayer(props: GradingLayerProps) {
   const handleSave = () => {
     if (!studentName.trim()) {
       setToast({ message: 'Nama siswa wajib diisi', type: 'error' });
+      return;
+    }
+
+    const normalizedNewName = studentName.trim().toLowerCase();
+    const isDuplicate = (gradedStudents || []).some(s => s.name.toLowerCase().trim() === normalizedNewName);
+    if (isDuplicate) {
+      setToast({ message: `Siswa "${studentName.trim()}" sudah dikoreksi di sesi ini!`, type: 'error' });
       return;
     }
 

@@ -1201,6 +1201,7 @@ export default function GradeMaster() {
           onReset={resetGrading}
           setToast={setToast}
           kkm={kkm}
+          gradedStudents={gradedStudents}
         />
       )}
 
