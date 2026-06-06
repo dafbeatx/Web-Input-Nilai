@@ -226,6 +226,7 @@ export default function GradingLayer(props: GradingLayerProps) {
     onSaveStudent(student);
     setToast({ message: `Nilai ${studentName} berhasil disimpan!`, type: 'success' });
     onReset();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const totalEssay = essayScores.reduce((a, b) => a + b, 0);
