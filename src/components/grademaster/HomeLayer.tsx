@@ -412,7 +412,7 @@ export default function HomeLayer(props: HomeLayerProps) {
       
       {/* Personalized Identity Section */}
       {!expandedGroup && (
-        <section className="mb-2 animate-in slide-in-from-top-4 duration-700">
+        <section className="mb-2 animate-in slide-in-from-top-4 duration-700 hidden md:block">
           <div className="bg-surface-container-low p-5 rounded-[2rem] border border-outline-variant/10 flex items-center gap-4 relative overflow-hidden premium-shadow">
              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
                {isAdmin ? (
@@ -462,7 +462,7 @@ export default function HomeLayer(props: HomeLayerProps) {
             <p className="text-on-surface-variant text-base leading-relaxed">Daftar sesi evaluasi dan ujian yang aktif untuk kelas ini.</p>
           </div>
         ) : (
-          <div className="flex flex-col">
+          <div className="flex flex-col hidden md:flex">
             <div className="flex items-start justify-between mb-3">
               <h1 className="text-4xl font-headline font-bold text-on-primary-fixed tracking-[-0.04em]">Dashboard Utama</h1>
               {isAdmin && (
@@ -481,34 +481,6 @@ export default function HomeLayer(props: HomeLayerProps) {
           </div>
         )}
       </header>
-
-      {/* Mobile Tab Switcher */}
-      {!expandedGroup && (
-        <div className="flex lg:hidden bg-surface-container-low p-1.5 rounded-2xl border border-outline-variant/10">
-          <button
-            onClick={() => setActiveMobileTab('ai')}
-            className={`flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
-              activeMobileTab === 'ai'
-                ? 'bg-primary text-surface-container-lowest shadow-md'
-                : 'text-on-surface-variant hover:text-on-surface'
-            }`}
-          >
-            <Sparkles size={14} />
-            <span>Asisten AI Navigator</span>
-          </button>
-          <button
-            onClick={() => setActiveMobileTab('classes')}
-            className={`flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
-              activeMobileTab === 'classes'
-                ? 'bg-primary text-surface-container-lowest shadow-md'
-                : 'text-on-surface-variant hover:text-on-surface'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">grid_view</span>
-            <span>Daftar Kelas ({classGroups.length})</span>
-          </button>
-        </div>
-      )}
 
       {/* Main Content Area */}
       {isLoading ? (
@@ -704,11 +676,11 @@ export default function HomeLayer(props: HomeLayerProps) {
         </div>
       ) : (
         /* --- FULL SCREEN AI CHAT ASSISTANT (Default View) --- */
-        <div className="w-full max-w-4xl mx-auto flex flex-col gap-4 animate-in fade-in duration-300">
-          <div className="bg-slate-950/45 backdrop-blur-xl border border-white/10 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden h-[620px] relative">
+        <div className="w-full max-w-4xl mx-auto flex-1 md:flex-initial flex flex-col gap-4 animate-in fade-in duration-300 min-h-0">
+          <div className="bg-slate-950/45 backdrop-blur-xl border border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden h-full md:h-[650px] relative min-h-0">
             
             {/* AI Chat Header */}
-            <div className="p-5 bg-gradient-to-r from-violet-950/20 via-slate-950 to-slate-950 border-b border-white/5 flex items-center justify-between">
+            <div className="p-5 bg-gradient-to-r from-violet-950/20 via-slate-950 to-slate-950 border-b border-white/5 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 bg-violet-500/10 rounded-xl flex items-center justify-center border border-violet-500/20 shadow-[0_0_15px_rgba(155,114,203,0.2)] shrink-0">
                   <GeminiLogo className="w-7 h-7 animate-pulse" />
@@ -813,7 +785,7 @@ export default function HomeLayer(props: HomeLayerProps) {
             </div>
 
             {/* Quick suggestions chips bar */}
-            <div className="px-5 py-3 bg-slate-950/50 border-t border-white/5 flex flex-col gap-1.5">
+            <div className="px-5 py-3 bg-slate-950/50 border-t border-white/5 flex flex-col gap-1.5 shrink-0">
               <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest font-semibold">Saran pertanyaan / perintah:</span>
               <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                 {suggestedQuestions.map((q, idx) => (
@@ -831,23 +803,25 @@ export default function HomeLayer(props: HomeLayerProps) {
             {/* Input Form Panel */}
             <form 
               onSubmit={(e) => { e.preventDefault(); handleSendMessage(inputValue); }} 
-              className="p-3 bg-slate-950 border-t border-white/5 flex gap-2"
+              className="p-3 bg-slate-950 border-t border-white/5 flex gap-2 shrink-0 pb-safe-or-more md:pb-3"
             >
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder={isAiResponding ? "Sedang memproses instruksi..." : "Ketik instruksi navigasi Anda..."}
-                disabled={isAiResponding}
-                className="flex-1 px-4 py-3 bg-slate-900 border border-white/5 focus:border-violet-500/50 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-500 outline-none transition-all focus:ring-1 focus:ring-violet-500/25"
-              />
-              <button
-                type="submit"
-                disabled={isAiResponding || !inputValue.trim()}
-                className="p-3 bg-gradient-to-r from-sky-600 to-violet-600 hover:from-sky-500 hover:to-violet-500 disabled:opacity-40 text-white rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-lg shadow-violet-600/20"
-              >
-                <Send size={15} />
-              </button>
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder={isAiResponding ? "Sedang memproses..." : "Tanya GradeMaster AI..."}
+                  disabled={isAiResponding}
+                  className="w-full pl-4 pr-12 py-3.5 bg-slate-900 border border-white/5 focus:border-violet-500/50 rounded-full text-xs sm:text-sm text-slate-100 placeholder-slate-500 outline-none transition-all focus:ring-1 focus:ring-violet-500/25"
+                />
+                <button
+                  type="submit"
+                  disabled={isAiResponding || !inputValue.trim()}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 bg-gradient-to-r from-sky-600 to-violet-600 hover:from-sky-500 hover:to-violet-500 disabled:opacity-30 text-white rounded-full transition-all flex items-center justify-center active:scale-95 shadow-md shadow-violet-600/20"
+                >
+                  <Send size={15} />
+                </button>
+              </div>
             </form>
           </div>
         </div>
