@@ -115,6 +115,31 @@ export default function SetupLayer(props: SetupLayerProps) {
     }
   };
 
+  const PREDEFINED_YEARS = ["2024/2025", "2025/2026", "2026/2027"];
+  const [isCustomYear, setIsCustomYear] = useState(() => {
+    return academicYear !== "" && !PREDEFINED_YEARS.includes(academicYear);
+  });
+
+  useEffect(() => {
+    if (academicYear !== "" && !PREDEFINED_YEARS.includes(academicYear)) {
+      setIsCustomYear(true);
+    } else if (academicYear === "") {
+      // Keep custom input visible if user clears
+    } else {
+      setIsCustomYear(false);
+    }
+  }, [academicYear]);
+
+  const handleYearChange = (val: string) => {
+    if (val === "__custom__") {
+      setIsCustomYear(true);
+      setAcademicYear("");
+    } else {
+      setIsCustomYear(false);
+      setAcademicYear(val);
+    }
+  };
+
   useEffect(() => {
     if (schoolLevel !== 'SMA') return;
     setIsLoadingClasses(true);
@@ -142,11 +167,39 @@ export default function SetupLayer(props: SetupLayerProps) {
       const res = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(studentClass)}&year=${encodeURIComponent(academicYear)}`);
       const data = await res.json();
       
-      const students = data.students?.map((s: any) => s.student_name) || [];
+      let students = data.students?.map((s: any) => s.student_name) || [];
       if (students.length === 0) {
         setToast({ message: `Peringatan: Tidak ada data siswa di kelas ${studentClass} tahun ${academicYear}. Harap isi di menu Kehadiran & Perilaku.`, type: 'error' });
       } else {
-        setToast({ message: `${students.length} siswa otomatis termuat dari data pusat.`, type: 'success' });
+        if (examType === 'Susulan UTS' || examType === 'Susulan UAS') {
+          try {
+            const scoresRes = await fetch(
+              `/api/grademaster/students/existing-scores?class=${encodeURIComponent(studentClass)}&subject=${encodeURIComponent(subject)}&year=${encodeURIComponent(academicYear)}&semester=${encodeURIComponent(semester)}&examType=${encodeURIComponent(examType)}`
+            );
+            if (scoresRes.ok) {
+              const scoresData = await scoresRes.json();
+              const existingSet = new Set<string>(scoresData.existingStudents || []);
+              const filtered = students.filter((name: string) => !existingSet.has(name));
+              const excludedCount = students.length - filtered.length;
+              students = filtered;
+              if (excludedCount > 0) {
+                setToast({ 
+                  message: `${students.length} siswa termuat. ${excludedCount} siswa disaring karena sudah memiliki nilai.`, 
+                  type: 'success' 
+                });
+              } else {
+                setToast({ message: `${students.length} siswa otomatis termuat dari data pusat.`, type: 'success' });
+              }
+            } else {
+              setToast({ message: `${students.length} siswa otomatis termuat. Gagal menyaring siswa ujian susulan.`, type: 'success' });
+            }
+          } catch (filterErr) {
+            console.error('Error filtering students for makeup exam:', filterErr);
+            setToast({ message: `${students.length} siswa otomatis termuat. Gagal menyaring siswa ujian susulan.`, type: 'success' });
+          }
+        } else {
+          setToast({ message: `${students.length} siswa otomatis termuat dari data pusat.`, type: 'success' });
+        }
       }
 
       setStudentList(students);
@@ -285,11 +338,27 @@ export default function SetupLayer(props: SetupLayerProps) {
                   </div>
                   <div className="col-span-1">
                     <label className={labelClass}><BookOpen size={14} /> Thn Ajaran</label>
-                    <select value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} className={`${inputClass} cursor-pointer`}>
+                    <select
+                      value={isCustomYear ? "__custom__" : academicYear}
+                      onChange={(e) => handleYearChange(e.target.value)}
+                      className={`${inputClass} cursor-pointer mb-2`}
+                    >
                       <option value="2024/2025">2024/2025</option>
                       <option value="2025/2026">2025/2026</option>
                       <option value="2026/2027">2026/2027</option>
+                      <option value="__custom__">-- Ketik Manual (Lainnya) --</option>
                     </select>
+                    {isCustomYear && (
+                      <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                        <input
+                          type="text"
+                          value={academicYear}
+                          onChange={(e) => setAcademicYear(e.target.value)}
+                          placeholder="Ketik tahun ajaran manual..."
+                          className={inputClass}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -302,6 +371,8 @@ export default function SetupLayer(props: SetupLayerProps) {
                       <option value="PAS">PAS (Penilaian Akhir Semester)</option>
                       <option value="PAT">PAT (Penilaian Akhir Tahun)</option>
                       <option value="Ulangan Harian">Ulangan Harian</option>
+                      <option value="Susulan UTS">Susulan UTS (Tengah Semester)</option>
+                      <option value="Susulan UAS">Susulan UAS (Akhir Semester)</option>
                     </select>
                   </div>
                 </div>
