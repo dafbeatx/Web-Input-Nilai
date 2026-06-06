@@ -76,6 +76,23 @@ export default function HomeLayer(props: HomeLayerProps) {
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const [activeMobileTab, setActiveMobileTab] = useState<'ai' | 'classes'>('ai');
   const [showTraditionalClasses, setShowTraditionalClasses] = useState(false);
+  const [showPreferencePopup, setShowPreferencePopup] = useState(false);
+
+  // Load layout preference on mount
+  useEffect(() => {
+    const pref = localStorage.getItem('gm_home_layout_pref');
+    if (!pref) {
+      setShowPreferencePopup(true);
+    } else {
+      setShowTraditionalClasses(pref === 'traditional');
+    }
+  }, []);
+
+  const savePreference = (choice: 'ai' | 'traditional') => {
+    localStorage.setItem('gm_home_layout_pref', choice);
+    setShowTraditionalClasses(choice === 'traditional');
+    setShowPreferencePopup(false);
+  };
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom of chat internally (prevents outer window/body scroll jumps)
@@ -182,7 +199,7 @@ export default function HomeLayer(props: HomeLayerProps) {
             content: "Menampilkan daftar kelas tradisional sesuai permintaan Anda. Klik tombol **Kembali ke AI Assistant** di atas untuk berinteraksi dengan asisten cerdas kembali."
           }
         ]);
-        setShowTraditionalClasses(true);
+        savePreference('traditional');
         setIsAiResponding(false);
       }, 400);
       return;
@@ -598,7 +615,7 @@ export default function HomeLayer(props: HomeLayerProps) {
             </div>
 
             <button
-              onClick={() => setShowTraditionalClasses(false)}
+              onClick={() => savePreference('ai')}
               className="px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-md flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
             >
               <Sparkles size={14} />
@@ -696,7 +713,7 @@ export default function HomeLayer(props: HomeLayerProps) {
               
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setShowTraditionalClasses(true)}
+                  onClick={() => savePreference('traditional')}
                   className="px-3.5 py-2 bg-white/5 hover:bg-white/10 text-slate-200 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 border border-white/5"
                   title="Tampilkan Daftar Kelas Tradisional"
                 >
@@ -823,6 +840,63 @@ export default function HomeLayer(props: HomeLayerProps) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Preference Popup Modal Overlay */}
+      {showPreferencePopup && (
+        <div className="fixed inset-0 z-[1200] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-slate-900 border border-white/10 rounded-[2rem] p-6 max-w-lg w-full shadow-2xl shadow-violet-500/10 flex flex-col gap-6 relative overflow-hidden animate-in zoom-in-95 duration-300">
+            {/* Background Glow */}
+            <div className="absolute -right-20 -top-20 w-48 h-48 bg-violet-600/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute -left-20 -bottom-20 w-48 h-48 bg-sky-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div className="flex flex-col items-center text-center gap-2 relative z-10">
+              <div className="w-14 h-14 bg-violet-500/10 rounded-2xl flex items-center justify-center border border-violet-500/20 shadow-[0_0_20px_rgba(155,114,203,0.35)] mb-2">
+                <GeminiLogo className="w-9 h-9 animate-pulse" />
+              </div>
+              <h3 className="font-headline font-black text-xl text-slate-100 uppercase tracking-wide">Pilih Tampilan Dashboard</h3>
+              <p className="text-xs text-slate-400 max-w-sm">
+                Selamat datang di **GradeMaster OS**. Silakan pilih gaya tampilan beranda utama yang paling nyaman untuk Anda bekerja.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
+              {/* Pilihan AI Navigator */}
+              <button
+                onClick={() => savePreference('ai')}
+                className="group flex flex-col items-center text-center p-5 bg-slate-950/40 hover:bg-violet-950/30 border border-white/5 hover:border-violet-500/40 rounded-2xl transition-all duration-300 active:scale-[0.98] shadow-sm hover:shadow-[0_0_25px_rgba(155,114,203,0.15)]"
+              >
+                <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center border border-violet-500/20 text-violet-400 group-hover:scale-110 transition-transform mb-3">
+                  <Sparkles size={20} />
+                </div>
+                <h4 className="font-bold text-sm text-slate-200 group-hover:text-violet-300 transition-colors mb-1">AI Navigator</h4>
+                <p className="text-[10px] text-slate-500 group-hover:text-slate-400 transition-colors leading-relaxed">
+                  Asisten Cerdas untuk mengarahkan Anda ke mana saja dengan perintah obrolan / suara.
+                </p>
+              </button>
+
+              {/* Pilihan Tradisional */}
+              <button
+                onClick={() => savePreference('traditional')}
+                className="group flex flex-col items-center text-center p-5 bg-slate-950/40 hover:bg-sky-950/30 border border-white/5 hover:border-sky-500/40 rounded-2xl transition-all duration-300 active:scale-[0.98] shadow-sm hover:shadow-[0_0_25px_rgba(14,165,233,0.15)]"
+              >
+                <div className="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center border border-sky-500/20 text-sky-400 group-hover:scale-110 transition-transform mb-3">
+                  <span className="material-symbols-outlined text-lg">grid_view</span>
+                </div>
+                <h4 className="font-bold text-sm text-slate-200 group-hover:text-sky-300 transition-colors mb-1">Tradisional</h4>
+                <p className="text-[10px] text-slate-500 group-hover:text-slate-400 transition-colors leading-relaxed">
+                  Layout Grid Bento standar. Menampilkan seluruh daftar kelas dan data secara manual.
+                </p>
+              </button>
+            </div>
+
+            <div className="text-center relative z-10">
+              <p className="text-[10px] text-slate-500">
+                *Anda dapat mengubah pilihan ini kapan saja melalui tombol pintasan di bagian atas beranda.
+              </p>
+            </div>
           </div>
         </div>
       )}
