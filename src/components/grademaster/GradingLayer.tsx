@@ -410,7 +410,7 @@ export default function GradingLayer(props: GradingLayerProps) {
                         <button
                           key={opt}
                           onClick={() => handleAnswerSelect(qNum, opt)}
-                          className={`w-11 h-11 md:w-10 md:h-10 rounded-lg border font-bold text-xs md:text-sm transition-all ${
+                          className={`w-11 h-11 md:w-10 md:h-10 rounded-lg border font-bold text-xs md:text-sm flex items-center justify-center transition-all ${
                             studentAns === opt
                               ? (isCorrect ? 'bg-emerald-500 border-emerald-500 text-white scale-110 shadow-lg shadow-emerald-500/20' : 'bg-rose-500 border-rose-500 text-white scale-110 shadow-lg shadow-rose-500/20')
                               : 'bg-surface-variant border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary'
