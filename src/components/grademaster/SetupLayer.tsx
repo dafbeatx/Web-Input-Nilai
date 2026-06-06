@@ -84,6 +84,7 @@ export default function SetupLayer(props: SetupLayerProps) {
     "IPS",
     "Bahasa Indonesia",
     "Bahasa Inggris",
+    "Bahasa Arab",
     "PAI",
     "PJOK",
     "Seni Budaya",
@@ -221,6 +222,7 @@ export default function SetupLayer(props: SetupLayerProps) {
                       <option value="IPS">IPS (Sosial)</option>
                       <option value="Bahasa Indonesia">Bahasa Indonesia</option>
                       <option value="Bahasa Inggris">Bahasa Inggris</option>
+                      <option value="Bahasa Arab">Bahasa Arab</option>
                       <option value="PAI">PAI</option>
                       <option value="PJOK">PJOK</option>
                       <option value="Seni Budaya">Seni Budaya</option>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Code, Languages, Globe2, Binary, Atom, Compass, BookOpen, FileText, Award, HelpCircle } from 'lucide-react';
 import { SessionMeta } from '@/lib/grademaster/types';
 
 interface HomeLayerProps {
@@ -82,6 +82,51 @@ export default function HomeLayer(props: HomeLayerProps) {
   }, [classGroups]);
 
   const expandedGroup = expandedClass ? classGroups.find(g => `${g.className}__${g.academicYear}` === expandedClass) : null;
+
+  const getSubjectIcon = (subjectName: string) => {
+    const name = (subjectName || '').toLowerCase().trim();
+    if (name.includes('informatika') || name.includes('komputer') || name.includes('coding') || name.includes('ict')) {
+      return <Code className="text-sky-500 animate-pulse" size={20} />;
+    }
+    if (name.includes('arab') || name.includes('arabic')) {
+      return <Languages className="text-emerald-500 animate-pulse" size={20} />;
+    }
+    if (name.includes('inggris') || name.includes('english')) {
+      return <Globe2 className="text-indigo-500" size={20} />;
+    }
+    if (name.includes('matematika') || name.includes('math') || name.includes('hitung')) {
+      return <Binary className="text-amber-500" size={20} />;
+    }
+    if (name.includes('ipa') || name.includes('sains') || name.includes('fisika') || name.includes('kimia') || name.includes('biologi')) {
+      return <Atom className="text-purple-500" size={20} />;
+    }
+    if (name.includes('ips') || name.includes('sosial') || name.includes('sejarah') || name.includes('geografi') || name.includes('ekonomi')) {
+      return <Compass className="text-orange-500" size={20} />;
+    }
+    if (name.includes('indonesia') || name.includes('indo')) {
+      return <FileText className="text-rose-500" size={20} />;
+    }
+    if (name.includes('agama') || name.includes('pai') || name.includes('islam') || name.includes('fiqih')) {
+      return <BookOpen className="text-teal-500" size={20} />;
+    }
+    if (name.includes('pkn') || name.includes('kewarganegaraan') || name.includes('pancasila')) {
+      return <Award className="text-yellow-600" size={20} />;
+    }
+    return <HelpCircle className="text-slate-400" size={20} />;
+  };
+
+  const sessionsBySubject = useMemo(() => {
+    if (!expandedGroup) return [];
+    const map: Record<string, SessionMeta[]> = {};
+    for (const s of expandedGroup.sessions) {
+      const subj = s.subject || 'Lainnya';
+      if (!map[subj]) {
+        map[subj] = [];
+      }
+      map[subj].push(s);
+    }
+    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+  }, [expandedGroup]);
 
   return (
     <main className="flex-1 min-h-screen pt-[env(safe-area-inset-top,20px)] mt-24 pb-32 px-4 sm:px-6 flex flex-col gap-8 max-w-7xl mx-auto w-full animate-in fade-in transition-all duration-300">
@@ -180,64 +225,80 @@ export default function HomeLayer(props: HomeLayerProps) {
            )}
         </div>
       ) : expandedGroup ? (
-        /* --- SESION LIST (Expanded View) --- */
-        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in slide-in-from-right-4 duration-300">
-          {expandedGroup.sessions.map((s, idx) => (
-            <button
-              key={s.id}
-              onClick={() => onSessionClick(s)}
-              className="group relative w-full text-left bg-surface-container-lowest ambient-shadow p-6 rounded-2xl transition-all duration-300 ease-out active:scale-[0.98] border border-outline-variant/10 overflow-hidden"
-            >
-              <div className="flex justify-between items-start mb-6 relative z-10">
-                <div className="flex-1 pr-6">
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    {s.is_public ? (
-                      <span className="bg-primary-container/10 text-on-primary-fixed text-[10px] font-bold px-2 py-1 rounded-sm uppercase tracking-wider">Public</span>
-                    ) : (
-                      <span className="bg-surface-container-high text-on-surface-variant text-[10px] font-bold px-2 py-1 rounded-sm uppercase tracking-wider">Private</span>
-                    )}
-                    {s.is_demo && (
-                      <span className="bg-amber-500/10 text-amber-500 text-[10px] font-bold px-2 py-1 rounded-sm uppercase tracking-wider flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">science</span> Demo
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="font-headline text-2xl font-bold text-on-surface leading-tight tracking-tight">{s.session_name}</h3>
+        /* --- SESION LIST (Expanded View Grouped by Subject) --- */
+        <div className="flex flex-col gap-10 animate-in slide-in-from-right-4 duration-300">
+          {sessionsBySubject.map(([subjectName, subjSessions]) => (
+            <div key={subjectName} className="flex flex-col gap-4">
+              {/* Subject Group Title with Icon */}
+              <div className="flex items-center gap-3 border-b border-outline-variant/20 pb-3">
+                <div className="w-9 h-9 rounded-xl bg-surface-container-low flex items-center justify-center shadow-sm border border-outline-variant/10">
+                  {getSubjectIcon(subjectName)}
                 </div>
-                
-                <div className="w-10 h-10 rounded-xl bg-surface-container-low flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-300 transform group-hover:rotate-12 shadow-sm">
-                  <span className="material-symbols-outlined text-xl">analytics</span>
+                <div>
+                  <h3 className="font-headline text-lg font-black text-on-surface leading-tight tracking-tight uppercase">
+                    {subjectName}
+                  </h3>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/60 leading-none mt-1">
+                    {subjSessions.length} Sesi Evaluasi Aktif
+                  </p>
                 </div>
               </div>
-              
-              <div className="flex items-center justify-between relative z-10 border-t border-surface-container-low pt-4">
-                <div className="flex items-center gap-8">
-                  <div>
-                    <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Mata Pelajaran</p>
-                    <p className="text-sm font-semibold text-on-surface truncate max-w-[120px]">{s.subject || 'Mapel'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Tipe Evaluasi</p>
-                    <p className="text-sm font-semibold text-on-surface">{s.exam_type || 'UJIAN'}</p>
-                  </div>
-                </div>
-                
-                {isAdmin && (
-                  <div 
-                    onClick={(e) => { e.stopPropagation(); onDeleteSession(s.id, s.session_name); }}
-                    className="w-10 h-10 rounded-full hover:bg-error/10 text-on-surface-variant/40 hover:text-error flex items-center justify-center transition-all z-20 active:scale-90"
-                    title="Hapus Sesi"
+
+              {/* Sessions Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {subjSessions.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => onSessionClick(s)}
+                    className="group relative w-full text-left bg-surface-container-lowest ambient-shadow p-6 rounded-2xl transition-all duration-300 ease-out active:scale-[0.98] border border-outline-variant/10 overflow-hidden"
                   >
-                    <span className="material-symbols-outlined text-xl">delete</span>
-                  </div>
-                )}
+                    <div className="flex justify-between items-start mb-6 relative z-10">
+                      <div className="flex-1 pr-6">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          {s.is_public ? (
+                            <span className="bg-primary-container/10 text-on-primary-fixed text-[10px] font-bold px-2 py-1 rounded-sm uppercase tracking-wider">Public</span>
+                          ) : (
+                            <span className="bg-surface-container-high text-on-surface-variant text-[10px] font-bold px-2 py-1 rounded-sm uppercase tracking-wider">Private</span>
+                          )}
+                          {s.is_demo && (
+                            <span className="bg-amber-500/10 text-amber-500 text-[10px] font-bold px-2 py-1 rounded-sm uppercase tracking-wider flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[14px]">science</span> Demo
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="font-headline text-xl font-bold text-on-surface leading-tight tracking-tight">{s.session_name}</h3>
+                      </div>
+                      
+                      <div className="w-10 h-10 rounded-xl bg-surface-container-low flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-300 transform group-hover:rotate-12 shadow-sm">
+                        <span className="material-symbols-outlined text-xl">analytics</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between relative z-10 border-t border-surface-container-low pt-4">
+                      <div>
+                        <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Tipe Evaluasi</p>
+                        <p className="text-sm font-semibold text-on-surface">{s.exam_type || 'UJIAN'}</p>
+                      </div>
+                      
+                      {isAdmin && (
+                        <div 
+                          onClick={(e) => { e.stopPropagation(); onDeleteSession(s.id, s.session_name); }}
+                          className="w-10 h-10 rounded-full hover:bg-error/10 text-on-surface-variant/40 hover:text-error flex items-center justify-center transition-all z-20 active:scale-90"
+                          title="Hapus Sesi"
+                        >
+                          <span className="material-symbols-outlined text-xl">delete</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Highlight decorative */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-primary/20 transition-colors pointer-events-none"></div>
+                  </button>
+                ))}
               </div>
-              
-              {/* Highlight decorative */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-primary/20 transition-colors pointer-events-none"></div>
-            </button>
+            </div>
           ))}
-        </section>
+        </div>
       ) : (
         /* --- DAFTAR KELAS (Home / Default View) --- */
         <>
