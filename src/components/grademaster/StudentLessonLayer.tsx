@@ -24,6 +24,7 @@ import { DailyLesson, Quiz, ToastType } from '@/lib/grademaster/types';
 interface StudentLessonLayerProps {
   onBack: () => void;
   setToast: (t: ToastType) => void;
+  semester?: string;
 }
 
 type TabType = 'materi' | 'chat_ai' | 'kuis';
@@ -33,8 +34,8 @@ interface ChatMessage {
   content: string;
 }
 
-export default function StudentLessonLayer({ onBack, setToast }: StudentLessonLayerProps) {
-  const { studentData, studentClass } = useGradeMaster();
+export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganjil' }: StudentLessonLayerProps) {
+  const { studentData, studentClass, academicYear } = useGradeMaster();
   const activeClassName = studentData?.class_name || studentClass || "";
 
   // Core State
@@ -51,6 +52,7 @@ export default function StudentLessonLayer({ onBack, setToast }: StudentLessonLa
   const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
   const [quizScoreRecord, setQuizScoreRecord] = useState<any | null>(null);
   const [showQuizResults, setShowQuizResults] = useState(false);
+  const [isBlockedFromSusulan, setIsBlockedFromSusulan] = useState(false);
 
   // Chat AI State
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -75,6 +77,7 @@ export default function StudentLessonLayer({ onBack, setToast }: StudentLessonLa
           .from('daily_lessons')
           .select('*')
           .in('class_name', [activeClassName, baseClass])
+          .eq('academic_year', academicYear)
           .eq('is_published', true)
           .order('date', { ascending: false });
 
@@ -92,7 +95,7 @@ export default function StudentLessonLayer({ onBack, setToast }: StudentLessonLa
     };
 
     fetchLessons();
-  }, [activeClassName]);
+  }, [activeClassName, academicYear]);
 
   // Load quizzes and scores when selected lesson changes
   useEffect(() => {
@@ -102,6 +105,7 @@ export default function StudentLessonLayer({ onBack, setToast }: StudentLessonLa
         setSelectedQuiz(null);
         setQuizScoreRecord(null);
         setShowQuizResults(false);
+        setIsBlockedFromSusulan(false);
         return;
       }
 
@@ -109,6 +113,7 @@ export default function StudentLessonLayer({ onBack, setToast }: StudentLessonLa
       setSelectedQuiz(null);
       setQuizScoreRecord(null);
       setShowQuizResults(false);
+      setIsBlockedFromSusulan(false);
       setUserAnswers({});
 
       try {
@@ -130,6 +135,28 @@ export default function StudentLessonLayer({ onBack, setToast }: StudentLessonLa
           const studentId = studentData?.id || user?.id;
 
           if (studentId) {
+            // Check Susulan eligibility
+            if (firstQuiz.title && firstQuiz.title.includes('Susulan')) {
+              try {
+                const examType = firstQuiz.title.includes('UTS') ? 'Susulan UTS' : 'Susulan UAS';
+                const studentName = studentData?.name;
+                if (studentName) {
+                  const checkRes = await fetch(
+                    `/api/grademaster/students/existing-scores?class=${encodeURIComponent(activeClassName)}&subject=${encodeURIComponent(selectedLesson.subject)}&year=${encodeURIComponent(academicYear)}&semester=${encodeURIComponent(semester)}&examType=${encodeURIComponent(examType)}`
+                  );
+                  if (checkRes.ok) {
+                    const checkData = await checkRes.json();
+                    const existingSet = new Set<string>(checkData.existingStudents || []);
+                    if (existingSet.has(studentName)) {
+                      setIsBlockedFromSusulan(true);
+                    }
+                  }
+                }
+              } catch (checkErr) {
+                console.error("Failed to verify Susulan eligibility:", checkErr);
+              }
+            }
+
             // 2. Fetch existing score record
             const { data: scoreData } = await supabase
               .from('student_scores')
@@ -504,7 +531,24 @@ export default function StudentLessonLayer({ onBack, setToast }: StudentLessonLa
                             <Award className="text-emerald-500" size={20} />
                           </div>
 
-                          {showQuizResults && quizScoreRecord ? (
+                          {isBlockedFromSusulan ? (
+                            /* BLOCKED WARNING VIEW */
+                            <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-6 sm:p-8 text-center space-y-5 flex-1 flex flex-col justify-center items-center">
+                              <div className="w-16 h-16 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-amber-500/20">
+                                <AlertCircle size={32} />
+                              </div>
+                              <div className="space-y-2">
+                                <p className="text-amber-600 text-[10px] font-black uppercase tracking-widest">Akses Ujian Ditutup</p>
+                                <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">Ujian Susulan Tidak Tersedia</h3>
+                                <p className="text-slate-500 text-xs font-semibold max-w-sm mx-auto leading-relaxed">
+                                  Sistem mendeteksi Anda **sudah memiliki nilai** untuk ujian utama mata pelajaran **{selectedLesson.subject}** kelas **{activeClassName}**.
+                                </p>
+                              </div>
+                              <div className="text-[10px] font-bold text-slate-400 bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
+                                Ujian ini khusus untuk siswa yang belum memiliki nilai.
+                              </div>
+                            </div>
+                          ) : showQuizResults && quizScoreRecord ? (
                             /* SCORE RESULTS VIEW */
                             <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-6 sm:p-8 text-center space-y-5 flex-1 flex flex-col justify-center items-center">
                               <div className="w-16 h-16 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/20">

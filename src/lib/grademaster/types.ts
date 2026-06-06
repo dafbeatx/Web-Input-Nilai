@@ -178,6 +178,8 @@ export interface DailyLesson {
   ai_reading_preview?: string;
   ai_chat_prompt?: string;
   is_published: boolean;
+  academic_year?: string;
+  semester?: string;
   created_at: string;
 }
 

@@ -74,6 +74,7 @@ interface LessonManagementLayerProps {
   activeClass?: string;
   academicYear?: string;
   schoolLevel?: string;
+  semester?: string;
 }
 
 interface ChatMessage {
@@ -88,7 +89,8 @@ export default function LessonManagementLayer({
   setToast,
   activeClass = '7B',
   academicYear = '2025/2026',
-  schoolLevel = 'SMA'
+  schoolLevel = 'SMA',
+  semester = 'Ganjil'
 }: LessonManagementLayerProps) {
   // Conversational Flow States
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -99,10 +101,15 @@ export default function LessonManagementLayer({
   const [historySearchQuery, setHistorySearchQuery] = useState('');
 
   // Selected config during chat
-  const [flowType, setFlowType] = useState<'daily' | 'quiz' | 'notebook' | null>(null);
+  const [flowType, setFlowType] = useState<'daily' | 'quiz' | 'notebook' | 'susulan' | null>(null);
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [extractedText, setExtractedText] = useState<string>('');
+  
+  // Susulan specific configuration
+  const [selectedYear, setSelectedYear] = useState(academicYear);
+  const [susulanType, setSusulanType] = useState<'Susulan UTS' | 'Susulan UAS' | null>(null);
+  const [awaitingCustomYear, setAwaitingCustomYear] = useState(false);
 
   // AI Generated Results (Pending Publish/Draft)
   const [aiResult, setAiResult] = useState<{
@@ -113,11 +120,13 @@ export default function LessonManagementLayer({
 
   // Ref to store the latest states and avoid stale closures in saved state actions
   const chatStateRef = useRef({
-    flowType: null as 'daily' | 'quiz' | 'notebook' | null,
+    flowType: null as 'daily' | 'quiz' | 'notebook' | 'susulan' | null,
     selectedClass: '',
     selectedSubject: '',
     extractedText: '',
-    aiResult: null as any
+    aiResult: null as any,
+    selectedYear: academicYear,
+    susulanType: null as 'Susulan UTS' | 'Susulan UAS' | null
   });
 
   // Keep ref in sync with state
@@ -127,9 +136,11 @@ export default function LessonManagementLayer({
       selectedClass,
       selectedSubject,
       extractedText,
-      aiResult
+      aiResult,
+      selectedYear,
+      susulanType
     };
-  }, [flowType, selectedClass, selectedSubject, extractedText, aiResult]);
+  }, [flowType, selectedClass, selectedSubject, extractedText, aiResult, selectedYear, susulanType]);
 
   // Lesson Preview Modal
   const [previewingLesson, setPreviewingLesson] = useState<DailyLesson | null>(null);
@@ -176,12 +187,17 @@ export default function LessonManagementLayer({
     setSelectedSubject('');
     setExtractedText('');
     setAiResult(null);
+    setSelectedYear(academicYear);
+    setSusulanType(null);
+    setAwaitingCustomYear(false);
     chatStateRef.current = {
       flowType: null,
       selectedClass: '',
       selectedSubject: '',
       extractedText: '',
-      aiResult: null
+      aiResult: null,
+      selectedYear: academicYear,
+      susulanType: null
     };
     setMessages([
       {
@@ -190,7 +206,8 @@ export default function LessonManagementLayer({
         options: [
           { label: "📘 Buat Pelajaran Harian", action: () => startDailyLessonFlow() },
           { label: "📝 Manajemen Ulangan Harian", action: () => startQuizFlow() },
-          { label: "📂 NotebookLM (Upload PDF/DOCX)", action: () => startNotebookFlow() }
+          { label: "📂 NotebookLM (Upload PDF/DOCX)", action: () => startNotebookFlow() },
+          { label: "🎓 Ujian Susulan UTS / UAS", action: () => startSusulanFlow() }
         ]
       }
     ]);
@@ -253,6 +270,25 @@ export default function LessonManagementLayer({
     ]);
   };
 
+  // Option 4: Susulan Flow
+  const startSusulanFlow = () => {
+    setFlowType('susulan');
+    chatStateRef.current.flowType = 'susulan';
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: "Saya ingin membuat Ujian Susulan UTS/UAS." },
+      {
+        role: 'assistant',
+        content: "Baik, silakan tentukan tingkatan kelas untuk Ujian Susulan ini:",
+        options: [
+          { label: "Kelas 7", action: () => selectClass('Kelas 7') },
+          { label: "Kelas 8", action: () => selectClass('Kelas 8') },
+          { label: "Kelas 9", action: () => selectClass('Kelas 9') }
+        ]
+      }
+    ]);
+  };
+
   const selectClass = (cls: string) => {
     setSelectedClass(cls);
     chatStateRef.current.selectedClass = cls;
@@ -270,17 +306,80 @@ export default function LessonManagementLayer({
     ]);
   };
 
+  const selectYear = (year: string) => {
+    setSelectedYear(year);
+    chatStateRef.current.selectedYear = year;
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: `Tahun Ajaran: ${year}` },
+      {
+        role: 'assistant',
+        content: "Silakan pilih jenis Ujian Susulan yang ingin dibuat:",
+        options: [
+          { label: "Susulan UTS (Tengah Semester)", action: () => selectSusulanType("Susulan UTS") },
+          { label: "Susulan UAS (Akhir Semester)", action: () => selectSusulanType("Susulan UAS") }
+        ]
+      }
+    ]);
+  };
+
+  const startCustomYearInput = () => {
+    setAwaitingCustomYear(true);
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: "Ketik Tahun Ajaran Lain" },
+      {
+        role: 'assistant',
+        content: "Silakan ketik tahun ajaran baru di kolom chat di bawah ini (contoh: 2026/2027 atau 2027/2028):"
+      }
+    ]);
+  };
+
+  const selectSusulanType = (type: 'Susulan UTS' | 'Susulan UAS') => {
+    setSusulanType(type);
+    chatStateRef.current.susulanType = type;
+    
+    const activeSubject = chatStateRef.current.selectedSubject;
+    const activeClass = chatStateRef.current.selectedClass;
+    const example = getSubjectExample(activeSubject);
+
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: type },
+      {
+        role: 'assistant',
+        content: `Mata Pelajaran: ${activeSubject} • Kelas: ${activeClass} • Tahun Ajaran: ${selectedYear} • Jenis Ujian: ${type}\n\nSilakan tuliskan topik, deskripsi kisi-kisi atau upload naskah dokumen soal untuk Ujian Susulan ini (contoh: ${example.quiz}):`
+      }
+    ]);
+  };
+
   const selectSubject = (sub: string) => {
     setSelectedSubject(sub);
     chatStateRef.current.selectedSubject = sub;
     
     let nextContent = '';
     let fileUploadRequired = false;
-
+ 
     const activeFlow = chatStateRef.current.flowType;
     const activeClass = chatStateRef.current.selectedClass;
     const example = getSubjectExample(sub);
 
+    if (activeFlow === 'susulan') {
+      setMessages(prev => [
+        ...prev,
+        { role: 'user', content: sub },
+        {
+          role: 'assistant',
+          content: `Baik, Anda memilih ${sub} untuk ${activeClass}.\n\nTahun ajaran aktif saat ini adalah **${academicYear}**. Apakah Anda ingin menggunakan tahun ajaran ini atau mengubahnya?`,
+          options: [
+            { label: `Gunakan ${academicYear}`, action: () => selectYear(academicYear) },
+            { label: "Ketik Tahun Ajaran Lain", action: () => startCustomYearInput() }
+          ]
+        }
+      ]);
+      return;
+    }
+ 
     if (activeFlow === 'daily') {
       nextContent = `Baik, Anda memilih ${sub} untuk ${activeClass}.\n\nSilakan tuliskan topik atau deskripsi singkat materi yang ingin dibuat (contoh: ${example.daily}).`;
     } else if (activeFlow === 'quiz') {
@@ -309,6 +408,12 @@ export default function LessonManagementLayer({
     const userText = inputValue.trim();
     setInputValue('');
 
+    if (awaitingCustomYear) {
+      setAwaitingCustomYear(false);
+      selectYear(userText);
+      return;
+    }
+
     setMessages(prev => [
       ...prev,
       { role: 'user', content: userText }
@@ -320,8 +425,8 @@ export default function LessonManagementLayer({
     const activeSubject = chatStateRef.current.selectedSubject;
 
     try {
-      if (activeFlow === 'daily' || activeFlow === 'quiz') {
-        const result = await generateAILessonContent(userText, activeSubject, activeFlow);
+      if (activeFlow === 'daily' || activeFlow === 'quiz' || activeFlow === 'susulan') {
+        const result = await generateAILessonContent(userText, activeSubject, activeFlow === 'susulan' ? 'quiz' : activeFlow);
         setAiResult(result);
         chatStateRef.current.aiResult = result;
 
@@ -329,7 +434,7 @@ export default function LessonManagementLayer({
           ...prev,
           {
             role: 'assistant',
-            content: `✨ **Groq AI berhasil merumuskan materi pelajaran!**\n\nSilakan tinjau draf materi di bawah ini sebelum mempublikasikannya ke siswa.`
+            content: `✨ **Groq AI berhasil merumuskan materi kuis / ujian!**\n\nSilakan tinjau draf soal di bawah ini sebelum mempublikasikannya ke siswa.`
           }
         ]);
       }
@@ -424,7 +529,9 @@ export default function LessonManagementLayer({
         content: activeText || `Pembahasan materi mata pelajaran ${activeSubject} kelas ${activeClass}`,
         ai_reading_preview: activeAiResult.preview,
         ai_chat_prompt: activeAiResult.chatPrompt,
-        is_published: publish
+        is_published: publish,
+        academic_year: chatStateRef.current.selectedYear,
+        semester: semester
       });
 
       // 2. Create Quizzes Row if AI returned questions
@@ -438,12 +545,20 @@ export default function LessonManagementLayer({
           type: q.type || 'mcq'
         }));
 
+        const isSusulan = chatStateRef.current.flowType === 'susulan';
+        const targetTitle = isSusulan && chatStateRef.current.susulanType
+          ? `Ujian ${chatStateRef.current.susulanType} - ${activeSubject}`
+          : `Kuis Evaluasi - ${activeSubject}`;
+        const targetQuizType = isSusulan && chatStateRef.current.susulanType
+          ? (chatStateRef.current.susulanType === 'Susulan UTS' ? 'ASTS' : 'ASAJ')
+          : 'DAILY';
+
         const { error: quizError } = await supabase
           .from('quizzes')
           .insert({
             lesson_id: newLesson.id,
-            title: `Kuis Evaluasi - ${activeSubject}`,
-            quiz_type: 'DAILY',
+            title: targetTitle,
+            quiz_type: targetQuizType,
             duration_minutes: 15,
             questions: formattedQuestions
           });

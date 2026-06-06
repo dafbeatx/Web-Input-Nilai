@@ -1301,6 +1301,7 @@ export default function GradeMaster() {
         <StudentLessonLayer
           onBack={() => setLayer("home")}
           setToast={setToast}
+          semester={semester}
         />
       )}
 
@@ -1311,6 +1312,7 @@ export default function GradeMaster() {
           activeClass={studentClass}
           academicYear={academicYear}
           schoolLevel={schoolLevel}
+          semester={semester}
         />
       )}
 

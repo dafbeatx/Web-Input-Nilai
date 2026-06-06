@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getAdminSession } from '@/lib/grademaster/admin';
+import { getStudentSession } from '@/lib/grademaster/studentAuth';
 import { checkRateLimit } from '@/lib/grademaster/security';
 
 export const dynamic = "force-dynamic";
@@ -9,9 +10,10 @@ export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient();
     const adminSession = await getAdminSession();
+    const studentSession = await getStudentSession();
     
-    if (!adminSession) {
-      return NextResponse.json({ error: 'Akses ditolak: Hanya admin yang diizinkan mengakses data ini' }, { status: 403 });
+    if (!adminSession && !studentSession) {
+      return NextResponse.json({ error: 'Akses ditolak: Anda harus login untuk mengakses data ini' }, { status: 403 });
     }
 
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
