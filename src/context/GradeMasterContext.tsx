@@ -43,6 +43,9 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   const [academicYear, setAcademicYear] = useState("2025/2026");
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
+  const lastUserEmailRef = useRef<string | null>(null);
+  const hasInitialLoadedRef = useRef(false);
+
   // Ref to track roles for the popstate handler to avoid stale closures
   const authStateRef = useRef({ isAdmin, isStudent, isParent });
   useEffect(() => {
@@ -54,7 +57,12 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return;
 
     const hash = window.location.hash.replace('#', '');
-    const validLayers: Layer[] = ['home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 'remedial_dashboard', 'login', 'attendance', 'student_accounts', 'student_login', 'student_claim', 'teacher_claim', 'lesson_management', 'remedial_management', 'data_center'];
+    const validLayers: Layer[] = [
+      'home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 
+      'remedial_dashboard', 'login', 'attendance', 'student_accounts', 
+      'student_login', 'student_claim', 'teacher_claim', 'lesson_management', 
+      'remedial_management', 'data_center', 'student_profile', 'student_lesson'
+    ];
 
     const savedClass = localStorage.getItem('gm_studentClass');
     const savedYear = localStorage.getItem('gm_academicYear') || "2025/2026";
@@ -200,11 +208,11 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
 
         // Determine initial layer
         let initialLayer: Layer = 'student_login';
-        if (validLayers.includes(hash as Layer) && hash !== 'dashboard') {
+        if (validLayers.includes(hash as Layer)) {
           initialLayer = hash as Layer;
         }
 
-        const adminOnlyLayers = ['setup', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
+        const adminOnlyLayers = ['setup', 'dashboard', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
         const protectedLayers = ['remedial', 'student_lesson', 'student_profile'];
         const authLayers = ['login', 'student_login'];
 
@@ -231,6 +239,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         }
 
         console.log(`[AuthInit] Final resolved initialLayer: ${initialLayer}`);
+        lastUserEmailRef.current = currentSession?.user?.email || null;
+        hasInitialLoadedRef.current = true;
         setLayer(initialLayer);
         window.history.replaceState({ layer: initialLayer }, '', `#${initialLayer}`);
       } catch (err) {
@@ -240,6 +250,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         setIsStudent(false);
         setIsParent(false);
         setStudentData(null);
+        lastUserEmailRef.current = null;
+        hasInitialLoadedRef.current = true;
         setLayer("student_login");
         window.history.replaceState({ layer: 'student_login' }, '', '#student_login');
       } finally {
@@ -251,7 +263,11 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log(`[Global Auth Change] Event: ${event}, Session: ${!!session}`);
       
+      const currentEmail = session?.user?.email || null;
+
       if (event === 'SIGNED_OUT') {
+        lastUserEmailRef.current = null;
+        hasInitialLoadedRef.current = true;
         // Reset all states immediately on sign out
         setIsAdmin(false);
         setAdminUser(null);
@@ -263,6 +279,11 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         setIsAuthLoading(false);
       } else {
         // SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED, INITIAL_SESSION
+        if (hasInitialLoadedRef.current && currentEmail === lastUserEmailRef.current) {
+          console.log(`[Global Auth Change] Skipping redundant check for same user: ${currentEmail}`);
+          return;
+        }
+        
         setIsAuthLoading(true);
         await checkAuthAndRoute(session);
       }
@@ -272,7 +293,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     const handlePopState = () => {
       const newHash = window.location.hash.replace('#', '') as Layer;
       if (validLayers.includes(newHash)) {
-        const adminOnlyLayers = ['setup', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
+        const adminOnlyLayers = ['setup', 'dashboard', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
         const protectedLayers = ['remedial', 'student_lesson', 'student_profile'];
         const authLayers = ['login', 'student_login'];
         const { isAdmin: curAdmin, isStudent: curStudent, isParent: curParent } = authStateRef.current;
@@ -317,7 +338,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
 
   // Navigate and apply Auth guards dynamically
   const navigate = (newLayer: Layer) => {
-    const adminOnlyLayers = ['setup', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
+    const adminOnlyLayers = ['setup', 'dashboard', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
     const protectedLayers = ['remedial', 'student_lesson', 'student_profile'];
     const authLayers = ['login', 'student_login'];
 
