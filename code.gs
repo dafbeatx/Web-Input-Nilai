@@ -166,8 +166,8 @@ function doPost(e) {
     const matchesJson = scriptProperties.getProperty(phone + "_matches");
     const linkedName = scriptProperties.getProperty(phone + "_student_name");
 
-    // Deteksi apakah user menanyakan nilai, ujian, atau kelakuan/poin
-    const keywords = ["nilai", "raport", "remedial", "remed", "remedi", "ujian", "tes", "ulangan", "skor", "poin", "pelanggaran", "sanksi", "kelakuan", "sikap", "behavior", "kkm"];
+    // Deteksi apakah user menanyakan nilai, kelakuan, atau mengeluhkan masalah/error/remedial
+    const keywords = ["nilai", "raport", "remedial", "remed", "remedi", "ujian", "tes", "ulangan", "skor", "poin", "pelanggaran", "sanksi", "kelakuan", "sikap", "behavior", "kkm", "error", "masalah", "gagal", "macet", "stuck", "tidak bisa", "kendala", "link", "keluar", "buka"];
     let isQuerying = false;
     for (let i = 0; i < keywords.length; i++) {
       if (msgLower.indexOf(keywords[i]) !== -1) {
@@ -209,7 +209,26 @@ function doPost(e) {
 
     // --- KASUS B: Pengguna dalam proses memasukkan nama (AWAITING_NAME) ---
     if (state === "AWAITING_NAME") {
-      const matches = findStudentName(userMessage);
+      const potentialName = scriptProperties.getProperty(phone + "_potential_name");
+      const agreementWords = ["ya", "yes", "betul", "benar", "ok", "oke", "yup", "yo", "sip"];
+      
+      let matchedName = "";
+      
+      const isAgreeing = potentialName && (
+        agreementWords.indexOf(msgLower) !== -1 || 
+        msgLower === "ya" || 
+        msgLower === "betul" || 
+        msgLower === "benar" ||
+        msgLower.startsWith("ya ") ||
+        msgLower.startsWith("betul ") ||
+        msgLower.startsWith("benar ")
+      );
+
+      if (isAgreeing) {
+        matchedName = potentialName;
+      }
+      
+      const matches = matchedName ? [matchedName] : findStudentName(userMessage);
       
       if (matches.length === 0) {
         // Alihkan ke AI jika tidak ada kecocokan nama, agar AI membalas secara cerdas dan ramah
@@ -218,12 +237,14 @@ function doPost(e) {
         const matchedName = matches[0];
         scriptProperties.setProperty(phone + "_student_name", matchedName);
         scriptProperties.deleteProperty(phone + "_state");
+        scriptProperties.deleteProperty(phone + "_potential_name");
         
         // Ambil data terbaru (force refresh karena baru menautkan nama)
         const studentSummary = getStudentDataSummaryWithCache(phone, matchedName, true);
         return processAIWithData(phone, senderName, userMessage, introKey, studentSummary);
       } else {
         scriptProperties.setProperty(phone + "_matches", JSON.stringify(matches));
+        scriptProperties.deleteProperty(phone + "_potential_name");
         let replyMsg = `Ditemukan beberapa nama yang mirip di database:\n`;
         for (let i = 0; i < matches.length; i++) {
           replyMsg += `${i + 1}. ${matches[i]}\n`;
@@ -233,10 +254,25 @@ function doPost(e) {
       }
     }
 
-    // --- KASUS C: Alur Normal (Belum tertaut nama, tapi menanyakan data) ---
+    // --- KASUS C: Alur Normal (Belum tertaut nama, tapi menanyakan data/remedial/error) ---
     if (isQuerying && !linkedName) {
+      // Cek kecocokan nama kontak WhatsApp (senderName) secara proaktif
+      let contactMatchName = null;
+      if (senderName && senderName !== "Sobat") {
+        const contactMatches = findStudentName(senderName);
+        if (contactMatches.length === 1) {
+          contactMatchName = contactMatches[0];
+        }
+      }
+
       scriptProperties.setProperty(phone + "_state", "AWAITING_NAME");
-      return sendResponse("Boleh tahu siapa nama lengkap kamu? (Tulis nama lengkap sesuai absen ya) hehe.");
+      
+      if (contactMatchName) {
+        scriptProperties.setProperty(phone + "_potential_name", contactMatchName);
+        return sendResponse(`Boleh tahu siapa nama lengkap kamu sesuai absen? (Saya mendeteksi nama kontak WhatsApp kamu "${senderName}" cocok dengan "${contactMatchName}", apakah betul itu kamu? Balas "Ya" jika benar, atau ketik nama lengkap kamu yang sesuai absen jika bukan, hehe).`);
+      } else {
+        return sendResponse("Boleh tahu siapa nama lengkap kamu? (Tulis nama lengkap sesuai absen ya) hehe.");
+      }
     }
 
     // Alur percakapan umum (bisa sudah tertaut atau belum)
@@ -404,7 +440,7 @@ function findStudentName(name) {
 
 function getSupabaseStudentScores(studentName) {
   if (!SUPABASE_URL || !SUPABASE_KEY) return [];
-  const url = `${SUPABASE_URL.replace(/\/+$/, "")}/rest/v1/gm_students?select=final_score,remedial_status,remedial_score,original_score,gm_sessions(subject,exam_type,kkm)&name=eq.${encodeURIComponent(studentName)}&is_deleted=eq.false`;
+  const url = `${SUPABASE_URL.replace(/\/+$/, "")}/rest/v1/gm_students?select=id,final_score,remedial_status,remedial_score,original_score,risk_level,violation_count,is_blocked,cheating_flags,gm_sessions(id,subject,exam_type,kkm)&name=eq.${encodeURIComponent(studentName)}&is_deleted=eq.false`;
   
   const options = {
     method: "get",
@@ -421,6 +457,29 @@ function getSupabaseStudentScores(studentName) {
     return JSON.parse(response.getContentText());
   } catch (e) {
     logToSheet("system", "error", "getScores", e.toString(), "Error");
+  }
+  return [];
+}
+
+function getSupabaseRemedialAttempts(studentId) {
+  if (!SUPABASE_URL || !SUPABASE_KEY || !studentId) return [];
+  const url = `${SUPABASE_URL.replace(/\/+$/, "")}/rest/v1/gm_remedial_attempts?select=attempt_number,status,risk_score,risk_level,risk_flags,essay_score_auto,started_at,completed_at&student_id=eq.${studentId}&order=attempt_number.desc&limit=3`;
+  
+  const options = {
+    method: "get",
+    headers: {
+      "apikey": SUPABASE_KEY,
+      "Authorization": "Bearer " + SUPABASE_KEY,
+      "Accept": "application/json"
+    },
+    muteHttpExceptions: true
+  };
+
+  try {
+    const response = fetchWithRetry(url, options);
+    return JSON.parse(response.getContentText());
+  } catch (e) {
+    logToSheet("system", "error", "getRemedialAttempts", e.toString(), "Error");
   }
   return [];
 }
@@ -538,6 +597,36 @@ function getStudentDataSummary(studentName) {
         statusStr += `\n  🔗 Link Ujian Remedial: ${APP_URL}`;
       }
       summary += statusStr + `\n`;
+
+      // Ambil riwayat upaya remedial khusus siswa ini
+      if (s.id) {
+        const attempts = getSupabaseRemedialAttempts(s.id);
+        if (attempts && attempts.length > 0) {
+          summary += `  * RIWAYAT UPAYA REMEDIAL & KEPATUHAN PROCTORING:\n`;
+          attempts.forEach(att => {
+            let attDate = att.started_at ? att.started_at.split('T')[0] : "";
+            if (attDate) {
+              const parts = attDate.split('-');
+              if (parts.length === 3) attDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            summary += `    - Upaya #${att.attempt_number} (Status: ${att.status}) tgl ${attDate || 'baru-baru ini'}:\n`;
+            summary += `      > Tingkat Risiko Kecurangan: ${att.risk_level || 'LOW'} (Skor Risiko: ${att.risk_score || 0})\n`;
+            
+            let riskFlags = [];
+            if (att.risk_flags) {
+              try {
+                riskFlags = typeof att.risk_flags === 'string' ? JSON.parse(att.risk_flags) : att.risk_flags;
+              } catch(e) {}
+            }
+            if (riskFlags && riskFlags.length > 0) {
+              summary += `      > Indikasi Kecurangan: ${riskFlags.join(', ')}\n`;
+            }
+            if (att.essay_score_auto) {
+              summary += `      > Evaluasi Nilai Essay AI: ${att.essay_score_auto}\n`;
+            }
+          });
+        }
+      }
     });
   } else {
     summary += `NILAI UJIAN: Belum ada data nilai ujian.\n`;
