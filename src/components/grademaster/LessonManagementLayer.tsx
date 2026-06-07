@@ -80,7 +80,7 @@ interface LessonManagementLayerProps {
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
-  options?: { label: string; action: () => void }[];
+  options?: { label: string; action?: () => void; actionType?: string; payload?: any }[];
   fileUpload?: boolean;
 }
 
@@ -181,6 +181,34 @@ export default function LessonManagementLayer({
     resetChatToInit();
   }, []);
 
+  const handleOptionClick = (actionType: string, payload: any, label: string) => {
+    switch (actionType) {
+      case 'START_FLOW':
+        startFlow(payload, label);
+        break;
+      case 'SELECT_CLASS':
+        selectClass(payload);
+        break;
+      case 'SELECT_SUBJECT':
+        selectSubject(payload);
+        break;
+      case 'SELECT_YEAR':
+        selectYear(payload);
+        break;
+      case 'CUSTOM_YEAR':
+        startCustomYearInput();
+        break;
+      case 'SELECT_SUSULAN_TYPE':
+        selectSusulanType(payload);
+        break;
+      case 'RESET':
+        resetChatToInit();
+        break;
+      default:
+        break;
+    }
+  };
+
   const resetChatToInit = () => {
     setFlowType(null);
     setSelectedClass('');
@@ -204,86 +232,34 @@ export default function LessonManagementLayer({
         role: 'assistant',
         content: `Halo Guru/Admin! Saya adalah **Asisten Kurikulum AI GradeMaster**. 🤖🎓\n\nSaya di sini untuk membantu Anda membuat materi pelajaran harian, kuis interaktif, atau merangkum naskah dokumen menggunakan mesin cerdas Groq Llama.\n\nSilakan pilih opsi kerja yang ingin Anda lakukan hari ini:`,
         options: [
-          { label: "📘 Buat Pelajaran Harian", action: () => startDailyLessonFlow() },
-          { label: "📝 Manajemen Ulangan Harian", action: () => startQuizFlow() },
-          { label: "📂 NotebookLM (Upload PDF/DOCX)", action: () => startNotebookFlow() },
-          { label: "🎓 Ujian Susulan UTS / UAS", action: () => startSusulanFlow() }
+          { label: "📘 Buat Pelajaran Harian", actionType: 'START_FLOW', payload: 'daily' },
+          { label: "📝 Manajemen Ulangan Harian", actionType: 'START_FLOW', payload: 'quiz' },
+          { label: "📂 NotebookLM (Upload PDF/DOCX)", actionType: 'START_FLOW', payload: 'notebook' },
+          { label: "🎓 Ujian Susulan UTS / UAS", actionType: 'START_FLOW', payload: 'susulan' }
         ]
       }
     ]);
   };
 
-  // Option 1: Daily Lesson Flow
-  const startDailyLessonFlow = () => {
-    setFlowType('daily');
-    chatStateRef.current.flowType = 'daily';
+  const startFlow = (type: 'daily' | 'quiz' | 'notebook' | 'susulan', label: string) => {
+    setFlowType(type);
+    chatStateRef.current.flowType = type;
     setMessages(prev => [
       ...prev,
-      { role: 'user', content: "Saya ingin membuat pelajaran harian." },
+      { role: 'user', content: label },
       {
         role: 'assistant',
-        content: "Bagus! Silakan pilih tingkatan kelas pelajaran ini:",
+        content: type === 'susulan' 
+          ? "Baik, silakan tentukan tingkatan kelas untuk Ujian Susulan ini:" 
+          : type === 'notebook'
+          ? "Baik, silakan tentukan tingkatan kelas materi dokumen:"
+          : type === 'quiz'
+          ? "Baik, silakan tentukan tingkatan kelas kuis:"
+          : "Bagus! Silakan pilih tingkatan kelas pelajaran ini:",
         options: [
-          { label: "Kelas 7", action: () => selectClass('Kelas 7') },
-          { label: "Kelas 8", action: () => selectClass('Kelas 8') },
-          { label: "Kelas 9", action: () => selectClass('Kelas 9') }
-        ]
-      }
-    ]);
-  };
-
-  // Option 2: Quiz Flow
-  const startQuizFlow = () => {
-    setFlowType('quiz');
-    chatStateRef.current.flowType = 'quiz';
-    setMessages(prev => [
-      ...prev,
-      { role: 'user', content: "Saya ingin membuat ulangan/kuis harian." },
-      {
-        role: 'assistant',
-        content: "Baik, silakan tentukan tingkatan kelas kuis:",
-        options: [
-          { label: "Kelas 7", action: () => selectClass('Kelas 7') },
-          { label: "Kelas 8", action: () => selectClass('Kelas 8') },
-          { label: "Kelas 9", action: () => selectClass('Kelas 9') }
-        ]
-      }
-    ]);
-  };
-
-  // Option 3: NotebookLM Flow
-  const startNotebookFlow = () => {
-    setFlowType('notebook');
-    chatStateRef.current.flowType = 'notebook';
-    setMessages(prev => [
-      ...prev,
-      { role: 'user', content: "Saya ingin memproses dokumen pelajaran." },
-      {
-        role: 'assistant',
-        content: "Baik, silakan tentukan tingkatan kelas materi dokumen:",
-        options: [
-          { label: "Kelas 7", action: () => selectClass('Kelas 7') },
-          { label: "Kelas 8", action: () => selectClass('Kelas 8') },
-          { label: "Kelas 9", action: () => selectClass('Kelas 9') }
-        ]
-      }
-    ]);
-  };
-
-  // Option 4: Susulan Flow
-  const startSusulanFlow = () => {
-    setFlowType('susulan');
-    chatStateRef.current.flowType = 'susulan';
-    setMessages(prev => [
-      ...prev,
-      { role: 'user', content: "Saya ingin membuat Ujian Susulan UTS/UAS." },
-      {
-        role: 'assistant',
-        content: "Baik, silakan tentukan tingkatan kelas untuk Ujian Susulan ini:",
-        options: [
-          { label: "Kelas 7", action: () => selectClass('Kelas 7') },
-          { label: "Kelas 8", action: () => selectClass('Kelas 8') },
-          { label: "Kelas 9", action: () => selectClass('Kelas 9') }
+          { label: "Kelas 7", actionType: 'SELECT_CLASS', payload: 'Kelas 7' },
+          { label: "Kelas 8", actionType: 'SELECT_CLASS', payload: 'Kelas 8' },
+          { label: "Kelas 9", actionType: 'SELECT_CLASS', payload: 'Kelas 9' }
         ]
       }
     ]);
@@ -300,7 +276,8 @@ export default function LessonManagementLayer({
         content: `Materi berlaku untuk semua section di **${cls}**. Sekarang, pilih mata pelajaran:`,
         options: subjects.map(sub => ({
           label: sub,
-          action: () => selectSubject(sub)
+          actionType: 'SELECT_SUBJECT',
+          payload: sub
         }))
       }
     ]);
@@ -316,8 +293,8 @@ export default function LessonManagementLayer({
         role: 'assistant',
         content: "Silakan pilih jenis Ujian Susulan yang ingin dibuat:",
         options: [
-          { label: "Susulan UTS (Tengah Semester)", action: () => selectSusulanType("Susulan UTS") },
-          { label: "Susulan UAS (Akhir Semester)", action: () => selectSusulanType("Susulan UAS") }
+          { label: "Susulan UTS (Tengah Semester)", actionType: 'SELECT_SUSULAN_TYPE', payload: 'Susulan UTS' },
+          { label: "Susulan UAS (Akhir Semester)", actionType: 'SELECT_SUSULAN_TYPE', payload: 'Susulan UAS' }
         ]
       }
     ]);
@@ -341,6 +318,7 @@ export default function LessonManagementLayer({
     
     const activeSubject = chatStateRef.current.selectedSubject;
     const activeClass = chatStateRef.current.selectedClass;
+    const activeYear = chatStateRef.current.selectedYear;
     const example = getSubjectExample(activeSubject);
 
     setMessages(prev => [
@@ -348,7 +326,7 @@ export default function LessonManagementLayer({
       { role: 'user', content: type },
       {
         role: 'assistant',
-        content: `Mata Pelajaran: ${activeSubject} • Kelas: ${activeClass} • Tahun Ajaran: ${selectedYear} • Jenis Ujian: ${type}\n\nSilakan tuliskan topik, deskripsi kisi-kisi atau upload naskah dokumen soal untuk Ujian Susulan ini (contoh: ${example.quiz}):`
+        content: `Mata Pelajaran: ${activeSubject} • Kelas: ${activeClass} • Tahun Ajaran: ${activeYear} • Jenis Ujian: ${type}\n\nSilakan tuliskan topik, deskripsi kisi-kisi atau upload naskah dokumen soal untuk Ujian Susulan ini (contoh: ${example.quiz}):`
       }
     ]);
   };
@@ -357,9 +335,6 @@ export default function LessonManagementLayer({
     setSelectedSubject(sub);
     chatStateRef.current.selectedSubject = sub;
     
-    let nextContent = '';
-    let fileUploadRequired = false;
- 
     const activeFlow = chatStateRef.current.flowType;
     const activeClass = chatStateRef.current.selectedClass;
     const example = getSubjectExample(sub);
@@ -372,13 +347,16 @@ export default function LessonManagementLayer({
           role: 'assistant',
           content: `Baik, Anda memilih ${sub} untuk ${activeClass}.\n\nTahun ajaran aktif saat ini adalah **${academicYear}**. Apakah Anda ingin menggunakan tahun ajaran ini atau mengubahnya?`,
           options: [
-            { label: `Gunakan ${academicYear}`, action: () => selectYear(academicYear) },
-            { label: "Ketik Tahun Ajaran Lain", action: () => startCustomYearInput() }
+            { label: `Gunakan ${academicYear}`, actionType: 'SELECT_YEAR', payload: academicYear },
+            { label: "Ketik Tahun Ajaran Lain", actionType: 'CUSTOM_YEAR' }
           ]
         }
       ]);
       return;
     }
+ 
+    let nextContent = '';
+    let fileUploadRequired = false;
  
     if (activeFlow === 'daily') {
       nextContent = `Baik, Anda memilih ${sub} untuk ${activeClass}.\n\nSilakan tuliskan topik atau deskripsi singkat materi yang ingin dibuat (contoh: ${example.daily}).`;
@@ -430,11 +408,20 @@ export default function LessonManagementLayer({
         setAiResult(result);
         chatStateRef.current.aiResult = result;
 
+        let successContent = '';
+        if (activeFlow === 'daily') {
+          successContent = `✨ **Groq AI berhasil merumuskan materi pelajaran!**\n\nSilakan tinjau draf materi di bawah ini sebelum mempublikasikannya ke siswa.`;
+        } else if (activeFlow === 'quiz') {
+          successContent = `✨ **Groq AI berhasil merumuskan kuis / soal evaluasi!**\n\nSilakan tinjau draf kuis di bawah ini sebelum mempublikasikannya ke siswa.`;
+        } else {
+          successContent = `✨ **Groq AI berhasil merumuskan materi ujian susulan!**\n\nSilakan tinjau draf kuis di bawah ini sebelum mempublikasikannya ke siswa.`;
+        }
+
         setMessages(prev => [
           ...prev,
           {
             role: 'assistant',
-            content: `✨ **Groq AI berhasil merumuskan materi kuis / ujian!**\n\nSilakan tinjau draf soal di bawah ini sebelum mempublikasikannya ke siswa.`
+            content: successContent
           }
         ]);
       }
@@ -757,7 +744,13 @@ export default function LessonManagementLayer({
                         {msg.options.map((opt, oIdx) => (
                           <button
                             key={oIdx}
-                            onClick={opt.action}
+                            onClick={() => {
+                              if (opt.action) {
+                                opt.action();
+                              } else if (opt.actionType) {
+                                handleOptionClick(opt.actionType, opt.payload, opt.label);
+                              }
+                            }}
                             disabled={isAiResponding}
                             className="px-3.5 sm:px-4 py-2 bg-white/5 hover:bg-violet-500/10 hover:text-violet-300 border border-white/5 hover:border-violet-500/30 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-200 active:scale-95 disabled:opacity-40 min-h-[44px] sm:min-h-0 flex items-center justify-center text-center"
                           >
