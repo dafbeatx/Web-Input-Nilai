@@ -179,6 +179,7 @@ export default function StudentRemedialLayer({
   const isRefreshingRef = useRef(false);
   const isDeploymentReloadRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [backPressCount, setBackPressCount] = useState(0);
   const [secondChanceUsed, setSecondChanceUsed] = useState(false);
   const [secondChanceReason, setSecondChanceReason] = useState('');
@@ -1162,45 +1163,56 @@ export default function StudentRemedialLayer({
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
-  // Persist session state whenever any relevant field changes (survives refreshes/hot-reloads)
+  // Persist session state & backup answers (survives refreshes/hot-reloads)
+  // Debounced to prevent blocking the main thread when typing on mobile/low-end devices
   useEffect(() => {
-    const saved = loadRemedialSession();
-    const refreshCount = saved?.refreshCount || 0;
-    const prevQuestions = saved?.remedialQuestions || [];
-    const prevTimer = saved?.remedialTimer || 0;
-
-    saveRemedialSession({
-      ...saved,
-      sessionId,
-      studentName,
-      step,
-      startedAt: startedAtRef.current || saved?.startedAt || Date.now(),
-      answers,
-      note,
-      location: currentLocation,
-      refreshCount,
-      shuffledIndices: shuffledQuestions.length > 0
-        ? shuffledQuestions.map(q => q.originalIndex)
-        : (saved?.shuffledIndices || remedialQuestions.map((_, idx) => idx)),
-      studentId: currentStudentId || undefined,
-      examMode,
-      cameraStatus,
-      className,
-      subject,
-      remedialQuestions: (remedialQuestions && remedialQuestions.length > 0) ? remedialQuestions : prevQuestions,
-      remedialTimer: (remedialTimer && remedialTimer > 0) ? remedialTimer : prevTimer,
-      semester,
-      remedialEssayCount,
-    });
-  }, [answers, note, step, sessionId, studentName, className, subject, currentLocation, shuffledQuestions, currentStudentId, examMode, cameraStatus, remedialQuestions, remedialTimer, semester, remedialEssayCount]);
-
-  // Backup answers to a separate key that survives session resets
-  useEffect(() => {
-    if (step === 'EXAM' && answers && answers.some(a => a && a.trim() !== '')) {
-      const backupKey = `gm_remedial_backup_${sessionId}_${studentName.toLowerCase().trim()}`;
-      localStorage.setItem(backupKey, JSON.stringify(answers));
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
-  }, [answers, step, sessionId, studentName]);
+
+    saveTimeoutRef.current = setTimeout(() => {
+      const saved = loadRemedialSession();
+      const refreshCount = saved?.refreshCount || 0;
+      const prevQuestions = saved?.remedialQuestions || [];
+      const prevTimer = saved?.remedialTimer || 0;
+
+      saveRemedialSession({
+        ...saved,
+        sessionId,
+        studentName,
+        step,
+        startedAt: startedAtRef.current || saved?.startedAt || Date.now(),
+        answers,
+        note,
+        location: currentLocation,
+        refreshCount,
+        shuffledIndices: shuffledQuestions.length > 0
+          ? shuffledQuestions.map(q => q.originalIndex)
+          : (saved?.shuffledIndices || remedialQuestions.map((_, idx) => idx)),
+        studentId: currentStudentId || undefined,
+        examMode,
+        cameraStatus,
+        className,
+        subject,
+        remedialQuestions: (remedialQuestions && remedialQuestions.length > 0) ? remedialQuestions : prevQuestions,
+        remedialTimer: (remedialTimer && remedialTimer > 0) ? remedialTimer : prevTimer,
+        semester,
+        remedialEssayCount,
+      });
+
+      // Backup answers to a separate key that survives session resets
+      if (step === 'EXAM' && answers && answers.some(a => a && a.trim() !== '')) {
+        const backupKey = `gm_remedial_backup_${sessionId}_${studentName.toLowerCase().trim()}`;
+        localStorage.setItem(backupKey, JSON.stringify(answers));
+      }
+    }, 1000); // 1-second debounce
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [answers, note, step, sessionId, studentName, className, subject, currentLocation, shuffledQuestions, currentStudentId, examMode, cameraStatus, remedialQuestions, remedialTimer, semester, remedialEssayCount]);
 
   const isSubmittingRef = useRef(isSubmitting);
   useEffect(() => { isSubmittingRef.current = isSubmitting; });

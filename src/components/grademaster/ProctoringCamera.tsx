@@ -75,7 +75,8 @@ async function acquireStream(): Promise<MediaStream> {
 
 const MAX_SETUP_RETRIES = 3;
 const RETRY_DELAY_MS = 2000;
-const FACE_CHECK_INTERVAL = 1500;
+const isMobileDevice = typeof window !== 'undefined' && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+const FACE_CHECK_INTERVAL = isMobileDevice ? 3000 : 1500;
 
 // Calibration: require 3 consecutive frames with exactly 1 face
 const CALIBRATION_REQUIRED_FRAMES = 3;
@@ -131,9 +132,11 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
         try {
           await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js');
           await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js');
-          // Add TFJS + COCO-SSD for Phone Detection
-          await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs');
-          await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd');
+          if (!isMobileDevice) {
+            // Add TFJS + COCO-SSD for Phone Detection ONLY on desktop to prevent OOM/lag on mobile devices
+            await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs');
+            await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd');
+          }
         } catch (scriptErr) {
           console.warn('AI scripts failed to load, some detection features may be unavailable:', scriptErr);
         }
@@ -347,7 +350,7 @@ const ProctoringCamera = forwardRef<HTMLVideoElement, ProctoringCameraProps>(
         }
         
         // ── Object Detection (Phone) ──
-        if (win.cocoSsd && typeof (win.cocoSsd as any).load === 'function') {
+        if (!isMobileDevice && win.cocoSsd && typeof (win.cocoSsd as any).load === 'function') {
           try {
             const model = await (win.cocoSsd as any).load();
             const objectInterval = setInterval(async () => {
