@@ -352,7 +352,7 @@ export async function POST(req: NextRequest) {
       subject: session.subject,
       className: session.class_name,
       schoolLevel: session.school_level,
-      studentList: session.student_list,
+      studentList: isReadOnly ? [] : session.student_list,
       scoringConfig: parsedConfig || session.scoring_config,
       examType: session.exam_type || 'UTS',
       academicYear: session.academic_year || '2025/2026',
@@ -364,8 +364,8 @@ export async function POST(req: NextRequest) {
       isDemo: session.is_demo,
       isReadOnly,
       showRemedialButton,
-      questionDifficulties, // Pre-calculated for students
-      gradedStudents,
+      questionDifficulties: isReadOnly ? [] : questionDifficulties,
+      gradedStudents: isReadOnly ? [] : gradedStudents,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Gagal memuat sesi';
