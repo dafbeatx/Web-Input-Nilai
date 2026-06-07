@@ -283,7 +283,7 @@ export default function AICopilot() {
         return (
           <li 
             key={idx} 
-            className="ml-4 list-disc text-xs leading-relaxed py-0.5"
+            className="ml-4 list-disc text-sm sm:text-xs leading-relaxed py-0.5"
             dangerouslySetInnerHTML={{ __html: formattedLine.replace(/^[-*]\s+/, '') }}
           />
         );
@@ -292,7 +292,7 @@ export default function AICopilot() {
       return (
         <p 
           key={idx} 
-          className="text-xs leading-relaxed mb-2"
+          className="text-sm sm:text-xs leading-relaxed mb-2"
           dangerouslySetInnerHTML={{ __html: formattedLine }}
         />
       );
@@ -364,10 +364,10 @@ export default function AICopilot() {
 
       {/* Floating Glassmorphic Chat Box */}
       {isOpen && (
-        <div className="fixed bottom-[5.5rem] left-3 right-3 sm:left-auto sm:right-6 sm:bottom-40 z-[9999] w-auto sm:w-[380px] h-[440px] sm:h-[520px] max-h-[70vh] sm:max-h-none bg-slate-950/95 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-300 font-sans">
+        <div className="fixed inset-0 sm:inset-auto sm:right-6 sm:bottom-40 z-[9999] w-full sm:w-[380px] h-dvh sm:h-[520px] bg-slate-950 sm:bg-slate-950/95 backdrop-blur-xl border-0 sm:border sm:border-white/10 rounded-none sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-0 sm:slide-in-from-bottom-8 fade-in duration-300 font-sans">
           
           {/* Header Panel */}
-          <div className="p-4 bg-gradient-to-r from-violet-950/40 via-slate-950 to-slate-950 border-b border-white/5 flex items-center justify-between">
+          <div className="pt-[calc(1rem+env(safe-area-inset-top,0px))] pr-4 pb-4 pl-4 sm:p-4 bg-gradient-to-r from-violet-950/40 via-slate-950 to-slate-950 border-b border-white/5 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-violet-500/15 rounded-xl flex items-center justify-center border border-violet-500/25 shadow-[0_0_10px_rgba(155,114,203,0.2)]">
                 <GeminiLogo className="w-6 h-6 animate-pulse" />
@@ -380,23 +380,23 @@ export default function AICopilot() {
               </div>
             </div>
             
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               {/* Reset Chat button */}
               <button 
                 onClick={handleResetChat} 
-                className="p-1.5 bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 rounded-lg text-slate-400 transition-all animate-in fade-in duration-200"
+                className="p-2.5 sm:p-1.5 bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 rounded-xl sm:rounded-lg text-slate-400 transition-all animate-in fade-in duration-200 active:scale-95"
                 title="Reset Percakapan"
               >
-                <RotateCcw size={15} />
+                <RotateCcw size={18} className="sm:w-[15px] sm:h-[15px]" />
               </button>
               
               {/* Close button */}
               <button 
                 onClick={() => setIsOpen(false)} 
-                className="p-1.5 bg-white/5 hover:bg-white/10 hover:text-white rounded-lg text-slate-400 transition-all"
+                className="p-2.5 sm:p-1.5 bg-white/5 hover:bg-white/10 hover:text-white rounded-xl sm:rounded-lg text-slate-400 transition-all active:scale-95"
                 title="Tutup Chat"
               >
-                <X size={15} />
+                <X size={18} className="sm:w-[15px] sm:h-[15px]" />
               </button>
             </div>
           </div>
@@ -433,7 +433,7 @@ export default function AICopilot() {
                             <button
                               key={act.layer}
                               onClick={() => handleActionClick(act.layer)}
-                              className="w-full p-2.5 bg-slate-950 hover:bg-violet-950/40 text-slate-100 hover:text-violet-300 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all duration-200 border border-white/5 hover:border-violet-500/30 flex items-center justify-between group shadow-sm hover:shadow-[0_0_12px_rgba(155,114,203,0.1)]"
+                              className="w-full p-3 sm:p-2.5 bg-slate-950 hover:bg-violet-950/40 text-slate-100 hover:text-violet-300 font-bold text-xs sm:text-[10px] uppercase tracking-wider rounded-xl transition-all duration-200 border border-white/5 hover:border-violet-500/30 flex items-center justify-between group shadow-sm hover:shadow-[0_0_12px_rgba(155,114,203,0.1)] min-h-[40px]"
                             >
                               <div className="flex items-center gap-2">
                                 <Compass size={12} className="text-violet-400 group-hover:rotate-45 transition-transform" />
@@ -467,16 +467,16 @@ export default function AICopilot() {
           </div>
 
           {/* Quick Preset Chip Suggestions */}
-          <div className="px-4 py-2.5 bg-slate-950/50 border-t border-white/5">
-            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">
+          <div className="px-4 py-3 sm:py-2.5 bg-slate-950/50 border-t border-white/5 shrink-0">
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2 sm:mb-1.5">
               {messages.length > 1 ? "Saran Tindakan Lanjutan:" : "Rekomendasi Pintasan Guru/Siswa:"}
             </span>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1.5 sm:pb-1">
               {suggestedQuestions.map((chip, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleChipClick(chip)}
-                  className="flex-none px-3 py-1.5 bg-white/5 hover:bg-violet-500/10 hover:text-violet-300 border border-white/5 hover:border-violet-500/30 rounded-xl text-[10px] font-bold text-slate-300 transition-all whitespace-nowrap active:scale-95"
+                  className="flex-none px-3.5 py-2 sm:px-3 sm:py-1.5 bg-white/5 hover:bg-violet-500/10 hover:text-violet-300 border border-white/5 hover:border-violet-500/30 rounded-xl text-xs sm:text-[10px] font-bold text-slate-300 transition-all whitespace-nowrap active:scale-95 min-h-[32px] sm:min-h-[28px]"
                 >
                   {chip}
                 </button>
@@ -485,19 +485,19 @@ export default function AICopilot() {
           </div>
 
           {/* Input Form Panel */}
-          <form onSubmit={handleFormSubmit} className="p-3 bg-slate-950 border-t border-white/5 flex gap-2">
+          <form onSubmit={handleFormSubmit} className="pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3 px-3 sm:p-3 bg-slate-950 border-t border-white/5 flex gap-2 shrink-0">
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder={isLoading ? "Sedang merespons..." : "Ketik instruksi navigasi/kebutuhan Anda..."}
               disabled={isLoading}
-              className="flex-1 px-4 py-2.5 bg-slate-900 border border-white/5 focus:border-violet-500/50 rounded-xl text-sm text-slate-100 placeholder-slate-500 outline-none transition-all focus:text-base sm:focus:text-sm"
+              className="flex-1 px-4 py-3 sm:py-2.5 bg-slate-900 border border-white/5 focus:border-violet-500/50 rounded-xl text-base sm:text-sm text-slate-100 placeholder-slate-500 outline-none transition-all"
             />
             <button
               type="submit"
               disabled={isLoading || !inputValue.trim()}
-              className="p-2.5 bg-gradient-to-r from-sky-600 to-violet-600 hover:from-sky-500 hover:to-violet-500 disabled:opacity-40 text-white rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-lg shadow-violet-600/20"
+              className="p-3 sm:p-2.5 bg-gradient-to-r from-sky-600 to-violet-600 hover:from-sky-500 hover:to-violet-500 disabled:opacity-40 text-white rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-lg shadow-violet-600/20"
             >
               <Send size={14} />
             </button>
