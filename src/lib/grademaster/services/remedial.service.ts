@@ -395,26 +395,14 @@ export async function submitRemedial(
         attemptUpdate.status = 'FAILED_EFFORT';
         studentUpdate.teacher_reviewed = true;
       } else {
-        // VALID SUBMISSION
+        // VALID SUBMISSION — Always accept, score capped at KKM ceiling
         const rawScore = essayResult.score;
         const penaltyAmount = isPenaltyApplied ? 15 : 0;
         const kkmScore = session.kkm || 75;
         
-        if (rawScore < kkmScore) {
-           console.log(`[Remedial] Menolak submission untuk ${studentName} (Skor: ${rawScore} < KKM: ${kkmScore})`);
-           // Kembalikan status REMEDIAL agar frontend memberikan waktu tambahan 5 menit
-           return {
-             ...student,
-             remedial_status: 'REMEDIAL',
-             newFinalScore: rawScore,
-             subject: session.subject,
-             class_name: session.class_name,
-             attempt_id: attempt.id,
-             attempt_token: (attempt as any).attempt_token || null,
-           };
-        }
-
-        const finalScore = Math.max(0, kkmScore - penaltyAmount);
+        // Score = min(rawScore, KKM) - penalty. Never block submission based on KKM.
+        const finalScore = Math.max(0, Math.min(rawScore, kkmScore) - penaltyAmount);
+        console.log(`[Remedial] VALID submission for ${studentName}: rawScore=${rawScore}, KKM=${kkmScore}, penalty=${penaltyAmount}, finalScore=${finalScore}`);
 
         studentUpdate.remedial_score = finalScore;
         studentUpdate.final_score = finalScore;

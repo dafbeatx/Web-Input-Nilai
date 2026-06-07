@@ -142,7 +142,10 @@ export default function StudentRemedialLayer({
 }: StudentRemedialLayerProps) {
   const [step, setStep] = useState<RemedialStep>('RULES');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<string[]>(new Array(remedialEssayCount).fill(""));
+  const [answers, setAnswers] = useState<string[]>(() => {
+    const len = (remedialQuestions && remedialQuestions.length > 0) ? remedialQuestions.length : remedialEssayCount;
+    return new Array(len).fill("");
+  });
   const [timeLeft, setTimeLeft] = useState(remedialTimer * 60);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<string>('');
@@ -198,6 +201,10 @@ export default function StudentRemedialLayer({
   const wakeLockRef = useRef<any>(null); // Screen Wake Lock
   const lastPhotoHashRef = useRef<string>(''); // Dedup: track last sent photo hash
   const consecutiveDupCountRef = useRef<number>(0); // Track how many dupes skipped in a row
+
+  const totalQuestions = shuffledQuestions.length > 0
+    ? shuffledQuestions.length
+    : ((remedialQuestions && remedialQuestions.length > 0) ? remedialQuestions.length : remedialEssayCount);
 
   // Draggable PiP Camera State
   const pipRef = useRef<HTMLDivElement>(null);
@@ -925,7 +932,10 @@ export default function StudentRemedialLayer({
         const questionsAvailable = hasPropsQuestions || hasSavedQuestions;
 
         // Only restore non-EXAM meta immediately; EXAM step requires verified questions
-        setAnswers(saved.answers.length === remedialEssayCount ? saved.answers : new Array(remedialEssayCount).fill(""));
+        const expectedLen = (saved.remedialQuestions && saved.remedialQuestions.length > 0)
+          ? saved.remedialQuestions.length
+          : ((remedialQuestions && remedialQuestions.length > 0) ? remedialQuestions.length : remedialEssayCount);
+        setAnswers(saved.answers && saved.answers.length === expectedLen ? saved.answers : new Array(expectedLen).fill(""));
         setNote(saved.note || '');
         setCurrentLocation(saved.location || '');
         startedAtRef.current = saved.startedAt;
@@ -980,6 +990,17 @@ export default function StudentRemedialLayer({
                       ? saved.shuffledIndices
                       : serverQuestions.map((_: string, idx: number) => idx);
                     setShuffledQuestions(indices.map((idx: number) => ({ text: serverQuestions[idx] || '', originalIndex: idx })));
+                    if (saved.answers && saved.answers.length === serverQuestions.length) {
+                      setAnswers(saved.answers);
+                    } else {
+                      const next = new Array(serverQuestions.length).fill("");
+                      if (saved.answers) {
+                        saved.answers.forEach((val: string, idx: number) => {
+                          if (idx < next.length) next[idx] = val;
+                        });
+                      }
+                      setAnswers(next);
+                    }
                     setStep(saved.step as RemedialStep);
                     // setToast({ message: "Soal berhasil dimuat dari server. Melanjutkan ujian...", type: "success" });
                     return;
@@ -1338,6 +1359,14 @@ export default function StudentRemedialLayer({
             ? saved.shuffledIndices
             : saved.remedialQuestions.map((_: string, i: number) => i);
           setShuffledQuestions(indices.map((idx: number) => ({ text: saved.remedialQuestions![idx] || '', originalIndex: idx })));
+          setAnswers(prev => {
+            if (prev.length === saved.remedialQuestions!.length) return prev;
+            const next = new Array(saved.remedialQuestions!.length).fill("");
+            prev.forEach((val, idx) => {
+              if (idx < next.length) next[idx] = val;
+            });
+            return next;
+          });
           sendTelegramNotify('ACTIVITY', undefined, `[HEALTH_CHECK] Recovery berhasil dari localStorage (${saved.remedialQuestions.length} soal)`);
           healthCheckAttemptedRef.current = false;
           return;
@@ -1360,6 +1389,14 @@ export default function StudentRemedialLayer({
                   ? saved.shuffledIndices
                   : serverQuestions.map((_: string, i: number) => i);
                 setShuffledQuestions(indices.map((idx: number) => ({ text: serverQuestions[idx] || '', originalIndex: idx })));
+                setAnswers(prev => {
+                  if (prev.length === serverQuestions.length) return prev;
+                  const next = new Array(serverQuestions.length).fill("");
+                  prev.forEach((val, idx) => {
+                    if (idx < next.length) next[idx] = val;
+                  });
+                  return next;
+                });
                 if (saved) {
                   saveRemedialSession({ ...saved, remedialQuestions: serverQuestions });
                 }
@@ -1830,7 +1867,7 @@ export default function StudentRemedialLayer({
 
   // Execute Timeout logic exactly ONCE when triggered
   useEffect(() => {
-    if (isTimeoutTriggered && step === 'EXAM') {
+    if (isTimeoutTriggered && step === 'EXAM' && !isSubmitting) {
       const current = loadRemedialSession();
       saveRemedialSession({
         sessionId,
@@ -1853,7 +1890,7 @@ export default function StudentRemedialLayer({
       });
       handleStatusUpdate('TIMEOUT');
     }
-  }, [isTimeoutTriggered]); // Strictly runs only when isTimeoutTriggered changes
+  }, [isTimeoutTriggered, isSubmitting, step]);
 
   // Proctoring: START photo + 30s auto-snap (depends ONLY on step, NOT timeLeft)
   useEffect(() => {
@@ -2146,9 +2183,10 @@ export default function StudentRemedialLayer({
       status, 
       location: currentLocation,
       answers: (status === 'COMPLETED' || status === 'TIMEOUT') ? (() => {
-        const mappedAnswers = new Array(remedialEssayCount).fill("");
+        const totalQ = shuffledQuestions.length > 0 ? shuffledQuestions.length : remedialEssayCount;
+        const mappedAnswers = new Array(totalQ).fill("");
         shuffledQuestions.forEach((sq, i) => {
-          if (sq.originalIndex < remedialEssayCount) {
+          if (sq.originalIndex < totalQ) {
             mappedAnswers[sq.originalIndex] = answers[i] || "";
           }
         });
@@ -2938,12 +2976,12 @@ export default function StudentRemedialLayer({
               <span className="text-4xl font-black font-outfit text-on-surface tracking-tighter">
                 {answers.filter(a => a.trim() !== '').length}
               </span>
-              <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">/ {remedialEssayCount} Soal</span>
+              <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">/ {totalQuestions} Soal</span>
             </div>
             <div className="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden border border-outline-variant">
               <div 
                 className="h-full bg-primary shadow-[0_0_12px_rgba(59,130,246,0.5)] transition-all duration-1000 ease-out" 
-                style={{ width: `${(answers.filter(a => a.trim() !== '').length / remedialEssayCount) * 100}%` }}
+                style={{ width: `${(answers.filter(a => a.trim() !== '').length / totalQuestions) * 100}%` }}
               />
             </div>
           </div>
@@ -2971,13 +3009,13 @@ export default function StudentRemedialLayer({
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Progres:</span>
                 <span className="text-xs font-black font-outfit text-on-surface">
-                  {answers.filter(a => a.trim() !== '').length} / {remedialEssayCount} Soal
+                  {answers.filter(a => a.trim() !== '').length} / {totalQuestions} Soal
                 </span>
               </div>
               <div className="flex-1 max-w-[150px] h-1 bg-surface-variant rounded-full overflow-hidden border border-outline-variant">
                 <div 
                   className="h-full bg-primary shadow-[0_0_12px_rgba(59,130,246,0.5)] transition-all duration-1000 ease-out" 
-                  style={{ width: `${(answers.filter(a => a.trim() !== '').length / remedialEssayCount) * 100}%` }}
+                  style={{ width: `${(answers.filter(a => a.trim() !== '').length / totalQuestions) * 100}%` }}
                 />
               </div>
             </div>
