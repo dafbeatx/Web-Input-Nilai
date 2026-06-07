@@ -493,7 +493,7 @@ export async function submitRemedial(
       
       // Log penalty event if applied
       if (isPenaltyApplied) {
-        studentUpdate.cheating_flags = [...(studentUpdate.cheating_flags as string[] || []), 'Keterlambatan pengumpulan (-15 Poin)'];
+        studentUpdate.cheating_flags = [...(studentUpdate.cheating_flags as string[] || []), 'Sanksi Keterlambatan: Nilai Ujian Dikurangi 15 Poin'];
       }
     } else if (status === 'TIMEOUT' || status === 'FAILED') {
       // Jika TIMEOUT, nilai tetap dihitung dari apa yang sudah dikerjakan
