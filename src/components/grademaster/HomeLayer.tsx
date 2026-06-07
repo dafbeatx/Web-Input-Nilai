@@ -44,6 +44,7 @@ interface HomeLayerProps {
   onOpenSettings: () => void;
   userData: { name?: string; class_name?: string; subject?: string };
   isStudent: boolean;
+  onLayoutChange?: (view: 'ai' | 'traditional' | 'expanded') => void;
 }
 
 interface ClassGroup {
@@ -62,7 +63,8 @@ export default function HomeLayer(props: HomeLayerProps) {
     onDeleteSession,
     isAdmin,
     userData,
-    isStudent
+    isStudent,
+    onLayoutChange
   } = props;
 
   const [expandedClass, setExpandedClass] = useState<string | null>(null);
@@ -83,16 +85,32 @@ export default function HomeLayer(props: HomeLayerProps) {
     const pref = localStorage.getItem('gm_home_layout_pref');
     if (!pref) {
       setShowPreferencePopup(true);
+      onLayoutChange?.('ai');
     } else {
-      setShowTraditionalClasses(pref === 'traditional');
+      const isTrad = pref === 'traditional';
+      setShowTraditionalClasses(isTrad);
+      onLayoutChange?.(isTrad ? 'traditional' : 'ai');
     }
-  }, []);
+  }, [onLayoutChange]);
 
   const savePreference = (choice: 'ai' | 'traditional') => {
     localStorage.setItem('gm_home_layout_pref', choice);
     setShowTraditionalClasses(choice === 'traditional');
     setShowPreferencePopup(false);
+    onLayoutChange?.(choice);
+    if (choice === 'ai') {
+      setExpandedClass(null);
+    }
   };
+
+  useEffect(() => {
+    if (expandedClass) {
+      onLayoutChange?.('expanded');
+    } else {
+      onLayoutChange?.(showTraditionalClasses ? 'traditional' : 'ai');
+    }
+  }, [expandedClass, showTraditionalClasses, onLayoutChange]);
+
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom of chat internally (prevents outer window/body scroll jumps)

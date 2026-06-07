@@ -318,6 +318,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     }
 
     await supabase.auth.signOut();
+    localStorage.setItem('gm_remember_me', 'false'); // Force disable remember me status on logout
     setLayer("student_login");
     window.history.pushState({ layer: 'student_login' }, '', '#student_login');
   };

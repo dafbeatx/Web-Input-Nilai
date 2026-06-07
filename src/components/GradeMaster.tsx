@@ -90,6 +90,7 @@ export default function GradeMaster() {
   } = useGradeMaster();
 
   const [isPublicView, setIsPublicView] = useState(false);
+  const [homeView, setHomeView] = useState<'ai' | 'traditional' | 'expanded'>('ai');
   const [isSessionPublic, setIsSessionPublic] = useState(true);
   const [isDemo, setIsDemo] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
@@ -1029,9 +1030,11 @@ export default function GradeMaster() {
     );
   }
 
+  const isHomeScrollLocked = layer === 'home' && homeView === 'ai';
+
   return (
-    <div className={`relative flex flex-col ${['lesson_management', 'home'].includes(layer) ? 'h-dvh overflow-hidden' : 'min-h-[100dvh] pb-safe'} transition-colors duration-500`}>
-      <div className={`w-full ${['lesson_management', 'home'].includes(layer) ? 'h-full flex flex-col' : ''} font-outfit`}>
+    <div className={`relative flex flex-col ${isHomeScrollLocked || layer === 'lesson_management' ? 'h-dvh overflow-hidden' : 'min-h-[100dvh] pb-safe'} transition-colors duration-500`}>
+      <div className={`w-full ${isHomeScrollLocked || layer === 'lesson_management' ? 'h-full flex flex-col' : ''} font-outfit`}>
         {layer === "home" && (
         <HomeLayer
           sessions={sessions}
@@ -1074,6 +1077,7 @@ export default function GradeMaster() {
             subject: isAdmin ? subject : undefined
           }}
           isStudent={isStudent}
+          onLayoutChange={setHomeView}
         />
         )}
 
