@@ -212,7 +212,8 @@ function doPost(e) {
       const matches = findStudentName(userMessage);
       
       if (matches.length === 0) {
-        return sendResponse(`Maaf, nama "${userMessage}" tidak ditemukan di database GradeMaster. Boleh coba ketik kembali nama lengkap sesuai absen? Atau ketik /reset untuk membatalkan, hehe.`);
+        // Alihkan ke AI jika tidak ada kecocokan nama, agar AI membalas secara cerdas dan ramah
+        return processAIWithData(phone, senderName, userMessage, introKey, "", "AWAITING_NAME_NO_MATCH");
       } else if (matches.length === 1) {
         const matchedName = matches[0];
         scriptProperties.setProperty(phone + "_student_name", matchedName);
@@ -253,7 +254,7 @@ function doPost(e) {
 
 // --- FUNGSI UTAMA AI DENGAN DATA SUPABASE ---
 
-function processAIWithData(phone, senderName, userMsg, introKey, studentSummary) {
+function processAIWithData(phone, senderName, userMsg, introKey, studentSummary, nameErrorState) {
   const bukuPintar = getKnowledgeBase();
   const promptCustom = getPromptManagement();
   const infoTunggakan = getTunggakanInfo(senderName);
@@ -292,6 +293,16 @@ function processAIWithData(phone, senderName, userMsg, introKey, studentSummary)
   ${studentSummary ? `\n- DATA SISWA TERTAUT:\n${studentSummary}` : ""}
 
   SOP: Ramah, Profesional, akhiri dengan "hihi" atau "hehe". Media: Jika kirim file tanpa teks, asumsikan bukti transfer jika sedang transaksi.`;
+
+  if (nameErrorState === "AWAITING_NAME_NO_MATCH") {
+    systemContent += `\n\nPENTING: Pengguna saat ini sedang diminta untuk memasukkan nama lengkap siswa, tetapi pesan terakhir mereka ("${userMsg}") tidak cocok dengan data siswa mana pun di database GradeMaster.
+    Tolong bantu pengguna secara cerdas dan ramah:
+    1. Jika pesan tersebut berisi pertanyaan umum, keluhan, penjelasan, atau sekadar salam, jawab pertanyaan atau tanggapi pesan mereka terlebih dahulu secara ringkas.
+    2. Sampaikan secara santun dan halus bahwa nama yang dimasukkan tidak ditemukan di data GradeMaster.
+    3. Ingatkan kembali pengguna dengan sopan untuk mengetikkan nama lengkap mereka yang terdaftar di absen agar data penilaian/remedial mereka bisa dicari.
+    4. Beritahu mereka bahwa mereka bisa mengetik /reset kapan saja untuk membatalkan pencarian nama dan mengulang kembali.
+    5. Akhiri respons dengan ciri khas "hihi" atau "hehe".`;
+  }
 
   return processAIRequest(history, userMsg, introKey, phone, senderName, systemContent);
 }
