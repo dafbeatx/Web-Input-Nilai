@@ -45,6 +45,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
 
   const lastUserEmailRef = useRef<string | null>(null);
   const hasInitialLoadedRef = useRef(false);
+  const activeCheckIdRef = useRef(0);
 
   // Ref to track roles for the popstate handler to avoid stale closures
   const authStateRef = useRef({ isAdmin, isStudent, isParent });
@@ -55,6 +56,9 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   // Synchronize authentication and layer state on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    let isUnmounted = false;
+    let activeSubscription: { unsubscribe: () => void } | null = null;
 
     const hash = window.location.hash.replace('#', '');
     const validLayers: Layer[] = [
@@ -71,6 +75,9 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     setAcademicYear(savedYear);
 
     const checkAuthAndRoute = async (currentSession: any) => {
+      activeCheckIdRef.current += 1;
+      const checkId = activeCheckIdRef.current;
+
       try {
         console.log("[AuthCheck] checkAuthAndRoute: Resolving role for session:", currentSession?.user?.email || "none");
         
@@ -147,7 +154,12 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
 
             // Get actual profile metadata from backend
             const adminRes = await fetchWithRetry("/api/admin/check");
+            if (checkId !== activeCheckIdRef.current) {
+              console.log(`[AuthCheck] checkId ${checkId} superseded. Aborting admin profile load.`);
+              return;
+            }
             const adminData = await adminRes.json();
+            if (checkId !== activeCheckIdRef.current) return;
             activeAdminUser = adminData.displayName || adminData.username || currentSession.user.user_metadata?.full_name || email;
             setAdminUser(activeAdminUser);
           } else {
@@ -159,7 +171,12 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
 
             // Check if they are already bound to a student account
             const studentRes = await fetchWithRetry("/api/student/check");
+            if (checkId !== activeCheckIdRef.current) {
+              console.log(`[AuthCheck] checkId ${checkId} superseded. Aborting student profile load.`);
+              return;
+            }
             const studentData = await studentRes.json();
+            if (checkId !== activeCheckIdRef.current) return;
 
             if (studentData.authenticated && studentData.role === 'student') {
               resolvedStudentData = { ...studentData.student, isGoogleLinked: true };
@@ -183,7 +200,12 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         } else {
           console.log("[AuthInit] No Supabase session, checking backend cookies for legacy student token...");
           const studentRes = await fetchWithRetry("/api/student/check");
+          if (checkId !== activeCheckIdRef.current) {
+            console.log(`[AuthCheck] checkId ${checkId} superseded. Aborting legacy student check.`);
+            return;
+          }
           const studentCheckData = await studentRes.json();
+          if (checkId !== activeCheckIdRef.current) return;
 
           if (studentCheckData.authenticated) {
             activeStudent = true;
@@ -238,12 +260,18 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
           }
         }
 
+        if (checkId !== activeCheckIdRef.current) {
+          console.log(`[AuthCheck] checkId ${checkId} superseded right before route application.`);
+          return;
+        }
+
         console.log(`[AuthInit] Final resolved initialLayer: ${initialLayer}`);
         lastUserEmailRef.current = currentSession?.user?.email || null;
         hasInitialLoadedRef.current = true;
         setLayer(initialLayer);
         window.history.replaceState({ layer: initialLayer }, '', `#${initialLayer}`);
       } catch (err) {
+        if (checkId !== activeCheckIdRef.current) return;
         console.error("[AuthInit] Error during checkAuthAndRoute, fallback to student_login:", err);
         setIsAdmin(false);
         setAdminUser(null);
@@ -255,14 +283,14 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         setLayer("student_login");
         window.history.replaceState({ layer: 'student_login' }, '', '#student_login');
       } finally {
-        setIsAuthLoading(false);
+        if (checkId === activeCheckIdRef.current) {
+          setIsAuthLoading(false);
+        }
       }
     };
 
-    // Listen to Supabase Auth state changes globally
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const handleAuthStateChange = async (event: string, session: any) => {
       console.log(`[Global Auth Change] Event: ${event}, Session: ${!!session}`);
-      
       const currentEmail = session?.user?.email || null;
 
       if (event === 'SIGNED_OUT') {
@@ -287,7 +315,31 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         setIsAuthLoading(true);
         await checkAuthAndRoute(session);
       }
-    });
+    };
+
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (isUnmounted) return;
+        
+        await checkAuthAndRoute(session);
+        if (isUnmounted) return;
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          await handleAuthStateChange(event, session);
+        });
+
+        activeSubscription = subscription;
+      } catch (err) {
+        console.error("[AuthInit] Initial session retrieval failed, starting fallback subscription:", err);
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          await handleAuthStateChange(event, session);
+        });
+        activeSubscription = subscription;
+      }
+    };
+
+    initAuth();
 
     // History popstate listener
     const handlePopState = () => {
@@ -316,7 +368,10 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
 
     window.addEventListener('popstate', handlePopState);
     return () => {
-      subscription.unsubscribe();
+      isUnmounted = true;
+      if (activeSubscription) {
+        activeSubscription.unsubscribe();
+      }
       window.removeEventListener('popstate', handlePopState);
     };
   }, []);
