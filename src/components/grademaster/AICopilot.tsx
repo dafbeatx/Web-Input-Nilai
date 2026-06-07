@@ -364,10 +364,10 @@ export default function AICopilot() {
 
       {/* Floating Glassmorphic Chat Box */}
       {isOpen && (
-        <div className="fixed inset-0 sm:inset-auto sm:right-6 sm:bottom-40 z-[9999] w-full sm:w-[380px] h-dvh sm:h-[520px] bg-slate-950 sm:bg-slate-950/95 backdrop-blur-xl border-0 sm:border sm:border-white/10 rounded-none sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-0 sm:slide-in-from-bottom-8 fade-in duration-300 font-sans">
+        <div className="fixed inset-0 sm:inset-auto sm:right-6 sm:bottom-40 z-[9999] w-full sm:w-[380px] h-full sm:h-[520px] bg-[#121620] sm:bg-[#121620]/95 backdrop-blur-xl border-0 sm:border sm:border-white/10 rounded-none sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-0 sm:slide-in-from-bottom-8 fade-in duration-300 font-sans">
           
           {/* Header Panel */}
-          <div className="pt-[calc(1rem+env(safe-area-inset-top,0px))] pr-4 pb-4 pl-4 sm:p-4 bg-gradient-to-r from-violet-950/40 via-slate-950 to-slate-950 border-b border-white/5 flex items-center justify-between shrink-0">
+          <div className="pt-[calc(1rem+env(safe-area-inset-top,0px))] pr-4 pb-4 pl-4 sm:p-4 bg-gradient-to-r from-violet-950/20 via-[#121620] to-[#121620] border-b border-white/5 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-violet-500/15 rounded-xl flex items-center justify-center border border-violet-500/25 shadow-[0_0_10px_rgba(155,114,203,0.2)]">
                 <GeminiLogo className="w-6 h-6 animate-pulse" />
@@ -402,7 +402,7 @@ export default function AICopilot() {
           </div>
 
           {/* Message Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 no-scrollbar scroll-smooth overscroll-contain">
             {messages.map((msg) => {
               const isAI = msg.role === 'assistant';
               return (
@@ -467,7 +467,7 @@ export default function AICopilot() {
           </div>
 
           {/* Quick Preset Chip Suggestions */}
-          <div className="px-4 py-3 sm:py-2.5 bg-slate-950/50 border-t border-white/5 shrink-0">
+          <div className="px-4 py-3 sm:py-2.5 bg-[#121620]/50 border-t border-white/5 shrink-0">
             <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2 sm:mb-1.5">
               {messages.length > 1 ? "Saran Tindakan Lanjutan:" : "Rekomendasi Pintasan Guru/Siswa:"}
             </span>
@@ -485,7 +485,7 @@ export default function AICopilot() {
           </div>
 
           {/* Input Form Panel */}
-          <form onSubmit={handleFormSubmit} className="pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3 px-3 sm:p-3 bg-slate-950 border-t border-white/5 flex gap-2 shrink-0">
+          <form onSubmit={handleFormSubmit} className="pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3 px-3 sm:p-3 bg-[#121620] border-t border-white/5 flex gap-2 shrink-0">
             <input
               type="text"
               value={inputValue}
