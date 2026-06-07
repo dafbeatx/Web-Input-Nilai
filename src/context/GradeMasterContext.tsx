@@ -64,11 +64,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
 
     const checkAuthAndRoute = async (currentSession: any) => {
       try {
-        // 1. Get the absolute latest session to prevent race conditions or stale data
-        const { data: { session: latestSession } } = await supabase.auth.getSession();
-        const activeSession = latestSession || currentSession;
-
-        console.log("[AuthCheck] checkAuthAndRoute: Resolving role for session:", activeSession?.user?.email || "none");
+        console.log("[AuthCheck] checkAuthAndRoute: Resolving role for session:", currentSession?.user?.email || "none");
         
         // 2. Reset all role-related states immediately to prevent carrying over from previous logins
         setIsAdmin(false);
@@ -78,7 +74,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         setStudentData(null);
 
         // If there's an active Google session, clean up any conflicting parent or legacy session data
-        if (activeSession && activeSession.user) {
+        if (currentSession && currentSession.user) {
           localStorage.removeItem('gm_isParent');
           localStorage.removeItem('gm_studentData');
           localStorage.removeItem('gm_admin_session');
@@ -127,8 +123,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
               console.error("[AuthInit] Failed to parse saved student data:", e);
             }
           }
-        } else if (activeSession && activeSession.user && activeSession.user.email) {
-          const email = activeSession.user.email.toLowerCase();
+        } else if (currentSession && currentSession.user && currentSession.user.email) {
+          const email = currentSession.user.email.toLowerCase();
           console.log("[AuthInit] Client-side Supabase session resolved successfully for email:", email);
 
           const adminDomains = ['@guru.smp.belajar.id', '@guru.belajar.id', '@smp.belajar.id', '@admin.belajar.id'];
@@ -144,7 +140,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
             // Get actual profile metadata from backend
             const adminRes = await fetchWithRetry("/api/admin/check");
             const adminData = await adminRes.json();
-            activeAdminUser = adminData.displayName || adminData.username || activeSession.user.user_metadata?.full_name || email;
+            activeAdminUser = adminData.displayName || adminData.username || currentSession.user.user_metadata?.full_name || email;
             setAdminUser(activeAdminUser);
           } else {
             console.log("[AuthInit] Email domain resolved as Student");
@@ -166,9 +162,9 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
             } else {
               // Unlinked Google student
               resolvedStudentData = {
-                name: activeSession.user.user_metadata?.full_name || email,
+                name: currentSession.user.user_metadata?.full_name || email,
                 username: email,
-                photo_url: activeSession.user.user_metadata?.avatar_url || '',
+                photo_url: currentSession.user.user_metadata?.avatar_url || '',
                 email: email,
                 id: email,
                 isGoogleLinked: false

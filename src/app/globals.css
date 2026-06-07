@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --font-inter: 'Inter', sans-serif;
+    --font-outfit: 'Outfit', sans-serif;
+    --font-manrope: 'Manrope', sans-serif;
+    --font-amiri: 'Amiri', serif;
+  }
   html {
     scroll-behavior: smooth;
   }
