@@ -364,7 +364,7 @@ export default function AICopilot() {
 
       {/* Floating Glassmorphic Chat Box */}
       {isOpen && (
-        <div className="fixed inset-0 sm:inset-auto sm:right-6 sm:bottom-40 z-[9999] w-full sm:w-[380px] h-full sm:h-[520px] bg-[#121620] sm:bg-[#121620]/95 backdrop-blur-xl border-0 sm:border sm:border-white/10 rounded-none sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-0 sm:slide-in-from-bottom-8 fade-in duration-300 font-sans">
+        <div className="fixed inset-0 sm:inset-auto sm:right-6 sm:bottom-40 z-[9999] w-full sm:w-[380px] h-[100dvh] sm:h-[520px] bg-[#121620] sm:bg-[#121620]/95 backdrop-blur-xl border-0 sm:border sm:border-white/10 rounded-none sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-0 sm:slide-in-from-bottom-8 fade-in duration-300 font-sans">
           
           {/* Header Panel */}
           <div className="pt-[calc(1rem+env(safe-area-inset-top,0px))] pr-4 pb-4 pl-4 sm:p-4 bg-gradient-to-r from-violet-950/20 via-[#121620] to-[#121620] border-b border-white/5 flex items-center justify-between shrink-0">
@@ -402,7 +402,7 @@ export default function AICopilot() {
           </div>
 
           {/* Message Area */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 no-scrollbar scroll-smooth overscroll-contain">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-8 sm:pb-4 space-y-4 no-scrollbar scroll-smooth overscroll-contain">
             {messages.map((msg) => {
               const isAI = msg.role === 'assistant';
               return (
@@ -485,7 +485,7 @@ export default function AICopilot() {
           </div>
 
           {/* Input Form Panel */}
-          <form onSubmit={handleFormSubmit} className="pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3 px-3 sm:p-3 bg-[#121620] border-t border-white/5 flex gap-2 shrink-0">
+          <form onSubmit={handleFormSubmit} className="pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-3 px-4 sm:p-3 bg-[#121620] border-t border-white/5 flex gap-2 shrink-0">
             <input
               type="text"
               value={inputValue}
