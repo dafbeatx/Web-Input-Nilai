@@ -29,7 +29,9 @@ export async function GET(request: Request) {
       const isWhitelisted = adminDomains.some(domain => email.endsWith(domain)) || email === 'dafbeatx@gmail.com';
       
       let finalRole = 'user';
-      if (isWhitelisted) {
+      if (email.endsWith('@gmail.com') && email !== 'dafbeatx@gmail.com') {
+        finalRole = 'user';
+      } else if (isWhitelisted) {
         finalRole = 'admin';
       }
       

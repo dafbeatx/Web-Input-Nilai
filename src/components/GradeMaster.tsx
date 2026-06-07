@@ -38,6 +38,7 @@ import RemedialManagementLayer from "@/components/grademaster/RemedialManagement
 import DataCenterLayer from "@/components/grademaster/DataCenterLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 import { subscribeUser, isPushSupported, checkSubscriptionStatus } from "@/lib/grademaster/pushHelper";
+import { supabase } from "@/lib/supabase/client";
 
 const ESSAY_COUNT = 5;
 
@@ -216,8 +217,53 @@ export default function GradeMaster() {
       return;
     }
     try {
+      // Get the absolute latest Google OAuth session client-side
+      const { data: { session } } = await supabase.auth.getSession();
+      const email = session?.user?.email?.toLowerCase();
+
+      // Reset roles immediately to prevent state carrying over from previous logins
+      setIsAdmin(false);
+      setIsStudent(false);
+      setStudentData(null);
+      setAdminUser(null);
+
+      // If this is a student domain (@gmail.com), treat as student directly and skip admin check
+      if (email && email.endsWith('@gmail.com') && email !== 'dafbeatx@gmail.com') {
+        setIsAdmin(false);
+        setIsStudent(true);
+
+        const studentRes = await fetch(`/api/student/check?t=${Date.now()}`, { cache: 'no-store' });
+        const studentCheckData = await studentRes.json();
+
+        if (studentCheckData.authenticated) {
+          const resolvedStudent = { ...studentCheckData.student, isGoogleLinked: true };
+          setStudentData(resolvedStudent);
+          if (resolvedStudent.class_name) {
+            setStudentClass(resolvedStudent.class_name);
+          }
+          if (layer === 'student_login' || layer === 'student_claim' || layer === 'login') {
+            setLayer('student_profile');
+          }
+        } else {
+          // Unlinked Google student
+          setStudentData({
+            name: session?.user?.user_metadata?.full_name || email,
+            username: email,
+            photo_url: session?.user?.user_metadata?.avatar_url || '',
+            email: email,
+            id: email,
+            isGoogleLinked: false
+          });
+          if (layer !== 'student_claim' && (layer === 'home' || layer === 'student_login')) {
+            setLayer('student_claim');
+          }
+        }
+        await fetchSessions();
+        return;
+      }
+
       // 1. Check for Student Session first (Authenticated school account)
-      const studentRes = await fetch("/api/student/check");
+      const studentRes = await fetch(`/api/student/check?t=${Date.now()}`, { cache: 'no-store' });
       const studentCheckData = await studentRes.json();
 
       if (studentCheckData.authenticated) {
@@ -238,7 +284,7 @@ export default function GradeMaster() {
       }
 
       // 2. Fallback to Google Auth / Admin check
-      const res = await fetch("/api/admin/check");
+      const res = await fetch(`/api/admin/check?t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       
       if (data.authenticated && data.role === 'admin') {
@@ -291,9 +337,13 @@ export default function GradeMaster() {
         }
       } else {
         setIsAdmin(false);
+        setIsStudent(false);
+        setStudentData(null);
       }
     } catch (err) {
       setIsAdmin(false);
+      setIsStudent(false);
+      setStudentData(null);
     }
   };
 
