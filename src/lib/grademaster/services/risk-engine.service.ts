@@ -44,6 +44,11 @@ const EVENT_SEVERITY: Record<string, RiskSeverity> = {
   'OVERLAY_INDICATION': 'LOW',
   'UNUSUAL_ACTIVITY': 'MEDIUM',
   'PIP_ACTIVE': 'HIGH',
+  'PHONE_DETECTED': 'CRITICAL',
+  'BOOK_DETECTED': 'HIGH',
+  'EARPIECE_DETECTED': 'HIGH',
+  'EXTRA_SCREEN_DETECTED': 'HIGH',
+  'FACE_UNALIGNED': 'LOW',
   'SYSTEM_EVENT': 'LOW',  // New category for system-level logs (will set points to 0 below)
 };
 
@@ -85,6 +90,11 @@ export function assessClientRisk(clientFlags: string[]): RiskAssessment {
     else if (flagStr.includes('Indikasi Layer/Overlay') || flagStr.includes('OVERLAY')) event = 'OVERLAY_INDICATION';
     else if (flagStr.includes('Aktivitas Tidak Biasa')) event = 'UNUSUAL_ACTIVITY';
     else if (flagStr.includes('PICTURE-IN-PICTURE') || flagStr.includes('PIP')) event = 'PIP_ACTIVE';
+    else if (flagStr.includes('penggunaan HP') || flagStr.includes('HP')) event = 'PHONE_DETECTED';
+    else if (flagStr.includes('buku') || flagStr.includes('catatan')) event = 'BOOK_DETECTED';
+    else if (flagStr.includes('earpiece') || flagStr.includes('headphone') || flagStr.includes('headset')) event = 'EARPIECE_DETECTED';
+    else if (flagStr.includes('layar/perangkat tambahan') || flagStr.includes('tambahan')) event = 'EXTRA_SCREEN_DETECTED';
+    else if (flagStr.includes('tidak sejajar') || flagStr.includes('sejajar')) event = 'FACE_UNALIGNED';
     // System & Health Check mapping (0 points)
     else if (flagStr.includes('HEALTH_CHECK') || flagStr.includes('RECOVERY') || flagStr.includes('server')) event = 'SYSTEM_EVENT';
 

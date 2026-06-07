@@ -366,7 +366,86 @@ export async function submitRemedial(
     studentUpdate.remedial_answers = answers;
     studentUpdate.remedial_note = note;
     studentUpdate.is_cheated = systemFlagged || explicitlyBlocked || isTooFast; 
-    studentUpdate.cheating_flags = finalFlags.map(f => f.event);
+
+    // Map finalFlags to human-readable Indonesian descriptions
+    const mappedFlags: string[] = [];
+    finalFlags.forEach((f, idx) => {
+      // If it's a client flag, try using the corresponding raw clientCheatingFlags string
+      if (idx < clientCheatingFlags.length) {
+        const rawFlag = clientCheatingFlags[idx];
+        if (rawFlag) {
+          const lowerFlag = rawFlag.toLowerCase();
+          // Skip system logs/health checks
+          if (lowerFlag.includes('health_check') || lowerFlag.includes('recovery') || lowerFlag.includes('server')) {
+            return;
+          }
+          mappedFlags.push(rawFlag);
+          return;
+        }
+      }
+
+      // Map server-side / other event codes
+      switch (f.event) {
+        case 'FAST_COMPLETION':
+          mappedFlags.push('Menyelesaikan ujian terlalu cepat (di bawah 5 menit)');
+          break;
+        case 'LOW_EFFORT':
+          mappedFlags.push('Jawaban esai terlalu pendek / terindikasi asal-asalan');
+          break;
+        case 'IDENTICAL_ESSAY':
+          mappedFlags.push('Deteksi jawaban esai identik dengan peserta lain (plagiarisme)');
+          break;
+        case 'HIGH_ESSAY_SIMILARITY':
+          mappedFlags.push('Kemiripan esai sangat tinggi dengan peserta lain');
+          break;
+        case 'NO_FACE':
+          mappedFlags.push('Wajah tidak terdeteksi oleh kamera');
+          break;
+        case 'MULTI_FACE':
+          mappedFlags.push('Terdeteksi lebih dari satu orang di kamera');
+          break;
+        case 'TAB_SWITCH':
+          mappedFlags.push('Meninggalkan halaman ujian / pindah tab');
+          break;
+        case 'BACK_PRESS':
+          mappedFlags.push('Mencoba menekan tombol kembali');
+          break;
+        case 'COPY_ATTEMPT':
+          mappedFlags.push('Mencoba menyalin teks (Copy)');
+          break;
+        case 'PASTE_ATTEMPT':
+          mappedFlags.push('Mencoba menempel teks (Paste)');
+          break;
+        case 'PRINT_ATTEMPT':
+          mappedFlags.push('Mencoba mencetak halaman');
+          break;
+        case 'OVERLAY_INDICATION':
+          mappedFlags.push('Indikasi menggunakan Layer/Overlay tambahan');
+          break;
+        case 'UNUSUAL_ACTIVITY':
+          mappedFlags.push('Aktivitas tidak biasa terdeteksi');
+          break;
+        case 'PIP_ACTIVE':
+          mappedFlags.push('Mode Picture-in-Picture aktif');
+          break;
+        case 'SYSTEM_EVENT':
+          // skip
+          break;
+        default:
+          if (f.event && f.event !== 'UNKNOWN') {
+            mappedFlags.push(f.event);
+          }
+          break;
+      }
+    });
+
+    const uniqueMappedFlags = Array.from(new Set(mappedFlags));
+
+    if (studentUpdate.is_cheated && uniqueMappedFlags.length === 0) {
+      uniqueMappedFlags.push('Terdeteksi indikasi kecurangan oleh sistem');
+    }
+
+    studentUpdate.cheating_flags = uniqueMappedFlags;
     studentUpdate.essay_score_auto = essayResult.score;
     studentUpdate.essay_score_final = essayResult.score;
     studentUpdate.essay_auto_details = essayResult.details;
@@ -414,7 +493,7 @@ export async function submitRemedial(
       
       // Log penalty event if applied
       if (isPenaltyApplied) {
-        studentUpdate.cheating_flags = [...(studentUpdate.cheating_flags as string[] || []), 'PENALTY: LATE_SUBMISSION (-15 Poin)'];
+        studentUpdate.cheating_flags = [...(studentUpdate.cheating_flags as string[] || []), 'Keterlambatan pengumpulan (-15 Poin)'];
       }
     } else if (status === 'TIMEOUT' || status === 'FAILED') {
       // Jika TIMEOUT, nilai tetap dihitung dari apa yang sudah dikerjakan
