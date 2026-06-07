@@ -85,19 +85,15 @@ export default function HomeLayer(props: HomeLayerProps) {
     const pref = localStorage.getItem('gm_home_layout_pref');
     if (!pref) {
       setShowPreferencePopup(true);
-      onLayoutChange?.('ai');
     } else {
-      const isTrad = pref === 'traditional';
-      setShowTraditionalClasses(isTrad);
-      onLayoutChange?.(isTrad ? 'traditional' : 'ai');
+      setShowTraditionalClasses(pref === 'traditional');
     }
-  }, [onLayoutChange]);
+  }, []);
 
   const savePreference = (choice: 'ai' | 'traditional') => {
     localStorage.setItem('gm_home_layout_pref', choice);
     setShowTraditionalClasses(choice === 'traditional');
     setShowPreferencePopup(false);
-    onLayoutChange?.(choice);
     if (choice === 'ai') {
       setExpandedClass(null);
     }

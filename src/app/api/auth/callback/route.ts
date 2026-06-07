@@ -28,21 +28,8 @@ export async function GET(request: Request) {
       const adminDomains = ['@guru.smp.belajar.id', '@guru.belajar.id', '@smp.belajar.id', '@admin.belajar.id'];
       const isWhitelisted = adminDomains.some(domain => email.endsWith(domain)) || email === 'dafbeatx@gmail.com';
       
-      // Get existing profile to avoid overwriting a manually set admin role
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      // Priority: 
-      // 1. If existing profile is 'admin', keep it 'admin'.
-      // 2. If email is whitelisted, make 'admin'.
-      // 3. Otherwise 'user'.
       let finalRole = 'user';
-      if (existingProfile?.role === 'admin') {
-        finalRole = 'admin';
-      } else if (isWhitelisted) {
+      if (isWhitelisted) {
         finalRole = 'admin';
       }
       

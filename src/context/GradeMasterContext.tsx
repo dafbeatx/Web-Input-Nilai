@@ -76,6 +76,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         console.log("[AuthInit] Parent mode detected via localStorage");
         activeParent = true;
         setIsParent(true);
+        setIsAdmin(false);
+        setIsStudent(false);
         if (savedStudentData) {
           try {
             resolvedStudentData = JSON.parse(savedStudentData);
@@ -92,14 +94,12 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
           
           // Wait for Supabase to resolve the session with a timeout of 2000ms
           const session = await new Promise<any>(async (resolve) => {
-            // Check current session
             const { data: { session: immediateSession } } = await supabase.auth.getSession();
             if (immediateSession) {
               resolve(immediateSession);
               return;
             }
 
-            // Listen for auth state change
             let resolved = false;
             const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
               if (resolved) return;
@@ -109,7 +109,6 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
               resolve(currentSession);
             });
 
-            // Timeout fallback
             setTimeout(() => {
               if (!resolved) {
                 resolved = true;
@@ -118,12 +117,6 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
               }
             }, 2000);
           });
-
-          if (session) {
-            console.log("[AuthInit] Client-side Supabase session resolved successfully for email:", session.user?.email);
-          } else {
-            console.log("[AuthInit] No client-side Supabase session detected yet, checking backend cookies directly...");
-          }
 
           // Helper for retrying fetches
           const fetchWithRetry = async (url: string, retries = 3, delay = 350): Promise<Response> => {
@@ -140,56 +133,71 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
             return fetch(url);
           };
 
-          // Check student status first
-          const studentRes = await fetchWithRetry("/api/student/check");
-          const studentCheckData = await studentRes.json();
-          console.log("[AuthInit] Student check response:", studentCheckData);
+          if (session && session.user && session.user.email) {
+            const email = session.user.email.toLowerCase();
+            console.log("[AuthInit] Client-side Supabase session resolved successfully for email:", email);
 
-          if (studentCheckData.authenticated) {
-            activeStudent = true;
-            setIsStudent(true);
-            resolvedStudentData = { ...studentCheckData.student, isGoogleLinked: true };
-            setStudentData(resolvedStudentData);
-            if (resolvedStudentData.class_name) {
-              setStudentClass(resolvedStudentData.class_name);
-            }
-            console.log("[AuthInit] User is authenticated student:", resolvedStudentData.name);
-          } else {
-            // Fallback to check admin (which also handles unlinked student_google role)
-            const adminRes = await fetchWithRetry("/api/admin/check");
-            const adminData = await adminRes.json();
-            console.log("[AuthInit] Admin check response:", adminData);
+            const adminDomains = ['@guru.smp.belajar.id', '@guru.belajar.id', '@smp.belajar.id', '@admin.belajar.id'];
+            const emailIsAdmin = adminDomains.some(domain => email.endsWith(domain)) || email === 'dafbeatx@gmail.com';
 
-            if (adminData.authenticated && adminData.role === 'admin') {
+            if (emailIsAdmin) {
+              console.log("[AuthInit] Email domain resolved as Admin/Guru");
               activeAdmin = true;
               setIsAdmin(true);
-              activeAdminUser = adminData.displayName || adminData.username;
+              setIsStudent(false);
+              setIsParent(false);
+
+              // Get actual profile metadata from backend
+              const adminRes = await fetchWithRetry("/api/admin/check");
+              const adminData = await adminRes.json();
+              activeAdminUser = adminData.displayName || adminData.username || session.user.user_metadata?.full_name || email;
               setAdminUser(activeAdminUser);
-              console.log("[AuthInit] User is authenticated admin:", activeAdminUser);
-            } else if (adminData.authenticated && adminData.role === 'student') {
+            } else {
+              console.log("[AuthInit] Email domain resolved as Student");
               activeStudent = true;
               setIsStudent(true);
-              resolvedStudentData = adminData.student;
+              setIsAdmin(false);
+              setIsParent(false);
+
+              // Check if they are already bound to a student account
+              const studentRes = await fetchWithRetry("/api/student/check");
+              const studentData = await studentRes.json();
+
+              if (studentData.authenticated && studentData.role === 'student') {
+                resolvedStudentData = { ...studentData.student, isGoogleLinked: true };
+                setStudentData(resolvedStudentData);
+                if (resolvedStudentData.class_name) {
+                  setStudentClass(resolvedStudentData.class_name);
+                }
+              } else {
+                // Unlinked Google student
+                resolvedStudentData = {
+                  name: session.user.user_metadata?.full_name || email,
+                  username: email,
+                  photo_url: session.user.user_metadata?.avatar_url || '',
+                  email: email,
+                  id: email,
+                  isGoogleLinked: false
+                };
+                setStudentData(resolvedStudentData);
+              }
+            }
+          } else {
+            console.log("[AuthInit] No Supabase session, checking backend cookies for legacy student token...");
+            const studentRes = await fetchWithRetry("/api/student/check");
+            const studentCheckData = await studentRes.json();
+
+            if (studentCheckData.authenticated) {
+              activeStudent = true;
+              setIsStudent(true);
+              setIsAdmin(false);
+              setIsParent(false);
+              resolvedStudentData = { ...studentCheckData.student, isGoogleLinked: true };
               setStudentData(resolvedStudentData);
               if (resolvedStudentData.class_name) {
                 setStudentClass(resolvedStudentData.class_name);
               }
-              console.log("[AuthInit] User is authenticated student (via admin/check):", resolvedStudentData.name);
-            } else if (adminData.role === 'student_google') {
-              activeStudent = true;
-              setIsStudent(true);
-              resolvedStudentData = {
-                name: adminData.username,
-                username: adminData.email,
-                photo_url: adminData.avatar_url,
-                email: adminData.email,
-                id: adminData.email,
-                isGoogleLinked: false
-              };
-              setStudentData(resolvedStudentData);
-              console.log("[AuthInit] User is unlinked student_google:", adminData.email);
-            } else {
-              console.log("[AuthInit] User has session but resolved no specific role");
+              console.log("[AuthInit] Legacy student token found:", resolvedStudentData.name);
             }
           }
         } catch (err) {
@@ -198,38 +206,34 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       }
 
       // Determine initial layer
-      let initialLayer: Layer = 'home';
+      let initialLayer: Layer = 'student_login';
       if (validLayers.includes(hash as Layer) && hash !== 'dashboard') {
         initialLayer = hash as Layer;
       }
 
       const adminOnlyLayers = ['setup', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
-      const protectedLayers = ['remedial', 'student_lesson'];
+      const protectedLayers = ['remedial', 'student_lesson', 'student_profile'];
       const authLayers = ['login', 'student_login'];
 
-      if (adminOnlyLayers.includes(initialLayer) && !activeAdmin) {
-        initialLayer = 'student_login';
-      } else if (protectedLayers.includes(initialLayer) && !activeAdmin && !activeStudent && !activeParent) {
-        initialLayer = 'student_login';
-      } else if (authLayers.includes(initialLayer) && (activeAdmin || activeStudent || activeParent)) {
-        if (activeAdmin) {
+      if (activeAdmin) {
+        if (authLayers.includes(initialLayer) || initialLayer === 'student_claim') {
           initialLayer = 'home';
-        } else if (activeStudent) {
-          if (resolvedStudentData && resolvedStudentData.isGoogleLinked === false) {
-            initialLayer = 'student_claim';
-          } else {
-            initialLayer = 'dashboard';
-          }
-        } else {
-          initialLayer = 'dashboard'; // parent
         }
-      } else if (initialLayer === 'home' && !activeAdmin && !activeStudent && !activeParent) {
-        initialLayer = 'student_login';
-      } else if (initialLayer === 'home' && activeStudent) {
+      } else if (activeStudent) {
         if (resolvedStudentData && resolvedStudentData.isGoogleLinked === false) {
           initialLayer = 'student_claim';
         } else {
-          initialLayer = 'dashboard';
+          if (adminOnlyLayers.includes(initialLayer) || authLayers.includes(initialLayer) || initialLayer === 'home') {
+            initialLayer = 'student_profile';
+          }
+        }
+      } else if (activeParent) {
+        if (adminOnlyLayers.includes(initialLayer) || authLayers.includes(initialLayer) || initialLayer === 'home') {
+          initialLayer = 'student_profile';
+        }
+      } else {
+        if (adminOnlyLayers.includes(initialLayer) || protectedLayers.includes(initialLayer) || initialLayer === 'home' || initialLayer === 'student_claim') {
+          initialLayer = 'student_login';
         }
       }
 
@@ -246,7 +250,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       const newHash = window.location.hash.replace('#', '') as Layer;
       if (validLayers.includes(newHash)) {
         const adminOnlyLayers = ['setup', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
-        const protectedLayers = ['remedial', 'student_lesson'];
+        const protectedLayers = ['remedial', 'student_lesson', 'student_profile'];
+        const authLayers = ['login', 'student_login'];
         const { isAdmin: curAdmin, isStudent: curStudent, isParent: curParent } = authStateRef.current;
 
         if (adminOnlyLayers.includes(newHash) && !curAdmin) {
@@ -255,6 +260,10 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         } else if (protectedLayers.includes(newHash) && !curAdmin && !curStudent && !curParent) {
           setLayer('student_login');
           window.history.replaceState({ layer: 'student_login' }, '', '#student_login');
+        } else if (authLayers.includes(newHash) && (curAdmin || curStudent || curParent)) {
+          const redirectTarget = curAdmin ? 'home' : 'student_profile';
+          setLayer(redirectTarget);
+          window.history.replaceState({ layer: redirectTarget }, '', `#${redirectTarget}`);
         } else {
           setLayer(newHash);
         }
@@ -283,7 +292,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   // Navigate and apply Auth guards dynamically
   const navigate = (newLayer: Layer) => {
     const adminOnlyLayers = ['setup', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
-    const protectedLayers = ['remedial', 'student_lesson'];
+    const protectedLayers = ['remedial', 'student_lesson', 'student_profile'];
+    const authLayers = ['login', 'student_login'];
 
     if (adminOnlyLayers.includes(newLayer) && !isAdmin) {
       setLayer('student_login');
@@ -297,6 +307,13 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    if (authLayers.includes(newLayer) && (isAdmin || isStudent || isParent)) {
+      const redirectTarget = isAdmin ? 'home' : 'student_profile';
+      setLayer(redirectTarget);
+      window.history.pushState({ layer: redirectTarget }, '', `#${redirectTarget}`);
+      return;
+    }
+
     setLayer(newLayer);
     if (window.location.hash.replace('#', '') !== newLayer) {
       window.history.pushState({ layer: newLayer }, '', `#${newLayer}`);
@@ -306,19 +323,27 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     if (isAdmin) {
       await fetch('/api/admin/logout', { method: 'POST' }).catch(() => {});
-      setIsAdmin(false);
-      setAdminUser(null);
     } else if (isStudent || isParent) {
       await fetch('/api/student/logout', { method: 'POST' }).catch(() => {});
-      setIsStudent(false);
-      setIsParent(false);
-      setStudentData(null);
-      localStorage.removeItem('gm_isParent');
-      localStorage.removeItem('gm_studentData');
     }
 
     await supabase.auth.signOut();
+
+    setIsAdmin(false);
+    setAdminUser(null);
+    setIsStudent(false);
+    setIsParent(false);
+    setStudentData(null);
+
+    localStorage.removeItem('gm_isParent');
+    localStorage.removeItem('gm_studentData');
+    localStorage.removeItem('gm_admin_session');
+    localStorage.removeItem('gm_sessionId');
+    localStorage.removeItem('gm_sessionName');
+    localStorage.removeItem('gm_sessionPassword');
+    localStorage.removeItem('gm_isPublicView');
     localStorage.setItem('gm_remember_me', 'false'); // Force disable remember me status on logout
+
     setLayer("student_login");
     window.history.pushState({ layer: 'student_login' }, '', '#student_login');
   };

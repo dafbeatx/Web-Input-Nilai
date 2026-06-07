@@ -230,7 +230,7 @@ export default function GradeMaster() {
         }
         // Navigate away from login page if session is already active
         if (layer === 'student_login' || layer === 'student_claim' || layer === 'login') {
-          setLayer('home');
+          setLayer('student_profile');
         }
         // SYNC: Re-fetch sessions now that student is confirmed (mirrors admin pattern)
         await fetchSessions();
@@ -267,7 +267,7 @@ export default function GradeMaster() {
           setStudentClass(data.student.class_name);
         }
         if (layer === 'student_login' || layer === 'student_claim') {
-          setLayer('home');
+          setLayer('student_profile');
         }
         // SYNC: Re-fetch sessions for student role
         await fetchSessions();

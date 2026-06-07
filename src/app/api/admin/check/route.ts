@@ -29,7 +29,7 @@ export async function GET() {
     let role = profile?.role || 'user';
 
     // AUTO-UPGRADE OR DOWNGRADE: Strictly enforce domain-based role
-    const adminDomains = ['@guru.smp.belajar.id'];
+    const adminDomains = ['@guru.smp.belajar.id', '@guru.belajar.id', '@smp.belajar.id', '@admin.belajar.id'];
     const isWhitelisted = adminDomains.some(domain => email.toLowerCase().endsWith(domain)) || email === 'dafbeatx@gmail.com';
     
     if (isWhitelisted) {
