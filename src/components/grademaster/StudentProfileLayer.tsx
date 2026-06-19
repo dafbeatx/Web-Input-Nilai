@@ -80,6 +80,73 @@ export default function StudentProfileLayer({
   const [localReasons, setLocalReasons] = useState<{ text: string, weight: number }[]>(behaviorReasons);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Dynamic Badges
+  interface BadgeItem {
+    id: string;
+    label: string;
+    desc: string;
+    icon: string;
+    color: string;
+  }
+  const getBadges = () => {
+    const list: BadgeItem[] = [];
+    const charScore = Math.max(0, 100 - totalPoints);
+    
+    if (charScore === 100) {
+      list.push({
+        id: 'gold_disc',
+        label: 'Disiplin Emas',
+        desc: 'Poin Perilaku Sempurna',
+        icon: '🏆',
+        color: 'from-amber-500/10 to-yellow-500/20 text-amber-800 border-amber-500/20'
+      });
+    } else if (charScore >= 80) {
+      list.push({
+        id: 'silver_disc',
+        label: 'Siswa Teladan',
+        desc: 'Karakter Sangat Baik',
+        icon: '⭐️',
+        color: 'from-blue-500/10 to-indigo-500/20 text-indigo-800 border-indigo-500/20'
+      });
+    }
+
+    const attPercent = studentSummary?.attendance?.percentage;
+    if (attPercent && attPercent >= 95) {
+      list.push({
+        id: 'perfect_pres',
+        label: 'Hadir Sempurna',
+        desc: 'Presensi >= 95%',
+        icon: '📅',
+        color: 'from-emerald-500/10 to-teal-500/20 text-emerald-800 border-emerald-500/20'
+      });
+    }
+
+    const hasAcademic = studentSummary?.academicHistory && studentSummary.academicHistory.length > 0;
+    const allPassing = hasAcademic && studentSummary.academicHistory.every((g: any) => g.isPassing);
+    if (allPassing) {
+      list.push({
+        id: 'academic_star',
+        label: 'Bintang Kelas',
+        desc: 'Semua Ujian Lulus KKM',
+        icon: '✏️',
+        color: 'from-violet-500/10 to-purple-500/20 text-purple-800 border-purple-500/20'
+      });
+    }
+
+    if (list.length === 0) {
+      list.push({
+        id: 'member',
+        label: 'Anggota Aktif',
+        desc: 'Siswa GradeMaster OS',
+        icon: '🛡️',
+        color: 'from-slate-500/10 to-slate-500/20 text-slate-800 border-slate-500/20'
+      });
+    }
+    return list;
+  };
+
+  const badges = getBadges();
+
 
 
   useEffect(() => {
@@ -281,7 +348,10 @@ export default function StudentProfileLayer({
       {/* Main Content */}
       <main className="pt-24 px-6 pb-32 max-w-4xl mx-auto space-y-12 w-full">
         {/* Profile Header */}
-        <section className="flex flex-col items-center text-center space-y-4">
+        <section className="flex flex-col items-center text-center space-y-4 relative py-6">
+          {/* Ambient Glow behind avatar */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-44 bg-primary/10 rounded-full blur-[40px] pointer-events-none -z-10" />
+          
           <div className="relative group">
             <div className="w-24 h-24 rounded-full bg-primary-container text-white flex items-center justify-center text-3xl font-bold tracking-tight shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden border-4 border-white">
               {currentAvatarUrl ? (
@@ -307,39 +377,130 @@ export default function StudentProfileLayer({
           </div>
           
           <div>
-            <h2 className="text-on-primary-fixed font-bold text-2xl tracking-tight leading-tight uppercase">{studentName}</h2>
-            <p className="text-on-surface-variant text-sm mt-1 uppercase font-medium">Kelas {className} • {academicYear}</p>
+            <h2 className="text-on-primary-fixed font-bold text-2xl tracking-tight leading-tight uppercase font-outfit">{studentName}</h2>
+            <p className="text-on-surface-variant text-xs mt-1.5 uppercase font-bold tracking-widest">Kelas {className} • {academicYear}</p>
+          </div>
+        </section>
+
+        {/* Achievements / Badges Section */}
+        <section className="space-y-3">
+          <h3 className="text-left text-xs font-bold text-on-surface-variant/60 uppercase tracking-widest px-1">Lencana Pencapaian</h3>
+          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar scroll-smooth">
+            {badges.map(b => (
+              <div 
+                key={b.id} 
+                className={`flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-gradient-to-br ${b.color} border rounded-2xl shadow-sm hover:scale-[1.03] transition-all duration-300 select-none max-w-[240px]`}
+              >
+                <span className="text-2xl">{b.icon}</span>
+                <div className="text-left min-w-0">
+                  <p className="text-xs font-black uppercase tracking-wider truncate leading-tight">{b.label}</p>
+                  <p className="text-[10px] font-medium opacity-80 truncate mt-0.5">{b.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 
         {/* Metric Cards Bento Layout */}
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {/* Poin Demerit */}
-          <div className="bg-surface-container-low p-6 rounded-xl relative overflow-hidden transition-all duration-300 hover:bg-surface-container border border-surface-container">
-            <div className="flex justify-between items-center relative z-10">
-              <div>
-                <p className="text-on-surface-variant uppercase tracking-[0.05em] text-[10px] font-bold mb-1">Poin Demerit</p>
-                <p className={`text-4xl font-semibold tracking-tight ${totalPoints > 0 ? 'text-error' : 'text-secondary'}`}>
-                  {totalPoints}
-                </p>
+          {/* Poin Perilaku & Karakter (Apple Ring Style) */}
+          <div className="bg-surface border border-outline-variant rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between gap-4">
+            <div className="flex-1 space-y-1.5 text-left">
+              <p className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest">Karakter & Kedisiplinan</p>
+              <h4 className="text-xl font-extrabold text-on-surface leading-tight font-outfit">Skor Perilaku</h4>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-2xl font-black text-on-surface">{Math.max(0, 100 - totalPoints)}</span>
+                <span className="text-xs text-on-surface-variant/60 font-medium">/ 100 Poin</span>
               </div>
-              <div className="w-12 h-12 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-sm">
-                <AlertCircle className={totalPoints > 0 ? 'text-error' : 'text-secondary'} size={24} />
+              {totalPoints > 0 && (
+                <span className="inline-block text-[10px] font-bold bg-rose-500/10 text-rose-600 px-2 py-0.5 rounded-lg border border-rose-500/20 mt-1">
+                  -{totalPoints} Poin Demerit
+                </span>
+              )}
+            </div>
+            
+            {/* SVG Progress Ring */}
+            <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="30"
+                  className="stroke-slate-100"
+                  strokeWidth="6"
+                  fill="transparent"
+                />
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="30"
+                  className={`transition-all duration-500 ease-out ${
+                    totalPoints === 0 ? 'stroke-emerald-500' : totalPoints < 30 ? 'stroke-amber-500' : 'stroke-rose-500'
+                  }`}
+                  strokeWidth="6"
+                  fill="transparent"
+                  strokeDasharray={`${2 * Math.PI * 30}`}
+                  strokeDashoffset={`${2 * Math.PI * 30 - (Math.max(0, 100 - totalPoints) / 100) * (2 * Math.PI * 30)}`}
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className={`text-[12px] font-black font-outfit ${
+                  totalPoints === 0 ? 'text-emerald-600' : totalPoints < 30 ? 'text-amber-600' : 'text-rose-600'
+                }`}>
+                  {Math.max(0, 100 - totalPoints)}%
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Kehadiran */}
-          <div className="bg-surface-container-low p-6 rounded-xl relative overflow-hidden transition-all duration-300 hover:bg-surface-container border border-surface-container">
-            <div className="flex justify-between items-center relative z-10">
-              <div>
-                <p className="text-on-surface-variant uppercase tracking-[0.05em] text-[10px] font-bold mb-1">Kehadiran</p>
-                <p className="text-4xl font-semibold text-secondary tracking-tight">
-                  {isLoadingSummary ? "..." : (studentSummary?.attendance?.percentage ? `${studentSummary.attendance.percentage}%` : "—")}
-                </p>
+          {/* Kehadiran (Apple Ring Style) */}
+          <div className="bg-surface border border-outline-variant rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between gap-4">
+            <div className="flex-1 space-y-1.5 text-left">
+              <p className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest">Kehadiran Kelas</p>
+              <h4 className="text-xl font-extrabold text-on-surface leading-tight font-outfit">Persentase Presensi</h4>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-2xl font-black text-on-surface">
+                  {isLoadingSummary ? '...' : (studentSummary?.attendance?.percentage !== null && studentSummary?.attendance?.percentage !== undefined ? `${studentSummary.attendance.percentage}%` : '—')}
+                </span>
+                <span className="text-xs text-on-surface-variant/60 font-medium">Keaktifan</span>
               </div>
-              <div className="w-12 h-12 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-sm">
-                <Activity className="text-secondary" size={24} />
+              {!isLoadingSummary && studentSummary?.attendance?.total !== undefined && (
+                <span className="inline-block text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-lg border border-primary/20 mt-1">
+                  Hadir {studentSummary.attendance.present} dari {studentSummary.attendance.total} Pertemuan
+                </span>
+              )}
+            </div>
+            
+            {/* SVG Progress Ring */}
+            <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="30"
+                  className="stroke-slate-100"
+                  strokeWidth="6"
+                  fill="transparent"
+                />
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="30"
+                  className={`transition-all duration-500 ease-out ${
+                    !studentSummary?.attendance?.percentage ? 'stroke-slate-300' : studentSummary.attendance.percentage >= 90 ? 'stroke-primary' : 'stroke-amber-500'
+                  }`}
+                  strokeWidth="6"
+                  fill="transparent"
+                  strokeDasharray={`${2 * Math.PI * 30}`}
+                  strokeDashoffset={`${2 * Math.PI * 30 - ((studentSummary?.attendance?.percentage ?? 0) / 100) * (2 * Math.PI * 30)}`}
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-[12px] font-black font-outfit text-on-surface-variant">
+                  {isLoadingSummary ? '...' : (studentSummary?.attendance?.percentage !== null && studentSummary?.attendance?.percentage !== undefined ? `${studentSummary.attendance.percentage}%` : '—')}
+                </span>
               </div>
             </div>
           </div>
@@ -477,6 +638,31 @@ export default function StudentProfileLayer({
           {activeTab === 'ACADEMIC' && (
             <section className="space-y-6 pt-4 animate-in fade-in duration-300">
                <h3 className="text-on-primary-fixed font-bold text-lg tracking-tight">Rekam Jejak Akademik</h3>
+               
+               {/* Academic Stats Header */}
+               {studentSummary?.academicHistory && studentSummary.academicHistory.length > 0 && (() => {
+                 const history = studentSummary.academicHistory;
+                 const totalExams = history.length;
+                 const passedExams = history.filter((g: any) => g.isPassing).length;
+                 const avgScore = Math.round(history.reduce((sum: number, g: any) => sum + g.score, 0) / totalExams);
+                 return (
+                   <div className="grid grid-cols-3 gap-3 bg-surface-variant/40 border border-outline-variant p-4 rounded-2xl mb-4 text-center animate-in fade-in duration-300">
+                     <div>
+                       <p className="text-[9px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-1">Rerata Nilai</p>
+                       <p className="text-lg font-black text-primary font-outfit">{avgScore}</p>
+                     </div>
+                     <div>
+                       <p className="text-[9px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-1">Rasio Kelulusan</p>
+                       <p className="text-lg font-black text-emerald-600 font-outfit">{Math.round((passedExams / totalExams) * 100)}%</p>
+                     </div>
+                     <div>
+                       <p className="text-[9px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-1">Total Sesi</p>
+                       <p className="text-lg font-black text-secondary font-outfit">{totalExams} Ujian</p>
+                     </div>
+                   </div>
+                 );
+               })()}
+
                {isLoadingSummary ? (
                  <div className="py-12 flex flex-col items-center justify-center gap-4 text-on-surface-variant">
                    <Loader2 size={32} className="animate-spin" />
