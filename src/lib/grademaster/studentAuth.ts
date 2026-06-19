@@ -62,7 +62,7 @@ export async function getStudentSession() {
   // gm_behavior_logs uses gm_behaviors.id (not gm_student_accounts.id)
   const { data: behaviorData } = await supabase
     .from('gm_behaviors')
-    .select('id, total_points')
+    .select('id, total_points, avatar_url')
     .eq('student_name', accountData.student_name)
     .eq('class_name', accountData.class_name)
     .maybeSingle();
@@ -79,6 +79,7 @@ export async function getStudentSession() {
       academic_year: accountData.academic_year,
       username: accountData.username,
       photo_url: accountData.profile_photo_url,
+      avatar_url: behaviorData?.avatar_url ?? null,
     },
   };
 }

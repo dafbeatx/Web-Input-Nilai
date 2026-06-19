@@ -1350,7 +1350,7 @@ export default function GradeMaster() {
           academicYear={academicYear}
           initialPoints={studentData.total_points ?? 0}
           avatarUrl={studentData.avatar_url}
-          canEditPhoto={true}
+          canEditPhoto={!studentData.avatar_url}
           isAdmin={false}
           onBack={() => setLayer("home")}
           setToast={setToast}

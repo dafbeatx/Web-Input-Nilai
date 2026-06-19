@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { getAdminSession } from '@/lib/grademaster/admin';
+import { getStudentSession } from '@/lib/grademaster/studentAuth';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/grademaster/security';
 import { compressAndConvertToWebP } from '@/lib/grademaster/image-utils';
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Otorisasi - Hanya admin yang boleh unggah
-    const supabase = await createClient();
+    // 1. Otorisasi - Admin atau Siswa yang bersangkutan (jika belum memiliki avatar)
     const adminSession = await getAdminSession();
-    if (!adminSession) {
-      return NextResponse.json({ error: 'Unauthorized: Only admin can upload avatars' }, { status: 403 });
+    const studentSessionData = !adminSession ? await getStudentSession() : null;
+    const isStudentSession = !!studentSessionData;
+
+    if (!adminSession && !isStudentSession) {
+      return NextResponse.json({ error: 'Unauthorized: Only admin or authenticated students can upload avatars' }, { status: 403 });
     }
 
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
@@ -27,6 +30,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Data foto atau ID siswa tidak ditemukan' }, { status: 400 });
     }
 
+    // Validasi tambahan jika ini siswa
+    if (isStudentSession && studentSessionData) {
+      const studentBehaviorId = studentSessionData.student.behavior_id;
+      if (!studentBehaviorId || studentId !== studentBehaviorId) {
+        return NextResponse.json({ error: 'Unauthorized: You can only upload your own profile photo' }, { status: 403 });
+      }
+
+      // Periksa apakah avatar_url sudah ada di gm_behaviors
+      const { data: currentBehavior, error: behaviorErr } = await supabaseAdmin
+        .from('gm_behaviors')
+        .select('avatar_url')
+        .eq('id', studentId)
+        .maybeSingle();
+
+      if (behaviorErr) {
+        console.error('[Avatar] Error checking existing avatar:', behaviorErr);
+        return NextResponse.json({ error: 'Gagal memverifikasi data profil' }, { status: 500 });
+      }
+
+      if (currentBehavior && currentBehavior.avatar_url && currentBehavior.avatar_url.trim() !== '') {
+        return NextResponse.json({ error: 'Foto profil sudah ada dan tidak dapat diubah oleh siswa' }, { status: 400 });
+      }
+    }
+
     // Ekstraksi Buffer File
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -34,9 +61,9 @@ export async function POST(req: NextRequest) {
     // 3. Konversi Extrem via Sharp (Resizing + WebP + Compression 80%)
     const processedImageBuffer = await compressAndConvertToWebP(buffer);
 
-    // 4. Upload ke Supabase Storage (Bucket: avatars)
+    // 4. Upload ke Supabase Storage (Bucket: avatars) via admin client
     const filePath = `student_${studentId}_${Date.now()}.webp`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from('avatars')
       .upload(filePath, processedImageBuffer, {
         contentType: 'image/webp',
@@ -55,14 +82,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Dapatkan Public URL
-    const { data: publicUrlData } = supabase.storage
+    const { data: publicUrlData } = supabaseAdmin.storage
       .from('avatars')
       .getPublicUrl(filePath);
 
     const publicAvatarUrl = publicUrlData.publicUrl;
 
-    // 5. Update Tabel gm_behaviors
-    const { error: dbError } = await supabase
+    // 5. Update Tabel gm_behaviors via admin client
+    const { error: dbError } = await supabaseAdmin
       .from('gm_behaviors')
       .update({ avatar_url: publicAvatarUrl })
       .eq('id', studentId);

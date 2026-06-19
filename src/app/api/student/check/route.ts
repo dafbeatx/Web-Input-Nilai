@@ -34,7 +34,7 @@ export async function GET() {
         // Find corresponding behavior record
         const { data: behaviorRecord } = await supabase
           .from('gm_behaviors')
-          .select('id, total_points')
+          .select('id, total_points, avatar_url')
           .eq('student_name', boundAccount.student_name)
           .eq('class_name', boundAccount.class_name)
           .single();
@@ -54,6 +54,7 @@ export async function GET() {
             academic_year: boundAccount.academic_year,
             username: boundAccount.username,
             photo_url: boundAccount.profile_photo_url,
+            avatar_url: behaviorRecord?.avatar_url || null,
             isGoogleLinked: true
           },
         });
