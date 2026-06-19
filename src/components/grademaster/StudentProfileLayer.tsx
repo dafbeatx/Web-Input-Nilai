@@ -5,8 +5,12 @@ import {
   ArrowLeft, PlusCircle, MinusCircle, Loader2, FileText, 
   Trash2, Pencil, ShieldCheck, ThumbsUp, X, Calendar, 
   Activity, History, DownloadCloud, Check, User,
-  Settings, AlertCircle, LogOut, Share2
+  Settings, AlertCircle, LogOut, Share2, Trophy, TrendingUp, Target
 } from 'lucide-react';
+import { 
+  LineChart, Line, XAxis, YAxis, Tooltip, 
+  ResponsiveContainer, CartesianGrid 
+} from 'recharts';
 import { ToastType } from '@/lib/grademaster/types';
 import { 
   addBehaviorAction, 
@@ -433,109 +437,138 @@ export default function StudentProfileLayer({
         </section>
 
         {/* Metric Cards Bento Layout */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-          {/* Poin Perilaku & Karakter (Apple Ring Style) */}
-          <div className="bg-surface border border-outline-variant rounded-3xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between gap-3 sm:gap-4">
-            <div className="flex-1 space-y-1.5 text-left min-w-0">
-              <p className="text-[9px] sm:text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider sm:tracking-widest truncate">Karakter & Kedisiplinan</p>
-              <h4 className="text-lg sm:text-xl font-extrabold text-on-surface leading-tight font-outfit truncate">Skor Perilaku</h4>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-xl sm:text-2xl font-black text-on-surface">{Math.max(0, 100 - totalPoints)}</span>
-                <span className="text-[11px] sm:text-xs text-on-surface-variant/60 font-medium">/ 100 Poin</span>
+        {(() => {
+          const charScore = Math.max(0, 100 - totalPoints);
+          return (
+            <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              {/* Poin Perilaku & Karakter (Apple Ring Style) */}
+              <div className="bg-surface border border-outline-variant rounded-3xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between gap-3 sm:gap-4">
+                <div className="flex-1 space-y-1.5 text-left min-w-0">
+                  <p className="text-[9px] sm:text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider sm:tracking-widest truncate">Karakter & Kedisiplinan</p>
+                  <h4 className="text-lg sm:text-xl font-extrabold text-on-surface leading-tight font-outfit truncate">Skor Perilaku</h4>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-xl sm:text-2xl font-black text-on-surface">{charScore}</span>
+                    <span className="text-[11px] sm:text-xs text-on-surface-variant/60 font-medium">/ 100 Poin</span>
+                  </div>
+                  <span className={`inline-block text-[9px] sm:text-[10px] font-black px-2.5 py-1 rounded-lg border mt-1.5 max-w-full truncate ${
+                    charScore >= 90 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                    charScore >= 75 ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' :
+                    charScore >= 60 ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                    'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                  }`}>
+                    Kategori: {
+                      charScore >= 90 ? 'Sangat Baik' :
+                      charScore >= 75 ? 'Baik' :
+                      charScore >= 60 ? 'Cukup' :
+                      'Perlu Pembinaan'
+                    }
+                  </span>
+                </div>
+                
+                {/* SVG Progress Ring */}
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center shrink-0">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle
+                      cx="50%"
+                      cy="50%"
+                      r="35%"
+                      className="stroke-slate-100"
+                      strokeWidth="5"
+                      fill="transparent"
+                    />
+                    <circle
+                      cx="50%"
+                      cy="50%"
+                      r="35%"
+                      className={`transition-all duration-500 ease-out ${
+                        charScore >= 90 ? 'stroke-emerald-500' :
+                        charScore >= 75 ? 'stroke-blue-500' :
+                        charScore >= 60 ? 'stroke-amber-500' :
+                        'stroke-rose-500'
+                      }`}
+                      strokeWidth="5"
+                      fill="transparent"
+                      strokeDasharray="220"
+                      strokeDashoffset={String(220 - (charScore / 100) * 220)}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className={`text-[11px] sm:text-[12px] font-black font-outfit ${
+                      charScore >= 90 ? 'text-emerald-600' :
+                      charScore >= 75 ? 'text-blue-600' :
+                      charScore >= 60 ? 'text-amber-600' :
+                      'text-rose-600'
+                    }`}>
+                      {charScore}%
+                    </span>
+                  </div>
+                </div>
               </div>
-              {totalPoints > 0 && (
-                <span className="inline-block text-[9px] sm:text-[10px] font-bold bg-rose-500/10 text-rose-600 px-2 py-0.5 rounded-lg border border-rose-500/20 mt-1 max-w-full truncate">
-                  -{totalPoints} Poin Demerit
-                </span>
-              )}
-            </div>
-            
-            {/* SVG Progress Ring */}
-            <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center shrink-0">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle
-                  cx="50%"
-                  cy="50%"
-                  r="35%"
-                  className="stroke-slate-100"
-                  strokeWidth="5"
-                  fill="transparent"
-                />
-                <circle
-                  cx="50%"
-                  cy="50%"
-                  r="35%"
-                  className={`transition-all duration-500 ease-out ${
-                    totalPoints === 0 ? 'stroke-emerald-500' : totalPoints < 30 ? 'stroke-amber-500' : 'stroke-rose-500'
-                  }`}
-                  strokeWidth="5"
-                  fill="transparent"
-                  strokeDasharray="220"
-                  strokeDashoffset={String(220 - (Math.max(0, 100 - totalPoints) / 100) * 220)}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className={`text-[11px] sm:text-[12px] font-black font-outfit ${
-                  totalPoints === 0 ? 'text-emerald-600' : totalPoints < 30 ? 'text-amber-600' : 'text-rose-600'
-                }`}>
-                  {Math.max(0, 100 - totalPoints)}%
-                </span>
-              </div>
-            </div>
-          </div>
 
-          {/* Kehadiran (Apple Ring Style) */}
-          <div className="bg-surface border border-outline-variant rounded-3xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between gap-3 sm:gap-4">
-            <div className="flex-1 space-y-1.5 text-left min-w-0">
-              <p className="text-[9px] sm:text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider sm:tracking-widest truncate">Kehadiran Kelas</p>
-              <h4 className="text-lg sm:text-xl font-extrabold text-on-surface leading-tight font-outfit truncate">Persentase Presensi</h4>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-xl sm:text-2xl font-black text-on-surface">
-                  {isLoadingSummary ? '...' : (studentSummary?.attendance?.percentage !== null && studentSummary?.attendance?.percentage !== undefined ? `${studentSummary.attendance.percentage}%` : '—')}
-                </span>
-                <span className="text-[11px] sm:text-xs text-on-surface-variant/60 font-medium">Keaktifan</span>
+              {/* Kehadiran (Apple Ring Style) */}
+              <div className="bg-surface border border-outline-variant rounded-3xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between gap-3 sm:gap-4">
+                <div className="flex-1 space-y-1.5 text-left min-w-0">
+                  <p className="text-[9px] sm:text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider sm:tracking-widest truncate">Kehadiran Kelas</p>
+                  <h4 className="text-lg sm:text-xl font-extrabold text-on-surface leading-tight font-outfit truncate">Persentase Presensi</h4>
+                  {isLoadingSummary ? (
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className="text-xl sm:text-2xl font-black text-on-surface">...</span>
+                    </div>
+                  ) : !studentSummary?.attendance || studentSummary.attendance.total === 0 ? (
+                    <p className="text-xs font-bold text-on-surface-variant/60 mt-2">Data presensi belum tersedia</p>
+                  ) : (
+                    <>
+                      <div className="flex items-baseline gap-2 mt-1">
+                        <span className="text-xl sm:text-2xl font-black text-on-surface">
+                          {studentSummary.attendance.percentage}%
+                        </span>
+                        <span className="text-[11px] sm:text-xs text-on-surface-variant/60 font-medium">Keaktifan</span>
+                      </div>
+                      <span className="inline-block text-[9px] sm:text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-lg border border-primary/20 mt-1 max-w-full truncate">
+                        Hadir {studentSummary.attendance.present} dari {studentSummary.attendance.total}
+                      </span>
+                    </>
+                  )}
+                </div>
+                
+                {/* SVG Progress Ring */}
+                {!isLoadingSummary && studentSummary?.attendance && studentSummary.attendance.total > 0 && (
+                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center shrink-0">
+                    <svg className="w-full h-full transform -rotate-90">
+                      <circle
+                        cx="50%"
+                        cy="50%"
+                        r="35%"
+                        className="stroke-slate-100"
+                        strokeWidth="5"
+                        fill="transparent"
+                      />
+                      <circle
+                        cx="50%"
+                        cy="50%"
+                        r="35%"
+                        className={`transition-all duration-500 ease-out ${
+                          studentSummary.attendance.percentage >= 90 ? 'stroke-primary' : 'stroke-amber-500'
+                        }`}
+                        strokeWidth="5"
+                        fill="transparent"
+                        strokeDasharray="220"
+                        strokeDashoffset={String(220 - ((studentSummary.attendance.percentage ?? 0) / 100) * 220)}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-[11px] sm:text-[12px] font-black font-outfit text-on-surface-variant">
+                        {studentSummary.attendance.percentage}%
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
-              {!isLoadingSummary && studentSummary?.attendance?.total !== undefined && (
-                <span className="inline-block text-[9px] sm:text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-lg border border-primary/20 mt-1 max-w-full truncate">
-                  Hadir {studentSummary.attendance.present} dari {studentSummary.attendance.total}
-                </span>
-              )}
-            </div>
-            
-            {/* SVG Progress Ring */}
-            <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center shrink-0">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle
-                  cx="50%"
-                  cy="50%"
-                  r="35%"
-                  className="stroke-slate-100"
-                  strokeWidth="5"
-                  fill="transparent"
-                />
-                <circle
-                  cx="50%"
-                  cy="50%"
-                  r="35%"
-                  className={`transition-all duration-500 ease-out ${
-                    !studentSummary?.attendance?.percentage ? 'stroke-slate-300' : studentSummary.attendance.percentage >= 90 ? 'stroke-primary' : 'stroke-amber-500'
-                  }`}
-                  strokeWidth="5"
-                  fill="transparent"
-                  strokeDasharray="220"
-                  strokeDashoffset={String(220 - ((studentSummary?.attendance?.percentage ?? 0) / 100) * 220)}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-[11px] sm:text-[12px] font-black font-outfit text-on-surface-variant">
-                  {isLoadingSummary ? '...' : (studentSummary?.attendance?.percentage !== null && studentSummary?.attendance?.percentage !== undefined ? `${studentSummary.attendance.percentage}%` : '—')}
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
+            </section>
+          );
+        })()}
 
         {/* Tabs */}
         <nav aria-label="Profile Tabs" className="flex border-b border-surface-container overflow-x-auto no-scrollbar sm:justify-center">
@@ -689,99 +722,289 @@ export default function StudentProfileLayer({
               )}
             </section>
           )}
+          {activeTab === 'ACADEMIC' && (() => {
+            const academicHistory = studentSummary?.academicHistory || [];
+            const totalExams = academicHistory.length;
+            const passedExams = academicHistory.filter((g: any) => g.isPassing).length;
+            
+            // Rata-rata Akademik dengan 1 angka desimal
+            const avgScore = totalExams > 0 
+              ? Number((academicHistory.reduce((sum: number, g: any) => sum + Number(g.score || 0), 0) / totalExams).toFixed(1))
+              : 0;
 
-          {activeTab === 'ACADEMIC' && (
-            <section className="space-y-6 pt-4 animate-in fade-in duration-300">
-               <h3 className="text-on-primary-fixed font-bold text-lg tracking-tight">Rekam Jejak Akademik</h3>
-               
-               {/* Academic Stats Header */}
-               {studentSummary?.academicHistory && studentSummary.academicHistory.length > 0 && (() => {
-                 const history = studentSummary.academicHistory;
-                 const totalExams = history.length;
-                 const passedExams = history.filter((g: any) => g.isPassing).length;
-                 const avgScore = Math.round(history.reduce((sum: number, g: any) => sum + g.score, 0) / totalExams);
-                 return (
-                   <div className="grid grid-cols-3 gap-3 bg-surface-variant/40 border border-outline-variant p-4 rounded-2xl mb-4 text-center animate-in fade-in duration-300">
-                     <div>
-                       <p className="text-[9px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-1">Rerata Nilai</p>
-                       <p className="text-lg font-black text-primary font-outfit">{avgScore}</p>
-                     </div>
-                     <div>
-                       <p className="text-[9px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-1">Rasio Kelulusan</p>
-                       <p className="text-lg font-black text-emerald-600 font-outfit">{Math.round((passedExams / totalExams) * 100)}%</p>
-                     </div>
-                     <div>
-                       <p className="text-[9px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-1">Total Sesi</p>
-                       <p className="text-lg font-black text-secondary font-outfit">{totalExams} Ujian</p>
-                     </div>
-                   </div>
-                 );
-               })()}
+            // Rasio Kelulusan
+            const passPercent = totalExams > 0 
+              ? Math.round((passedExams / totalExams) * 100)
+              : 0;
 
-               {isLoadingSummary ? (
-                 <div className="py-12 flex flex-col items-center justify-center gap-4 text-on-surface-variant">
-                   <Loader2 size={32} className="animate-spin" />
-                   <p className="text-xs font-bold uppercase">Memuat Nilai...</p>
-                 </div>
-               ) : !studentSummary?.academicHistory?.length ? (
-                 <div className="py-20 text-center bg-surface-container-low rounded-3xl border border-dashed border-surface-container flex flex-col items-center justify-center px-6">
-                   <Activity size={40} className="text-on-surface-variant opacity-20 mb-4" />
-                   <p className="text-sm font-bold text-on-surface-variant uppercase">Belum Ada Riwayat Nilai</p>
-                 </div>
-               ) : (
-                 <div className="space-y-3">
-                   {studentSummary.academicHistory.map((grade: any, idx: number) => (
-                     <div key={idx} className="bg-white p-4 rounded-xl border border-surface-container flex items-center justify-between shadow-sm">
-                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                         <h4 className="text-on-primary-fixed font-bold text-sm uppercase leading-tight truncate">{grade.sessionName}</h4>
-                         <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider truncate">{grade.subject} • {formatDate(grade.date)}</p>
-                       </div>
-                       <div className="text-right flex flex-col items-end gap-1 flex-shrink-0">
-                          <p className={`text-xl font-black ${grade.isPassing ? 'text-secondary' : 'text-error'}`}>{grade.score}</p>
-                          <p className="text-[8px] font-bold text-on-surface-variant uppercase">KKM: {grade.kkm}</p>
-                          {!isAdmin && grade.hasRemedialAvailable && onStartRemedial && (
-                            isParent ? (
-                              <button 
-                                disabled
-                                title="Remedial hanya dapat dimulai dengan login menggunakan akun Google Siswa"
-                                className="mt-1 px-3 py-1.5 bg-slate-300 text-white rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 cursor-not-allowed opacity-70"
-                              >
-                                <span className="material-symbols-outlined text-[12px]">edit_note</span>
-                                Remedial (Siswa Saja)
-                              </button>
-                            ) : (
-                              <button 
-                                onClick={() => onStartRemedial(grade.sessionName)}
-                                className="mt-1 px-3 py-1.5 bg-rose-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm shadow-rose-500/20"
-                              >
-                                <span className="material-symbols-outlined text-[12px]">edit_note</span>
-                                Remedial
-                              </button>
-                            )
-                          )}
-                          {!grade.isPassing && isParent && (
-                            <button 
-                              onClick={() => {
-                                const deadlineText = grade.remedialDeadline ? formatDate(grade.remedialDeadline) : 'Batas Waktu Sesi';
-                                const appUrl = typeof window !== 'undefined' ? `${window.location.origin}` : 'https://web-input-nilai.vercel.app';
-                                const message = `*GradeMaster OS - Pemberitahuan Remedial* 🔄\n\nHalo, berikut adalah informasi pengerjaan remedial:\n👤 *Nama Siswa*: ${studentName}\n🏫 *Kelas*: ${className}\n📚 *Mata Pelajaran*: ${grade.subject}\n📝 *Sesi*: ${grade.sessionName}\n📊 *Nilai Ujian*: ${grade.score} (KKM: ${grade.kkm})\n⚠️ *Alasan*: Nilai di bawah batas kelulusan KKM.\n\nSilakan kerjakan remedial secara mandiri melalui tautan resmi ini:\n🔗 *Link Remedial*: ${appUrl}\n\n*Batas Waktu*: ${deadlineText}\nMohon diselesaikan sebelum tenggat waktu. Terima kasih!`;
-                                const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-                                window.open(waUrl, '_blank');
-                              }}
-                              className="mt-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm shadow-emerald-600/20"
-                              title="Bagikan informasi remedial ke WhatsApp"
-                            >
-                              <Share2 size={10} />
-                              Bagikan WA
-                            </button>
+            // Analisis Akademik
+            const highestScore = totalExams > 0 
+              ? Math.max(...academicHistory.map((g: any) => Number(g.score || 0)))
+              : 0;
+            const lowestScore = totalExams > 0 
+              ? Math.min(...academicHistory.map((g: any) => Number(g.score || 0)))
+              : 0;
+            
+            // Pelajaran terbaik
+            let bestSubject = "—";
+            if (totalExams > 0) {
+              const subjectsMap: Record<string, number[]> = {};
+              academicHistory.forEach((g: any) => {
+                if (!subjectsMap[g.subject]) subjectsMap[g.subject] = [];
+                subjectsMap[g.subject].push(Number(g.score || 0));
+              });
+              let maxAvg = -1;
+              Object.keys(subjectsMap).forEach(subj => {
+                const avg = subjectsMap[subj].reduce((s, val) => s + val, 0) / subjectsMap[subj].length;
+                if (avg > maxAvg) {
+                  maxAvg = avg;
+                  bestSubject = subj;
+                }
+              });
+            }
+
+            // Status Akademik
+            let statusText = "Belum Diketahui";
+            let statusBadgeColor = "bg-slate-500/10 text-slate-600 border-slate-500/20";
+            if (totalExams > 0) {
+              if (avgScore >= 85) {
+                statusText = "Sangat Baik";
+                statusBadgeColor = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+              } else if (avgScore >= 75) {
+                statusText = "Baik";
+                statusBadgeColor = "bg-blue-500/10 text-blue-600 border-blue-500/20";
+              } else if (avgScore >= 60) {
+                statusText = "Perlu Perhatian";
+                statusBadgeColor = "bg-yellow-500/10 text-yellow-600 border-yellow-500/20";
+              } else {
+                statusText = "Memerlukan Pembinaan";
+                statusBadgeColor = "bg-rose-500/10 text-rose-600 border-rose-500/20";
+              }
+            }
+
+            // Tren data
+            let trendText = "Tidak ada tren data";
+            let trendColor = "text-on-surface-variant bg-surface-container-high border-outline-variant";
+            if (totalExams >= 2) {
+              const sortedHistory = [...academicHistory].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+              const lastScore = sortedHistory[sortedHistory.length - 1].score;
+              const prevScore = sortedHistory[sortedHistory.length - 2].score;
+              const diff = lastScore - prevScore;
+              if (diff > 0) {
+                trendText = `Meningkat (+${diff} poin dibanding ujian sebelumnya) 📈`;
+                trendColor = "text-emerald-600 bg-emerald-500/10 border-emerald-500/20";
+              } else if (diff < 0) {
+                trendText = `Menurun (${diff} poin dibanding ujian sebelumnya) 📉`;
+                trendColor = "text-rose-600 bg-rose-500/10 border-rose-500/20";
+              } else {
+                trendText = "Stabil (sama dengan ujian sebelumnya) 📊";
+                trendColor = "text-blue-600 bg-blue-500/10 border-blue-500/20";
+              }
+            }
+
+            // Chart data
+            const chartData = [...academicHistory]
+              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+              .map((g: any) => ({
+                name: g.sessionName.slice(0, 10),
+                nilai: Number(g.score || 0),
+                subject: g.subject
+              }));
+
+            // Insight Otomatis
+            let insightText = "";
+            if (totalExams === 0) {
+              insightText = "Belum ada data akademik yang tersedia untuk dianalisis.";
+            } else {
+              const attendanceText = studentSummary?.attendance && studentSummary.attendance.total > 0
+                ? `Kehadiran belum dapat dianalisis karena data presensi belum tersedia.` 
+                : "Kehadiran belum dapat dianalisis karena data presensi belum tersedia.";
+
+              // override real attendance info if exist
+              const realAttendanceText = studentSummary?.attendance && studentSummary.attendance.total > 0
+                ? `Tingkat kehadiran siswa saat ini berada di angka ${studentSummary.attendance.percentage}%.`
+                : "Kehadiran belum dapat dianalisis karena data presensi belum tersedia.";
+
+              insightText = `Nilai rata-rata siswa saat ini ${avgScore.toFixed(1)}. Dari ${totalExams} ujian yang telah dikerjakan, ${passedExams} ujian telah mencapai KKM. Mata pelajaran terbaik adalah ${bestSubject} dengan nilai ${highestScore}. ${realAttendanceText}`;
+            }
+
+            return (
+              <section className="space-y-6 pt-4 animate-in fade-in duration-300 text-left">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-on-primary-fixed font-bold text-lg tracking-tight font-outfit">Rekam Jejak Akademik</h3>
+                  {totalExams > 0 && (
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${statusBadgeColor}`}>
+                      Status: {statusText}
+                    </span>
+                  )}
+                </div>
+
+                {isLoadingSummary ? (
+                  <div className="py-12 flex flex-col items-center justify-center gap-4 text-on-surface-variant">
+                    <Loader2 size={32} className="animate-spin" />
+                    <p className="text-xs font-bold uppercase">Memuat Nilai...</p>
+                  </div>
+                ) : totalExams === 0 ? (
+                  <div className="py-20 text-center bg-surface-container-low rounded-3xl border border-dashed border-surface-container flex flex-col items-center justify-center px-6 space-y-4">
+                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                      <Activity size={32} />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold text-on-surface uppercase tracking-wider">Belum ada data akademik.</p>
+                      <p className="text-xs text-on-surface-variant">Siswa belum memiliki riwayat nilai ujian terdaftar di sistem.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Bento Academic Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {/* Rata-rata Akademik */}
+                      <div className="bg-surface border border-outline-variant rounded-3xl p-5 shadow-sm space-y-2 relative group text-left">
+                        <p className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest">Rata-rata Akademik</p>
+                        <p className="text-3xl font-black text-primary font-outfit">{avgScore.toFixed(1)}</p>
+                        <p className="text-[10px] text-on-surface-variant font-medium leading-normal">
+                          Dihitung dari seluruh ujian yang telah dikerjakan.
+                        </p>
+                      </div>
+
+                      {/* Rasio Kelulusan */}
+                      <div className="bg-surface border border-outline-variant rounded-3xl p-5 shadow-sm space-y-2 text-left">
+                        <p className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest">Rasio Kelulusan</p>
+                        <p className="text-3xl font-black text-emerald-600 font-outfit">{passPercent}%</p>
+                        <p className="text-[10px] text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-100 font-bold inline-block">
+                          {passedExams} dari {totalExams} ujian tuntas
+                        </p>
+                      </div>
+
+                      {/* Total Sesi */}
+                      <div className="bg-surface border border-outline-variant rounded-3xl p-5 shadow-sm space-y-2 text-left">
+                        <p className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest">Total Sesi</p>
+                        <p className="text-3xl font-black text-secondary font-outfit">{totalExams}</p>
+                        <p className="text-[10px] text-on-surface-variant font-medium">Ujian terdaftar di kelas.</p>
+                      </div>
+                    </div>
+
+                    {/* Analisis Akademik */}
+                    <div className="bg-surface border border-outline-variant rounded-[2rem] p-5 sm:p-6 shadow-sm space-y-4 text-left">
+                      <h4 className="text-xs font-black text-on-surface-variant uppercase tracking-[0.2em] flex items-center gap-2">
+                        <Trophy size={14} className="text-amber-500" /> Analisis Akademik
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Nilai Ujian Tertinggi</p>
+                          <p className="text-lg font-black text-primary font-outfit">{highestScore}</p>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Nilai Ujian Terendah</p>
+                          <p className="text-lg font-black text-rose-500 font-outfit">{lowestScore}</p>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left col-span-2 sm:col-span-1">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pelajaran Terbaik</p>
+                          <p className="text-xs font-black text-emerald-700 font-outfit truncate">{bestSubject}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Insight Otomatis */}
+                    <div className="bg-gradient-to-br from-primary/5 to-secondary/5 border border-outline-variant p-5 rounded-[2rem] shadow-sm relative overflow-hidden text-left">
+                      <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-2 flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-base">psychology</span> Kesimpulan Akademik
+                      </h4>
+                      <p className="text-xs font-semibold text-primary leading-relaxed">
+                        {insightText}
+                      </p>
+                    </div>
+
+                    {/* Grafik Perkembangan Nilai */}
+                    {totalExams >= 1 && (
+                      <div className="bg-surface border border-outline-variant rounded-[2rem] p-5 sm:p-6 shadow-sm space-y-4 text-left">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <h4 className="text-xs font-black text-on-surface-variant uppercase tracking-[0.2em] flex items-center gap-2">
+                            <TrendingUp size={14} className="text-secondary" /> Grafik Perkembangan Nilai
+                          </h4>
+                          {totalExams >= 2 && (
+                            <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border ${trendColor}`}>
+                              {trendText}
+                            </span>
                           )}
                         </div>
-                     </div>
-                   ))}
-                 </div>
-               )}
-            </section>
-          )}
+                        <div className="h-[200px] w-full pt-4">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData} margin={{ left: -20, right: 10, top: 10, bottom: 5 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f4" vertical={false} />
+                              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#adaaad', fontSize: 9, fontWeight: 'bold'}} />
+                              <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{fill: '#adaaad', fontSize: 9, fontWeight: 'bold'}} />
+                              <Tooltip 
+                                contentStyle={{backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', fontSize: '11px', fontWeight: 'bold', boxShadow: '0 4px 12px rgba(0,0,0,0.05)'}} 
+                                formatter={(value, name, props) => [`Nilai: ${value}`, `${props.payload.subject}`]}
+                              />
+                              <Line type="monotone" dataKey="nilai" stroke="#3b82f6" strokeWidth={3} activeDot={{ r: 6 }} dot={{ r: 4, strokeWidth: 2 }} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Rekam Jejak List */}
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-black text-on-surface-variant/60 uppercase tracking-[0.2em] px-1 text-left">Daftar Sesi Ujian</h4>
+                      <div className="space-y-3">
+                        {academicHistory.map((grade: any, idx: number) => (
+                          <div key={idx} className="bg-white p-4 sm:p-5 rounded-2xl border border-surface-container flex items-center justify-between shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300">
+                            <div className="flex flex-col gap-1 min-w-0 flex-1 text-left">
+                              <h4 className="text-on-primary-fixed font-extrabold text-sm uppercase leading-tight truncate">{grade.sessionName}</h4>
+                              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider truncate">{grade.subject} • {formatDate(grade.date)}</p>
+                            </div>
+                            <div className="text-right flex flex-col items-end gap-1.5 flex-shrink-0 ml-4">
+                              <p className={`text-xl sm:text-2xl font-black leading-none ${grade.isPassing ? 'text-secondary' : 'text-error'}`}>{grade.score}</p>
+                              <p className="text-[8px] font-black text-on-surface-variant uppercase bg-slate-100 px-1.5 py-0.5 rounded">KKM: {grade.kkm}</p>
+                              
+                              {!isAdmin && grade.hasRemedialAvailable && onStartRemedial && (
+                                isParent ? (
+                                  <button 
+                                    disabled
+                                    title="Remedial hanya dapat dimulai dengan login menggunakan akun Google Siswa"
+                                    className="mt-1.5 px-3 py-1.5 bg-slate-200 text-slate-400 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 cursor-not-allowed opacity-80"
+                                  >
+                                    <span className="material-symbols-outlined text-[12px]">edit_note</span>
+                                    Remedial (Siswa Saja)
+                                  </button>
+                                ) : (
+                                  <button 
+                                    onClick={() => onStartRemedial(grade.sessionName)}
+                                    className="mt-1.5 px-3 py-1.5 bg-rose-500 text-white hover:bg-rose-600 rounded-lg text-[9px] font-black uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm shadow-rose-500/20"
+                                  >
+                                    <span className="material-symbols-outlined text-[12px]">edit_note</span>
+                                    Remedial
+                                  </button>
+                                )
+                              )}
+                              {!grade.isPassing && isParent && (
+                                <button 
+                                  onClick={() => {
+                                    const deadlineText = grade.remedialDeadline ? formatDate(grade.remedialDeadline) : 'Batas Waktu Sesi';
+                                    const appUrl = typeof window !== 'undefined' ? `${window.location.origin}` : 'https://web-input-nilai.vercel.app';
+                                    const message = `*GradeMaster OS - Pemberitahuan Remedial* 🔄\n\nHalo, berikut adalah informasi pengerjaan remedial:\n👤 *Nama Siswa*: ${studentName}\n🏫 *Kelas*: ${className}\n📚 *Mata Pelajaran*: ${grade.subject}\n📝 *Sesi*: ${grade.sessionName}\n📊 *Nilai Ujian*: ${grade.score} (KKM: ${grade.kkm})\n⚠️ *Alasan*: Nilai di bawah batas kelulusan KKM.\n\nSilakan kerjakan remedial secara mandiri melalui tautan resmi ini:\n🔗 *Link Remedial*: ${appUrl}\n\n*Batas Waktu*: ${deadlineText}\nMohon diselesaikan sebelum tenggat waktu. Terima kasih!`;
+                                    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+                                    window.open(waUrl, '_blank');
+                                  }}
+                                  className="mt-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm shadow-emerald-600/20"
+                                  title="Bagikan informasi remedial ke WhatsApp"
+                                >
+                                  <Share2 size={10} />
+                                  Bagikan WA
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </section>
+            );
+          })()}
 
           {activeTab === 'DOCUMENTS' && (
             <section className="space-y-6 pt-4 animate-in fade-in duration-300">
