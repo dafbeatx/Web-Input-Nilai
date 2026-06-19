@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   ArrowLeft, Users, Download, Trash2, Shield, Loader2,
   UserPlus, ShieldCheck, Camera, AlertCircle, CheckCircle2,
-  KeyRound, Image as ImageIcon
+  KeyRound, Image as ImageIcon, TrendingUp
 } from 'lucide-react';
 import { ToastType, StudentAccount } from '@/lib/grademaster/types';
 
@@ -28,6 +28,53 @@ export default function StudentAccountsLayer({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [promoteToClass, setPromoteToClass] = useState('');
+  const [promoteToYear, setPromoteToYear] = useState('');
+  const [isPromoting, setIsPromoting] = useState(false);
+
+  const getNextAcademicYear = (current: string) => {
+    const parts = current.split('/');
+    if (parts.length === 2) {
+      const y1 = parseInt(parts[0]);
+      const y2 = parseInt(parts[1]);
+      if (!isNaN(y1) && !isNaN(y2)) {
+        return `${y1 + 1}/${y2 + 1}`;
+      }
+    }
+    return '2026/2027';
+  };
+
+  const handlePromote = async () => {
+    if (!selectedClass || !promoteToClass.trim() || !promoteToYear.trim() || isPromoting) return;
+    setIsPromoting(true);
+    try {
+      const res = await fetch('/api/grademaster/student-accounts/promote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromClass: selectedClass,
+          toClass: promoteToClass,
+          fromYear: activeYear,
+          toYear: promoteToYear,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setToast({ message: data.message || 'Kenaikan kelas siswa berhasil diproses!', type: 'success' });
+        setShowPromoteModal(false);
+        setPromoteToClass('');
+        fetchClasses();
+        fetchAccounts();
+      } else {
+        setToast({ message: data.error || 'Gagal memproses kenaikan kelas', type: 'error' });
+      }
+    } catch {
+      setToast({ message: 'Terjadi kesalahan saat memproses kenaikan kelas', type: 'error' });
+    } finally {
+      setIsPromoting(false);
+    }
+  };
 
   const fetchClasses = useCallback(async () => {
     try {
@@ -217,7 +264,7 @@ export default function StudentAccountsLayer({
 
       {/* Action Buttons */}
       {selectedClass && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
           <button
             onClick={handleGenerate}
             disabled={isGenerating}
@@ -237,10 +284,22 @@ export default function StudentAccountsLayer({
           <button
             onClick={handleClearPasswords}
             disabled={isClearing || !hasPasswords}
-            className="flex items-center justify-center gap-2 px-4 py-3.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-2xl text-[13px] font-sans font-semibold transition-all active:scale-[0.97] disabled:opacity-50 col-span-2 md:col-span-1"
+            className="flex items-center justify-center gap-2 px-4 py-3.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-2xl text-[13px] font-sans font-semibold transition-all active:scale-[0.97] disabled:opacity-50"
           >
             {isClearing ? <Loader2 size={16} className="animate-spin" /> : <Shield size={16} />}
             Hapus Password
+          </button>
+          <button
+            onClick={() => {
+              setPromoteToClass('');
+              setPromoteToYear(getNextAcademicYear(activeYear));
+              setShowPromoteModal(true);
+            }}
+            disabled={accounts.length === 0}
+            className="flex items-center justify-center gap-2 px-4 py-3.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-2xl text-[13px] font-sans font-semibold transition-all active:scale-[0.97] disabled:opacity-50"
+          >
+            <TrendingUp size={16} />
+            Kenaikan Kelas
           </button>
           <div className="hidden md:flex items-center justify-center px-4 py-3.5 bg-surface-variant border border-outline-variant rounded-2xl text-[13px] font-sans font-medium text-on-surface-variant">
             <Users size={16} className="mr-2" /> {accounts.length} Akun
@@ -343,6 +402,61 @@ export default function StudentAccountsLayer({
             <p className="text-[12px] font-sans text-on-surface-variant mt-0.5 leading-relaxed">
               Segera ekspor ke Excel lalu klik "Hapus Password" untuk keamanan. Password plain hanya bersifat sementara.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Kenaikan Kelas */}
+      {showPromoteModal && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-[#111113] border border-outline-variant rounded-[2rem] p-6 max-w-md w-full relative shadow-2xl shadow-black/50 animate-in zoom-in-95 duration-300">
+            <h3 className="text-lg font-sans font-bold text-on-surface mb-2 flex items-center gap-2">
+              <TrendingUp className="text-indigo-400" size={20} /> Kenaikan Kelas Siswa
+            </h3>
+            <p className="text-[12px] text-on-surface-variant mb-6 leading-relaxed text-left">
+              Pindahkan seluruh siswa kelas <span className="text-[#00b4ff] font-semibold">{selectedClass}</span> ({activeYear}) secara massal ke kelas dan tahun ajaran baru di bawah ini.
+            </p>
+            
+            <div className="space-y-4 mb-6 text-left">
+              <div>
+                <label className="block text-[11px] font-sans font-medium text-on-surface-variant mb-1.5">Kelas Baru (Tujuan)</label>
+                <input
+                  type="text"
+                  value={promoteToClass}
+                  onChange={(e) => setPromoteToClass(e.target.value.toUpperCase())}
+                  placeholder="Misal: 8A"
+                  className="w-full bg-black/40 border border-outline-variant rounded-xl p-3.5 text-[14px] font-sans font-medium text-on-surface outline-none focus:border-indigo-500/50 transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-sans font-medium text-on-surface-variant mb-1.5">Tahun Ajaran Baru (Tujuan)</label>
+                <input
+                  type="text"
+                  value={promoteToYear}
+                  onChange={(e) => setPromoteToYear(e.target.value)}
+                  placeholder="Misal: 2026/2027"
+                  className="w-full bg-black/40 border border-outline-variant rounded-xl p-3.5 text-[14px] font-sans font-medium text-on-surface outline-none focus:border-indigo-500/50 transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowPromoteModal(false)}
+                type="button"
+                className="flex-1 py-3.5 bg-surface-variant border border-outline-variant hover:bg-surface-container-highest rounded-xl text-[13px] font-sans font-semibold text-on-surface transition-all active:scale-[0.97]"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handlePromote}
+                disabled={!promoteToClass.trim() || !promoteToYear.trim() || isPromoting}
+                type="button"
+                className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl text-[13px] font-sans font-semibold text-white transition-all active:scale-[0.97] flex items-center justify-center gap-1.5"
+              >
+                {isPromoting ? <Loader2 size={14} className="animate-spin" /> : "Konfirmasi Naik"}
+              </button>
+            </div>
           </div>
         </div>
       )}
