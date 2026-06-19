@@ -759,7 +759,7 @@ export default function StudentProfileLayer({
                               </button>
                             )
                           )}
-                          {!grade.isPassing && (
+                          {!grade.isPassing && isParent && (
                             <button 
                               onClick={() => {
                                 const deadlineText = grade.remedialDeadline ? formatDate(grade.remedialDeadline) : 'Batas Waktu Sesi';
