@@ -21,6 +21,9 @@ import {
 import { supabase } from '@/lib/supabase/client';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import Image from 'next/image';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface BehaviorLog {
   id: string;
@@ -96,6 +99,408 @@ export default function StudentProfileLayer({
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [localReasons, setLocalReasons] = useState<{ text: string, weight: number }[]>(behaviorReasons);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
+
+  const loadImage = (url: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      const img = new window.Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = (err) => reject(err);
+      img.src = url;
+    });
+  };
+
+  const handleDownloadDocument = async (docId: string, docName: string) => {
+    if (downloadingDocId) return;
+    setDownloadingDocId(docId);
+    setToast({ message: `Sedang menyiapkan unduhan ${docName}...`, type: "success" });
+
+    try {
+      if (docId === 'report-1') {
+        const doc = new jsPDF();
+        
+        if (currentAvatarUrl) {
+          try {
+            const img = await loadImage(currentAvatarUrl);
+            doc.addImage(img, 'JPEG', 160, 45, 26, 33);
+          } catch (err) {
+            console.error("Failed to load student avatar for PDF:", err);
+          }
+        }
+
+        doc.setDrawColor(190, 24, 74);
+        doc.setLineWidth(0.5);
+        doc.rect(10, 10, 190, 277);
+
+        const clsUpper = (className || '').toUpperCase();
+        const schoolName = clsUpper.includes('SMA') || clsUpper.includes('10') || clsUpper.includes('11') || clsUpper.includes('12') || clsUpper.includes('X') || clsUpper.includes('XI') || clsUpper.includes('XII')
+          ? 'SMA TERPADU AS SALAAM'
+          : 'SMP TERPADU AL-ITTIHADIYAH';
+
+        doc.setFont("Times", "bold");
+        doc.setFontSize(16);
+        doc.text(`OSIS ${schoolName}`, 105, 20, { align: 'center' });
+        
+        doc.setFontSize(12);
+        doc.text('Laporan Kedisiplinan dan Kepatuhan Perilaku Siswa', 105, 26, { align: 'center' });
+        
+        doc.setFont("Times", "normal");
+        doc.setFontSize(10);
+        doc.text(`Tahun Ajaran ${academicYear}`, 105, 31, { align: 'center' });
+        
+        doc.setLineWidth(1);
+        doc.line(14, 35, 196, 35);
+        doc.setLineWidth(0.5);
+        doc.line(14, 36.5, 196, 36.5);
+
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(50, 50, 50);
+        
+        doc.text('Nama Siswa', 15, 46);
+        doc.text(`:  ${studentName}`, 45, 46);
+        doc.text('Kelas', 15, 52);
+        doc.text(`:  ${className}`, 45, 52);
+        doc.text('Total Pengurangan Poin', 15, 58);
+        doc.text(`:  ${totalPoints} Poin`, 45, 58);
+        
+        const charScore = Math.max(0, 100 - totalPoints);
+        doc.text('Skor Perilaku Akhir', 15, 64);
+        doc.text(`:  ${charScore} / 100 Poin`, 45, 64);
+
+        doc.setFont("Helvetica", "bold");
+        doc.text('Kategori Perilaku', 15, 70);
+        doc.text(':', 45, 70);
+        
+        let statusLabel = 'Sangat Baik';
+        let badgeColor: [number, number, number] = [34, 197, 94];
+        
+        if (charScore >= 90) {
+          statusLabel = 'Sangat Baik';
+          badgeColor = [34, 197, 94];
+        } else if (charScore >= 75) {
+          statusLabel = 'Baik';
+          badgeColor = [59, 130, 246];
+        } else if (charScore >= 60) {
+          statusLabel = 'Cukup';
+          badgeColor = [245, 158, 11];
+        } else {
+          statusLabel = 'Perlu Pembinaan';
+          badgeColor = [239, 68, 68];
+        }
+
+        doc.setFillColor(...badgeColor);
+        doc.circle(49, 69, 1.8, 'F');
+        
+        doc.setTextColor(0, 0, 0);
+        doc.text(statusLabel, 54, 70);
+
+        doc.setFont("Helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text('Catatan Perilaku Harian', 15, 82);
+        
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.2);
+        doc.line(15, 85, 195, 85);
+
+        const logsData = studentLogs.map((log, idx) => [
+          idx + 1,
+          log.reason,
+          log.points_delta > 0 ? `-${log.points_delta}` : `+${Math.abs(log.points_delta)}`,
+          new Date(log.violation_date || log.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+          log.points_delta > 0 ? 'Pelanggaran' : 'Apresiasi'
+        ]);
+
+        let behaviorTableEndY = 87;
+        if (logsData.length > 0) {
+          autoTable(doc, {
+            startY: 87,
+            head: [['No', 'Uraian Sikap / Pelanggaran', 'Dampak Poin', 'Tanggal', 'Jenis']],
+            body: logsData,
+            theme: 'grid',
+            styles: { font: 'Helvetica', fontSize: 9, cellPadding: 3 },
+            headStyles: { fillColor: [190, 24, 74], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+            columnStyles: {
+              0: { halign: 'center', cellWidth: 10 },
+              1: { halign: 'left' },
+              2: { halign: 'center', cellWidth: 25 },
+              3: { halign: 'center', cellWidth: 28 },
+              4: { halign: 'center', cellWidth: 25 }
+            }
+          });
+          behaviorTableEndY = (doc as any).lastAutoTable.finalY + 8;
+        } else {
+          doc.setFont("Helvetica", "normal");
+          doc.setFontSize(10);
+          doc.setTextColor(100, 100, 100);
+          doc.text('Catatan perilaku bersih — Tidak ada pelanggaran kedisiplinan tercatat.', 15, 91);
+          doc.setTextColor(0, 0, 0);
+          behaviorTableEndY = 100;
+        }
+
+        doc.setFont("Helvetica", "bold");
+        doc.setFontSize(11);
+        doc.text('Evaluasi Karakter', 15, behaviorTableEndY);
+        doc.line(15, behaviorTableEndY + 2, 195, behaviorTableEndY + 2);
+
+        let evalText = '';
+        if (studentLogs.length === 0) {
+          evalText = `Siswa atas nama ${studentName} menunjukkan kepatuhan dan kedisiplinan yang sangat baik selama masa pembelajaran. Catatan perilaku bersih tanpa ada pelanggaran kedisiplinan yang tercatat. Diharapkan untuk terus mempertahankan sikap positif ini sebagai teladan bagi rekan-rekan lainnya.`;
+        } else {
+          const uniqueViolations = Array.from(new Set(studentLogs.map(v => v.reason.trim()).filter(Boolean)));
+          const violationString = uniqueViolations.join(', ');
+          
+          if (charScore >= 90) {
+            evalText = `Siswa atas nama ${studentName} secara keseluruhan menunjukkan karakter yang Sangat Baik dengan skor kedisiplinan ${charScore}/100. Catatan keaktifan perilaku mencakup pelanggaran ringan seperti: ${violationString}. Terus pertahankan kedisiplinan ini.`;
+          } else if (charScore >= 75) {
+            evalText = `Siswa atas nama ${studentName} menunjukkan perilaku berkategori Baik dengan skor ${charScore}/100. Terdapat beberapa catatan yang perlu diperhatikan yaitu: ${violationString}. Disarankan untuk meningkatkan disiplin diri dan menjaga kepatuhan aturan sekolah.`;
+          } else if (charScore >= 60) {
+            evalText = `Siswa atas nama ${studentName} memiliki skor perilaku Cukup (${charScore}/100) dan memerlukan pembinaan terpadu. Pelanggaran yang tercatat meliputi: ${violationString}. Perlu adanya pembinaan intensif dari wali kelas dan guru BK.`;
+          } else {
+            evalText = `Tingkat kedisiplinan siswa atas nama ${studentName} sangat rendah dengan skor perilaku ${charScore}/100 (Perlu Pembinaan). Pelanggaran meliputi: ${violationString}. Sangat penting bagi pihak sekolah dan orang tua untuk bekerja sama memberikan bimbingan ketat agar siswa memperbaiki perilakunya.`;
+          }
+        }
+
+        if (behaviorTableEndY + 5 > 240) {
+          doc.addPage();
+          doc.rect(10, 10, 190, 277);
+          behaviorTableEndY = 20;
+        }
+
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(9.5);
+        doc.setTextColor(50, 50, 50);
+        const splitEval = doc.splitTextToSize(evalText, 180);
+        doc.text(splitEval, 15, behaviorTableEndY + 5);
+
+        const evalEndY = behaviorTableEndY + 5 + (splitEval.length * 4.5) + 6;
+        let signatureY = evalEndY + 4;
+        if (signatureY > 250) {
+          doc.addPage();
+          doc.rect(10, 10, 190, 277);
+          signatureY = 25;
+        }
+
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        const signatureX = 135;
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        doc.text(`Bogor, ${dateStr}`, signatureX, signatureY);
+        doc.text('Pembimbing OSIS,', signatureX, signatureY + 4);
+        
+        doc.setFont("Helvetica", "bold");
+        doc.text('Nurholis Majid, S.Pd., G.r.', signatureX, signatureY + 22);
+        doc.setLineWidth(0.2);
+        doc.line(signatureX, signatureY + 23, signatureX + 50, signatureY + 23);
+
+        const footerY = 278;
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.2);
+        doc.line(15, footerY, 195, footerY);
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        doc.text('Dokumen dihasilkan otomatis oleh GradeMaster OS', 15, footerY + 5);
+
+        doc.save(`Laporan_Perilaku_${studentName.replace(/ /g, '_')}_${className}.pdf`);
+        setToast({ message: "Berhasil mengunduh Laporan Progres Kelakuan", type: "success" });
+
+      } else if (docId === 'cert-1') {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1120;
+        canvas.height = 792;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error("Gagal menginisialisasi canvas");
+
+        ctx.fillStyle = '#fcfbf7';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = '#c5a880';
+        ctx.lineWidth = 8;
+        ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(32, 32, canvas.width - 64, canvas.height - 64);
+
+        const drawCorner = (x: number, y: number, xDir: number, yDir: number) => {
+          ctx.fillStyle = '#c5a880';
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + xDir * 50, y);
+          ctx.lineTo(x, y + yDir * 50);
+          ctx.closePath();
+          ctx.fill();
+        };
+        drawCorner(32, 32, 1, 1);
+        drawCorner(canvas.width - 32, 32, -1, 1);
+        drawCorner(32, canvas.height - 32, 1, -1);
+        drawCorner(canvas.width - 32, canvas.height - 32, -1, -1);
+
+        const clsUpper = (className || '').toUpperCase();
+        const schoolName = clsUpper.includes('SMA') || clsUpper.includes('10') || clsUpper.includes('11') || clsUpper.includes('12') || clsUpper.includes('X') || clsUpper.includes('XI') || clsUpper.includes('XII')
+          ? 'SMA TERPADU AS SALAAM'
+          : 'SMP TERPADU AL-ITTIHADIYAH';
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        ctx.font = 'bold 22px Georgia, serif';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText(schoolName.toUpperCase(), canvas.width / 2, 100);
+
+        ctx.font = 'bold 50px Georgia, serif';
+        ctx.fillStyle = '#1e293b';
+        ctx.fillText('SERTIFIKAT PENGHARGAAN', canvas.width / 2, 180);
+
+        ctx.font = 'italic 20px Georgia, serif';
+        ctx.fillStyle = '#c5a880';
+        ctx.fillText('Piagam Kedisiplinan & Integritas Karakter', canvas.width / 2, 235);
+
+        ctx.strokeStyle = '#c5a880';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(canvas.width / 2 - 120, 260);
+        ctx.lineTo(canvas.width / 2 + 120, 260);
+        ctx.stroke();
+
+        ctx.font = 'normal 18px Arial, sans-serif';
+        ctx.fillStyle = '#475569';
+        ctx.fillText('Diberikan dengan hormat kepada siswa:', canvas.width / 2, 300);
+
+        ctx.font = 'bold 44px Georgia, serif';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText(studentName.toUpperCase(), canvas.width / 2, 370);
+
+        ctx.font = 'bold 18px Arial, sans-serif';
+        ctx.fillStyle = '#475569';
+        ctx.fillText(`Kelas ${className}  •  Tahun Ajaran ${academicYear}`, canvas.width / 2, 425);
+
+        ctx.font = 'normal 16px Georgia, serif';
+        ctx.fillStyle = '#334155';
+        const citation = 'Atas dedikasi yang tinggi dalam mempertahankan kedisiplinan kelas, kelakuan terpuji,\n' +
+                         'serta menunjukkan tingkat integritas akademik terbaik di lingkungan sekolah.';
+        const lines = citation.split('\n');
+        ctx.fillText(lines[0], canvas.width / 2, 480);
+        ctx.fillText(lines[1], canvas.width / 2, 510);
+
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        ctx.font = 'normal 16px Arial, sans-serif';
+        ctx.fillStyle = '#475569';
+        ctx.fillText(`Bogor, ${dateStr}`, canvas.width / 2, 580);
+
+        ctx.font = 'normal 16px Georgia, serif';
+        ctx.fillStyle = '#1e293b';
+        ctx.fillText('Pembimbing OSIS,', 280, 630);
+        ctx.font = 'bold 18px Georgia, serif';
+        ctx.fillText('Nurholis Majid, S.Pd., G.r.', 280, 700);
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(180, 712);
+        ctx.lineTo(380, 712);
+        ctx.stroke();
+
+        ctx.font = 'normal 16px Georgia, serif';
+        ctx.fillStyle = '#1e293b';
+        ctx.fillText('Kepala Sekolah,', canvas.width - 280, 630);
+        ctx.font = 'bold 18px Georgia, serif';
+        ctx.fillText('Dr. H. Asep Mulyana, M.Pd.', canvas.width - 280, 700);
+        ctx.beginPath();
+        ctx.moveTo(canvas.width - 380, 712);
+        ctx.lineTo(canvas.width - 180, 712);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(197, 168, 128, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(canvas.width / 2, 650, 45, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.font = 'bold 11px Arial, sans-serif';
+        ctx.fillStyle = '#c5a880';
+        ctx.fillText('GRADE', canvas.width / 2, 642);
+        ctx.fillText('MASTER', canvas.width / 2, 658);
+
+        const link = document.createElement('a');
+        link.download = `Sertifikat_Kedisiplinan_${studentName.replace(/ /g, '_')}_${className}.jpg`;
+        link.href = canvas.toDataURL('image/jpeg', 0.95);
+        link.click();
+        setToast({ message: "Berhasil mengunduh Sertifikat Kedisiplinan (JPG)", type: "success" });
+
+      } else if (docId === 'history-1') {
+        const academicHistory = studentSummary?.academicHistory || [];
+        
+        const rows: any[] = [
+          ['REKAPITULASI NILAI AKADEMIK TAHUNAN'],
+          [`NAMA SISWA: ${studentName.toUpperCase()}`],
+          [`KELAS: ${className} • TAHUN AJARAN: ${academicYear}`],
+          [],
+          ['No', 'Mata Pelajaran', 'Ujian Sesi', 'KKM', 'Nilai Akhir', 'Status Kelulusan', 'Nilai Remedial']
+        ];
+
+        academicHistory.forEach((g, idx) => {
+          rows.push([
+            idx + 1,
+            g.subject,
+            g.sessionName,
+            g.kkm,
+            g.score,
+            g.isPassing ? 'TUNTAS' : 'REMEDIAL',
+            g.remedialScore !== null && g.remedialScore !== undefined ? g.remedialScore : '-'
+          ]);
+        });
+
+        const totalExams = academicHistory.length;
+        const avgScore = totalExams > 0 
+          ? Number((academicHistory.reduce((sum, g) => sum + Number(g.score || 0), 0) / totalExams).toFixed(1))
+          : 0;
+        const passedExams = academicHistory.filter(g => g.isPassing).length;
+        const passPercent = totalExams > 0 ? Math.round((passedExams / totalExams) * 100) : 0;
+
+        rows.push([]);
+        rows.push(['RINGKASAN AKADEMIK & PRESENSI']);
+        rows.push(['Rata-rata Akademik', `${avgScore} / 100`]);
+        rows.push(['Rasio Kelulusan Ujian', `${passedExams} dari ${totalExams} tuntas (${passPercent}%)`]);
+        
+        const attendance = studentSummary?.attendance;
+        if (attendance && attendance.total > 0) {
+          rows.push(['Persentase Kehadiran', `${attendance.percentage}%`]);
+          rows.push(['Detail Presensi', `Hadir ${attendance.present} dari ${attendance.total} pertemuan`]);
+        } else {
+          rows.push(['Persentase Kehadiran', 'Data presensi belum tersedia']);
+        }
+
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+
+        const colWidths = [
+          { wch: 6 },
+          { wch: 25 },
+          { wch: 30 },
+          { wch: 10 },
+          { wch: 12 },
+          { wch: 18 },
+          { wch: 15 }
+        ];
+        ws['!cols'] = colWidths;
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Akademik");
+        
+        XLSX.writeFile(wb, `Rekap_Nilai_${studentName.replace(/ /g, '_')}_${className}.xlsx`);
+        setToast({ message: "Berhasil mengunduh Rekap Nilai Tahunan (Excel)", type: "success" });
+      }
+    } catch (err: any) {
+      console.error(err);
+      setToast({ message: `Gagal mengunduh dokumen: ${err.message}`, type: "error" });
+    } finally {
+      setDownloadingDocId(null);
+    }
+  };
+
   const [isMounted, setIsMounted] = useState(false);
 
   // Memoize chart data to prevent Recharts rendering loop
@@ -1048,11 +1453,20 @@ export default function StudentProfileLayer({
                             <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider truncate">{doc.size}</p>
                           </div>
                        </div>
-                       {doc.ready && (
-                         <button className="text-on-primary-fixed transition-colors hover:scale-110">
-                           <DownloadCloud size={18} />
-                         </button>
-                       )}
+                        {doc.ready && (
+                          <button 
+                            onClick={() => handleDownloadDocument(doc.id, doc.name)}
+                            disabled={downloadingDocId !== null}
+                            className="text-on-primary-fixed transition-colors hover:scale-110 disabled:opacity-50 active:scale-95"
+                            title={`Unduh ${doc.name}`}
+                          >
+                            {downloadingDocId === doc.id ? (
+                              <Loader2 size={18} className="animate-spin text-primary" />
+                            ) : (
+                              <DownloadCloud size={18} />
+                            )}
+                          </button>
+                        )}
                      </div>
                    ))}
                 </div>
