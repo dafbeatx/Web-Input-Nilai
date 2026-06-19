@@ -275,7 +275,7 @@ export default function StudentRemedialLayer({
         });
         setToast({ message: "Peringatan: Jangan pindah tab atau aplikasi!", type: "error" });
 
-        // Sync violation to database in real-time
+        // Sync violation to database in real-time (fire-and-forget)
         fetch('/api/grademaster/students/remedial/violation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -286,10 +286,6 @@ export default function StudentRemedialLayer({
             if (data.isBlocked) {
               setIsPermanentlyBlocked(true);
               setIsTabHidden(false);
-              if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
-            }
-            if (data.count !== undefined) {
-              setTabWarningCount(data.count);
             }
           }
         }).catch(err => {
