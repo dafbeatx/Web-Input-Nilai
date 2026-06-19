@@ -254,12 +254,16 @@ export default function StudentProfileLayer({
     <div className="fixed inset-0 bg-surface/95 backdrop-blur-2xl z-[1000] flex flex-col animate-in fade-in duration-300 overflow-y-auto no-scrollbar bg-surface-container-lowest text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed">
       {/* TopAppBar */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-lg flex items-center justify-between px-6 h-16 max-w-4xl mx-auto left-1/2 -translate-x-1/2 border-b border-surface-container shadow-[0_10px_40px_rgba(15,23,42,0.04)]">
-        <button 
-          onClick={onBack}
-          className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-container transition-all text-on-surface active:scale-95"
-        >
-          <ArrowLeft size={20} />
-        </button>
+        {isAdmin ? (
+          <button 
+            onClick={onBack}
+            className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-container transition-all text-on-surface active:scale-95"
+          >
+            <ArrowLeft size={20} />
+          </button>
+        ) : (
+          <div className="w-10" />
+        )}
         <h1 className="font-headline font-bold text-lg tracking-tight">Student Profile</h1>
         {onLogout ? (
           <button 

@@ -48,8 +48,8 @@ export default function Navbar() {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
 
-  // Hidden in behavior page (uses its own nav), exam, and auth layers
-  const isHidden = pathname?.startsWith('/behavior') || ['login', 'student_login', 'student_claim', 'teacher_claim', 'remedial', 'lesson_management', 'grading'].includes(layer);
+  // Hidden in behavior page (uses its own nav), exam, auth, and student profile/lesson layers
+  const isHidden = pathname?.startsWith('/behavior') || ['login', 'student_login', 'student_claim', 'teacher_claim', 'remedial', 'lesson_management', 'grading', 'student_profile', 'student_lesson'].includes(layer);
 
   useEffect(() => {
     if (!isHidden) {
