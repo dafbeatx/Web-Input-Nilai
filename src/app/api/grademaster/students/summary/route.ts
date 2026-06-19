@@ -52,7 +52,11 @@ export async function GET(req: NextRequest) {
     const { data: gradeData, error: gradeError } = await supabaseAdmin
       .from('gm_students')
       .select(`
+        id,
         final_score,
+        remedial_score,
+        remedial_status,
+        cheating_flags,
         session_id,
         gm_sessions (
           session_name,
@@ -69,17 +73,44 @@ export async function GET(req: NextRequest) {
 
     if (gradeError) throw gradeError;
 
-    const academicHistory = gradeData?.map((g: any) => {
+    const academicHistory = await Promise.all((gradeData || []).map(async (g: any) => {
       const sessionData = Array.isArray(g.gm_sessions) ? g.gm_sessions[0] : g.gm_sessions;
       const kkm = Number(sessionData?.kkm || 70);
-      const finalScore = Number(g.final_score);
-      const isPassing = finalScore >= kkm;
+      let finalScore = Number(g.final_score);
+      let cheatingFlags = g.cheating_flags || [];
       
-      const showRemedialButton = true;
       let config = sessionData?.scoring_config;
       if (typeof config === 'string') {
         try { config = JSON.parse(config); } catch(e) {}
       }
+      
+      const deadline = config?.remedialDeadline;
+      
+      // Auto-release check: If score is held back, but deadline has passed, release it on-the-fly!
+      const isHeldBack = Array.isArray(cheatingFlags) && cheatingFlags.some((f: string) => f.includes('Nilai remedial ditahan'));
+      if (isHeldBack && deadline && new Date() > new Date(deadline)) {
+        const releasedScore = g.remedial_score !== null && g.remedial_score !== undefined ? Number(g.remedial_score) : finalScore;
+        const cleanedFlags = cheatingFlags.filter((f: string) => !f.includes('Nilai remedial ditahan'));
+        
+        console.log(`[Summary Auto-Release] Deadline passed for student=${targetStudentName}, session=${g.session_id}. Releasing score=${releasedScore}`);
+        
+        const { error: updateErr } = await supabaseAdmin
+          .from('gm_students')
+          .update({
+            final_score: releasedScore,
+            final_score_locked: releasedScore,
+            cheating_flags: cleanedFlags
+          })
+          .eq('id', g.id);
+          
+        if (!updateErr) {
+          finalScore = releasedScore;
+          cheatingFlags = cleanedFlags;
+        }
+      }
+      
+      const isPassing = finalScore >= kkm;
+      const showRemedialButton = true;
       const hasQuestions = Array.isArray(config?.remedialQuestions) && config.remedialQuestions.length > 0;
       
       return {
@@ -89,9 +120,13 @@ export async function GET(req: NextRequest) {
         kkm: kkm,
         date: sessionData?.updated_at,
         isPassing,
-        hasRemedialAvailable: !isPassing && showRemedialButton && hasQuestions
+        hasRemedialAvailable: !isPassing && showRemedialButton && hasQuestions && (!deadline || new Date() <= new Date(deadline)),
+        remedialStatus: g.remedial_status,
+        remedialScore: g.remedial_score,
+        cheatingFlags,
+        remedialDeadline: deadline
       };
-    }) || [];
+    })) || [];
 
     // 3. Mock Documents (In real app, this might pull from a storage table)
     const documents = [

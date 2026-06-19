@@ -5,7 +5,7 @@ import {
   ArrowLeft, PlusCircle, MinusCircle, Loader2, FileText, 
   Trash2, Pencil, ShieldCheck, ThumbsUp, X, Calendar, 
   Activity, History, DownloadCloud, Check, User,
-  Settings, AlertCircle, LogOut
+  Settings, AlertCircle, LogOut, Share2
 } from 'lucide-react';
 import { ToastType } from '@/lib/grademaster/types';
 import { 
@@ -556,6 +556,30 @@ export default function StudentProfileLayer({
         <div className="min-h-[300px]">
           {activeTab === 'SUMMARY' && (
             <section className="space-y-6 pt-4 animate-in fade-in duration-300">
+              {/* Score Holdback Alert Banner */}
+              {(() => {
+                const heldBackGrades = studentSummary?.academicHistory?.filter((g: any) => 
+                  Array.isArray(g.cheatingFlags) && g.cheatingFlags.some((f: string) => f.includes('Nilai remedial ditahan'))
+                ) || [];
+                
+                return heldBackGrades.map((g: any, idx: number) => {
+                  const deadlineText = g.remedialDeadline ? formatDate(g.remedialDeadline) : 'batas waktu sesi berakhir';
+                  return (
+                    <div key={idx} className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-5 flex items-start gap-4 text-left animate-in slide-in-from-top-4 duration-500">
+                      <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0 text-amber-600">
+                        <AlertCircle size={20} className="animate-pulse" />
+                      </div>
+                      <div className="min-w-0 space-y-1">
+                        <h4 className="text-amber-800 font-extrabold text-[10px] uppercase tracking-wider leading-none font-outfit">Nilai Remedial Ditahan Sementara</h4>
+                        <p className="text-amber-950 text-xs font-semibold leading-relaxed">
+                          Nilai remedial untuk pelajaran <strong className="text-amber-950 font-black">{g.subject} ({g.sessionName})</strong> sedang ditahan sementara menunggu rekan sekelas menyelesaikan remedial, atau hingga batas waktu remedial berakhir pada <strong className="text-amber-950 font-black">{deadlineText}</strong>.
+                        </p>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+
               <div className="flex items-center justify-between">
                 <h3 className="text-on-primary-fixed font-bold text-lg tracking-tight">Riwayat Transparansi</h3>
                 <span className="bg-surface-container-high text-on-surface-variant text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider truncate">
@@ -690,29 +714,45 @@ export default function StudentProfileLayer({
                          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider truncate">{grade.subject} • {formatDate(grade.date)}</p>
                        </div>
                        <div className="text-right flex flex-col items-end gap-1 flex-shrink-0">
-                         <p className={`text-xl font-black ${grade.isPassing ? 'text-secondary' : 'text-error'}`}>{grade.score}</p>
-                         <p className="text-[8px] font-bold text-on-surface-variant uppercase">KKM: {grade.kkm}</p>
-                         {!isAdmin && grade.hasRemedialAvailable && onStartRemedial && (
-                           isParent ? (
-                             <button 
-                               disabled
-                               title="Remedial hanya dapat dimulai dengan login menggunakan akun Google Siswa"
-                               className="mt-1 px-3 py-1.5 bg-slate-300 text-white rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 cursor-not-allowed opacity-70"
-                             >
-                               <span className="material-symbols-outlined text-[12px]">edit_note</span>
-                               Remedial (Siswa Saja)
-                             </button>
-                           ) : (
-                             <button 
-                               onClick={() => onStartRemedial(grade.sessionName)}
-                               className="mt-1 px-3 py-1.5 bg-rose-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm shadow-rose-500/20"
-                             >
-                               <span className="material-symbols-outlined text-[12px]">edit_note</span>
-                               Remedial
-                             </button>
-                           )
-                         )}
-                       </div>
+                          <p className={`text-xl font-black ${grade.isPassing ? 'text-secondary' : 'text-error'}`}>{grade.score}</p>
+                          <p className="text-[8px] font-bold text-on-surface-variant uppercase">KKM: {grade.kkm}</p>
+                          {!isAdmin && grade.hasRemedialAvailable && onStartRemedial && (
+                            isParent ? (
+                              <button 
+                                disabled
+                                title="Remedial hanya dapat dimulai dengan login menggunakan akun Google Siswa"
+                                className="mt-1 px-3 py-1.5 bg-slate-300 text-white rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 cursor-not-allowed opacity-70"
+                              >
+                                <span className="material-symbols-outlined text-[12px]">edit_note</span>
+                                Remedial (Siswa Saja)
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => onStartRemedial(grade.sessionName)}
+                                className="mt-1 px-3 py-1.5 bg-rose-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm shadow-rose-500/20"
+                              >
+                                <span className="material-symbols-outlined text-[12px]">edit_note</span>
+                                Remedial
+                              </button>
+                            )
+                          )}
+                          {!grade.isPassing && (
+                            <button 
+                              onClick={() => {
+                                const deadlineText = grade.remedialDeadline ? formatDate(grade.remedialDeadline) : 'Batas Waktu Sesi';
+                                const appUrl = typeof window !== 'undefined' ? `${window.location.origin}` : 'https://web-input-nilai.vercel.app';
+                                const message = `*GradeMaster OS - Pemberitahuan Remedial* 🔄\n\nHalo, berikut adalah informasi pengerjaan remedial:\n👤 *Nama Siswa*: ${studentName}\n🏫 *Kelas*: ${className}\n📚 *Mata Pelajaran*: ${grade.subject}\n📝 *Sesi*: ${grade.sessionName}\n📊 *Nilai Ujian*: ${grade.score} (KKM: ${grade.kkm})\n⚠️ *Alasan*: Nilai di bawah batas kelulusan KKM.\n\nSilakan kerjakan remedial secara mandiri melalui tautan resmi ini:\n🔗 *Link Remedial*: ${appUrl}\n\n*Batas Waktu*: ${deadlineText}\nMohon diselesaikan sebelum tenggat waktu. Terima kasih!`;
+                                const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+                                window.open(waUrl, '_blank');
+                              }}
+                              className="mt-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm shadow-emerald-600/20"
+                              title="Bagikan informasi remedial ke WhatsApp"
+                            >
+                              <Share2 size={10} />
+                              Bagikan WA
+                            </button>
+                          )}
+                        </div>
                      </div>
                    ))}
                  </div>
