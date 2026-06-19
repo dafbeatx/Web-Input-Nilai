@@ -120,6 +120,16 @@ async function runRemedialReminder() {
 // GET handler: triggers automatic mass reminder (suitable for scheduled Vercel Cron jobs)
 export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const action = searchParams.get('action');
+
+    if (action === 'hourly-reminder') {
+      console.log('[Push Send API] GET request detected. Running hourly remedial reminder check...');
+      const { runHourlyRemedialReminder } = await import('@/lib/grademaster/services/push-notification.service');
+      const result = await runHourlyRemedialReminder();
+      return NextResponse.json(result);
+    }
+
     console.log('[Push Send API] GET request detected. Running daily remedial reminder cron...');
     return await runRemedialReminder();
   } catch (err: any) {
@@ -131,7 +141,7 @@ export async function GET(req: NextRequest) {
 // POST handler: triggers targeted single push or mass push depending on payload
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const { action, studentAccountId, title, message, url } = body;
 
     // Case 1: Send single direct notification (useful for testing or direct alerts)
@@ -159,6 +169,13 @@ export async function POST(req: NextRequest) {
     // Case 2: Mass Daily Remedial Reminder
     if (action === 'remedial-reminder') {
       return await runRemedialReminder();
+    }
+
+    // Case 3: Hourly Remedial Reminder Check
+    if (action === 'hourly-reminder') {
+      const { runHourlyRemedialReminder } = await import('@/lib/grademaster/services/push-notification.service');
+      const result = await runHourlyRemedialReminder();
+      return NextResponse.json(result);
     }
 
     return NextResponse.json({ error: 'Aksi tidak valid atau parameter tidak lengkap.' }, { status: 400 });

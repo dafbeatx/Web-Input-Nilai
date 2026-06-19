@@ -161,6 +161,14 @@ export async function POST(req: NextRequest) {
        isPenaltyApplied || false
     )) as any;
 
+    if (status === 'INITIATED') {
+      import('@/lib/grademaster/services/push-notification.service').then(m => {
+        m.notifyClassmatesRemedialStarted(sessionId, studentName || data.name || '');
+      }).catch(err => {
+        console.error('[Remedial API] Classmate notification trigger failed:', err);
+      });
+    }
+
     return NextResponse.json({ 
       success: true, 
       attemptId: data.attempt_id,
