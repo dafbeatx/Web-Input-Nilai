@@ -197,6 +197,8 @@ export default function StudentRemedialLayer({
   const [remainingStudents, setRemainingStudents] = useState<{name: string}[]>([]);
   const [sessionCreatedAt, setSessionCreatedAt] = useState<string | null>(null);
   const [finalScore, setFinalScore] = useState<number | null>(null);
+  const [essayAutoDetails, setEssayAutoDetails] = useState<{ similarity: number; score: number }[]>([]);
+  const [remedialAnswerKeys, setRemedialAnswerKeys] = useState<string[]>([]);
   const hasSubmittedRef = useRef(false);
   const hasSentStartNotifRef = useRef(false);
   const wakeLockRef = useRef<any>(null); // Screen Wake Lock
@@ -1099,6 +1101,13 @@ export default function StudentRemedialLayer({
             
             if (['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
               setFinalScore(data.finalScore);
+              if (data.remedialAnswers) setAnswers(data.remedialAnswers);
+              if (data.essayAutoDetails) setEssayAutoDetails(data.essayAutoDetails);
+              if (data.remedialQuestions && data.remedialQuestions.length > 0) {
+                setShuffledQuestions(data.remedialQuestions.map((q: string, i: number) => ({ text: q, originalIndex: i })));
+              }
+              if (data.remedialAnswerKeys) setRemedialAnswerKeys(data.remedialAnswerKeys);
+
               // Pre-fetch friends list for results screen
               fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`, { cache: 'no-store' })
                 .then(r => r.json())
@@ -1906,7 +1915,7 @@ export default function StudentRemedialLayer({
 
   // Proctoring: START photo + 30s auto-snap (depends ONLY on step, NOT timeLeft)
   useEffect(() => {
-    if (step !== 'EXAM') return;
+    if (step !== 'EXAM' || isSubmitting) return;
 
     // Helper: retry capture with short delay between attempts
     const captureWithRetry = async (maxAttempts = 3, delayMs = 500): Promise<string | undefined> => {
@@ -1987,11 +1996,11 @@ export default function StudentRemedialLayer({
       isProctoringActive = false;
       clearTimeout(proctorTimerId);
     };
-  }, [step]);
+  }, [step, isSubmitting]);
 
   // ── MONITORING SETUP (Heartbeat & Event Listeners) ──
   useEffect(() => {
-    if (step !== 'EXAM' || !attemptId) return;
+    if (step !== 'EXAM' || !attemptId || isSubmitting) return;
 
     // 1. Start Heartbeat Pulse (20s)
     heartbeatTimerRef.current = setInterval(sendHeartbeat, 20000);
@@ -2056,7 +2065,7 @@ export default function StudentRemedialLayer({
       if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
       clearInterval(fastNetworkPoll);
     };
-  }, [step, attemptId]);
+  }, [step, attemptId, isSubmitting]);
 
   // Anti-cheat mechanism — basic keyboard protection
   useEffect(() => {
@@ -2257,17 +2266,6 @@ export default function StudentRemedialLayer({
         } else {
           const data = await res.json();
           
-          // STRICT KKM ENFORCEMENT: If status is 'REMEDIAL', it means score < KKM
-          if (data.status === 'REMEDIAL') {
-            setToast({ message: "⚠️ NILAI BELUM MENCAPAI KKM (70). Waktu tambahan 5 menit diberikan untuk perbaikan!", type: "error" });
-            setIsSubmitting(false);
-            hasSubmittedRef.current = false; // Allow re-submission
-            setTimeLeft(300); // Give 5 extra minutes
-            setIsTimeoutTriggered(false); // Reset timeout trigger so timer runs again
-            setFinalScore(data.newFinalScore ?? data.final_score);
-            return; // STAY ON EXAM STEP
-          }
-
           clearRemedialSession();
           if (typeof window !== 'undefined') {
             const backupKey = `gm_remedial_backup_${sessionId}_${studentName.toLowerCase().trim()}`;
@@ -2280,10 +2278,19 @@ export default function StudentRemedialLayer({
           if (finalStatus === 'FAILED_EFFORT') {
             setToast({ message: "Sesi selesai: Jawaban dibatalkan karena terdeteksi tidak valid atau terlalu cepat.", type: "error" });
             setFinalScore(0);
-          } else if (['COMPLETED', 'SUBMITTED'].includes(finalStatus)) {
-            setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Selamat, Anda LULUS KKM!", type: "success" });
+          } else if (['COMPLETED', 'SUBMITTED', 'REMEDIAL'].includes(finalStatus)) {
             const fScore = data.newFinalScore ?? data.final_score ?? 0;
             setFinalScore(fScore);
+
+            if (fScore < (kkm || 70)) {
+              setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Nilai Anda belum mencapai KKM.", type: "error" });
+            } else {
+              setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Selamat, Anda LULUS KKM!", type: "success" });
+            }
+
+            if (data.essayDetails) setEssayAutoDetails(data.essayDetails);
+            if (data.remedialAnswerKeys) setRemedialAnswerKeys(data.remedialAnswerKeys);
+
             sendTelegramNotify('FINISH', undefined, undefined, fScore);
             
             fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`, { cache: 'no-store' })
@@ -2306,7 +2313,7 @@ export default function StudentRemedialLayer({
             const fScore = data.newFinalScore ?? data.final_score ?? 0;
             setFinalScore(fScore);
           }
-          setStep(finalStatus as RemedialStep);
+          setStep(finalStatus === 'REMEDIAL' ? 'SUBMITTED' : (finalStatus as RemedialStep));
           setIsSubmitting(false);
           return;
         }
@@ -2786,8 +2793,60 @@ export default function StudentRemedialLayer({
                     </p>
                   </div>
                   {finalScore !== null && finalScore < 70 && (
-                    <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest bg-rose-500/10 py-2 rounded-full border border-rose-500/20 px-4 inline-block block mx-auto w-fit">⚠️ Belum Mencapai KKM (70)</p>
-                  )}
+                     <>
+                       <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest bg-rose-500/10 py-2 rounded-full border border-rose-500/20 px-4 inline-block block mx-auto w-fit">⚠️ Belum Mencapai KKM (70)</p>
+                       
+                       <div className="mt-8 text-left space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar focus:outline-none">
+                         <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
+                           <h4 className="text-[11px] font-black text-rose-400 uppercase tracking-wider mb-1 flex items-center gap-2">
+                             <AlertTriangle size={14} /> Analisis Koreksi Ujian
+                           </h4>
+                           <p className="text-[10px] text-on-surface-variant font-bold leading-normal uppercase">
+                             Berikut adalah detail evaluasi per soal yang terindikasi kurang tepat untuk dipelajari kembali:
+                           </p>
+                         </div>
+                         
+                         <div className="space-y-4">
+                           {(shuffledQuestions.length > 0 ? shuffledQuestions : answers.map((_, i) => ({ text: `Soal Essay ${i + 1}`, originalIndex: i }))).map((q, idx) => {
+                             const detail = essayAutoDetails[idx];
+                             const score = detail ? detail.score : 0;
+                             const answerKey = remedialAnswerKeys[idx];
+                             const isLowScore = score < 70;
+                             
+                             return (
+                               <div key={idx} className={`p-5 rounded-3xl border transition-all ${isLowScore ? 'bg-rose-500/5 border-rose-500/15' : 'bg-emerald-500/5 border-emerald-500/15'}`}>
+                                 <div className="flex items-center justify-between mb-3 pb-2 border-b border-outline-variant/40">
+                                   <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Soal {idx + 1}</span>
+                                   <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${isLowScore ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}`}>
+                                     Skor: {score} / 100
+                                   </span>
+                                 </div>
+                                 
+                                 <p className="text-[11px] font-black text-on-surface uppercase tracking-tight mb-2 leading-relaxed text-left">{q.text}</p>
+                                 
+                                 <div className="mt-3 space-y-2 text-[10px] font-bold">
+                                   <div className="p-3 bg-surface-variant/40 rounded-xl border border-outline-variant/30 text-left">
+                                     <span className="text-on-surface-variant uppercase tracking-wider block mb-1 text-[9px]">Jawaban Anda:</span>
+                                     <p className="text-on-surface text-[11px] whitespace-pre-line leading-relaxed">{answers[idx] || "Tidak dijawab"}</p>
+                                   </div>
+                                   
+                                   {isLowScore && answerKey && (
+                                     <div className="p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10 text-left">
+                                       <span className="text-emerald-400 uppercase tracking-wider block mb-1 text-[9px]">Referensi Kunci Jawaban:</span>
+                                       <p className="text-on-surface text-[11px] whitespace-pre-line leading-relaxed">{answerKey}</p>
+                                     </div>
+                                   )}
+                                 </div>
+                               </div>
+                             );
+                           })}
+                         </div>
+                       </div>
+                     </>
+                   )}
+                   {(finalScore === null || finalScore >= 70) && (
+                     <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 py-2 rounded-full border border-emerald-500/20 px-4 inline-block block mx-auto w-fit">✓ Lulus KKM (70)</p>
+                   )}
                </div>
             )}
           </div>
@@ -3127,7 +3186,7 @@ export default function StudentRemedialLayer({
       </main>
 
       {/* ── DRAGGABLE CAMERA (GradeMaster PiP) ── */}
-      {step === 'EXAM' && (
+      {step === 'EXAM' && !isSubmitting && (
         <div
           ref={pipRef}
           id="draggable-pip-container"

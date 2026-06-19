@@ -252,6 +252,8 @@ export async function submitRemedial(
   // Find active attempt with auto-recovery
   let attempt = await findActiveAttempt(sessionId, studentId, studentName);
 
+  const answerKeys: string[] = attempt.remedial_answer_keys || session.scoring_config?.remedialAnswerKeys || [];
+
   // Mencegah Double Submit (Race Condition Protection)
   if (['COMPLETED', 'CHEATED', 'TIME_UP', 'SUBMITTED', 'FAILED_EFFORT'].includes(attempt.status)) {
     console.log(`[Remedial] Mencegah Double Submit untuk ${studentName} (Status: ${attempt.status})`);
@@ -338,7 +340,6 @@ export async function submitRemedial(
     const isTooLate = backendElapsedMs > maxDurationMs;
 
     // Essay scoring (server-side only) - Use attempt-specific dynamic keys if available
-    const answerKeys: string[] = attempt.remedial_answer_keys || session.scoring_config?.remedialAnswerKeys || [];
     const questions: string[] = attempt.remedial_questions || session.scoring_config?.remedialQuestions || [];
     const essayResult = await calculateEssayScore(answers, answerKeys, questions);
 
@@ -589,6 +590,7 @@ export async function submitRemedial(
     attempt_token: (attempt as any).attempt_token || null,
     subject: session.subject,
     class_name: session.class_name,
+    remedialAnswerKeys: answerKeys,
   };
 }
 

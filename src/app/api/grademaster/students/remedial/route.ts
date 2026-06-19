@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     let queryResult = await supabase
       .from('gm_students')
-      .select('id, name, final_score, remedial_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed, violation_count, is_blocked, remedial_extended_time')
+      .select('id, name, final_score, remedial_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed, violation_count, is_blocked, remedial_extended_time, remedial_answers, essay_auto_details')
       .eq('session_id', sessionId)
       .ilike('name', studentName.trim())
       .eq('is_deleted', false)
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
       console.warn('[Remedial GET API] Column remedial_extended_time is missing, retrying query without it.');
       queryResult = await supabase
         .from('gm_students')
-        .select('id, name, final_score, remedial_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed, violation_count, is_blocked')
+        .select('id, name, final_score, remedial_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed, violation_count, is_blocked, remedial_answers, essay_auto_details')
         .eq('session_id', sessionId)
         .ilike('name', studentName.trim())
         .eq('is_deleted', false)
@@ -70,6 +70,20 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    let remedialQuestions: string[] = [];
+    let remedialAnswerKeys: string[] = [];
+    if (sessionId) {
+      const { data: session } = await supabase
+        .from('gm_sessions')
+        .select('scoring_config')
+        .eq('id', sessionId)
+        .single();
+      if (session?.scoring_config) {
+        remedialQuestions = session.scoring_config.remedialQuestions || [];
+        remedialAnswerKeys = session.scoring_config.remedialAnswerKeys || [];
+      }
+    }
+
     const response = NextResponse.json({ 
       status: currentStatus,
       finalScore: student.final_score,
@@ -77,7 +91,11 @@ export async function GET(req: NextRequest) {
       teacherReviewed: student.teacher_reviewed,
       violationCount: student.violation_count || 0,
       isBlocked: student.is_blocked || false,
-      remedialExtendedTime: student.remedial_extended_time || 0
+      remedialExtendedTime: student.remedial_extended_time || 0,
+      remedialAnswers: student.remedial_answers || [],
+      essayAutoDetails: student.essay_auto_details || [],
+      remedialQuestions,
+      remedialAnswerKeys
     });
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     return response;
@@ -154,6 +172,8 @@ export async function POST(req: NextRequest) {
       subject: data.subject,
       className: data.class_name,
       remedialQuestions: data.remedialQuestions,
+      essayDetails: data.essay_auto_details || [],
+      remedialAnswerKeys: data.remedialAnswerKeys || []
     });
 
   } catch (err: unknown) {
