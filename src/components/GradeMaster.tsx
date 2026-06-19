@@ -36,6 +36,7 @@ import LessonManagementLayer from "./grademaster/LessonManagementLayer";
 import StudentLessonLayer from "./grademaster/StudentLessonLayer";
 import RemedialManagementLayer from "@/components/grademaster/RemedialManagementLayer";
 import DataCenterLayer from "@/components/grademaster/DataCenterLayer";
+import StudentAccountsLayer from "./grademaster/StudentAccountsLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 import { subscribeUser, isPushSupported, checkSubscriptionStatus } from "@/lib/grademaster/pushHelper";
 import { supabase } from "@/lib/supabase/client";
@@ -1388,6 +1389,15 @@ export default function GradeMaster() {
       {layer === "data_center" && isAdmin && (
         <DataCenterLayer
           onBack={() => setLayer("home")}
+        />
+      )}
+
+      {layer === "student_accounts" && isAdmin && (
+        <StudentAccountsLayer
+          onBack={() => setLayer("home")}
+          setToast={setToast}
+          activeClass={studentClass}
+          activeYear={academicYear}
         />
       )}
 

@@ -127,7 +127,8 @@ export default function HomeLayer(props: HomeLayerProps) {
         { label: "Buat Sesi Ujian Baru", layer: "setup", description: "Atur KKM & esai" },
         { label: "Cek Kehadiran", layer: "attendance", description: "Rekap presensi siswa" },
         { label: "Buka Data Sikap/Sikap", layer: "behavior", description: "Poin kedisiplinan" },
-        { label: "Kelola Mata Pelajaran", layer: "lesson_management", description: "Kelola kurikulum & ujian susulan" }
+        { label: "Kelola Mata Pelajaran", layer: "lesson_management", description: "Kelola kurikulum & ujian susulan" },
+        { label: "Kelola Akun & Kenaikan", layer: "student_accounts", description: "Password & Kenaikan Kelas" }
       ];
     } else {
       actions = [

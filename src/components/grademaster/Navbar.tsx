@@ -179,6 +179,14 @@ export default function Navbar() {
                     <Database size={18} /> Pusat Data
                   </button>
                   <button
+                    onClick={() => onNavigate('student_accounts')}
+                    className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 ${
+                      layer === 'student_accounts' ? 'bg-[#00b4ff]/10 text-[#00b4ff] border border-[#00b4ff]/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
+                    }`}
+                  >
+                    <Users size={18} /> Akun Siswa
+                  </button>
+                  <button
                     onClick={() => onNavigate('remedial_dashboard')}
                     className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 ${
                       layer === 'remedial_dashboard' ? 'bg-secondary/10 text-secondary border border-secondary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
@@ -477,6 +485,19 @@ export default function Navbar() {
                     <div>
                       <span className="text-[11px] font-bold text-on-surface block leading-tight">Pusat Data</span>
                       <span className="text-[9px] font-medium text-on-surface-variant">Kelola siswa & nilai manual</span>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => { onNavigate('student_accounts'); setIsMobileMenuOpen(false); }} 
+                    className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/15 flex items-center justify-center">
+                      <Users size={18} className="text-indigo-500" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-on-surface block leading-tight">Akun Siswa</span>
+                      <span className="text-[9px] font-medium text-on-surface-variant">Manajemen password & kenaikan kelas</span>
                     </div>
                   </button>
 
