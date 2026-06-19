@@ -88,6 +88,14 @@ export default function StudentProfileLayer({
     icon: string;
     color: string;
   }
+  const getSchoolName = (classNameStr: string) => {
+    const cls = (classNameStr || '').toUpperCase();
+    if (cls.includes('SMA') || cls.includes('10') || cls.includes('11') || cls.includes('12') || cls.includes('X') || cls.includes('XI') || cls.includes('XII')) {
+      return 'SMA Terpadu As Salaam';
+    }
+    return 'SMP Terpadu Al-Ittihadiyah';
+  };
+
   const getBadges = () => {
     const list: BadgeItem[] = [];
     const charScore = Math.max(0, 100 - totalPoints);
@@ -137,7 +145,7 @@ export default function StudentProfileLayer({
       list.push({
         id: 'member',
         label: 'Anggota Aktif',
-        desc: 'Siswa GradeMaster OS',
+        desc: `Siswa ${getSchoolName(className)}`,
         icon: '🛡️',
         color: 'from-slate-500/10 to-slate-500/20 text-slate-800 border-slate-500/20'
       });
@@ -320,7 +328,7 @@ export default function StudentProfileLayer({
   return (
     <div className="fixed inset-0 bg-surface/95 backdrop-blur-2xl z-[1000] flex flex-col animate-in fade-in duration-300 overflow-y-auto no-scrollbar bg-surface-container-lowest text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed">
       {/* TopAppBar */}
-      <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-lg flex items-center justify-between px-6 h-16 max-w-4xl mx-auto left-1/2 -translate-x-1/2 border-b border-surface-container shadow-[0_10px_40px_rgba(15,23,42,0.04)]">
+      <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-lg flex items-center justify-between px-4 sm:px-6 h-16 max-w-4xl mx-auto left-1/2 -translate-x-1/2 border-b border-surface-container shadow-[0_10px_40px_rgba(15,23,42,0.04)]">
         {isAdmin ? (
           <button 
             onClick={onBack}
@@ -346,7 +354,7 @@ export default function StudentProfileLayer({
       </header>
 
       {/* Main Content */}
-      <main className="pt-24 px-6 pb-32 max-w-4xl mx-auto space-y-12 w-full">
+      <main className="pt-20 px-4 sm:px-6 pb-32 max-w-4xl mx-auto space-y-8 sm:space-y-12 w-full">
         {/* Profile Header */}
         <section className="flex flex-col items-center text-center space-y-4 relative py-6">
           {/* Ambient Glow behind avatar */}
@@ -376,16 +384,16 @@ export default function StudentProfileLayer({
             )}
           </div>
           
-          <div>
-            <h2 className="text-on-primary-fixed font-bold text-2xl tracking-tight leading-tight uppercase font-outfit">{studentName}</h2>
-            <p className="text-on-surface-variant text-xs mt-1.5 uppercase font-bold tracking-widest">Kelas {className} • {academicYear}</p>
+          <div className="px-4">
+            <h2 className="text-on-primary-fixed font-bold text-xl sm:text-2xl tracking-tight leading-tight uppercase font-outfit break-words">{studentName}</h2>
+            <p className="text-on-surface-variant text-[11px] sm:text-xs mt-1.5 uppercase font-bold tracking-widest">Kelas {className} • {academicYear}</p>
           </div>
         </section>
 
         {/* Achievements / Badges Section */}
         <section className="space-y-3">
           <h3 className="text-left text-xs font-bold text-on-surface-variant/60 uppercase tracking-widest px-1">Lencana Pencapaian</h3>
-          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar scroll-smooth">
+          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar scroll-smooth -mx-4 px-4 sm:-mx-6 sm:px-6">
             {badges.map(b => (
               <div 
                 key={b.id} 
@@ -402,50 +410,50 @@ export default function StudentProfileLayer({
         </section>
 
         {/* Metric Cards Bento Layout */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           {/* Poin Perilaku & Karakter (Apple Ring Style) */}
-          <div className="bg-surface border border-outline-variant rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between gap-4">
-            <div className="flex-1 space-y-1.5 text-left">
-              <p className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest">Karakter & Kedisiplinan</p>
-              <h4 className="text-xl font-extrabold text-on-surface leading-tight font-outfit">Skor Perilaku</h4>
+          <div className="bg-surface border border-outline-variant rounded-3xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between gap-3 sm:gap-4">
+            <div className="flex-1 space-y-1.5 text-left min-w-0">
+              <p className="text-[9px] sm:text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider sm:tracking-widest truncate">Karakter & Kedisiplinan</p>
+              <h4 className="text-lg sm:text-xl font-extrabold text-on-surface leading-tight font-outfit truncate">Skor Perilaku</h4>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-black text-on-surface">{Math.max(0, 100 - totalPoints)}</span>
-                <span className="text-xs text-on-surface-variant/60 font-medium">/ 100 Poin</span>
+                <span className="text-xl sm:text-2xl font-black text-on-surface">{Math.max(0, 100 - totalPoints)}</span>
+                <span className="text-[11px] sm:text-xs text-on-surface-variant/60 font-medium">/ 100 Poin</span>
               </div>
               {totalPoints > 0 && (
-                <span className="inline-block text-[10px] font-bold bg-rose-500/10 text-rose-600 px-2 py-0.5 rounded-lg border border-rose-500/20 mt-1">
+                <span className="inline-block text-[9px] sm:text-[10px] font-bold bg-rose-500/10 text-rose-600 px-2 py-0.5 rounded-lg border border-rose-500/20 mt-1 max-w-full truncate">
                   -{totalPoints} Poin Demerit
                 </span>
               )}
             </div>
             
             {/* SVG Progress Ring */}
-            <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
+            <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center shrink-0">
               <svg className="w-full h-full transform -rotate-90">
                 <circle
-                  cx="40"
-                  cy="40"
-                  r="30"
+                  cx="50%"
+                  cy="50%"
+                  r="35%"
                   className="stroke-slate-100"
-                  strokeWidth="6"
+                  strokeWidth="5"
                   fill="transparent"
                 />
                 <circle
-                  cx="40"
-                  cy="40"
-                  r="30"
+                  cx="50%"
+                  cy="50%"
+                  r="35%"
                   className={`transition-all duration-500 ease-out ${
                     totalPoints === 0 ? 'stroke-emerald-500' : totalPoints < 30 ? 'stroke-amber-500' : 'stroke-rose-500'
                   }`}
-                  strokeWidth="6"
+                  strokeWidth="5"
                   fill="transparent"
-                  strokeDasharray={`${2 * Math.PI * 30}`}
-                  strokeDashoffset={`${2 * Math.PI * 30 - (Math.max(0, 100 - totalPoints) / 100) * (2 * Math.PI * 30)}`}
+                  strokeDasharray="220"
+                  strokeDashoffset={String(220 - (Math.max(0, 100 - totalPoints) / 100) * 220)}
                   strokeLinecap="round"
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className={`text-[12px] font-black font-outfit ${
+                <span className={`text-[11px] sm:text-[12px] font-black font-outfit ${
                   totalPoints === 0 ? 'text-emerald-600' : totalPoints < 30 ? 'text-amber-600' : 'text-rose-600'
                 }`}>
                   {Math.max(0, 100 - totalPoints)}%
@@ -455,50 +463,50 @@ export default function StudentProfileLayer({
           </div>
 
           {/* Kehadiran (Apple Ring Style) */}
-          <div className="bg-surface border border-outline-variant rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between gap-4">
-            <div className="flex-1 space-y-1.5 text-left">
-              <p className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest">Kehadiran Kelas</p>
-              <h4 className="text-xl font-extrabold text-on-surface leading-tight font-outfit">Persentase Presensi</h4>
+          <div className="bg-surface border border-outline-variant rounded-3xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between gap-3 sm:gap-4">
+            <div className="flex-1 space-y-1.5 text-left min-w-0">
+              <p className="text-[9px] sm:text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider sm:tracking-widest truncate">Kehadiran Kelas</p>
+              <h4 className="text-lg sm:text-xl font-extrabold text-on-surface leading-tight font-outfit truncate">Persentase Presensi</h4>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-black text-on-surface">
+                <span className="text-xl sm:text-2xl font-black text-on-surface">
                   {isLoadingSummary ? '...' : (studentSummary?.attendance?.percentage !== null && studentSummary?.attendance?.percentage !== undefined ? `${studentSummary.attendance.percentage}%` : '—')}
                 </span>
-                <span className="text-xs text-on-surface-variant/60 font-medium">Keaktifan</span>
+                <span className="text-[11px] sm:text-xs text-on-surface-variant/60 font-medium">Keaktifan</span>
               </div>
               {!isLoadingSummary && studentSummary?.attendance?.total !== undefined && (
-                <span className="inline-block text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-lg border border-primary/20 mt-1">
-                  Hadir {studentSummary.attendance.present} dari {studentSummary.attendance.total} Pertemuan
+                <span className="inline-block text-[9px] sm:text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-lg border border-primary/20 mt-1 max-w-full truncate">
+                  Hadir {studentSummary.attendance.present} dari {studentSummary.attendance.total}
                 </span>
               )}
             </div>
             
             {/* SVG Progress Ring */}
-            <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
+            <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center shrink-0">
               <svg className="w-full h-full transform -rotate-90">
                 <circle
-                  cx="40"
-                  cy="40"
-                  r="30"
+                  cx="50%"
+                  cy="50%"
+                  r="35%"
                   className="stroke-slate-100"
-                  strokeWidth="6"
+                  strokeWidth="5"
                   fill="transparent"
                 />
                 <circle
-                  cx="40"
-                  cy="40"
-                  r="30"
+                  cx="50%"
+                  cy="50%"
+                  r="35%"
                   className={`transition-all duration-500 ease-out ${
                     !studentSummary?.attendance?.percentage ? 'stroke-slate-300' : studentSummary.attendance.percentage >= 90 ? 'stroke-primary' : 'stroke-amber-500'
                   }`}
-                  strokeWidth="6"
+                  strokeWidth="5"
                   fill="transparent"
-                  strokeDasharray={`${2 * Math.PI * 30}`}
-                  strokeDashoffset={`${2 * Math.PI * 30 - ((studentSummary?.attendance?.percentage ?? 0) / 100) * (2 * Math.PI * 30)}`}
+                  strokeDasharray="220"
+                  strokeDashoffset={String(220 - ((studentSummary?.attendance?.percentage ?? 0) / 100) * 220)}
                   strokeLinecap="round"
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-[12px] font-black font-outfit text-on-surface-variant">
+                <span className="text-[11px] sm:text-[12px] font-black font-outfit text-on-surface-variant">
                   {isLoadingSummary ? '...' : (studentSummary?.attendance?.percentage !== null && studentSummary?.attendance?.percentage !== undefined ? `${studentSummary.attendance.percentage}%` : '—')}
                 </span>
               </div>
