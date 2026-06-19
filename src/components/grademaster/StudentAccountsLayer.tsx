@@ -240,25 +240,29 @@ export default function StudentAccountsLayer({
   return (
     <main className="min-h-dvh p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto page-pt md:pt-16 pb-24 font-outfit bg-transparent">
       <header className="mb-6 md:mb-10">
-        <button type="button" onClick={onBack} className="flex items-center gap-2 text-on-surface-variant hover:text-[#00b4ff] font-sans text-[13px] font-medium transition-all mb-4 bg-surface-variant px-4 py-2 rounded-xl border border-outline-variant hover:border-[#00b4ff]/20">
+        <button 
+          type="button" 
+          onClick={onBack} 
+          className="flex items-center gap-2 text-on-surface-variant hover:text-primary font-sans text-xs font-bold uppercase tracking-wider transition-all mb-4 bg-surface-variant px-4 py-2.5 rounded-xl border border-outline-variant hover:border-primary/20 min-h-[38px]"
+        >
           <ArrowLeft size={14} /> Beranda
         </button>
-        <h1 className="text-xl md:text-3xl font-sans font-bold text-on-surface tracking-[-0.5px] flex items-center gap-3">
-          <KeyRound className="text-[#00b4ff]" size={24} /> Manajemen Akun Siswa
+        <h1 className="text-2xl md:text-3xl font-bold text-on-surface tracking-tight flex items-center gap-3 font-outfit">
+          <KeyRound className="text-primary" size={28} /> Manajemen Akun Siswa
         </h1>
-        <p className="text-[13px] text-on-surface-variant font-sans mt-1">Buat, kelola, dan ekspor kredensial login siswa</p>
+        <p className="text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest mt-1.5">Buat, kelola, dan ekspor kredensial login siswa</p>
       </header>
 
       {/* Class Selector */}
-      <div className="bg-[#111113] rounded-2xl p-4 border border-outline-variant mb-6 shadow-xl shadow-black/20">
-        <label className="block text-[12px] font-sans font-medium text-on-surface-variant mb-2">Pilih Kelas</label>
+      <div className="bg-surface border border-outline-variant rounded-2xl p-5 mb-6 shadow-sm">
+        <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Pilih Kelas</label>
         <select
           value={selectedClass}
           onChange={(e) => setSelectedClass(e.target.value)}
-          className="w-full bg-black/40 border border-outline-variant rounded-xl p-3.5 text-[15px] font-sans font-medium text-on-surface outline-none focus:border-[#00b4ff]/50 transition-all appearance-none"
+          className="w-full bg-surface-variant border border-outline-variant rounded-xl p-3 text-sm font-bold text-on-surface focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all appearance-none cursor-pointer"
         >
-          <option value="">-- Pilih Kelas --</option>
-          {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
+          <option value="" className="text-on-surface-variant">-- Pilih Kelas --</option>
+          {availableClasses.map(c => <option key={c} value={c} className="text-on-surface">{c}</option>)}
         </select>
       </div>
 
@@ -268,7 +272,7 @@ export default function StudentAccountsLayer({
           <button
             onClick={handleGenerate}
             disabled={isGenerating}
-            className="flex items-center justify-center gap-2 px-4 py-3.5 bg-[#00b4ff]/10 text-[#00b4ff] border border-[#00b4ff]/20 rounded-2xl text-[13px] font-sans font-semibold transition-all active:scale-[0.97] disabled:opacity-50"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white border border-primary/10 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] hover:bg-primary/95 disabled:opacity-50 min-h-[44px]"
           >
             {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
             Generate
@@ -276,7 +280,7 @@ export default function StudentAccountsLayer({
           <button
             onClick={handleExport}
             disabled={isExporting || accounts.length === 0}
-            className="flex items-center justify-center gap-2 px-4 py-3.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-2xl text-[13px] font-sans font-semibold transition-all active:scale-[0.97] disabled:opacity-50"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 min-h-[44px]"
           >
             {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
             Export Excel
@@ -284,7 +288,7 @@ export default function StudentAccountsLayer({
           <button
             onClick={handleClearPasswords}
             disabled={isClearing || !hasPasswords}
-            className="flex items-center justify-center gap-2 px-4 py-3.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-2xl text-[13px] font-sans font-semibold transition-all active:scale-[0.97] disabled:opacity-50"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 min-h-[44px]"
           >
             {isClearing ? <Loader2 size={16} className="animate-spin" /> : <Shield size={16} />}
             Hapus Password
@@ -296,13 +300,13 @@ export default function StudentAccountsLayer({
               setShowPromoteModal(true);
             }}
             disabled={accounts.length === 0}
-            className="flex items-center justify-center gap-2 px-4 py-3.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-2xl text-[13px] font-sans font-semibold transition-all active:scale-[0.97] disabled:opacity-50"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 hover:bg-indigo-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 min-h-[44px]"
           >
             <TrendingUp size={16} />
             Kenaikan Kelas
           </button>
-          <div className="hidden md:flex items-center justify-center px-4 py-3.5 bg-surface-variant border border-outline-variant rounded-2xl text-[13px] font-sans font-medium text-on-surface-variant">
-            <Users size={16} className="mr-2" /> {accounts.length} Akun
+          <div className="hidden md:flex items-center justify-center px-4 py-3 bg-surface border border-outline-variant rounded-xl text-xs font-bold text-on-surface-variant uppercase tracking-wider min-h-[44px]">
+            <Users size={16} className="mr-2 text-primary" /> {accounts.length} Akun
           </div>
         </div>
       )}
@@ -311,8 +315,8 @@ export default function StudentAccountsLayer({
       <div className="space-y-3">
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="bg-[#111113] border border-outline-variant rounded-2xl p-4 animate-pulse flex gap-4 items-center">
-              <div className="w-12 h-12 bg-surface-variant rounded-2xl shrink-0" />
+            <div key={i} className="bg-surface border border-outline-variant rounded-xl p-4 animate-pulse flex gap-4 items-center">
+              <div className="w-12 h-12 bg-surface-container-highest rounded-xl shrink-0" />
               <div className="flex-1 space-y-2.5">
                 <div className="h-4 bg-surface-container-highest rounded-full w-2/3" />
                 <div className="h-3 bg-surface-variant rounded-full w-1/3" />
@@ -321,11 +325,11 @@ export default function StudentAccountsLayer({
           ))
         ) : accounts.length > 0 ? (
           accounts.map((account, idx) => (
-            <div key={account.id} className="bg-[#111113] border border-outline-variant rounded-2xl p-4 shadow-lg shadow-black/20 transition-all active:scale-[0.99]">
+            <div key={account.id} className="bg-surface border border-outline-variant hover:border-primary/30 rounded-xl p-4 shadow-sm hover:shadow transition-all duration-200">
               <div className="flex items-center gap-4">
                 {/* Photo / Avatar */}
                 <div className="relative group shrink-0">
-                  <div className="w-12 h-12 rounded-2xl overflow-hidden bg-surface-variant border border-outline-variant flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-surface-variant border border-outline-variant flex items-center justify-center">
                     {account.profile_photo_url ? (
                       <img
                         src={account.profile_photo_url}
@@ -334,11 +338,11 @@ export default function StudentAccountsLayer({
                         loading="lazy"
                       />
                     ) : (
-                      <span className="text-lg font-bold text-slate-600">{(account.student_name || 'S').charAt(0)}</span>
+                      <span className="text-base font-black text-primary font-outfit">{(account.student_name || 'S').charAt(0)}</span>
                     )}
                   </div>
-                  <label className="absolute inset-0 cursor-pointer opacity-0 group-hover:opacity-100 bg-black/60 rounded-2xl flex items-center justify-center transition-opacity">
-                    <Camera size={16} className="text-on-surface" />
+                  <label className="absolute inset-0 cursor-pointer opacity-0 group-hover:opacity-100 bg-black/60 rounded-xl flex items-center justify-center transition-opacity">
+                    <Camera size={16} className="text-white" />
                     <input
                       type="file"
                       accept="image/*"
@@ -354,16 +358,16 @@ export default function StudentAccountsLayer({
                 {/* Info */}
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-[15px] font-sans font-semibold text-on-surface truncate">{account.student_name}</h3>
-                    <span className="text-[11px] font-sans text-on-surface-variant">#{idx + 1}</span>
+                    <h3 className="text-sm font-extrabold text-on-surface truncate font-sans">{account.student_name}</h3>
+                    <span className="text-[10px] font-bold text-on-surface-variant/40 bg-surface-variant px-1.5 py-0.5 rounded font-mono">#{idx + 1}</span>
                   </div>
                   <div className="flex items-center gap-3 mt-1">
-                    <span className="text-[12px] font-sans text-[#00b4ff] font-medium">@{account.username}</span>
+                    <span className="text-xs font-bold text-primary">@{account.username}</span>
                     {account.password_plain ? (
-                      <span className="text-[11px] font-mono bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-lg border border-emerald-500/20">{account.password_plain}</span>
+                      <span className="text-xs font-mono bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-lg border border-emerald-500/20 font-bold">{account.password_plain}</span>
                     ) : (
-                      <span className="text-[11px] font-sans text-slate-600 flex items-center gap-1">
-                        <ShieldCheck size={10} /> Tersimpan
+                      <span className="text-[11px] font-bold text-on-surface-variant/60 flex items-center gap-1">
+                        <ShieldCheck size={12} className="text-emerald-500" /> Tersimpan
                       </span>
                     )}
                   </div>
@@ -372,7 +376,7 @@ export default function StudentAccountsLayer({
                 {/* Delete */}
                 <button
                   onClick={() => handleDeleteAccount(account.id)}
-                  className="p-2 text-slate-600 hover:text-rose-500 rounded-xl transition-colors active:bg-surface-variant shrink-0"
+                  className="p-2 text-on-surface-variant/40 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all shrink-0 min-h-[38px] flex items-center justify-center"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -380,27 +384,28 @@ export default function StudentAccountsLayer({
             </div>
           ))
         ) : selectedClass ? (
-          <div className="py-20 text-center">
-            <Users size={48} className="mx-auto text-slate-700 mb-4 stroke-1" />
-            <p className="text-[14px] font-sans font-medium text-on-surface-variant">Belum ada akun untuk kelas ini</p>
-            <p className="text-[12px] font-sans text-slate-600 mt-1">Klik "Generate" untuk membuat akun otomatis</p>
+          <div className="py-20 text-center bg-surface border border-dashed border-outline-variant rounded-2xl">
+            <Users size={48} className="mx-auto text-on-surface-variant/40 mb-4 stroke-1" />
+            <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider">Belum ada akun untuk kelas ini</p>
+            <p className="text-xs text-on-surface-variant/60 mt-1">Klik tombol **"Generate"** di atas untuk membuat akun otomatis secara instan.</p>
           </div>
         ) : (
-          <div className="py-20 text-center">
-            <KeyRound size={48} className="mx-auto text-slate-700 mb-4 stroke-1" />
-            <p className="text-[14px] font-sans font-medium text-on-surface-variant">Pilih kelas untuk memulai</p>
+          <div className="py-20 text-center bg-surface border border-dashed border-outline-variant rounded-2xl">
+            <KeyRound size={48} className="mx-auto text-on-surface-variant/40 mb-4 stroke-1" />
+            <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider">Silakan pilih kelas terlebih dahulu</p>
+            <p className="text-xs text-on-surface-variant/60 mt-1">Gunakan pemilih kelas di atas untuk memulai pengelolaan kredensial siswa.</p>
           </div>
         )}
       </div>
 
       {/* Security Notice */}
       {hasPasswords && accounts.length > 0 && (
-        <div className="mt-6 p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl flex items-start gap-3">
-          <AlertCircle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+        <div className="mt-6 p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl flex items-start gap-3">
+          <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <h4 className="text-[13px] font-sans font-semibold text-amber-400">Password Masih Tersimpan</h4>
-            <p className="text-[12px] font-sans text-on-surface-variant mt-0.5 leading-relaxed">
-              Segera ekspor ke Excel lalu klik "Hapus Password" untuk keamanan. Password plain hanya bersifat sementara.
+            <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wider">Password Masih Tersimpan</h4>
+            <p className="text-xs text-amber-700/80 mt-1 leading-relaxed">
+              Segera ekspor ke Excel lalu klik **"Hapus Password"** untuk keamanan. Password plain hanya bersifat sementara sebelum akun diklaim siswa.
             </p>
           </div>
         </div>
@@ -408,34 +413,34 @@ export default function StudentAccountsLayer({
 
       {/* Modal Kenaikan Kelas */}
       {showPromoteModal && (
-        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="bg-[#111113] border border-outline-variant rounded-[2rem] p-6 max-w-md w-full relative shadow-2xl shadow-black/50 animate-in zoom-in-95 duration-300">
-            <h3 className="text-lg font-sans font-bold text-on-surface mb-2 flex items-center gap-2">
-              <TrendingUp className="text-indigo-400" size={20} /> Kenaikan Kelas Siswa
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-surface border border-outline-variant rounded-[2rem] p-6 max-w-md w-full relative shadow-2xl animate-in zoom-in-95 duration-300">
+            <h3 className="text-lg font-bold text-on-surface mb-2 flex items-center gap-2 font-outfit">
+              <TrendingUp className="text-indigo-600" size={20} /> Kenaikan Kelas Siswa
             </h3>
-            <p className="text-[12px] text-on-surface-variant mb-6 leading-relaxed text-left">
-              Pindahkan seluruh siswa kelas <span className="text-[#00b4ff] font-semibold">{selectedClass}</span> ({activeYear}) secara massal ke kelas dan tahun ajaran baru di bawah ini.
+            <p className="text-xs text-on-surface-variant mb-6 leading-relaxed text-left">
+              Pindahkan seluruh siswa kelas <span className="text-primary font-bold">{selectedClass}</span> ({activeYear}) secara massal ke kelas dan tahun ajaran baru di bawah ini.
             </p>
             
             <div className="space-y-4 mb-6 text-left">
               <div>
-                <label className="block text-[11px] font-sans font-medium text-on-surface-variant mb-1.5">Kelas Baru (Tujuan)</label>
+                <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Kelas Baru (Tujuan)</label>
                 <input
                   type="text"
                   value={promoteToClass}
                   onChange={(e) => setPromoteToClass(e.target.value.toUpperCase())}
                   placeholder="Misal: 8A"
-                  className="w-full bg-black/40 border border-outline-variant rounded-xl p-3.5 text-[14px] font-sans font-medium text-on-surface outline-none focus:border-indigo-500/50 transition-all"
+                  className="w-full bg-surface-variant border border-outline-variant rounded-xl p-3.5 text-sm font-bold text-on-surface outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-sans font-medium text-on-surface-variant mb-1.5">Tahun Ajaran Baru (Tujuan)</label>
+                <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Tahun Ajaran Baru (Tujuan)</label>
                 <input
                   type="text"
                   value={promoteToYear}
                   onChange={(e) => setPromoteToYear(e.target.value)}
                   placeholder="Misal: 2026/2027"
-                  className="w-full bg-black/40 border border-outline-variant rounded-xl p-3.5 text-[14px] font-sans font-medium text-on-surface outline-none focus:border-indigo-500/50 transition-all"
+                  className="w-full bg-surface-variant border border-outline-variant rounded-xl p-3.5 text-sm font-bold text-on-surface outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all"
                 />
               </div>
             </div>
@@ -444,7 +449,7 @@ export default function StudentAccountsLayer({
               <button
                 onClick={() => setShowPromoteModal(false)}
                 type="button"
-                className="flex-1 py-3.5 bg-surface-variant border border-outline-variant hover:bg-surface-container-highest rounded-xl text-[13px] font-sans font-semibold text-on-surface transition-all active:scale-[0.97]"
+                className="flex-1 py-3 bg-surface-variant border border-outline-variant hover:bg-surface-container-highest rounded-xl text-xs font-bold uppercase tracking-wider text-on-surface transition-all active:scale-[0.97] min-h-[44px]"
               >
                 Batal
               </button>
@@ -452,7 +457,7 @@ export default function StudentAccountsLayer({
                 onClick={handlePromote}
                 disabled={!promoteToClass.trim() || !promoteToYear.trim() || isPromoting}
                 type="button"
-                className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl text-[13px] font-sans font-semibold text-white transition-all active:scale-[0.97] flex items-center justify-center gap-1.5"
+                className="flex-1 py-3 bg-primary hover:bg-primary-dim disabled:opacity-50 rounded-xl text-xs font-bold uppercase tracking-wider text-white transition-all active:scale-[0.97] flex items-center justify-center gap-1.5 min-h-[44px]"
               >
                 {isPromoting ? <Loader2 size={14} className="animate-spin" /> : "Konfirmasi Naik"}
               </button>
