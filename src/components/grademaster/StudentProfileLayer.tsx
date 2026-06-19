@@ -83,6 +83,7 @@ export default function StudentProfileLayer({
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [localReasons, setLocalReasons] = useState<{ text: string, weight: number }[]>(behaviorReasons);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   // Dynamic Badges
   interface BadgeItem {
@@ -187,6 +188,10 @@ export default function StudentProfileLayer({
   useEffect(() => {
     setLocalReasons(behaviorReasons);
   }, [behaviorReasons]);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     fetchStudentLogs();
@@ -916,7 +921,7 @@ export default function StudentProfileLayer({
                     </div>
 
                     {/* Grafik Perkembangan Nilai */}
-                    {totalExams >= 1 && (
+                    {isMounted && totalExams >= 1 && (
                       <div className="bg-surface border border-outline-variant rounded-[2rem] p-5 sm:p-6 shadow-sm space-y-4 text-left">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <h4 className="text-xs font-black text-on-surface-variant uppercase tracking-[0.2em] flex items-center gap-2">
@@ -929,7 +934,7 @@ export default function StudentProfileLayer({
                           )}
                         </div>
                         <div className="h-[200px] w-full pt-4">
-                          <ResponsiveContainer width="100%" height="100%">
+                          <ResponsiveContainer width="99%" height={200}>
                             <LineChart data={chartData} margin={{ left: -20, right: 10, top: 10, bottom: 5 }}>
                               <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f4" vertical={false} />
                               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#adaaad', fontSize: 9, fontWeight: 'bold'}} />
