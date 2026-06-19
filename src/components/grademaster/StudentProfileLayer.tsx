@@ -49,6 +49,19 @@ interface StudentProfileLayerProps {
   behaviorReasons?: { text: string; weight: number }[];
 }
 
+const CHART_MARGIN = { left: -20, right: 10, top: 10, bottom: 5 };
+const CHART_TICK_STYLE = { fill: '#adaaad', fontSize: 9, fontWeight: 'bold' };
+const TOOLTIP_CONTENT_STYLE = {
+  backgroundColor: '#ffffff',
+  borderRadius: '16px',
+  border: '1px solid #e2e8f0',
+  fontSize: '11px',
+  fontWeight: 'bold',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+};
+const ACTIVE_DOT_PROPS = { r: 6 };
+const DOT_PROPS = { r: 4, strokeWidth: 2 };
+
 export default function StudentProfileLayer({ 
   onBack, 
   setToast, 
@@ -84,6 +97,18 @@ export default function StudentProfileLayer({
   const [localReasons, setLocalReasons] = useState<{ text: string, weight: number }[]>(behaviorReasons);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isMounted, setIsMounted] = useState(false);
+
+  // Memoize chart data to prevent Recharts rendering loop
+  const chartData = React.useMemo(() => {
+    const history = studentSummary?.academicHistory || [];
+    return [...history]
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .map((g: any) => ({
+        name: g.sessionName.slice(0, 10),
+        nilai: Number(g.score || 0),
+        subject: g.subject
+      }));
+  }, [studentSummary?.academicHistory]);
 
   // Dynamic Badges
   interface BadgeItem {
@@ -807,14 +832,7 @@ export default function StudentProfileLayer({
               }
             }
 
-            // Chart data
-            const chartData = [...academicHistory]
-              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-              .map((g: any) => ({
-                name: g.sessionName.slice(0, 10),
-                nilai: Number(g.score || 0),
-                subject: g.subject
-              }));
+            // Chart data is memoized at top level
 
             // Insight Otomatis
             let insightText = "";
@@ -935,15 +953,15 @@ export default function StudentProfileLayer({
                         </div>
                         <div className="h-[200px] w-full pt-4">
                           <ResponsiveContainer width="99%" height={200}>
-                            <LineChart data={chartData} margin={{ left: -20, right: 10, top: 10, bottom: 5 }}>
+                            <LineChart data={chartData} margin={CHART_MARGIN}>
                               <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f4" vertical={false} />
-                              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#adaaad', fontSize: 9, fontWeight: 'bold'}} />
-                              <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{fill: '#adaaad', fontSize: 9, fontWeight: 'bold'}} />
+                              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={CHART_TICK_STYLE} />
+                              <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={CHART_TICK_STYLE} />
                               <Tooltip 
-                                contentStyle={{backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', fontSize: '11px', fontWeight: 'bold', boxShadow: '0 4px 12px rgba(0,0,0,0.05)'}} 
+                                contentStyle={TOOLTIP_CONTENT_STYLE} 
                                 formatter={(value, name, props) => [`Nilai: ${value}`, `${props.payload.subject}`]}
                               />
-                              <Line type="monotone" dataKey="nilai" stroke="#3b82f6" strokeWidth={3} activeDot={{ r: 6 }} dot={{ r: 4, strokeWidth: 2 }} />
+                              <Line type="monotone" dataKey="nilai" stroke="#3b82f6" strokeWidth={3} activeDot={ACTIVE_DOT_PROPS} dot={DOT_PROPS} />
                             </LineChart>
                           </ResponsiveContainer>
                         </div>

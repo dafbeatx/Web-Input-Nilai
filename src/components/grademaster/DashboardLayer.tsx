@@ -18,6 +18,10 @@ import {
 } from 'recharts';
 import InsightPanel from './InsightPanel';
 
+const CHART_TICK_STYLE_DASHBOARD = { fill: '#adaaad', fontSize: 10, fontWeight: 'bold' };
+const TOOLTIP_CONTENT_STYLE_DASHBOARD = { backgroundColor: '#19191c', borderRadius: '12px', border: '1px solid #ffffff10', fontSize: '12px' };
+const BAR_RADIUS: [number, number, number, number] = [6, 6, 0, 0];
+
 interface BehaviorRecord {
   student_name: string;
   total_points: number;
@@ -245,6 +249,11 @@ export default function DashboardLayer({
   const passCount = gradedStudents.filter(s => s.finalScore >= kkm).length;
   const remCount = gradedStudents.length - passCount;
   const passRate = gradedStudents.length > 0 ? Math.round((passCount / gradedStudents.length) * 100) : 0;
+
+  const pieData = useMemo(() => [
+    { name: 'Lulus', value: passCount },
+    { name: 'Remedial', value: remCount }
+  ], [passCount, remCount]);
 
   // Student Remedial Detection
   const normalizeName = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase();
@@ -575,10 +584,10 @@ export default function DashboardLayer({
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={analytics.distribution}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
-                      <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{fill: '#adaaad', fontSize: 10, fontWeight: 'bold'}} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#adaaad', fontSize: 10, fontWeight: 'bold'}} />
-                      <Tooltip contentStyle={{backgroundColor: '#19191c', borderRadius: '12px', border: '1px solid #ffffff10', fontSize: '12px'}} />
-                      <Bar dataKey="count" fill="url(#colorGradient)" radius={[6, 6, 0, 0]} />
+                      <XAxis dataKey="range" axisLine={false} tickLine={false} tick={CHART_TICK_STYLE_DASHBOARD} />
+                      <YAxis axisLine={false} tickLine={false} tick={CHART_TICK_STYLE_DASHBOARD} />
+                      <Tooltip contentStyle={TOOLTIP_CONTENT_STYLE_DASHBOARD} />
+                      <Bar dataKey="count" fill="url(#colorGradient)" radius={BAR_RADIUS} />
                       <defs>
                         <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#9bffce" stopOpacity={0.8}/>
@@ -597,10 +606,7 @@ export default function DashboardLayer({
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
-                            data={[
-                              { name: 'Lulus', value: passCount },
-                              { name: 'Remedial', value: remCount }
-                            ]}
+                            data={pieData}
                             innerRadius={50}
                             outerRadius={80}
                             paddingAngle={8}
