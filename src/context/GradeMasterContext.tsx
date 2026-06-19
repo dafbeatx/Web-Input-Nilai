@@ -429,6 +429,9 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       await fetch('/api/student/logout', { method: 'POST' }).catch(() => {});
     }
 
+    // Hapus cookie orang tua / parent jika ada
+    document.cookie = "gm_parent_student=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Strict";
+
     await supabase.auth.signOut();
 
     setIsAdmin(false);

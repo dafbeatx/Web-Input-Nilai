@@ -90,6 +90,10 @@ export default function StudentLoginLayer({
     isStudentSelectedRef.current = true;
     setIsParentMode(false);
     setIsParent(true);
+    
+    // Set cookie untuk autentikasi Orang Tua di API server-side
+    document.cookie = `gm_parent_student=${encodeURIComponent(s.student_name)}; path=/; max-age=604800; SameSite=Strict`;
+
     setStudentData({ 
       id: s.id, 
       name: s.student_name, 

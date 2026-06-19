@@ -1,6 +1,8 @@
-export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../../lib/supabase/admin';
+import { getStudentSession } from '@/lib/grademaster/studentAuth';
+import { getAdminSession } from '@/lib/grademaster/admin';
+import { cookies } from 'next/headers';
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,11 +14,31 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Nama siswa wajib diisi' }, { status: 400 });
     }
 
+    const adminSession = await getAdminSession();
+    const studentSession = await getStudentSession();
+    
+    let targetStudentName = studentName;
+
+    if (studentSession) {
+      // 1. Siswa login: paksa agar hanya mengambil data dirinya sendiri
+      targetStudentName = studentSession.student.name;
+    } else if (!adminSession) {
+      // 2. Orang tua / Guest: periksa cookie gm_parent_student
+      const cookieStore = await cookies();
+      const parentStudent = cookieStore.get('gm_parent_student')?.value;
+      if (parentStudent) {
+        targetStudentName = parentStudent;
+      } else {
+        // Jika tidak ada session admin, siswa, maupun parent cookie, tolak akses demi keamanan data
+        return NextResponse.json({ error: 'Akses ditolak: Sesi tidak valid' }, { status: 403 });
+      }
+    }
+
     // 1. Fetch Attendance Stats
     const { data: attData, error: attError } = await supabaseAdmin
       .from('gm_attendance')
       .select('status')
-      .eq('student_name', studentName)
+      .eq('student_name', targetStudentName)
       .eq('academic_year', academicYear);
 
     if (attError) throw attError;
@@ -42,7 +64,7 @@ export async function GET(req: NextRequest) {
           scoring_config
         )
       `)
-      .eq('name', studentName)
+      .eq('name', targetStudentName)
       .order('created_at', { ascending: false });
 
     if (gradeError) throw gradeError;
@@ -82,7 +104,7 @@ export async function GET(req: NextRequest) {
     const { data: behaviorData } = await supabaseAdmin
       .from('gm_behaviors')
       .select('total_points')
-      .eq('student_name', studentName)
+      .eq('student_name', targetStudentName)
       .eq('academic_year', academicYear)
       .single();
 
