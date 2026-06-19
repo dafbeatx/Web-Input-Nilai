@@ -2792,8 +2792,18 @@ export default function StudentRemedialLayer({
 
     const handleShare = () => {
       const timeStr = getRemainingTimeStr();
-      const text = `SAYA SUDAH BERES REMEDIAL! 🎓\n\n👤 Nama: ${studentName}\n🏫 Kelas: ${className}\n📚 Mapel: ${subject}\n📊 Jenis: ${examType}\n🔥 Skor: ${finalScore}\n\nSisa waktu input nilai: ${timeStr}. Buruan dikerjakan!`;
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+      
+      // Randomize classmate who is also in remedial from remainingStudents list
+      let targetFriend = "";
+      if (remainingStudents && remainingStudents.length > 0) {
+        const randIndex = Math.floor(Math.random() * remainingStudents.length);
+        targetFriend = remainingStudents[randIndex].name;
+      }
+
+      const friendPart = targetFriend ? `Khusus untuk *${targetFriend}* dan rekan lainnya, ` : '';
+      const text = `*GradeMaster OS - Pengingat Remedial* 🔄\n\nHalo! Saya (*${studentName}*) sudah berhasil menyelesaikan remedial ujian *${subject}*.\n\n${friendPart}karena nilai kita akan ditahan sementara oleh sistem sampai semua rekan sekelas selesai mengerjakan, mohon segera diselesaikan pengerjaannya ya!\n\nLink Pengerjaan: ${window.location.origin}\nTerima kasih! 🙏`;
+      
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
     };
 
     return (
@@ -2820,7 +2830,7 @@ export default function StudentRemedialLayer({
                  <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-5 space-y-3">
                    <p className="text-[11px] font-black text-rose-400 uppercase tracking-wider mb-2">Riwayat Pelanggaran Keamanan:</p>
                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                     {(serverCheatingFlags.length > 0 ? serverCheatingFlags : clientCheatingFlags).map((flag, idx) => {
+                     {(serverCheatingFlags.length > 0 ? serverCheatingFlags : clientCheatingFlags).filter(f => !f.includes('Nilai remedial ditahan')).map((flag, idx) => {
                        let label = flag;
                        let desc = "";
                        if (flag === 'TAB_SWITCH' || flag.includes('Meninggalkan halaman') || flag.includes('Tab Switch')) {
@@ -2868,7 +2878,7 @@ export default function StudentRemedialLayer({
                          </div>
                        );
                      })}
-                     {(serverCheatingFlags.length === 0 && clientCheatingFlags.length === 0) && (
+                     {((serverCheatingFlags.length > 0 ? serverCheatingFlags : clientCheatingFlags).filter(f => !f.includes('Nilai remedial ditahan')).length === 0) && (
                        <p className="text-xs text-on-surface-variant font-medium text-center">Pelanggaran aturan proctoring ujian terdeteksi secara otomatis oleh sistem.</p>
                      )}
                    </div>
@@ -3007,7 +3017,7 @@ export default function StudentRemedialLayer({
                       onClick={handleShare}
                       className="w-full py-5 bg-emerald-500 text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all border border-outline-variant flex items-center justify-center gap-3"
                     >
-                      Kabarkan Teman Sekelas <Send size={18} />
+                      Ingatkan Teman via WA <Send size={18} />
                     </button>
                  )}
               </>

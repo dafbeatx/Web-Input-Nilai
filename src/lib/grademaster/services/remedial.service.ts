@@ -551,7 +551,8 @@ export async function submitRemedial(
     return !finishedStates.includes(s.remedial_status || 'NONE');
   });
 
-  const isHeldBack = pendingRemedialSiblings.length > 0;
+  const ownCheated = status === 'CHEATED' || studentUpdate.remedial_status === 'CHEATED' || studentUpdate.is_cheated === true;
+  const isHeldBack = pendingRemedialSiblings.length > 0 && !ownCheated;
 
   if (isHeldBack) {
     console.log(`[Remedial Holdback] Score for ${studentName} is held back because there are other pending remedial students.`);
@@ -853,7 +854,7 @@ export async function finalizeRemedial(
     return !finishedStates.includes(s.remedial_status || 'NONE');
   });
 
-  const isHeldBack = pendingRemedialSiblings.length > 0;
+  const isHeldBack = pendingRemedialSiblings.length > 0 && !student.is_cheated;
 
   let finalUpdateScore = finalScore;
   let finalFlags = (student as any).cheating_flags || [];
