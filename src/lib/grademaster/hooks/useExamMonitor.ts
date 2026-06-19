@@ -15,6 +15,18 @@ export const useExamMonitor = ({ attemptId, onViolation, onNetworkChange, examSt
   const initialWidthRef = useRef<number>(0);
   const initialHeightRef = useRef<number>(0);
 
+  const onViolationRef = useRef(onViolation);
+  const onNetworkChangeRef = useRef(onNetworkChange);
+
+  // Keep refs up-to-date
+  useEffect(() => {
+    onViolationRef.current = onViolation;
+  }, [onViolation]);
+
+  useEffect(() => {
+    onNetworkChangeRef.current = onNetworkChange;
+  }, [onNetworkChange]);
+
   const sendLog = useCallback(async (eventType: string, severity: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW', metadata: any = {}) => {
     if (!attemptId) return;
 
@@ -71,18 +83,18 @@ export const useExamMonitor = ({ attemptId, onViolation, onNetworkChange, examSt
 
     // 3. Network Listeners
     const handleOnline = () => {
-      onNetworkChange(true);
+      onNetworkChangeRef.current(true);
       sendLog('NETWORK_RECONNECT', 'LOW');
     };
     const handleOffline = () => {
-      onNetworkChange(false);
+      onNetworkChangeRef.current(false);
       sendLog('NETWORK_DISCONNECT', 'MEDIUM');
     };
 
     // 4. Visibility Listeners
     const handleVisibility = () => {
       if (document.hidden) {
-        onViolation('TAB_SWITCH', 'Student switched tabs or exited app', 'HIGH');
+        onViolationRef.current('TAB_SWITCH', 'Student switched tabs or exited app', 'HIGH');
         sendLog('TAB_BLUR', 'HIGH');
       } else {
         sendLog('TAB_FOCUS', 'LOW');
@@ -99,7 +111,7 @@ export const useExamMonitor = ({ attemptId, onViolation, onNetworkChange, examSt
       const hDiff = Math.abs(currHeight - initialHeightRef.current) / initialHeightRef.current;
       
       if (wDiff > 0.2 || hDiff > 0.2) {
-        onViolation('SPLIT_SCREEN', 'Possible split-screen or window resize detected', 'MEDIUM');
+        onViolationRef.current('SPLIT_SCREEN', 'Possible split-screen or window resize detected', 'MEDIUM');
         sendLog('VIEWPORT_RESIZE', 'MEDIUM', { 
           from: { w: initialWidthRef.current, h: initialHeightRef.current },
           to: { w: currWidth, h: currHeight }
@@ -129,7 +141,7 @@ export const useExamMonitor = ({ attemptId, onViolation, onNetworkChange, examSt
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [attemptId, sendLog, onViolation, onNetworkChange]);
+  }, [attemptId, sendLog]);
 
   return { sendLog };
 };

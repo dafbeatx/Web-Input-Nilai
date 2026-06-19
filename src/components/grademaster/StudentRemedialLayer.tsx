@@ -56,9 +56,8 @@ const QuestionCanvas = ({ text }: { text: string }) => {
       }
     };
     updateSize();
-    const observer = new ResizeObserver(updateSize);
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
   }, []);
 
   useEffect(() => {
@@ -125,6 +124,80 @@ const QuestionCanvas = ({ text }: { text: string }) => {
   );
 };
 
+const compressImage = async (base64Str: string, maxWidth = 320, quality = 0.6): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxWidth) {
+        height = (maxWidth / width) * height;
+        width = maxWidth;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(base64Str);
+  });
+};
+
+const computeSimpleHash = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): string => {
+  const w = canvas.width;
+  const h = canvas.height;
+  const samplePoints = [
+    [Math.floor(w * 0.25), Math.floor(h * 0.25)],
+    [Math.floor(w * 0.5), Math.floor(h * 0.25)],
+    [Math.floor(w * 0.75), Math.floor(h * 0.25)],
+    [Math.floor(w * 0.25), Math.floor(h * 0.5)],
+    [Math.floor(w * 0.5), Math.floor(h * 0.5)],
+    [Math.floor(w * 0.75), Math.floor(h * 0.5)],
+    [Math.floor(w * 0.25), Math.floor(h * 0.75)],
+    [Math.floor(w * 0.5), Math.floor(h * 0.75)],
+    [Math.floor(w * 0.75), Math.floor(h * 0.75)],
+    [Math.floor(w * 0.1), Math.floor(h * 0.1)],
+    [Math.floor(w * 0.9), Math.floor(h * 0.9)],
+    [Math.floor(w * 0.5), Math.floor(h * 0.1)],
+  ];
+  let hash = '';
+  for (const [x, y] of samplePoints) {
+    const pixel = ctx.getImageData(x, y, 1, 1).data;
+    hash += `${Math.floor(pixel[0] / 16)}${Math.floor(pixel[1] / 16)}${Math.floor(pixel[2] / 16)}`;
+  }
+  return hash;
+};
+
+const getDeviceInfo = () => {
+  if (typeof window === 'undefined') return 'unknown';
+  const ua = navigator.userAgent;
+  let os = "Other";
+  if (ua.indexOf("Win") !== -1) os = "Windows";
+  if (ua.indexOf("Mac") !== -1) os = "MacOS";
+  if (ua.indexOf("Android") !== -1) os = "Android";
+  if (ua.indexOf("iPhone") !== -1 || ua.indexOf("iPad") !== -1) os = "iOS";
+
+  let browser = "Other";
+  if (ua.indexOf("Chrome") !== -1) browser = "Chrome";
+  else if (ua.indexOf("Firefox") !== -1) browser = "Firefox";
+  else if (ua.indexOf("Safari") !== -1) browser = "Safari";
+  else if (ua.indexOf("Edge") !== -1) browser = "Edge";
+  
+  return `${os} | ${browser}`;
+};
+
+const getNetworkInfo = () => {
+  if (typeof navigator === 'undefined') return 'unknown';
+  const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+  if (!conn) return 'unknown';
+  return `${conn.effectiveType || 'unknown'} (${conn.downlink || '?'}Mbps)`;
+};
+
 export default function StudentRemedialLayer({
   studentName,
   subject,
@@ -175,6 +248,8 @@ export default function StudentRemedialLayer({
   const [clientCheatingFlags, setClientCheatingFlags] = useState<string[]>([]);
   const [serverCheatingFlags, setServerCheatingFlags] = useState<string[]>([]);
   const hasTriggeredCheatingRef = useRef(false);
+  const hasTriggeredSecondChanceRef = useRef(false);
+  const hasProcessedOverlayWarningRef = useRef(false);
   const startedAtRef = useRef<number>(0);
   const isRefreshingRef = useRef(false);
   const isDeploymentReloadRef = useRef(false);
@@ -246,204 +321,24 @@ export default function StudentRemedialLayer({
   const [aiProctorFindings, setAiProctorFindings] = useState<string[]>([]);
   const aiProctorIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Monitor Hook Integration
-  const { sendLog } = useExamMonitor({
-    attemptId,
-    examState: step,
-    onNetworkChange: (online) => {
-      setIsOffline(!online);
-      if (!online) {
-        setIsConnectionLocked(true);
-      } else {
-        // Auto-sync on reconnect
-        syncWithServer();
-      }
-    },
-    onViolation: (type, message, severity) => {
-      if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
-      setWarningCount(prev => prev + 1);
-      if (type === 'TAB_SWITCH') {
-        setTabWarningCount(prev => {
-          const newCount = prev + 1;
-          setActiveWarning({
-            type: 'TAB',
-            count: newCount,
-            limit: 3,
-            message: `⚠️ PERINGATAN PENGALIHAN FOKUS! Sistem mendeteksi Anda keluar dari halaman ujian atau membuka aplikasi/popup lain. Dilarang keras memindahkan fokus layar! (${newCount}/3)`
-          });
-          return newCount;
-        });
-        setToast({ message: "Peringatan: Jangan pindah tab atau aplikasi!", type: "error" });
+  const offlineBufferKey = `gm_log_buffer_${attemptId}`;
 
-        // Sync violation to database in real-time (fire-and-forget)
-        fetch('/api/grademaster/students/remedial/violation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId, studentName })
-        }).then(async res => {
-          if (res.ok) {
-            const data = await res.json();
-            if (data.isBlocked) {
-              setIsPermanentlyBlocked(true);
-              setIsTabHidden(false);
-            }
-          }
-        }).catch(err => {
-          console.error('Failed to report violation to server:', err);
-        });
-      }
-      if (type === 'SPLIT_SCREEN') {
-        setSplitScreenViolationCount(prev => prev + 1);
-        setToast({ message: "Layar Terbagi (Split Screen) Terdeteksi!", type: "error" });
-      }
-      
-      // Update DB with violation
-      sendTelegramNotify("SECURITY_VIOLATION", undefined, `${type}: ${message} (Severity: ${severity})`);
-    }
-  });
-
-  const syncWithServer = async () => {
-    if (!attemptId || step !== 'EXAM') return;
-    setIsSyncing(true);
+  const getLogBuffer = (): any[] => {
+    if (typeof window === 'undefined') return [];
     try {
-      // Perform a real handshake to ensure we are actually online and synced with the DB
-      const res = await fetch('/api/grademaster/heartbeat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          attemptId, 
-          networkStatus: navigator.onLine ? 'ONLINE' : 'OFFLINE',
-          latencyMs: 0
-        })
-      });
-      if (res.ok) {
-        setIsConnectionLocked(false);
-        setConsecutiveHeartbeatFailures(0);
-        setToast({ message: "Koneksi pulih. Sinkronisasi sukses.", type: "success" });
-        flushOfflineLogs();
-      } else {
-        setToast({ message: "Sinkronisasi gagal. Pastikan internet stabil.", type: "error" });
-      }
-    } catch (err) {
-      setToast({ message: "Gagal terhubung ke server. Periksa koneksi Anda.", type: "error" });
-    } finally {
-      setIsSyncing(false);
-    }
+      const saved = localStorage.getItem(offlineBufferKey);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
   };
 
-  const handleExit = () => {
-    clearRemedialSession();
-    onBack();
-  };
-
-  const getDeviceInfo = () => {
-    if (typeof window === 'undefined') return 'unknown';
-    const ua = navigator.userAgent;
-    let os = "Other";
-    if (ua.indexOf("Win") !== -1) os = "Windows";
-    if (ua.indexOf("Mac") !== -1) os = "MacOS";
-    if (ua.indexOf("Android") !== -1) os = "Android";
-    if (ua.indexOf("iPhone") !== -1 || ua.indexOf("iPad") !== -1) os = "iOS";
-
-    let browser = "Other";
-    if (ua.indexOf("Chrome") !== -1) browser = "Chrome";
-    else if (ua.indexOf("Firefox") !== -1) browser = "Firefox";
-    else if (ua.indexOf("Safari") !== -1) browser = "Safari";
-    else if (ua.indexOf("Edge") !== -1) browser = "Edge";
-    
-    return `${os} | ${browser}`;
-  };
-
-  const getNetworkInfo = () => {
-    if (typeof navigator === 'undefined') return 'unknown';
-    const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
-    if (!conn) return 'unknown';
-    return `${conn.effectiveType || 'unknown'} (${conn.downlink || '?'}Mbps)`;
-  };
-
-  const compressImage = async (base64Str: string, maxWidth = 320, quality = 0.6): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.src = base64Str;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-
-        if (width > maxWidth) {
-          height = (maxWidth / width) * height;
-          width = maxWidth;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.onerror = () => resolve(base64Str);
-    });
-  };
-
-  const sendTelegramNotify = async (event: string, photo?: string, message?: string, score?: number) => {
+  const saveLogBuffer = (logs: any[]) => {
+    if (typeof window === 'undefined') return;
     try {
-      // 1. Triple-layered fallback: props -> recovered session state -> global storage -> 'Unknown'
-      const saved = loadRemedialSession();
-      const currentStudentName = studentName || saved?.studentName || (typeof window !== 'undefined' ? localStorage.getItem('gm_studentName') : '') || 'Unknown Student';
-      const currentClassName = className || saved?.className || (typeof window !== 'undefined' ? localStorage.getItem('gm_studentClass') : '') || 'Unknown Class';
-      const currentSubject = subject || saved?.subject || (typeof window !== 'undefined' ? localStorage.getItem('gm_subject') : '') || 'Unknown Subject';
-
-      const netInfo = getNetworkInfo();
-      const payload = {
-        studentName: currentStudentName,
-        className: currentClassName,
-        subject: currentSubject,
-        event,
-        message: message ? `${message}${message.includes('Network:') ? '' : ` | Network: ${netInfo}`}` : `Network: ${netInfo}`,
-        photo,
-        score,
-        kkm: kkm || saved?.kkm || 70,
-        academicYear: academicYear || '2025/2026',
-        examType: examType || 'UTS',
-        deviceInfo: getDeviceInfo()
-      };
-
-      await fetch('/api/telegram/notify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-    } catch (err) {
-      console.error('Failed to send Telegram notify:', err);
-    }
+      localStorage.setItem(offlineBufferKey, JSON.stringify(logs.slice(-100))); // Cap at 100
+    } catch (e) { console.error('Failed to save log buffer', e); }
   };
 
-  const computeSimpleHash = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): string => {
-    const w = canvas.width;
-    const h = canvas.height;
-    const samplePoints = [
-      [Math.floor(w * 0.25), Math.floor(h * 0.25)],
-      [Math.floor(w * 0.5), Math.floor(h * 0.25)],
-      [Math.floor(w * 0.75), Math.floor(h * 0.25)],
-      [Math.floor(w * 0.25), Math.floor(h * 0.5)],
-      [Math.floor(w * 0.5), Math.floor(h * 0.5)],
-      [Math.floor(w * 0.75), Math.floor(h * 0.5)],
-      [Math.floor(w * 0.25), Math.floor(h * 0.75)],
-      [Math.floor(w * 0.5), Math.floor(h * 0.75)],
-      [Math.floor(w * 0.75), Math.floor(h * 0.75)],
-      [Math.floor(w * 0.1), Math.floor(h * 0.1)],
-      [Math.floor(w * 0.9), Math.floor(h * 0.9)],
-      [Math.floor(w * 0.5), Math.floor(h * 0.1)],
-    ];
-    let hash = '';
-    for (const [x, y] of samplePoints) {
-      const pixel = ctx.getImageData(x, y, 1, 1).data;
-      hash += `${Math.floor(pixel[0] / 16)}${Math.floor(pixel[1] / 16)}${Math.floor(pixel[2] / 16)}`;
-    }
-    return hash;
-  };
-
-  const capturePhoto = (): string | undefined => {
+  const capturePhoto = useCallback((): string | undefined => {
     if (!videoRef.current) return undefined;
     try {
       const video = videoRef.current;
@@ -490,7 +385,156 @@ export default function StudentRemedialLayer({
       console.error('Failed to capture photo:', err);
     }
     return undefined;
+  }, []);
+
+  const sendTelegramNotify = useCallback(async (event: string, photo?: string, message?: string, score?: number) => {
+    try {
+      // 1. Triple-layered fallback: props -> recovered session state -> global storage -> 'Unknown'
+      const saved = loadRemedialSession();
+      const currentStudentName = studentName || saved?.studentName || (typeof window !== 'undefined' ? localStorage.getItem('gm_studentName') : '') || 'Unknown Student';
+      const currentClassName = className || saved?.className || (typeof window !== 'undefined' ? localStorage.getItem('gm_studentClass') : '') || 'Unknown Class';
+      const currentSubject = subject || saved?.subject || (typeof window !== 'undefined' ? localStorage.getItem('gm_subject') : '') || 'Unknown Subject';
+
+      const netInfo = getNetworkInfo();
+      const payload = {
+        studentName: currentStudentName,
+        className: currentClassName,
+        subject: currentSubject,
+        event,
+        message: message ? `${message}${message.includes('Network:') ? '' : ` | Network: ${netInfo}`}` : `Network: ${netInfo}`,
+        photo,
+        score,
+        kkm: kkm || saved?.kkm || 70,
+        academicYear: academicYear || '2025/2026',
+        examType: examType || 'UTS',
+        deviceInfo: getDeviceInfo()
+      };
+
+      await fetch('/api/telegram/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (err) {
+      console.error('Failed to send Telegram notify:', err);
+    }
+  }, [studentName, className, subject, kkm, academicYear, examType]);
+
+  const flushOfflineLogs = useCallback(async () => {
+    if (!attemptId || !navigator.onLine) return;
+    const buffer = getLogBuffer();
+    if (buffer.length === 0) return;
+
+    try {
+      const res = await fetch('/api/grademaster/activity-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId, events: buffer })
+      });
+      if (res.ok) {
+        localStorage.removeItem(offlineBufferKey);
+        console.log(`[Monitoring] Successfully flushed ${buffer.length} offline logs.`);
+      }
+    } catch (err) {
+      console.warn('[Monitoring] Flush failed, will retry later.', err);
+    }
+  }, [attemptId, offlineBufferKey]);
+
+  const syncWithServer = useCallback(async () => {
+    if (!attemptId || step !== 'EXAM') return;
+    setIsSyncing(true);
+    try {
+      // Perform a real handshake to ensure we are actually online and synced with the DB
+      const res = await fetch('/api/grademaster/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          attemptId, 
+          networkStatus: navigator.onLine ? 'ONLINE' : 'OFFLINE',
+          latencyMs: 0
+        })
+      });
+      if (res.ok) {
+        setIsConnectionLocked(false);
+        setConsecutiveHeartbeatFailures(0);
+        setToast({ message: "Koneksi pulih. Sinkronisasi sukses.", type: "success" });
+        flushOfflineLogs();
+      } else {
+        setToast({ message: "Sinkronisasi gagal. Pastikan internet stabil.", type: "error" });
+      }
+    } catch (err) {
+      setToast({ message: "Gagal terhubung ke server. Periksa koneksi Anda.", type: "error" });
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [attemptId, step, setToast, flushOfflineLogs]);
+
+  const handleNetworkChange = useCallback((online: boolean) => {
+    setIsOffline(!online);
+    if (!online) {
+      setIsConnectionLocked(true);
+    } else {
+      // Auto-sync on reconnect
+      syncWithServer();
+    }
+  }, [syncWithServer]);
+
+  const handleViolation = useCallback((type: string, message: string, severity: 'LOW' | 'MEDIUM' | 'HIGH') => {
+    if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
+    setWarningCount(prev => prev + 1);
+    if (type === 'TAB_SWITCH') {
+      setTabWarningCount(prev => {
+        const newCount = prev + 1;
+        
+        setTimeout(() => {
+          setActiveWarning({
+            type: 'TAB',
+            count: newCount,
+            limit: 3,
+            message: `⚠️ PERINGATAN PENGALIHAN FOKUS! Sistem mendeteksi Anda keluar dari halaman ujian atau membuka aplikasi/popup lain. Dilarang keras memindahkan fokus layar! (${newCount}/3)`
+          });
+          setToast({ message: "Peringatan: Jangan pindah tab atau aplikasi!", type: "error" });
+
+          // Sync violation to database in real-time (fire-and-forget)
+          fetch('/api/grademaster/students/remedial/violation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId, studentName })
+          }).then(async res => {
+            if (res.ok) {
+              const data = await res.json();
+              if (data.isBlocked) {
+                setIsPermanentlyBlocked(true);
+                setIsTabHidden(false);
+              }
+            }
+          }).catch(err => {
+            console.error('Failed to report violation to server:', err);
+          });
+        }, 0);
+        
+        return newCount;
+      });
+    }
+    if (type === 'SPLIT_SCREEN') {
+      setSplitScreenViolationCount(prev => prev + 1);
+      setTimeout(() => {
+        setToast({ message: "Layar Terbagi (Split Screen) Terdeteksi!", type: "error" });
+      }, 0);
+    }
+    
+    // Update DB with violation
+    sendTelegramNotify("SECURITY_VIOLATION", undefined, `${type}: ${message} (Severity: ${severity})`);
+  }, [sessionId, studentName, sendTelegramNotify, setToast]);
+
+  const handleExit = () => {
+    clearRemedialSession();
+    onBack();
   };
+
+
+
+
 
   const isPhotoDuplicate = (base64: string): boolean => {
     try {
@@ -518,48 +562,11 @@ export default function StudentRemedialLayer({
   };
 
   const [agreedRules, setAgreedRules] = useState(false);
-  const offlineBufferKey = `gm_log_buffer_${attemptId}`;
-
-  // ── ADVANCED MONITORING (Pulse & Surveillance) ──
+    // ── ADVANCED MONITORING (Pulse & Surveillance) ──
   const heartbeatTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isOnlineRef = useRef<boolean>(true);
 
-  const getLogBuffer = (): any[] => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const saved = localStorage.getItem(offlineBufferKey);
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
-  };
-
-  const saveLogBuffer = (logs: any[]) => {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(offlineBufferKey, JSON.stringify(logs.slice(-100))); // Cap at 100
-    } catch (e) { console.error('Failed to save log buffer', e); }
-  };
-
-  const flushOfflineLogs = async () => {
-    if (!attemptId || !navigator.onLine) return;
-    const buffer = getLogBuffer();
-    if (buffer.length === 0) return;
-
-    try {
-      const res = await fetch('/api/grademaster/activity-log', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attemptId, events: buffer })
-      });
-      if (res.ok) {
-        localStorage.removeItem(offlineBufferKey);
-        console.log(`[Monitoring] Successfully flushed ${buffer.length} offline logs.`);
-      }
-    } catch (err) {
-      console.warn('[Monitoring] Flush failed, will retry later.', err);
-    }
-  };
-
-  const trackEvent = async (type: string, severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL', points: number, metadata: Record<string, any> = {}) => {
+  const trackEvent = useCallback(async (type: string, severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL', points: number, metadata: Record<string, any> = {}) => {
     const event = {
       eventType: type,
       severity,
@@ -589,12 +596,11 @@ export default function StudentRemedialLayer({
       const buffer = getLogBuffer();
       saveLogBuffer([...buffer, event]);
     }
-  };
+  }, [attemptId]);
 
-  const sendHeartbeat = async () => {
+  const sendHeartbeat = useCallback(async () => {
     if (!attemptId || step !== 'EXAM') return;
     
-    const start = Date.now();
     try {
       const res = await fetch('/api/grademaster/heartbeat', {
         method: 'POST',
@@ -622,8 +628,8 @@ export default function StudentRemedialLayer({
         return newFailCount;
       });
     }
-  };
-  const sendActivityLog = async (message: string, photo?: string, eventTypeOverride?: string) => {
+  }, [attemptId, step, flushOfflineLogs]);
+  const sendActivityLog = useCallback(async (message: string, photo?: string, eventTypeOverride?: string) => {
     if (step !== 'EXAM') return;
 
     const netInfo = getNetworkInfo();
@@ -657,7 +663,15 @@ export default function StudentRemedialLayer({
         console.error('Failed to sync data log:', err);
       }
     }
-  };
+  }, [step, attemptId, sendTelegramNotify]);
+
+  // Monitor Hook Integration
+  const { sendLog } = useExamMonitor({
+    attemptId,
+    examState: step,
+    onNetworkChange: handleNetworkChange,
+    onViolation: handleViolation
+  });
 
   // Permission states
   const [cameraOk, setCameraOk] = useState(false);
@@ -1475,96 +1489,102 @@ export default function StudentRemedialLayer({
   const handleCameraViolation = useCallback((type: string) => {
     if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
 
+    let flagMessage = "";
+    if (type === 'NO_FACE') flagMessage = "Wajah tidak terdeteksi";
+    else if (type === 'MULTIPLE_FACES') flagMessage = "Terdeteksi lebih dari satu orang";
+    else if (type === 'FACE_UNALIGNED') flagMessage = "Posisi wajah tidak sejajar";
+    else if (type === 'PHONE_DETECTED') flagMessage = "Terdeteksi penggunaan HP (Ponsel)";
+    else if (type === 'BOOK_DETECTED') flagMessage = "Terdeteksi membuka buku/catatan";
+    else if (type === 'EARPIECE_DETECTED') flagMessage = "Terdeteksi menggunakan earpiece/headphone";
+    else if (type === 'EXTRA_SCREEN_DETECTED') flagMessage = "Terdeteksi layar/perangkat tambahan";
+
     setWarningCount(prev => {
       const newCount = prev + 1;
-      
-      let flagMessage = "";
-      if (type === 'NO_FACE') flagMessage = "Wajah tidak terdeteksi";
-      else if (type === 'MULTIPLE_FACES') flagMessage = "Terdeteksi lebih dari satu orang";
-      else if (type === 'FACE_UNALIGNED') flagMessage = "Posisi wajah tidak sejajar";
-      else if (type === 'PHONE_DETECTED') flagMessage = "Terdeteksi penggunaan HP (Ponsel)";
-      else if (type === 'BOOK_DETECTED') flagMessage = "Terdeteksi membuka buku/catatan";
-      else if (type === 'EARPIECE_DETECTED') flagMessage = "Terdeteksi menggunakan earpiece/headphone";
-      else if (type === 'EXTRA_SCREEN_DETECTED') flagMessage = "Terdeteksi layar/perangkat tambahan";
-
       const reason = `${flagMessage} (${newCount} kali)`;
 
-      setClientCheatingFlags(oldFlags => {
-        if (!oldFlags.includes(flagMessage)) {
-           return [...oldFlags, flagMessage];
-        }
-        return oldFlags;
-      });
+      setTimeout(() => {
+        setClientCheatingFlags(oldFlags => {
+          if (!oldFlags.includes(flagMessage)) {
+             return [...oldFlags, flagMessage];
+          }
+          return oldFlags;
+        });
 
-      if (newCount >= 10) {
-        setClientCheatingFlags(f => [...f, reason]);
-        if (secondChanceUsed) {
-          hasTriggeredCheatingRef.current = true;
-          setToast({ message: "Batas pelanggaran terlampaui. Ujian dihentikan.", type: "error" });
-          handleStatusUpdate('CHEATED', reason);
+        if (newCount >= 10) {
+          setClientCheatingFlags(f => f.includes(reason) ? f : [...f, reason]);
+          if (secondChanceUsed) {
+            if (!hasTriggeredCheatingRef.current) {
+              hasTriggeredCheatingRef.current = true;
+              setToast({ message: "Batas pelanggaran terlampaui. Ujian dihentikan.", type: "error" });
+              handleStatusUpdate('CHEATED', reason);
+            }
+          } else {
+            if (!hasTriggeredSecondChanceRef.current) {
+              hasTriggeredSecondChanceRef.current = true;
+              setSecondChanceReason(reason);
+              setStep('SECOND_CHANCE');
+              sendTelegramNotify('SECOND_CHANCE', capturePhoto() || undefined, reason);
+            }
+          }
         } else {
-          setSecondChanceReason(reason);
-          setStep('SECOND_CHANCE');
-          sendTelegramNotify('SECOND_CHANCE', capturePhoto() || undefined, reason);
+          // Handle specific detections
+          if (type === 'PHONE_DETECTED') {
+              const snap = capturePhoto();
+              sendTelegramNotify('PHONE_DETECTED', snap || undefined);
+              setActiveWarning({
+                  type: 'CAMERA',
+                  count: newCount,
+                  limit: 10,
+                  message: "⚠️ HP TERDETEKSI! Sistem AI mendeteksi adanya ponsel di depan kamera. Penggunaan HP dilarang keras selama ujian! Aktivitas ini telah dilaporkan ke Admin Telegram."
+              });
+          } else if (type === 'BOOK_DETECTED') {
+              const snap = capturePhoto();
+              sendTelegramNotify('BOOK_DETECTED', snap || undefined, "Terdeteksi membuka buku/catatan");
+              setActiveWarning({
+                  type: 'CAMERA',
+                  count: newCount,
+                  limit: 10,
+                  message: "⚠️ BUKU/CATATAN TERDETEKSI! Sistem AI mendeteksi buku, kertas contekan, atau catatan di dekat Anda. Harap singkirkan benda tersebut segera!"
+              });
+          } else if (type === 'EARPIECE_DETECTED') {
+              const snap = capturePhoto();
+              sendTelegramNotify('EARPIECE_DETECTED', snap || undefined, "Terdeteksi menggunakan earpiece/headphone");
+              setActiveWarning({
+                  type: 'CAMERA',
+                  count: newCount,
+                  limit: 10,
+                  message: "⚠️ EARPHONE TERDETEKSI! Penggunaan headset, earphone, atau earpiece dilarang selama ujian demi mencegah komunikasi eksternal."
+              });
+          } else if (type === 'EXTRA_SCREEN_DETECTED') {
+              const snap = capturePhoto();
+              sendTelegramNotify('EXTRA_SCREEN_DETECTED', snap || undefined, "Terdeteksi layar/perangkat tambahan");
+              setActiveWarning({
+                  type: 'CAMERA',
+                  count: newCount,
+                  limit: 10,
+                  message: "⚠️ PERANGKAT TAMBAHAN TERDETEKSI! Sistem AI mendeteksi adanya monitor, tablet, atau layar tambahan di sekitar Anda."
+              });
+          } else if ((type === 'NO_FACE' || type === 'MULTIPLE_FACES') && Date.now() - lastEducationShownRef.current > 15000) {
+            setActiveWarning({
+              type: 'CAMERA',
+              count: newCount,
+              limit: 10,
+              message: type === 'NO_FACE' 
+                ? "⚠️ WAJAH TIDAK TERDETEKSI! Pastikan wajah Anda selalu menatap layar selama ujian berlangsung. Menjauh dari layar dianggap indikasi pelanggaran."
+                : "⚠️ MULTI-FACE DETECTED! Sistem mendeteksi lebih dari satu wajah. Ujian harus dikerjakan secara mandiri!"
+            });
+            lastEducationShownRef.current = Date.now();
+          } else if (type === 'FACE_UNALIGNED' && Date.now() - lastEducationShownRef.current > 15000) {
+            setActiveWarning({
+              type: 'CAMERA',
+              count: newCount,
+              limit: 10,
+              message: "⚠️ POSISI WAJAH TIDAK SEJAJAR! Sistem mendeteksi wajah Anda terlalu sering menoleh ke samping atau berpaling dari layar."
+            });
+            lastEducationShownRef.current = Date.now();
+          }
         }
-      } else {
-        // Handle specific detections
-        if (type === 'PHONE_DETECTED') {
-            const snap = capturePhoto();
-            sendTelegramNotify('PHONE_DETECTED', snap || undefined);
-            setActiveWarning({
-                type: 'CAMERA',
-                count: newCount,
-                limit: 10,
-                message: "⚠️ HP TERDETEKSI! Sistem AI mendeteksi adanya ponsel di depan kamera. Penggunaan HP dilarang keras selama ujian! Aktivitas ini telah dilaporkan ke Admin Telegram."
-            });
-        } else if (type === 'BOOK_DETECTED') {
-            const snap = capturePhoto();
-            sendTelegramNotify('BOOK_DETECTED', snap || undefined, "Terdeteksi membuka buku/catatan");
-            setActiveWarning({
-                type: 'CAMERA',
-                count: newCount,
-                limit: 10,
-                message: "⚠️ BUKU/CATATAN TERDETEKSI! Sistem AI mendeteksi buku, kertas contekan, atau catatan di dekat Anda. Harap singkirkan benda tersebut segera!"
-            });
-        } else if (type === 'EARPIECE_DETECTED') {
-            const snap = capturePhoto();
-            sendTelegramNotify('EARPIECE_DETECTED', snap || undefined, "Terdeteksi menggunakan earpiece/headphone");
-            setActiveWarning({
-                type: 'CAMERA',
-                count: newCount,
-                limit: 10,
-                message: "⚠️ EARPHONE TERDETEKSI! Penggunaan headset, earphone, atau earpiece dilarang selama ujian demi mencegah komunikasi eksternal."
-            });
-        } else if (type === 'EXTRA_SCREEN_DETECTED') {
-            const snap = capturePhoto();
-            sendTelegramNotify('EXTRA_SCREEN_DETECTED', snap || undefined, "Terdeteksi layar/perangkat tambahan");
-            setActiveWarning({
-                type: 'CAMERA',
-                count: newCount,
-                limit: 10,
-                message: "⚠️ PERANGKAT TAMBAHAN TERDETEKSI! Sistem AI mendeteksi adanya monitor, tablet, atau layar tambahan di sekitar Anda."
-            });
-        } else if ((type === 'NO_FACE' || type === 'MULTIPLE_FACES') && Date.now() - lastEducationShownRef.current > 15000) {
-          setActiveWarning({
-            type: 'CAMERA',
-            count: newCount,
-            limit: 10,
-            message: type === 'NO_FACE' 
-              ? "⚠️ WAJAH TIDAK TERDETEKSI! Pastikan wajah Anda selalu menatap layar selama ujian berlangsung. Menjauh dari layar dianggap indikasi pelanggaran."
-              : "⚠️ MULTI-FACE DETECTED! Sistem mendeteksi lebih dari satu wajah. Ujian harus dikerjakan secara mandiri!"
-          });
-          lastEducationShownRef.current = Date.now();
-        } else if (type === 'FACE_UNALIGNED' && Date.now() - lastEducationShownRef.current > 15000) {
-          setActiveWarning({
-            type: 'CAMERA',
-            count: newCount,
-            limit: 10,
-            message: "⚠️ POSISI WAJAH TIDAK SEJAJAR! Sistem mendeteksi wajah Anda terlalu sering menoleh ke samping atau berpaling dari layar."
-          });
-          lastEducationShownRef.current = Date.now();
-        }
-      }
+      }, 0);
 
       return newCount;
     });
@@ -2051,12 +2071,14 @@ export default function StudentRemedialLayer({
       trackEvent('WINDOW_BLUR', 'HIGH', 15, { reason: 'Window lost focus / popup / third-party overlay' });
       setTabWarningCount(prev => {
         const newCount = prev + 1;
-        setActiveWarning({
-          type: 'TAB',
-          count: newCount,
-          limit: 3,
-          message: `⚠️ INDIKASI KECURANGAN! Sistem mendeteksi Pindah Aplikasi / Perekam Layar (Screen Recorder) / Tarik Notifikasi. Dilarang keras memindahkan fokus layar! (${newCount}/3)`
-        });
+        setTimeout(() => {
+          setActiveWarning({
+            type: 'TAB',
+            count: newCount,
+            limit: 3,
+            message: `⚠️ INDIKASI KECURANGAN! Sistem mendeteksi Pindah Aplikasi / Perekam Layar (Screen Recorder) / Tarik Notifikasi. Dilarang keras memindahkan fokus layar! (${newCount}/3)`
+          });
+        }, 0);
         return newCount;
       });
     };
@@ -2129,6 +2151,7 @@ export default function StudentRemedialLayer({
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (showAiBotWarning && aiCountdown > 0) {
+      hasProcessedOverlayWarningRef.current = false; // Reset guard when active countdown runs
       timer = setInterval(() => {
         setAiCountdown(prev => prev - 1);
         
@@ -2138,20 +2161,23 @@ export default function StudentRemedialLayer({
         }
       }, 1000);
     } else if (showAiBotWarning && aiCountdown === 0) {
-      if (overlayViolationCount >= 3) {
-        // LOCKOUT: Time is up and violation still detected on Strike 3
-        setShowAiBotWarning(false);
-        handleStatusUpdate('CHEATED', 'Terdeteksi penggunaan Layer/Overlay secara berulang (Auto-Lock)');
-      } else {
-        // Flag instead of Lockout: Add to flags but don't terminate session for Strike 1 & 2
-        const reason = `Indikasi Layer/Overlay (Strike ${overlayViolationCount}/3)`;
-        setClientCheatingFlags(f => f.includes(reason) ? f : [...f, reason]);
-        
-        // Send synchronized log (DB + Tele) with Medium Confidence
-        sendActivityLog(`⚠️ ${reason} | Tingkat Kepercayaan: MEDIUM (Persisten 10s)`);
-        
-        // Stay visible for 5 more seconds then hide automatically
-        setTimeout(() => setShowAiBotWarning(false), 5000);
+      if (!hasProcessedOverlayWarningRef.current) {
+        hasProcessedOverlayWarningRef.current = true;
+        if (overlayViolationCount >= 3) {
+          // LOCKOUT: Time is up and violation still detected on Strike 3
+          setShowAiBotWarning(false);
+          handleStatusUpdate('CHEATED', 'Terdeteksi penggunaan Layer/Overlay secara berulang (Auto-Lock)');
+        } else {
+          // Flag instead of Lockout: Add to flags but don't terminate session for Strike 1 & 2
+          const reason = `Indikasi Layer/Overlay (Strike ${overlayViolationCount}/3)`;
+          setClientCheatingFlags(f => f.includes(reason) ? f : [...f, reason]);
+          
+          // Send synchronized log (DB + Tele) with Medium Confidence
+          sendActivityLog(`⚠️ ${reason} | Tingkat Kepercayaan: MEDIUM (Persisten 10s)`);
+          
+          // Stay visible for 5 more seconds then hide automatically
+          setTimeout(() => setShowAiBotWarning(false), 5000);
+        }
       }
     }
     return () => clearInterval(timer);
@@ -2369,20 +2395,29 @@ export default function StudentRemedialLayer({
 
   // Enforce Tab limits
   useEffect(() => {
-    if (tabWarningCount >= 3 && step === 'EXAM' && !hasTriggeredCheatingRef.current) {
+    if (tabWarningCount >= 3 && step === 'EXAM') {
       const reason = `Mencapai batas maksimal pengalihan layar (${tabWarningCount} kali)`;
-      setClientCheatingFlags(oldFlags => {
-        if (!oldFlags.includes(reason)) return [...oldFlags, reason];
-        return oldFlags;
-      });
       if (secondChanceUsed) {
-        hasTriggeredCheatingRef.current = true;
-        setToast({ message: "Batas pengalihan layar terlampaui. Ujian dihentikan.", type: "error" });
-        handleStatusUpdate('CHEATED', reason);
+        if (!hasTriggeredCheatingRef.current) {
+          hasTriggeredCheatingRef.current = true;
+          setToast({ message: "Batas pengalihan layar terlampaui. Ujian dihentikan.", type: "error" });
+          setClientCheatingFlags(oldFlags => {
+            if (!oldFlags.includes(reason)) return [...oldFlags, reason];
+            return oldFlags;
+          });
+          handleStatusUpdate('CHEATED', reason);
+        }
       } else {
-        setSecondChanceReason(reason);
-        setStep('SECOND_CHANCE');
-        sendTelegramNotify('SECOND_CHANCE', typeof capturePhoto === 'function' ? capturePhoto() || undefined : undefined, reason);
+        if (!hasTriggeredSecondChanceRef.current) {
+          hasTriggeredSecondChanceRef.current = true;
+          setSecondChanceReason(reason);
+          setClientCheatingFlags(oldFlags => {
+            if (!oldFlags.includes(reason)) return [...oldFlags, reason];
+            return oldFlags;
+          });
+          setStep('SECOND_CHANCE');
+          sendTelegramNotify('SECOND_CHANCE', typeof capturePhoto === 'function' ? capturePhoto() || undefined : undefined, reason);
+        }
       }
     }
   }, [tabWarningCount, step, secondChanceUsed]);
