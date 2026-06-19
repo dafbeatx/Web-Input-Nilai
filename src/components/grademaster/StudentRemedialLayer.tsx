@@ -3131,7 +3131,7 @@ export default function StudentRemedialLayer({
       </header>
 
       {/* ── MAIN CONTENT ── */}
-      <main className={`max-w-7xl mx-auto px-6 mobile-shell-padding flex flex-col lg:flex-row gap-8 transition-opacity duration-700 ${(isTabHidden || isPermanentlyBlocked || isOffline || isConnectionLocked) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+      <main className={`max-w-7xl mx-auto px-6 pt-[calc(6.5rem+env(safe-area-inset-top,0px))] pb-[calc(5rem+env(safe-area-inset-bottom,0px))] lg:pt-32 lg:pb-32 flex flex-col lg:flex-row gap-8 transition-opacity duration-700 ${(isTabHidden || isPermanentlyBlocked || isOffline || isConnectionLocked) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         
         {/* Monitoring Panel */}
         <aside className="w-full lg:w-72 lg:sticky lg:top-32 h-fit lg:space-y-6">
