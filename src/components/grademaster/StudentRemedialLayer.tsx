@@ -274,6 +274,27 @@ export default function StudentRemedialLayer({
           return newCount;
         });
         setToast({ message: "Peringatan: Jangan pindah tab atau aplikasi!", type: "error" });
+
+        // Sync violation to database in real-time
+        fetch('/api/grademaster/students/remedial/violation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, studentName })
+        }).then(async res => {
+          if (res.ok) {
+            const data = await res.json();
+            if (data.isBlocked) {
+              setIsPermanentlyBlocked(true);
+              setIsTabHidden(false);
+              if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
+            }
+            if (data.count !== undefined) {
+              setTabWarningCount(data.count);
+            }
+          }
+        }).catch(err => {
+          console.error('Failed to report violation to server:', err);
+        });
       }
       if (type === 'SPLIT_SCREEN') {
         setSplitScreenViolationCount(prev => prev + 1);
@@ -1051,7 +1072,8 @@ export default function StudentRemedialLayer({
           const data = await res.json();
           if (data.isBlocked) {
              setIsPermanentlyBlocked(true);
-             setIsTabHidden(false); 
+             setIsTabHidden(false);
+             if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
           }
           if (data.violationCount) {
              setTabWarningCount(data.violationCount);
@@ -2377,6 +2399,94 @@ export default function StudentRemedialLayer({
     }
     await handleStatusUpdate('COMPLETED');
   };
+
+  // RENDER: PERMANENTLY BLOCKED SCREEN
+  if (isPermanentlyBlocked) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-slate-950 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#f43f5e15,transparent)] pointer-events-none"></div>
+         <div className="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-[2rem] flex items-center justify-center mb-8 border border-rose-500/25 animate-pulse shadow-2xl shadow-rose-500/20">
+            <ShieldX size={48} />
+         </div>
+         <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-3 font-outfit">Sesi Ujian Ditangguhkan!</h2>
+         <p className="text-rose-400 font-bold max-w-md mb-6 leading-relaxed text-xs uppercase tracking-wide">
+           Sistem keamanan memblokir akun Anda secara permanen karena terdeteksi melanggar aturan proctoring ujian secara berulang.
+         </p>
+
+         <div className="bg-slate-900 border border-slate-800 max-w-md w-full rounded-3xl p-6 mb-8 text-left space-y-4 shadow-xl">
+           <div className="pb-3 border-b border-slate-800 flex justify-between items-center">
+             <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-400">Riwayat Pelanggaran Terdeteksi:</h4>
+             <span className="text-[9px] font-bold px-2 py-0.5 bg-rose-500/15 text-rose-400 border border-rose-500/25 rounded-md uppercase">Locked</span>
+           </div>
+           
+           <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+             {(serverCheatingFlags.length > 0 ? serverCheatingFlags : clientCheatingFlags).length > 0 ? (
+               (serverCheatingFlags.length > 0 ? serverCheatingFlags : clientCheatingFlags).map((flag, idx) => {
+                 let label = flag;
+                 let desc = "";
+                 if (flag === 'TAB_SWITCH' || flag.includes('Meninggalkan halaman') || flag.includes('Tab Switch')) {
+                   label = "Meninggalkan Halaman Ujian (Tab Switch)";
+                   desc = "Membuka tab baru, menekan tombol Home, atau berpindah ke aplikasi lain.";
+                 } else if (flag === 'BACK_PRESS' || flag.includes('tombol kembali')) {
+                   label = "Navigasi Kembali (Back Press)";
+                   desc = "Mencoba menekan tombol kembali pada perangkat browser.";
+                 } else if (flag === 'COPY_ATTEMPT' || flag.includes('menyalin') || flag.includes('copy')) {
+                   label = "Mencoba Menyalin Soal (Copy)";
+                   desc = "Tindakan menyalin teks soal atau jawaban dilarang oleh sistem.";
+                 } else if (flag === 'PASTE_ATTEMPT' || flag.includes('paste')) {
+                   label = "Mencoba Menempel Teks (Paste)";
+                   desc = "Tindakan menempel teks dari luar halaman ujian dibatasi.";
+                 } else if (flag === 'NO_FACE' || flag.includes('Wajah tidak terdeteksi')) {
+                   label = "Wajah Tidak Terdeteksi Kamera";
+                   desc = "Kamera pengawas tidak dapat menemukan wajah Anda di area ujian.";
+                 } else if (flag === 'MULTI_FACE' || flag.includes('lebih dari satu')) {
+                   label = "Deteksi Wajah Ganda";
+                   desc = "Sistem mendeteksi lebih dari satu orang di depan kamera.";
+                 } else if (flag === 'PIP_ACTIVE' || flag.includes('PICTURE-IN-PICTURE')) {
+                   label = "Mode Picture-in-Picture Aktif";
+                   desc = "Menampilkan layar di atas aplikasi lain (PiP/floating window) terdeteksi.";
+                 } else if (flag === 'OVERLAY_INDICATION' || flag.includes('Layer/Overlay')) {
+                   label = "Indikasi Layar Mengambang/Overlay";
+                   desc = "Aplikasi perekam layar atau overlay pihak ketiga terdeteksi aktif.";
+                 } else if (flag === 'FAST_COMPLETION') {
+                   label = "Pengumpulan Terlalu Cepat";
+                   desc = "Ujian diselesaikan dalam waktu kurang dari batas minimal pengerjaan (5 menit).";
+                 } else if (flag === 'LOW_EFFORT') {
+                   label = "Jawaban Kosong atau Asal-asalan";
+                   desc = "Sebagian besar jawaban terdeteksi kosong, terlalu pendek, atau berisi kata acak.";
+                 } else if (flag === 'IDENTICAL_ESSAY' || flag.includes('HIGH_ESSAY_SIMILARITY')) {
+                   label = "Plagiarisme / Kesamaan Esai Tinggi";
+                   desc = "Jawaban yang dikirim memiliki kemiripan ekstrem dengan siswa lain.";
+                 } else if (flag.includes('AI Vision')) {
+                   label = "AI Proctoring — Pelanggaran Terdeteksi";
+                   desc = flag.replace('AI Vision: ', '').replace('AI Vision Critical: ', '');
+                 }
+
+                 return (
+                   <div key={idx} className="p-3 rounded-2xl bg-rose-500/5 border border-rose-500/10">
+                     <p className="text-[11px] font-black text-rose-400 uppercase tracking-tight">{label}</p>
+                     {desc && <p className="text-[10px] text-slate-400 font-medium mt-1 leading-normal">{desc}</p>}
+                   </div>
+                 );
+               })
+             ) : (
+               <div className="p-4 text-center rounded-2xl bg-rose-500/5 border border-rose-500/10">
+                 <p className="text-xs text-rose-400 font-bold">Terdeteksi aktivitas mencurigakan yang melanggar integritas ujian.</p>
+               </div>
+             )}
+           </div>
+           
+           <p className="text-[10px] font-medium text-slate-400 pt-3 border-t border-slate-800 text-center leading-relaxed">
+             💡 Silakan hubungi <span className="text-white font-bold">Guru Pengampu atau Pengawas Ujian</span> untuk memverifikasi identitas Anda dan membuka kunci sesi ini.
+           </p>
+         </div>
+         
+         <div className="mt-8">
+            <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">GradeMaster Dynamic Security v2.0</p>
+         </div>
+      </div>
+    );
+  }
 
   // RENDER: RULES SCREEN (Pre-exam instruction popup)
   if (step === 'RULES') {
