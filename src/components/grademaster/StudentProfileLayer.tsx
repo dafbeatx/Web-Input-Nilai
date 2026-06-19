@@ -104,9 +104,9 @@ export default function StudentProfileLayer({
       list.push({
         id: 'gold_disc',
         label: 'Disiplin Emas',
-        desc: 'Poin Perilaku Sempurna',
+        desc: 'Perilaku Bersih & Sempurna',
         icon: '🏆',
-        color: 'from-amber-500/10 to-yellow-500/20 text-amber-800 border-amber-500/20'
+        color: 'from-amber-400 via-yellow-400 to-amber-500 text-yellow-950 border-amber-400/30 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
       });
     } else if (charScore >= 80) {
       list.push({
@@ -130,6 +130,29 @@ export default function StudentProfileLayer({
     }
 
     const hasAcademic = studentSummary?.academicHistory && studentSummary.academicHistory.length > 0;
+    
+    // Check for high academic achievements
+    if (hasAcademic) {
+      const maxScore = Math.max(...studentSummary.academicHistory.map((g: any) => Number(g.score) || 0));
+      if (maxScore === 100) {
+        list.push({
+          id: 'perfect_score',
+          label: 'Prestasi Emas',
+          desc: 'Nilai Ujian Sempurna (100)',
+          icon: '🥇',
+          color: 'from-yellow-400 via-amber-400 to-yellow-500 text-amber-950 border-yellow-400/40 shadow-[0_0_15px_rgba(234,179,8,0.25)]'
+        });
+      } else if (maxScore >= 90) {
+        list.push({
+          id: 'high_score',
+          label: 'Prestasi Unggul',
+          desc: `Nilai Tertinggi Kelas (${maxScore})`,
+          icon: '🥈',
+          color: 'from-slate-200 via-slate-100 to-slate-300 text-slate-800 border-slate-300/40 shadow-[0_0_10px_rgba(203,213,225,0.2)]'
+        });
+      }
+    }
+
     const allPassing = hasAcademic && studentSummary.academicHistory.every((g: any) => g.isPassing);
     if (allPassing) {
       list.push({
