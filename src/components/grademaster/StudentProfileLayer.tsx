@@ -409,7 +409,7 @@ export default function StudentProfileLayer({
         ctx.fillStyle = '#1e293b';
         ctx.fillText('Kepala Sekolah,', canvas.width - 280, 630);
         ctx.font = 'bold 18px Georgia, serif';
-        ctx.fillText('Dr. H. Asep Mulyana, M.Pd.', canvas.width - 280, 700);
+        ctx.fillText('Farhan Sopian Sahid, S.Pd.I', canvas.width - 280, 700);
         ctx.beginPath();
         ctx.moveTo(canvas.width - 380, 712);
         ctx.lineTo(canvas.width - 180, 712);
