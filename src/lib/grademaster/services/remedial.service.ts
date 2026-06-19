@@ -529,20 +529,85 @@ export async function submitRemedial(
      originalScore ??
      0;
 
-  console.log({
-     originalScore,
-     remedialScore,
-     calculatedScore,
-     finalScore
+  // Check if there are other students in this session who need remedial and haven't finished yet
+  const { data: siblingStudents } = await supabase
+    .from('gm_students')
+    .select('id, name, final_score, original_score, remedial_status')
+    .eq('session_id', sessionId)
+    .eq('is_deleted', false);
+
+  const kkmScore = session.kkm || 70;
+  const isCandidate = (s: any) => {
+    const orig = s.original_score !== null && s.original_score !== undefined ? Number(s.original_score) : 0;
+    const fin = s.final_score !== null && s.final_score !== undefined ? Number(s.final_score) : 0;
+    const baseScore = (orig > 0) ? orig : fin;
+    return baseScore < kkmScore;
+  };
+
+  const pendingRemedialSiblings = (siblingStudents || []).filter(s => {
+    if (s.id === studentId) return false;
+    if (!isCandidate(s)) return false;
+    const finishedStates = ['COMPLETED', 'CHEATED', 'TIMEOUT', 'FAILED_EFFORT', 'TIME_UP', 'SUBMITTED'];
+    return !finishedStates.includes(s.remedial_status || 'NONE');
   });
 
-  if (finalScore === null || finalScore === undefined) {
-     throw new Error("Final score missing");
-  }
+  const isHeldBack = pendingRemedialSiblings.length > 0;
 
-  // Ensure final_score is never null before insert/update
-  studentUpdate.final_score = finalScore;
-  studentUpdate.final_score_locked = finalScore;
+  if (isHeldBack) {
+    console.log(`[Remedial Holdback] Score for ${studentName} is held back because there are other pending remedial students.`);
+    // Keep final score as original/old score
+    const oldScore = student.original_score || student.final_score || 0;
+    studentUpdate.final_score = oldScore;
+    studentUpdate.final_score_locked = oldScore;
+    
+    // Add warning flag
+    let flags = studentUpdate.cheating_flags as string[] || [];
+    if (!flags.includes('Nilai remedial ditahan sementara menunggu teman sekelas selesai')) {
+      flags.push('Nilai remedial ditahan sementara menunggu teman sekelas selesai');
+    }
+    studentUpdate.cheating_flags = flags;
+  } else {
+    // Release this student's score
+    studentUpdate.final_score = finalScore;
+    studentUpdate.final_score_locked = finalScore;
+
+    // Remove warning flag from current student if present
+    let flags = studentUpdate.cheating_flags as string[] || [];
+    studentUpdate.cheating_flags = flags.filter((f: string) => !f.includes('Nilai remedial ditahan'));
+
+    // Release finished sibling students' scores
+    const finishedHeldBackSiblings = (siblingStudents || []).filter(s => {
+      if (s.id === studentId) return false;
+      const finishedStates = ['COMPLETED', 'CHEATED', 'TIMEOUT', 'FAILED_EFFORT', 'TIME_UP', 'SUBMITTED'];
+      return finishedStates.includes(s.remedial_status || 'NONE');
+    });
+
+    if (finishedHeldBackSiblings.length > 0) {
+      console.log(`[Remedial Release] Releasing scores for ${finishedHeldBackSiblings.length} finished siblings.`);
+      for (const sib of finishedHeldBackSiblings) {
+        const { data: sibData } = await supabase
+          .from('gm_students')
+          .select('remedial_score, essay_score_final, cheating_flags, original_score')
+          .eq('id', sib.id)
+          .single();
+
+        const sibReleaseScore = sibData?.remedial_score ?? sibData?.essay_score_final ?? sib.original_score ?? 0;
+        let sibFlags = sibData?.cheating_flags || [];
+        if (Array.isArray(sibFlags)) {
+          sibFlags = sibFlags.filter((f: string) => !f.includes('Nilai remedial ditahan'));
+        }
+
+        await supabase
+          .from('gm_students')
+          .update({
+            final_score: sibReleaseScore,
+            final_score_locked: sibReleaseScore,
+            cheating_flags: sibFlags
+          })
+          .eq('id', sib.id);
+      }
+    }
+  }
 
   const result = await withRetry(async () => {
     try {
@@ -738,7 +803,7 @@ export async function finalizeRemedial(
 ) {
   const { data: student, error: fetchErr } = await supabase
     .from('gm_students')
-    .select('essay_score_final, remedial_score, is_cheated, teacher_reviewed, original_score, final_score')
+    .select('essay_score_final, remedial_score, is_cheated, teacher_reviewed, original_score, final_score, session_id, cheating_flags, name')
     .eq('id', studentId)
     .single();
 
@@ -767,17 +832,94 @@ export async function finalizeRemedial(
      throw new Error("Final score missing");
   }
 
+  // Check if there are other students in this session who need remedial and haven't finished yet
+  const { data: siblingStudents } = await supabase
+    .from('gm_students')
+    .select('id, name, final_score, original_score, remedial_status')
+    .eq('session_id', student.session_id)
+    .eq('is_deleted', false);
+
+  const isCandidate = (s: any) => {
+    const orig = s.original_score !== null && s.original_score !== undefined ? Number(s.original_score) : 0;
+    const fin = s.final_score !== null && s.final_score !== undefined ? Number(s.final_score) : 0;
+    const baseScore = (orig > 0) ? orig : fin;
+    return baseScore < sessionKkm;
+  };
+
+  const pendingRemedialSiblings = (siblingStudents || []).filter(s => {
+    if (s.id === studentId) return false;
+    if (!isCandidate(s)) return false;
+    const finishedStates = ['COMPLETED', 'CHEATED', 'TIMEOUT', 'FAILED_EFFORT', 'TIME_UP', 'SUBMITTED'];
+    return !finishedStates.includes(s.remedial_status || 'NONE');
+  });
+
+  const isHeldBack = pendingRemedialSiblings.length > 0;
+
+  let finalUpdateScore = finalScore;
+  let finalFlags = (student as any).cheating_flags || [];
+
+  if (isHeldBack) {
+    console.log(`[Remedial Holdback] Score for ${student.name} is held back because there are other pending remedial students.`);
+    // Keep final score as original score
+    finalUpdateScore = originalScore || 0;
+    
+    // Add warning flag
+    if (Array.isArray(finalFlags)) {
+      if (!finalFlags.includes('Nilai remedial ditahan sementara menunggu teman sekelas selesai')) {
+        finalFlags.push('Nilai remedial ditahan sementara menunggu teman sekelas selesai');
+      }
+    }
+  } else {
+    // Release finished sibling students' scores
+    const finishedHeldBackSiblings = (siblingStudents || []).filter(s => {
+      if (s.id === studentId) return false;
+      const finishedStates = ['COMPLETED', 'CHEATED', 'TIMEOUT', 'FAILED_EFFORT', 'TIME_UP', 'SUBMITTED'];
+      return finishedStates.includes(s.remedial_status || 'NONE');
+    });
+
+    if (Array.isArray(finalFlags)) {
+      finalFlags = finalFlags.filter((f: string) => !f.includes('Nilai remedial ditahan'));
+    }
+
+    if (finishedHeldBackSiblings.length > 0) {
+      console.log(`[Remedial Release] Releasing scores for ${finishedHeldBackSiblings.length} finished siblings.`);
+      for (const sib of finishedHeldBackSiblings) {
+        const { data: sibData } = await supabase
+          .from('gm_students')
+          .select('remedial_score, essay_score_final, cheating_flags, original_score')
+          .eq('id', sib.id)
+          .single();
+
+        const sibReleaseScore = sibData?.remedial_score ?? sibData?.essay_score_final ?? sib.original_score ?? 0;
+        let sibFlags = sibData?.cheating_flags || [];
+        if (Array.isArray(sibFlags)) {
+          sibFlags = sibFlags.filter((f: string) => !f.includes('Nilai remedial ditahan'));
+        }
+
+        await supabase
+          .from('gm_students')
+          .update({
+            final_score: sibReleaseScore,
+            final_score_locked: sibReleaseScore,
+            cheating_flags: sibFlags
+          })
+          .eq('id', sib.id);
+      }
+    }
+  }
+
   const { error } = await supabase
     .from('gm_students')
     .update({
-      final_score: finalScore,
-      final_score_locked: finalScore,
+      final_score: finalUpdateScore,
+      final_score_locked: finalUpdateScore,
       remedial_status: 'COMPLETED',
+      cheating_flags: finalFlags,
     })
     .eq('id', studentId);
 
   if (error) throw error;
-  return finalScore;
+  return finalUpdateScore;
 }
 
 export async function resetRemedial(studentId: string) {
