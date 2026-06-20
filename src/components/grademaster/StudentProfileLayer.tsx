@@ -159,19 +159,19 @@ export default function StudentProfileLayer({
         doc.setTextColor(50, 50, 50);
         
         doc.text('Nama Siswa', 15, 46);
-        doc.text(`:  ${studentName}`, 45, 46);
+        doc.text(`:  ${studentName}`, 58, 46);
         doc.text('Kelas', 15, 52);
-        doc.text(`:  ${className}`, 45, 52);
+        doc.text(`:  ${className}`, 58, 52);
         doc.text('Total Pengurangan Poin', 15, 58);
-        doc.text(`:  ${totalPoints} Poin`, 45, 58);
+        doc.text(`:  ${totalPoints} Poin`, 58, 58);
         
         const charScore = Math.max(0, 100 - totalPoints);
         doc.text('Skor Perilaku Akhir', 15, 64);
-        doc.text(`:  ${charScore} / 100 Poin`, 45, 64);
+        doc.text(`:  ${charScore} / 100 Poin`, 58, 64);
 
         doc.setFont("Helvetica", "bold");
         doc.text('Kategori Perilaku', 15, 70);
-        doc.text(':', 45, 70);
+        doc.text(':', 58, 70);
         
         let statusLabel = 'Sangat Baik';
         let badgeColor: [number, number, number] = [34, 197, 94];
@@ -191,10 +191,10 @@ export default function StudentProfileLayer({
         }
 
         doc.setFillColor(...badgeColor);
-        doc.circle(49, 69, 1.8, 'F');
+        doc.circle(62, 69, 1.8, 'F');
         
         doc.setTextColor(0, 0, 0);
-        doc.text(statusLabel, 54, 70);
+        doc.text(statusLabel, 67, 70);
 
         doc.setFont("Helvetica", "bold");
         doc.setFontSize(12);
