@@ -957,7 +957,7 @@ export default function StudentProfileLayer({
                   </div>
                   <div>
                     <h4 className="text-[12px] font-black text-slate-800 tracking-tight leading-none font-outfit">Nilai Ujian</h4>
-                    <p className="text-[13px] text-slate-900 font-black mt-1 font-outfit">Avg: <span className="text-indigo-600">{avgScore}</span></p>
+                    <p className="text-[13px] text-slate-900 font-black mt-1 font-outfit">Rata-rata: <span className="text-indigo-600">{avgScore}</span></p>
                     <p className="text-[9px] text-slate-450 font-bold mt-1.5 leading-tight">Detail nilai akademik</p>
                   </div>
                   {pendingCount > 0 && (
