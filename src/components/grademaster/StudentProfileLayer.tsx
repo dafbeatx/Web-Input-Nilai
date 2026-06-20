@@ -617,9 +617,16 @@ export default function StudentProfileLayer({
 
   const badges = getBadges();
 
-
-
-  useEffect(() => {
+  const academicHistory = studentSummary?.academicHistory || [];
+  const avgScore = academicHistory.length > 0 
+    ? (academicHistory.reduce((sum: number, g: any) => sum + Number(g.score || 0), 0) / academicHistory.length).toFixed(1)
+    : '—';
+  const attPercent = studentSummary?.attendance?.percentage !== null && studentSummary?.attendance?.percentage !== undefined 
+    ? `${studentSummary.attendance.percentage}%`
+    : '—';
+  const badgesCount = badges.length;
+  const docsCount = studentSummary?.documents?.length || 0;
+  const pendingCount = academicHistory.filter((g: any) => !g.isPassing).length;  useEffect(() => {
     setLocalReasons(behaviorReasons);
   }, [behaviorReasons]);
 
@@ -819,7 +826,7 @@ export default function StudentProfileLayer({
       <div className="w-full max-w-md bg-slate-50 flex flex-col relative h-full shadow-[0_0_40px_rgba(0,0,0,0.06)] border-x border-slate-200/50 overflow-hidden">
         
         {/* Top AppBar */}
-        <header className="sticky top-0 w-full z-40 bg-white/90 backdrop-blur-lg flex items-center justify-between px-4 h-14 border-b border-slate-100 shrink-0">
+        <header className="sticky top-0 w-full z-40 bg-white flex items-center justify-between px-4 h-14 border-b border-slate-100 shrink-0">
           {activeTab === 'HOME' ? (
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               {isAdmin && (
@@ -830,7 +837,7 @@ export default function StudentProfileLayer({
                   <ArrowLeft size={14} />
                 </button>
               )}
-              <div className="w-9.5 h-9.5 rounded-full bg-gradient-to-tr from-indigo-500 to-violet-500 text-white flex items-center justify-center text-[10.5px] font-black tracking-tight shrink-0 overflow-hidden shadow-inner">
+              <div className="w-6.5 h-6.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-black tracking-tight shrink-0 overflow-hidden">
                 {currentAvatarUrl ? (
                   <img src={currentAvatarUrl} alt={studentName} className="w-full h-full object-cover" />
                 ) : (
@@ -838,9 +845,10 @@ export default function StudentProfileLayer({
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[8px] font-bold text-indigo-500 uppercase tracking-widest leading-none">Halo, Selamat Belajar! 👋</p>
-                <h2 className="text-slate-800 font-black text-[12px] mt-0.5 tracking-tight font-outfit truncate max-w-[130px] uppercase">{studentName}</h2>
-                <p className="text-slate-450 text-[8px] font-bold uppercase tracking-wider mt-0.5 leading-none">Kelas {className} • TA {academicYear}</p>
+                <h2 className="text-slate-800 font-extrabold text-[11.5px] tracking-tight leading-tight uppercase font-outfit truncate">
+                  {studentName} <span className="text-indigo-650 font-bold text-[9.5px] tracking-normal normal-case">({className})</span>
+                </h2>
+                <p className="text-slate-400 text-[8px] font-bold uppercase tracking-wider leading-none mt-0.5">Tahun Ajaran {academicYear}</p>
               </div>
             </div>
           ) : (
@@ -851,7 +859,7 @@ export default function StudentProfileLayer({
               >
                 <ArrowLeft size={14} />
               </button>
-              <h2 className="font-extrabold text-[12px] uppercase tracking-wider text-slate-800 font-outfit">
+              <h2 className="font-extrabold text-[12px] uppercase tracking-wider text-slate-850 font-outfit">
                 {activeTab === 'GRADES' && "Nilai Akademik"}
                 {activeTab === 'ATTENDANCE' && "Kehadiran Siswa"}
                 {activeTab === 'ACCOUNT' && "Berkas & Profil"}
@@ -879,14 +887,13 @@ export default function StudentProfileLayer({
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar pb-24">
           
-          {/* TAB 1: HOME (BERANDA) */}
-          {activeTab === 'HOME' && (
+             {activeTab === 'HOME' && (
             <div className="space-y-4 animate-in fade-in duration-300">
 
               {/* Banner Notifikasi Remedial / Sukses */}
               {(() => {
-                const pendingRemedials = (studentSummary?.academicHistory || []).filter((g: any) => !g.isPassing);
-                const heldBackGrades = (studentSummary?.academicHistory || []).filter((g: any) => 
+                const pendingRemedials = academicHistory.filter((g: any) => !g.isPassing);
+                const heldBackGrades = academicHistory.filter((g: any) => 
                   Array.isArray(g.cheatingFlags) && g.cheatingFlags.some((f: string) => f.includes('Nilai remedial ditahan'))
                 );
 
@@ -941,28 +948,24 @@ export default function StudentProfileLayer({
               {/* Quick Action Grid (2x2) */}
               <div className="grid grid-cols-2 gap-3">
                 {/* Tombol 1: Nilai & Remedial */}
-                {(() => {
-                  const pendingCount = (studentSummary?.academicHistory || []).filter((g: any) => !g.isPassing).length;
-                  return (
-                    <button
-                      onClick={() => setActiveTab('GRADES')}
-                      className="p-4 bg-white hover:bg-slate-50/80 active:scale-98 border border-slate-100 rounded-3xl flex flex-col items-start gap-3 text-left transition-all relative shadow-[0_2px_8px_rgba(0,0,0,0.01)] group"
-                    >
-                      <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
-                        <BookOpen size={18} />
-                      </div>
-                      <div>
-                        <h4 className="text-[12.5px] font-extrabold text-slate-800 tracking-tight leading-none font-outfit">Nilai Ujian</h4>
-                        <p className="text-[10px] text-slate-400 font-bold mt-1.5 leading-tight">Ujian & remedial siswa</p>
-                      </div>
-                      {pendingCount > 0 && (
-                        <span className="absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white ring-4 ring-white">
-                          {pendingCount}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })()}
+                <button
+                  onClick={() => setActiveTab('GRADES')}
+                  className="p-4 bg-white hover:bg-slate-50/80 active:scale-98 border border-slate-100 rounded-3xl flex flex-col items-start gap-3 text-left transition-all relative shadow-[0_2px_8px_rgba(0,0,0,0.01)] group"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                    <BookOpen size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-[12px] font-black text-slate-800 tracking-tight leading-none font-outfit">Nilai Ujian</h4>
+                    <p className="text-[13px] text-slate-900 font-black mt-1 font-outfit">Avg: <span className="text-indigo-600">{avgScore}</span></p>
+                    <p className="text-[9px] text-slate-450 font-bold mt-1.5 leading-tight">Detail nilai akademik</p>
+                  </div>
+                  {pendingCount > 0 && (
+                    <span className="absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white ring-4 ring-white">
+                      {pendingCount}
+                    </span>
+                  )}
+                </button>
 
                 {/* Tombol 2: Kehadiran */}
                 <button
@@ -973,8 +976,9 @@ export default function StudentProfileLayer({
                     <Calendar size={18} />
                   </div>
                   <div>
-                    <h4 className="text-[12.5px] font-extrabold text-slate-800 tracking-tight leading-none font-outfit">Kehadiran</h4>
-                    <p className="text-[10px] text-slate-400 font-bold mt-1.5 leading-tight">Presensi: {studentSummary?.attendance?.percentage ?? 0}%</p>
+                    <h4 className="text-[12px] font-black text-slate-800 tracking-tight leading-none font-outfit">Kehadiran</h4>
+                    <p className="text-[13px] text-emerald-600 font-black mt-1 font-outfit">{attPercent}</p>
+                    <p className="text-[9px] text-slate-455 font-bold mt-1.5 leading-tight">Log kehadiran harian</p>
                   </div>
                 </button>
 
@@ -987,12 +991,13 @@ export default function StudentProfileLayer({
                     <Trophy size={18} />
                   </div>
                   <div>
-                    <h4 className="text-[12.5px] font-extrabold text-slate-800 tracking-tight leading-none font-outfit">Prestasi Siswa</h4>
-                    <p className="text-[10px] text-slate-400 font-bold mt-1.5 leading-tight">Lencana & pencapaian</p>
+                    <h4 className="text-[12px] font-black text-slate-800 tracking-tight leading-none font-outfit">Prestasi Siswa</h4>
+                    <p className="text-[13px] text-amber-600 font-black mt-1 font-outfit">{badgesCount} Lencana</p>
+                    <p className="text-[9px] text-slate-455 font-bold mt-1.5 leading-tight">Piala & penghargaan</p>
                   </div>
                 </button>
 
-                {/* Tombol 4: Unduh Rapor */}
+                {/* Tombol 4: Unduh Berkas */}
                 <button
                   onClick={() => setActiveTab('ACCOUNT')}
                   className="p-4 bg-white hover:bg-slate-50/80 active:scale-98 border border-slate-100 rounded-3xl flex flex-col items-start gap-3 text-left transition-all shadow-[0_2px_8px_rgba(0,0,0,0.01)] group"
@@ -1001,8 +1006,9 @@ export default function StudentProfileLayer({
                     <FileText size={18} />
                   </div>
                   <div>
-                    <h4 className="text-[12.5px] font-extrabold text-slate-800 tracking-tight leading-none font-outfit">Unduh Berkas</h4>
-                    <p className="text-[10px] text-slate-400 font-bold mt-1.5 leading-tight">Rapor & piagam siswa</p>
+                    <h4 className="text-[12px] font-black text-slate-800 tracking-tight leading-none font-outfit">Unduh Berkas</h4>
+                    <p className="text-[13px] text-sky-600 font-black mt-1 font-outfit">{docsCount} Dokumen</p>
+                    <p className="text-[9px] text-slate-455 font-bold mt-1.5 leading-tight">Rapor & sertifikat</p>
                   </div>
                 </button>
               </div>
@@ -1306,44 +1312,41 @@ export default function StudentProfileLayer({
             </div>
           )}
 
-          {/* TAB 4: ACCOUNT (PROFIL, BERKAS & MANAJEMEN GURU) */}
           {activeTab === 'ACCOUNT' && (
             <div className="space-y-5 animate-in fade-in duration-300 text-left">
               
-              {/* Profil & Point */}
-              <div className="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-sm relative text-center">
-                <div className="h-16 bg-gradient-to-r from-indigo-500/10 via-violet-500/15 to-indigo-500/10" />
-                <div className="px-4 pb-5 pt-0 -mt-8 flex flex-col items-center">
-                  <div className="w-18 h-18 rounded-3xl bg-white border-4 border-white flex items-center justify-center text-xl font-bold tracking-tight shrink-0 overflow-hidden shadow-md relative group">
-                    {currentAvatarUrl ? (
-                      <img src={currentAvatarUrl} alt={studentName} className="w-full h-full object-cover" />
-                    ) : (
-                      studentName.slice(0, 2).toUpperCase()
-                    )}
-                    {(canEditPhoto || isAdmin) && (
-                      <button 
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isUploadingAvatar}
-                        className="absolute inset-0 bg-slate-900/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer active:opacity-100 disabled:opacity-50"
-                      >
-                        {isUploadingAvatar ? (
-                          <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                          <Upload size={16} />
-                        )}
-                      </button>
-                    )}
-                  </div>
-                  
-                  <h3 className="font-extrabold text-[14px] uppercase tracking-wider text-slate-800 mt-2 font-outfit">{studentName}</h3>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">NISN/ID: {studentId}</p>
+              {/* Profil & Point (Flat Row Layout - No Overlap) */}
+              <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-sm flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-base font-black tracking-tight shrink-0 overflow-hidden relative group">
+                  {currentAvatarUrl ? (
+                    <img src={currentAvatarUrl} alt={studentName} className="w-full h-full object-cover" />
+                  ) : (
+                    studentName.slice(0, 2).toUpperCase()
+                  )}
+                  {(canEditPhoto || isAdmin) && (
+                    <button 
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingAvatar}
+                      className="absolute inset-0 bg-slate-900/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer active:opacity-100 disabled:opacity-50"
+                    >
+                      {isUploadingAvatar ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Upload size={12} />
+                      )}
+                    </button>
+                  )}
+                </div>
+                
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-extrabold text-[13px] uppercase tracking-wider text-slate-800 font-outfit truncate">{studentName}</h3>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">NISN/ID: {studentId}</p>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Tahun Ajaran {academicYear}</p>
+                </div>
 
-                  <div className="mt-3.5 px-4 py-2 bg-indigo-50/50 border border-indigo-100/50 rounded-2xl inline-flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[15px] text-indigo-600">verified_user</span>
-                    <span className="text-[10px] font-black text-indigo-950 uppercase tracking-wider">
-                      Poin Kelakuan: <strong className="font-black text-indigo-600">{totalPoints} Poin</strong>
-                    </span>
-                  </div>
+                <div className="px-3 py-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-2xl flex flex-col items-center justify-center shrink-0">
+                  <span className="text-[12px] font-black leading-none">{totalPoints}</span>
+                  <span className="text-[7.5px] font-bold uppercase tracking-wide mt-0.5">Poin</span>
                 </div>
               </div>
 
