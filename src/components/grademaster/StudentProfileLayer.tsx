@@ -820,35 +820,60 @@ export default function StudentProfileLayer({
         
         {/* Top AppBar */}
         <header className="sticky top-0 w-full z-40 bg-white/90 backdrop-blur-lg flex items-center justify-between px-4 h-14 border-b border-slate-100 shrink-0">
-          {isAdmin ? (
-            <button 
-              onClick={onBack}
-              className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 transition-all text-slate-600 active:scale-95 border border-slate-100"
-            >
-              <ArrowLeft size={16} />
-            </button>
+          {activeTab === 'HOME' ? (
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              {isAdmin && (
+                <button 
+                  onClick={onBack}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 transition-all text-slate-600 active:scale-95 border border-slate-100 shrink-0"
+                >
+                  <ArrowLeft size={14} />
+                </button>
+              )}
+              <div className="w-9.5 h-9.5 rounded-full bg-gradient-to-tr from-indigo-500 to-violet-500 text-white flex items-center justify-center text-[10.5px] font-black tracking-tight shrink-0 overflow-hidden shadow-inner">
+                {currentAvatarUrl ? (
+                  <img src={currentAvatarUrl} alt={studentName} className="w-full h-full object-cover" />
+                ) : (
+                  studentName.slice(0, 2).toUpperCase()
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[8px] font-bold text-indigo-500 uppercase tracking-widest leading-none">Halo, Selamat Belajar! 👋</p>
+                <h2 className="text-slate-800 font-black text-[12px] mt-0.5 tracking-tight font-outfit truncate max-w-[130px] uppercase">{studentName}</h2>
+                <p className="text-slate-450 text-[8px] font-bold uppercase tracking-wider mt-0.5 leading-none">Kelas {className} • TA {academicYear}</p>
+              </div>
+            </div>
           ) : (
-            <div className="w-9" />
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <button 
+                onClick={() => setActiveTab('HOME')}
+                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 transition-all text-slate-600 active:scale-95 border border-slate-100 shrink-0"
+              >
+                <ArrowLeft size={14} />
+              </button>
+              <h2 className="font-extrabold text-[12px] uppercase tracking-wider text-slate-800 font-outfit">
+                {activeTab === 'GRADES' && "Nilai Akademik"}
+                {activeTab === 'ATTENDANCE' && "Kehadiran Siswa"}
+                {activeTab === 'ACCOUNT' && "Berkas & Profil"}
+              </h2>
+            </div>
           )}
-          
-          <div className="flex flex-col items-center">
-            <span className="font-extrabold text-[13px] uppercase tracking-wider text-slate-800 font-outfit">GradeMaster OS</span>
-            <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest leading-none mt-0.5">Siswa & Orang Tua</span>
-          </div>
 
-          <button
-            onClick={async () => {
-              setToast({ message: "Sedang menyinkronkan data...", type: "success" });
-              await fetchStudentSummary();
-              await fetchStudentLogs();
-              await fetchAttendanceLogs();
-              setToast({ message: "Data berhasil diperbarui ✨", type: "success" });
-            }}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all active:scale-95 border border-slate-100"
-            title="Sinkronisasi Data"
-          >
-            <span className="material-symbols-outlined text-[18px]">sync</span>
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={async () => {
+                setToast({ message: "Sedang menyinkronkan data...", type: "success" });
+                await fetchStudentSummary();
+                await fetchStudentLogs();
+                await fetchAttendanceLogs();
+                setToast({ message: "Data berhasil diperbarui ✨", type: "success" });
+              }}
+              className="w-8.5 h-8.5 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all active:scale-95 border border-slate-100"
+              title="Sinkronisasi Data"
+            >
+              <span className="material-symbols-outlined text-[16px]">sync</span>
+            </button>
+          </div>
         </header>
 
         {/* Main Content Area */}
@@ -857,22 +882,6 @@ export default function StudentProfileLayer({
           {/* TAB 1: HOME (BERANDA) */}
           {activeTab === 'HOME' && (
             <div className="space-y-4 animate-in fade-in duration-300">
-              
-              {/* Sapaan Siswa */}
-              <div className="bg-white border border-slate-100 rounded-3xl p-4.5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-3.5">
-                <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-indigo-500 to-violet-500 text-white flex items-center justify-center text-lg font-black tracking-tight shrink-0 overflow-hidden shadow-sm">
-                  {currentAvatarUrl ? (
-                    <img src={currentAvatarUrl} alt={studentName} className="w-full h-full object-cover" />
-                  ) : (
-                    studentName.slice(0, 2).toUpperCase()
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">Halo, Selamat Hari Ini</p>
-                  <h2 className="text-slate-800 font-extrabold text-[15px] mt-1 tracking-tight leading-tight uppercase font-outfit truncate">{studentName}</h2>
-                  <p className="text-slate-500 text-[10px] font-bold uppercase mt-0.5 tracking-wider">Kelas {className} • TA {academicYear}</p>
-                </div>
-              </div>
 
               {/* Banner Notifikasi Remedial / Sukses */}
               {(() => {
