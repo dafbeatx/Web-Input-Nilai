@@ -837,7 +837,7 @@ export default function StudentProfileLayer({
                   <ArrowLeft size={14} />
                 </button>
               )}
-              <div className="w-6.5 h-6.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-black tracking-tight shrink-0 overflow-hidden">
+              <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-black tracking-tight shrink-0 overflow-hidden">
                 {currentAvatarUrl ? (
                   <img src={currentAvatarUrl} alt={studentName} className="w-full h-full object-cover" />
                 ) : (
@@ -876,7 +876,7 @@ export default function StudentProfileLayer({
                 await fetchAttendanceLogs();
                 setToast({ message: "Data berhasil diperbarui ✨", type: "success" });
               }}
-              className="w-8.5 h-8.5 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all active:scale-95 border border-slate-100"
+              className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all active:scale-95 border border-slate-100"
               title="Sinkronisasi Data"
             >
               <span className="material-symbols-outlined text-[16px]">sync</span>
@@ -901,7 +901,7 @@ export default function StudentProfileLayer({
                   <div className="space-y-2">
                     {pendingRemedials.length > 0 ? (
                       <div className="bg-rose-50/80 border border-rose-100/50 rounded-2xl p-4 text-left flex items-start gap-3 animate-in slide-in-from-top-3 duration-300">
-                        <div className="w-8.5 h-8.5 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
                           <span className="material-symbols-outlined text-[18px]">warning</span>
                         </div>
                         <div className="min-w-0 flex-1">
@@ -913,7 +913,7 @@ export default function StudentProfileLayer({
                       </div>
                     ) : (
                       <div className="bg-emerald-50/80 border border-emerald-100/50 rounded-2xl p-4 text-left flex items-start gap-3 animate-in slide-in-from-top-3 duration-300">
-                        <div className="w-8.5 h-8.5 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
                           <span className="material-symbols-outlined text-[18px]">check_circle</span>
                         </div>
                         <div className="min-w-0 flex-1">
@@ -929,7 +929,7 @@ export default function StudentProfileLayer({
                       const deadlineText = g.remedialDeadline ? formatDate(g.remedialDeadline) : 'batas waktu sesi';
                       return (
                         <div key={idx} className="bg-amber-50/80 border border-amber-100/50 rounded-2xl p-4 text-left flex items-start gap-3 animate-in slide-in-from-top-3 duration-300">
-                          <div className="w-8.5 h-8.5 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                          <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
                             <span className="material-symbols-outlined text-[18px]">pending_actions</span>
                           </div>
                           <div className="min-w-0 flex-1">
