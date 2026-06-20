@@ -5,7 +5,8 @@ import {
   ArrowLeft, PlusCircle, MinusCircle, Loader2, FileText, 
   Trash2, Pencil, ShieldCheck, ThumbsUp, X, Calendar, 
   Activity, History, DownloadCloud, Check, User,
-  Settings, AlertCircle, LogOut, Share2, Trophy, TrendingUp, Target
+  Settings, AlertCircle, LogOut, Share2, Trophy, TrendingUp, Target,
+  Home, BookOpen, Upload
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, Tooltip, 
@@ -85,7 +86,10 @@ export default function StudentProfileLayer({
   const { isParent } = useGradeMaster();
   const [totalPoints, setTotalPoints] = useState(initialPoints);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(avatarUrl);
-  const [activeTab, setActiveTab] = useState<'SUMMARY' | 'ACADEMIC' | 'DOCUMENTS' | 'MANAGE'>('SUMMARY');
+  const [activeTab, setActiveTab] = useState<'HOME' | 'GRADES' | 'ATTENDANCE' | 'ACCOUNT'>('HOME');
+  const [showAchievementsModal, setShowAchievementsModal] = useState(false);
+  const [attendanceLogs, setAttendanceLogs] = useState<{ subject: string; date: string; status: string }[]>([]);
+  const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
   const [studentLogs, setStudentLogs] = useState<BehaviorLog[]>([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [studentSummary, setStudentSummary] = useState<{ attendance: any, academicHistory: any[], documents: any[] } | null>(null);
@@ -626,12 +630,13 @@ export default function StudentProfileLayer({
   useEffect(() => {
     fetchStudentLogs();
     fetchStudentSummary();
+    fetchAttendanceLogs();
     if (isAdmin) {
       fetchBehaviorSettings();
     }
     setTotalPoints(initialPoints);
     setCurrentAvatarUrl(avatarUrl);
-  }, [studentId, initialPoints, avatarUrl, isAdmin]);
+  }, [studentId, studentName, initialPoints, avatarUrl, isAdmin]);
 
   const fetchBehaviorSettings = async () => {
     try {
@@ -649,6 +654,26 @@ export default function StudentProfileLayer({
   useEffect(() => {
     setCurrentAvatarUrl(avatarUrl);
   }, [avatarUrl]);
+
+  const fetchAttendanceLogs = async () => {
+    if (!studentName) return;
+    setIsLoadingAttendance(true);
+    try {
+      const { data, error } = await supabase
+        .from('gm_attendance')
+        .select('subject, date, status')
+        .eq('student_name', studentName)
+        .order('date', { ascending: false });
+      
+      if (!error && data) {
+        setAttendanceLogs(data);
+      }
+    } catch (err) {
+      console.error("Gagal mengambil logs kehadiran:", err);
+    } finally {
+      setIsLoadingAttendance(false);
+    }
+  };
 
   const fetchStudentSummary = async () => {
     setIsLoadingSummary(true);
@@ -702,7 +727,7 @@ export default function StudentProfileLayer({
       onPointsUpdate?.(newPts);
       fetchStudentLogs();
       fetchStudentSummary();
-      setActiveTab('SUMMARY');
+      setActiveTab('ACCOUNT');
     } else {
       setToast({ message: result.error || "Gagal menambah catatan", type: "error" });
     }
@@ -776,7 +801,6 @@ export default function StudentProfileLayer({
 
       setToast({ message: "Foto profil berhasil diperbarui!", type: "success" });
       setCurrentAvatarUrl(data.avatar_url);
-      onAvatarUpdate?.(data.avatar_url);
     } catch (err: any) {
       setToast({ message: err.message || "Gagal mengunggah", type: "error" });
     } finally {
@@ -791,399 +815,257 @@ export default function StudentProfileLayer({
   };
 
   return (
-    <div className="fixed inset-0 bg-surface/95 backdrop-blur-2xl z-[1000] flex flex-col animate-in fade-in duration-300 overflow-y-auto no-scrollbar bg-surface-container-lowest text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed">
-      {/* TopAppBar */}
-      <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-lg flex items-center justify-between px-4 sm:px-6 h-16 max-w-4xl mx-auto left-1/2 -translate-x-1/2 border-b border-surface-container shadow-[0_10px_40px_rgba(15,23,42,0.04)]">
-        {isAdmin ? (
-          <button 
-            onClick={onBack}
-            className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-container transition-all text-on-surface active:scale-95"
-          >
-            <ArrowLeft size={20} />
-          </button>
-        ) : (
-          <div className="w-10" />
-        )}
-        <h1 className="font-headline font-bold text-lg tracking-tight">Student Profile</h1>
-        {onLogout ? (
-          <button 
-            onClick={onLogout}
-            className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-error/10 text-error transition-all active:scale-95"
-            title="Keluar"
-          >
-            <LogOut size={18} />
-          </button>
-        ) : (
-          <div className="w-10"></div>
-        )}
-      </header>
-
-      {/* Main Content */}
-      <main className="pt-20 px-4 sm:px-6 pb-32 max-w-4xl mx-auto space-y-8 sm:space-y-12 w-full">
-        {/* Profile Header */}
-        <section className="flex flex-col items-center text-center space-y-4 relative py-6">
-          {/* Ambient Glow behind avatar */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-44 bg-primary/10 rounded-full blur-[40px] pointer-events-none -z-10" />
+    <div className="fixed inset-0 bg-slate-100/50 flex justify-center z-[1000] font-sans antialiased text-slate-800 selection:bg-indigo-500/10">
+      <div className="w-full max-w-md bg-slate-50 flex flex-col relative h-full shadow-[0_0_40px_rgba(0,0,0,0.06)] border-x border-slate-200/50 overflow-hidden">
+        
+        {/* Top AppBar */}
+        <header className="sticky top-0 w-full z-40 bg-white/90 backdrop-blur-lg flex items-center justify-between px-4 h-14 border-b border-slate-100 shrink-0">
+          {isAdmin ? (
+            <button 
+              onClick={onBack}
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 transition-all text-slate-600 active:scale-95 border border-slate-100"
+            >
+              <ArrowLeft size={16} />
+            </button>
+          ) : (
+            <div className="w-9" />
+          )}
           
-          <div className="relative group">
-            <div className="w-24 h-24 rounded-full bg-primary-container text-white flex items-center justify-center text-3xl font-bold tracking-tight shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden border-4 border-white">
-              {currentAvatarUrl ? (
-                <img src={currentAvatarUrl} alt={studentName} className="w-full h-full object-cover" />
-              ) : (
-                studentName.slice(0, 2).toUpperCase()
-              )}
-              {isUploadingAvatar && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm">
-                  <Loader2 size={16} className="animate-spin text-white" />
-                </div>
-              )}
-            </div>
-            
-            {canEditPhoto && !isUploadingAvatar && (
-              <button 
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 w-8 h-8 bg-on-primary-fixed text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all border-2 border-white"
-              >
-                <Pencil size={14} />
-              </button>
-            )}
+          <div className="flex flex-col items-center">
+            <span className="font-extrabold text-[13px] uppercase tracking-wider text-slate-800 font-outfit">GradeMaster OS</span>
+            <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest leading-none mt-0.5">Siswa & Orang Tua</span>
           </div>
+
+          <button
+            onClick={async () => {
+              setToast({ message: "Sedang menyinkronkan data...", type: "success" });
+              await fetchStudentSummary();
+              await fetchStudentLogs();
+              await fetchAttendanceLogs();
+              setToast({ message: "Data berhasil diperbarui ✨", type: "success" });
+            }}
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all active:scale-95 border border-slate-100"
+            title="Sinkronisasi Data"
+          >
+            <span className="material-symbols-outlined text-[18px]">sync</span>
+          </button>
+        </header>
+
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar pb-24">
           
-          <div className="px-4">
-            <h2 className="text-on-primary-fixed font-bold text-xl sm:text-2xl tracking-tight leading-tight uppercase font-outfit break-words">{studentName}</h2>
-            <p className="text-on-surface-variant text-[11px] sm:text-xs mt-1.5 uppercase font-bold tracking-widest">Kelas {className} • {academicYear}</p>
-          </div>
-        </section>
-
-        {/* Achievements / Badges Section */}
-        <section className="space-y-3">
-          <h3 className="text-left text-xs font-bold text-on-surface-variant/60 uppercase tracking-widest px-1">Lencana Pencapaian</h3>
-          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar scroll-smooth -mx-4 px-4 sm:-mx-6 sm:px-6">
-            {badges.map(b => (
-              <div 
-                key={b.id} 
-                className={`flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-gradient-to-br ${b.color} border rounded-2xl shadow-sm hover:scale-[1.03] transition-all duration-300 select-none max-w-[240px]`}
-              >
-                <span className="text-2xl">{b.icon}</span>
-                <div className="text-left min-w-0">
-                  <p className="text-xs font-black uppercase tracking-wider truncate leading-tight">{b.label}</p>
-                  <p className="text-[10px] font-medium opacity-80 truncate mt-0.5">{b.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Metric Cards Bento Layout */}
-        {(() => {
-          const charScore = Math.max(0, 100 - totalPoints);
-          return (
-            <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              {/* Poin Perilaku & Karakter (Apple Ring Style) */}
-              <div className="bg-surface border border-outline-variant rounded-3xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between gap-3 sm:gap-4">
-                <div className="flex-1 space-y-1.5 text-left min-w-0">
-                  <p className="text-[9px] sm:text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider sm:tracking-widest truncate">Karakter & Kedisiplinan</p>
-                  <h4 className="text-lg sm:text-xl font-extrabold text-on-surface leading-tight font-outfit truncate">Skor Perilaku</h4>
-                  <div className="flex items-baseline gap-2 mt-1">
-                    <span className="text-xl sm:text-2xl font-black text-on-surface">{charScore}</span>
-                    <span className="text-[11px] sm:text-xs text-on-surface-variant/60 font-medium">/ 100 Poin</span>
-                  </div>
-                  <span className={`inline-block text-[9px] sm:text-[10px] font-black px-2.5 py-1 rounded-lg border mt-1.5 max-w-full truncate ${
-                    charScore >= 90 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                    charScore >= 75 ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' :
-                    charScore >= 60 ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                    'bg-rose-500/10 text-rose-600 border-rose-500/20'
-                  }`}>
-                    Kategori: {
-                      charScore >= 90 ? 'Sangat Baik' :
-                      charScore >= 75 ? 'Baik' :
-                      charScore >= 60 ? 'Cukup' :
-                      'Perlu Pembinaan'
-                    }
-                  </span>
-                </div>
-                
-                {/* SVG Progress Ring */}
-                <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center shrink-0">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle
-                      cx="50%"
-                      cy="50%"
-                      r="35%"
-                      className="stroke-slate-100"
-                      strokeWidth="5"
-                      fill="transparent"
-                    />
-                    <circle
-                      cx="50%"
-                      cy="50%"
-                      r="35%"
-                      className={`transition-all duration-500 ease-out ${
-                        charScore >= 90 ? 'stroke-emerald-500' :
-                        charScore >= 75 ? 'stroke-blue-500' :
-                        charScore >= 60 ? 'stroke-amber-500' :
-                        'stroke-rose-500'
-                      }`}
-                      strokeWidth="5"
-                      fill="transparent"
-                      strokeDasharray="220"
-                      strokeDashoffset={String(220 - (charScore / 100) * 220)}
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className={`text-[11px] sm:text-[12px] font-black font-outfit ${
-                      charScore >= 90 ? 'text-emerald-600' :
-                      charScore >= 75 ? 'text-blue-600' :
-                      charScore >= 60 ? 'text-amber-600' :
-                      'text-rose-600'
-                    }`}>
-                      {charScore}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Kehadiran (Apple Ring Style) */}
-              <div className="bg-surface border border-outline-variant rounded-3xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between gap-3 sm:gap-4">
-                <div className="flex-1 space-y-1.5 text-left min-w-0">
-                  <p className="text-[9px] sm:text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider sm:tracking-widest truncate">Kehadiran Kelas</p>
-                  <h4 className="text-lg sm:text-xl font-extrabold text-on-surface leading-tight font-outfit truncate">Persentase Presensi</h4>
-                  {isLoadingSummary ? (
-                    <div className="flex items-baseline gap-2 mt-1">
-                      <span className="text-xl sm:text-2xl font-black text-on-surface">...</span>
-                    </div>
-                  ) : !studentSummary?.attendance || studentSummary.attendance.total === 0 ? (
-                    <p className="text-xs font-bold text-on-surface-variant/60 mt-2">Data presensi belum tersedia</p>
+          {/* TAB 1: HOME (BERANDA) */}
+          {activeTab === 'HOME' && (
+            <div className="space-y-4 animate-in fade-in duration-300">
+              
+              {/* Sapaan Siswa */}
+              <div className="bg-white border border-slate-100 rounded-3xl p-4.5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-3.5">
+                <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-indigo-500 to-violet-500 text-white flex items-center justify-center text-lg font-black tracking-tight shrink-0 overflow-hidden shadow-sm">
+                  {currentAvatarUrl ? (
+                    <img src={currentAvatarUrl} alt={studentName} className="w-full h-full object-cover" />
                   ) : (
-                    <>
-                      <div className="flex items-baseline gap-2 mt-1">
-                        <span className="text-xl sm:text-2xl font-black text-on-surface">
-                          {studentSummary.attendance.percentage}%
-                        </span>
-                        <span className="text-[11px] sm:text-xs text-on-surface-variant/60 font-medium">Keaktifan</span>
-                      </div>
-                      <span className="inline-block text-[9px] sm:text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-lg border border-primary/20 mt-1 max-w-full truncate">
-                        Hadir {studentSummary.attendance.present} dari {studentSummary.attendance.total}
-                      </span>
-                    </>
+                    studentName.slice(0, 2).toUpperCase()
                   )}
                 </div>
-                
-                {/* SVG Progress Ring */}
-                {!isLoadingSummary && studentSummary?.attendance && studentSummary.attendance.total > 0 && (
-                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center shrink-0">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle
-                        cx="50%"
-                        cy="50%"
-                        r="35%"
-                        className="stroke-slate-100"
-                        strokeWidth="5"
-                        fill="transparent"
-                      />
-                      <circle
-                        cx="50%"
-                        cy="50%"
-                        r="35%"
-                        className={`transition-all duration-500 ease-out ${
-                          studentSummary.attendance.percentage >= 90 ? 'stroke-primary' : 'stroke-amber-500'
-                        }`}
-                        strokeWidth="5"
-                        fill="transparent"
-                        strokeDasharray="220"
-                        strokeDashoffset={String(220 - ((studentSummary.attendance.percentage ?? 0) / 100) * 220)}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-[11px] sm:text-[12px] font-black font-outfit text-on-surface-variant">
-                        {studentSummary.attendance.percentage}%
-                      </span>
-                    </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">Halo, Selamat Hari Ini</p>
+                  <h2 className="text-slate-800 font-extrabold text-[15px] mt-1 tracking-tight leading-tight uppercase font-outfit truncate">{studentName}</h2>
+                  <p className="text-slate-500 text-[10px] font-bold uppercase mt-0.5 tracking-wider">Kelas {className} • TA {academicYear}</p>
+                </div>
+              </div>
+
+              {/* Banner Notifikasi Remedial / Sukses */}
+              {(() => {
+                const pendingRemedials = (studentSummary?.academicHistory || []).filter((g: any) => !g.isPassing);
+                const heldBackGrades = (studentSummary?.academicHistory || []).filter((g: any) => 
+                  Array.isArray(g.cheatingFlags) && g.cheatingFlags.some((f: string) => f.includes('Nilai remedial ditahan'))
+                );
+
+                return (
+                  <div className="space-y-2">
+                    {pendingRemedials.length > 0 ? (
+                      <div className="bg-rose-50/80 border border-rose-100/50 rounded-2xl p-4 text-left flex items-start gap-3 animate-in slide-in-from-top-3 duration-300">
+                        <div className="w-8.5 h-8.5 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-[18px]">warning</span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-rose-950 font-black text-[10.5px] uppercase tracking-wider font-outfit">Ujian Belum Tuntas</h4>
+                          <p className="text-rose-800 text-[11.5px] font-semibold mt-0.5 leading-snug">
+                            Kamu memiliki <strong className="font-extrabold">{pendingRemedials.length} pelajaran</strong> remedial. Yuk selesaikan sekarang!
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-emerald-50/80 border border-emerald-100/50 rounded-2xl p-4 text-left flex items-start gap-3 animate-in slide-in-from-top-3 duration-300">
+                        <div className="w-8.5 h-8.5 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-emerald-950 font-black text-[10.5px] uppercase tracking-wider font-outfit">Status Ujian Aman</h4>
+                          <p className="text-emerald-800 text-[11.5px] font-semibold mt-0.5 leading-snug">
+                            Keren! Semua ujianmu berada di atas KKM. Pertahankan prestasimu ya! 🎉
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {heldBackGrades.map((g: any, idx: number) => {
+                      const deadlineText = g.remedialDeadline ? formatDate(g.remedialDeadline) : 'batas waktu sesi';
+                      return (
+                        <div key={idx} className="bg-amber-50/80 border border-amber-100/50 rounded-2xl p-4 text-left flex items-start gap-3 animate-in slide-in-from-top-3 duration-300">
+                          <div className="w-8.5 h-8.5 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                            <span className="material-symbols-outlined text-[18px]">pending_actions</span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-amber-950 font-black text-[10.5px] uppercase tracking-wider font-outfit">Nilai Remedial Ditahan</h4>
+                            <p className="text-amber-800 text-[11.5px] font-semibold mt-0.5 leading-snug">
+                              Nilai remedial <strong>{g.subject} ({g.sessionName})</strong> ditahan sementara menunggu rekan kelas selesai, atau hingga {deadlineText}.
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
+              {/* Quick Action Grid (2x2) */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Tombol 1: Nilai & Remedial */}
+                {(() => {
+                  const pendingCount = (studentSummary?.academicHistory || []).filter((g: any) => !g.isPassing).length;
+                  return (
+                    <button
+                      onClick={() => setActiveTab('GRADES')}
+                      className="p-4 bg-white hover:bg-slate-50/80 active:scale-98 border border-slate-100 rounded-3xl flex flex-col items-start gap-3 text-left transition-all relative shadow-[0_2px_8px_rgba(0,0,0,0.01)] group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                        <BookOpen size={18} />
+                      </div>
+                      <div>
+                        <h4 className="text-[12.5px] font-extrabold text-slate-800 tracking-tight leading-none font-outfit">Nilai Ujian</h4>
+                        <p className="text-[10px] text-slate-400 font-bold mt-1.5 leading-tight">Ujian & remedial siswa</p>
+                      </div>
+                      {pendingCount > 0 && (
+                        <span className="absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white ring-4 ring-white">
+                          {pendingCount}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })()}
+
+                {/* Tombol 2: Kehadiran */}
+                <button
+                  onClick={() => setActiveTab('ATTENDANCE')}
+                  className="p-4 bg-white hover:bg-slate-50/80 active:scale-98 border border-slate-100 rounded-3xl flex flex-col items-start gap-3 text-left transition-all shadow-[0_2px_8px_rgba(0,0,0,0.01)] group"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                    <Calendar size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-[12.5px] font-extrabold text-slate-800 tracking-tight leading-none font-outfit">Kehadiran</h4>
+                    <p className="text-[10px] text-slate-400 font-bold mt-1.5 leading-tight">Presensi: {studentSummary?.attendance?.percentage ?? 0}%</p>
+                  </div>
+                </button>
+
+                {/* Tombol 3: Prestasi Siswa */}
+                <button
+                  onClick={() => setShowAchievementsModal(true)}
+                  className="p-4 bg-white hover:bg-slate-50/80 active:scale-98 border border-slate-100 rounded-3xl flex flex-col items-start gap-3 text-left transition-all shadow-[0_2px_8px_rgba(0,0,0,0.01)] group"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                    <Trophy size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-[12.5px] font-extrabold text-slate-800 tracking-tight leading-none font-outfit">Prestasi Siswa</h4>
+                    <p className="text-[10px] text-slate-400 font-bold mt-1.5 leading-tight">Lencana & pencapaian</p>
+                  </div>
+                </button>
+
+                {/* Tombol 4: Unduh Rapor */}
+                <button
+                  onClick={() => setActiveTab('ACCOUNT')}
+                  className="p-4 bg-white hover:bg-slate-50/80 active:scale-98 border border-slate-100 rounded-3xl flex flex-col items-start gap-3 text-left transition-all shadow-[0_2px_8px_rgba(0,0,0,0.01)] group"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                    <FileText size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-[12.5px] font-extrabold text-slate-800 tracking-tight leading-none font-outfit">Unduh Berkas</h4>
+                    <p className="text-[10px] text-slate-400 font-bold mt-1.5 leading-tight">Rapor & piagam siswa</p>
+                  </div>
+                </button>
+              </div>
+
+              {/* Catatan Perilaku Terbaru (Maksimal 2 log) */}
+              <div className="space-y-2 pt-1 text-left">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Catatan Perilaku Terbaru</h3>
+                  {studentLogs.length > 2 && (
+                    <button
+                      onClick={() => setActiveTab('ACCOUNT')}
+                      className="text-[10px] font-black text-indigo-600 hover:text-indigo-700 uppercase tracking-wider transition-all"
+                    >
+                      Lihat Semua
+                    </button>
+                  )}
+                </div>
+
+                {isLoadingLogs ? (
+                  <div className="py-6 flex flex-col items-center justify-center gap-2 text-slate-400 bg-white border border-slate-100 rounded-2xl">
+                    <Loader2 size={16} className="animate-spin text-indigo-500" />
+                    <p className="text-[9px] font-bold uppercase tracking-wider">Memuat catatan...</p>
+                  </div>
+                ) : studentLogs.length === 0 ? (
+                  <div className="py-7 text-center bg-white border border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center px-4">
+                    <span className="material-symbols-outlined text-[24px] text-slate-350">sentiment_satisfied</span>
+                    <p className="text-[10.5px] font-bold text-slate-400 uppercase mt-1">Perilaku bersih & tertib</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {studentLogs.slice(0, 2).map((log) => {
+                      const isNegative = log.points_delta > 0;
+                      return (
+                        <div key={log.id} className="bg-white border border-slate-100 rounded-2xl p-3.5 flex items-start gap-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] transition-all">
+                          <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center ${
+                            isNegative ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
+                          }`}>
+                            <span className="material-symbols-outlined text-[16px]">
+                              {isNegative ? 'remove_circle_outline' : 'verified'}
+                            </span>
+                          </div>
+                          <div className="min-w-0 flex-1 text-left">
+                            <div className="flex justify-between items-baseline gap-2">
+                              <h4 className="font-extrabold text-slate-800 text-[11.5px] tracking-tight leading-snug truncate">{log.reason}</h4>
+                              <span className={`font-black text-[12px] shrink-0 ${isNegative ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                {isNegative ? '+' : '-'}{Math.abs(log.points_delta)} Poin
+                              </span>
+                            </div>
+                            <p className="text-[9px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{formatDate(log.violation_date || log.created_at)}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
-            </section>
-          );
-        })()}
-
-        {/* Tabs */}
-        <nav aria-label="Profile Tabs" className="flex border-b border-surface-container overflow-x-auto no-scrollbar sm:justify-center">
-          <button 
-            onClick={() => setActiveTab('SUMMARY')}
-            className={`pb-3 px-4 font-bold text-sm whitespace-nowrap transition-all ${
-              activeTab === 'SUMMARY' ? 'text-on-primary-fixed border-b-2 border-on-primary-fixed' : 'text-on-surface-variant hover:text-on-primary-fixed'
-            }`}
-          >
-            Ringkasan
-          </button>
-          <button 
-            onClick={() => setActiveTab('ACADEMIC')}
-            className={`pb-3 px-4 font-bold text-sm whitespace-nowrap transition-all ${
-              activeTab === 'ACADEMIC' ? 'text-on-primary-fixed border-b-2 border-on-primary-fixed' : 'text-on-surface-variant hover:text-on-primary-fixed'
-            }`}
-          >
-            Akademik
-          </button>
-          <button 
-            onClick={() => setActiveTab('DOCUMENTS')}
-            className={`pb-3 px-4 font-bold text-sm whitespace-nowrap transition-all ${
-              activeTab === 'DOCUMENTS' ? 'text-on-primary-fixed border-b-2 border-on-primary-fixed' : 'text-on-surface-variant hover:text-on-primary-fixed'
-            }`}
-          >
-            Dokumen
-          </button>
-          {isAdmin && (
-            <button 
-              onClick={() => setActiveTab('MANAGE')}
-              className={`pb-3 px-4 font-bold text-sm whitespace-nowrap transition-all ${
-                activeTab === 'MANAGE' ? 'text-on-primary-fixed border-b-2 border-on-primary-fixed' : 'text-on-surface-variant hover:text-on-primary-fixed'
-              }`}
-            >
-              Manajemen
-            </button>
+            </div>
           )}
-        </nav>
 
-        {/* Content Section */}
-        <div className="min-h-[300px]">
-          {activeTab === 'SUMMARY' && (
-            <section className="space-y-6 pt-4 animate-in fade-in duration-300">
-              {/* Score Holdback Alert Banner */}
-              {(() => {
-                const heldBackGrades = studentSummary?.academicHistory?.filter((g: any) => 
-                  Array.isArray(g.cheatingFlags) && g.cheatingFlags.some((f: string) => f.includes('Nilai remedial ditahan'))
-                ) || [];
-                
-                return heldBackGrades.map((g: any, idx: number) => {
-                  const deadlineText = g.remedialDeadline ? formatDate(g.remedialDeadline) : 'batas waktu sesi berakhir';
-                  return (
-                    <div key={idx} className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-5 flex items-start gap-4 text-left animate-in slide-in-from-top-4 duration-500">
-                      <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0 text-amber-600">
-                        <AlertCircle size={20} className="animate-pulse" />
-                      </div>
-                      <div className="min-w-0 space-y-1">
-                        <h4 className="text-amber-800 font-extrabold text-[10px] uppercase tracking-wider leading-none font-outfit">Nilai Remedial Ditahan Sementara</h4>
-                        <p className="text-amber-950 text-xs font-semibold leading-relaxed">
-                          Nilai remedial untuk pelajaran <strong className="text-amber-950 font-black">{g.subject} ({g.sessionName})</strong> sedang ditahan sementara menunggu rekan sekelas menyelesaikan remedial, atau hingga batas waktu remedial berakhir pada <strong className="text-amber-950 font-black">{deadlineText}</strong>.
-                        </p>
-                      </div>
-                    </div>
-                  );
-                });
-              })()}
-
-              <div className="flex items-center justify-between">
-                <h3 className="text-on-primary-fixed font-bold text-lg tracking-tight">Riwayat Transparansi</h3>
-                <span className="bg-surface-container-high text-on-surface-variant text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider truncate">
-                  {studentLogs.length} ENTRI TERPANTAU
-                </span>
-              </div>
-
-              {isLoadingLogs ? (
-                <div className="py-12 flex flex-col items-center justify-center gap-4 text-on-surface-variant">
-                  <Loader2 size={32} className="animate-spin" />
-                  <p className="text-xs font-bold uppercase">Memuat Riwayat...</p>
-                </div>
-              ) : studentLogs.length === 0 ? (
-                <div className="py-20 text-center bg-surface-container-low rounded-3xl border border-dashed border-surface-container flex flex-col items-center justify-center px-6">
-                  <History size={40} className="text-on-surface-variant opacity-20 mb-4" />
-                  <p className="text-sm font-bold text-on-surface-variant uppercase">Belum Ada Riwayat Perilaku</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {studentLogs.map((log) => (
-                    <div key={log.id} className="flex items-start space-x-4 group">
-                      <div className={`mt-1 flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                        log.points_delta > 0 ? 'bg-error/10 text-error' : 'bg-secondary/10 text-secondary'
-                      }`}>
-                        {log.points_delta > 0 ? <MinusCircle size={18} /> : <ThumbsUp size={18} />}
-                      </div>
-                      <div className="flex-1 pb-4 border-b border-surface-container">
-                        <div className="flex justify-between items-baseline mb-1">
-                          <h4 className="font-bold text-on-primary-fixed text-sm">{log.reason}</h4>
-                          <span className={`font-bold text-sm ${log.points_delta > 0 ? 'text-error' : 'text-secondary'}`}>
-                            {log.points_delta > 0 ? '+' : ''}{log.points_delta} Poin
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <p className="text-on-surface-variant text-[11px] font-medium uppercase">{formatDate(log.violation_date || log.created_at)}</p>
-                          {isAdmin && (
-                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                               <button 
-                                 onClick={() => {
-                                   setEditingLogId(log.id);
-                                   setEditForm({ reason: log.reason, points: log.points_delta, date: (log.violation_date || log.created_at).split('T')[0] });
-                                 }}
-                                 className="p-1 text-on-surface-variant hover:text-on-primary-fixed transition-colors"
-                               >
-                                 <Pencil size={12} />
-                               </button>
-                               <button 
-                                 onClick={() => handleDeleteLog(log.id)}
-                                 className="p-1 text-on-surface-variant hover:text-error transition-colors"
-                               >
-                                 <Trash2 size={12} />
-                               </button>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Inline Edit UI */}
-                        {isAdmin && editingLogId === log.id && (
-                          <div className="mt-4 pt-4 border-t border-surface-container space-y-4 animate-in slide-in-from-top-2">
-                             <div className="grid grid-cols-1 gap-3">
-                                <input 
-                                  type="date" 
-                                  value={editForm.date} 
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
-                                  className="w-full bg-white border border-surface-container rounded-lg px-3 py-2 text-xs font-bold outline-none focus:border-on-primary-fixed"
-                                />
-                                <input 
-                                  type="text" 
-                                  value={editForm.reason} 
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, reason: e.target.value }))}
-                                  className="w-full bg-white border border-surface-container rounded-lg px-3 py-2 text-xs font-bold outline-none focus:border-on-primary-fixed"
-                                />
-                             </div>
-                             <div className="flex gap-2">
-                                <button onClick={() => handleUpdateLog(log.id)} className="flex-1 py-2 bg-on-primary-fixed text-white rounded-lg text-[10px] font-bold uppercase tracking-widest">Simpan</button>
-                                <button onClick={() => setEditingLogId(null)} className="px-4 py-2 bg-surface-container text-on-surface-variant rounded-lg text-[10px] font-bold uppercase">Batal</button>
-                             </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
-          {activeTab === 'ACADEMIC' && (() => {
+          {/* TAB 2: GRADES (NILAI AKADEMIK) */}
+          {activeTab === 'GRADES' && (() => {
             const academicHistory = studentSummary?.academicHistory || [];
             const totalExams = academicHistory.length;
             const passedExams = academicHistory.filter((g: any) => g.isPassing).length;
             
-            // Rata-rata Akademik dengan 1 angka desimal
             const avgScore = totalExams > 0 
               ? Number((academicHistory.reduce((sum: number, g: any) => sum + Number(g.score || 0), 0) / totalExams).toFixed(1))
               : 0;
 
-            // Rasio Kelulusan
-            const passPercent = totalExams > 0 
-              ? Math.round((passedExams / totalExams) * 100)
-              : 0;
-
-            // Analisis Akademik
-            const highestScore = totalExams > 0 
-              ? Math.max(...academicHistory.map((g: any) => Number(g.score || 0)))
-              : 0;
-            const lowestScore = totalExams > 0 
-              ? Math.min(...academicHistory.map((g: any) => Number(g.score || 0)))
-              : 0;
+            const passPercent = totalExams > 0 ? Math.round((passedExams / totalExams) * 100) : 0;
+            const highestScore = totalExams > 0 ? Math.max(...academicHistory.map((g: any) => Number(g.score || 0))) : 0;
             
-            // Pelajaran terbaik
             let bestSubject = "—";
             if (totalExams > 0) {
               const subjectsMap: Record<string, number[]> = {};
@@ -1201,216 +1083,115 @@ export default function StudentProfileLayer({
               });
             }
 
-            // Status Akademik
-            let statusText = "Belum Diketahui";
-            let statusBadgeColor = "bg-slate-500/10 text-slate-600 border-slate-500/20";
-            if (totalExams > 0) {
-              if (avgScore >= 85) {
-                statusText = "Sangat Baik";
-                statusBadgeColor = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
-              } else if (avgScore >= 75) {
-                statusText = "Baik";
-                statusBadgeColor = "bg-blue-500/10 text-blue-600 border-blue-500/20";
-              } else if (avgScore >= 60) {
-                statusText = "Perlu Perhatian";
-                statusBadgeColor = "bg-yellow-500/10 text-yellow-600 border-yellow-500/20";
-              } else {
-                statusText = "Memerlukan Pembinaan";
-                statusBadgeColor = "bg-rose-500/10 text-rose-600 border-rose-500/20";
-              }
-            }
-
-            // Tren data
-            let trendText = "Tidak ada tren data";
-            let trendColor = "text-on-surface-variant bg-surface-container-high border-outline-variant";
-            if (totalExams >= 2) {
-              const sortedHistory = [...academicHistory].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-              const lastScore = sortedHistory[sortedHistory.length - 1].score;
-              const prevScore = sortedHistory[sortedHistory.length - 2].score;
-              const diff = lastScore - prevScore;
-              if (diff > 0) {
-                trendText = `Meningkat (+${diff} poin dibanding ujian sebelumnya) 📈`;
-                trendColor = "text-emerald-600 bg-emerald-500/10 border-emerald-500/20";
-              } else if (diff < 0) {
-                trendText = `Menurun (${diff} poin dibanding ujian sebelumnya) 📉`;
-                trendColor = "text-rose-600 bg-rose-500/10 border-rose-500/20";
-              } else {
-                trendText = "Stabil (sama dengan ujian sebelumnya) 📊";
-                trendColor = "text-blue-600 bg-blue-500/10 border-blue-500/20";
-              }
-            }
-
-            // Chart data is memoized at top level
-
-            // Insight Otomatis
-            let insightText = "";
-            if (totalExams === 0) {
-              insightText = "Belum ada data akademik yang tersedia untuk dianalisis.";
-            } else {
-              const attendanceText = studentSummary?.attendance && studentSummary.attendance.total > 0
-                ? `Kehadiran belum dapat dianalisis karena data presensi belum tersedia.` 
-                : "Kehadiran belum dapat dianalisis karena data presensi belum tersedia.";
-
-              // override real attendance info if exist
-              const realAttendanceText = studentSummary?.attendance && studentSummary.attendance.total > 0
-                ? `Tingkat kehadiran siswa saat ini berada di angka ${studentSummary.attendance.percentage}%.`
-                : "Kehadiran belum dapat dianalisis karena data presensi belum tersedia.";
-
-              insightText = `Nilai rata-rata siswa saat ini ${avgScore.toFixed(1)}. Dari ${totalExams} ujian yang telah dikerjakan, ${passedExams} ujian telah mencapai KKM. Mata pelajaran terbaik adalah ${bestSubject} dengan nilai ${highestScore}. ${realAttendanceText}`;
-            }
-
             return (
-              <section className="space-y-6 pt-4 animate-in fade-in duration-300 text-left">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-on-primary-fixed font-bold text-lg tracking-tight font-outfit">Rekam Jejak Akademik</h3>
-                  {totalExams > 0 && (
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${statusBadgeColor}`}>
-                      Status: {statusText}
-                    </span>
-                  )}
+              <div className="space-y-4 animate-in fade-in duration-300 text-left">
+                
+                {/* Ringkasan Nilai */}
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div className="bg-white border border-slate-100 rounded-2xl p-3 text-center shadow-sm">
+                    <p className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">Rata-Rata</p>
+                    <p className="text-xl font-black text-indigo-600 font-outfit mt-1">{avgScore.toFixed(1)}</p>
+                  </div>
+                  <div className="bg-white border border-slate-100 rounded-2xl p-3 text-center shadow-sm">
+                    <p className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">Tuntas</p>
+                    <p className="text-xl font-black text-emerald-600 font-outfit mt-1">{passPercent}%</p>
+                  </div>
+                  <div className="bg-white border border-slate-100 rounded-2xl p-3 text-center shadow-sm">
+                    <p className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">Nilai Tertinggi</p>
+                    <p className="text-xl font-black text-amber-500 font-outfit mt-1">{highestScore}</p>
+                  </div>
                 </div>
 
-                {isLoadingSummary ? (
-                  <div className="py-12 flex flex-col items-center justify-center gap-4 text-on-surface-variant">
-                    <Loader2 size={32} className="animate-spin" />
-                    <p className="text-xs font-bold uppercase">Memuat Nilai...</p>
+                {/* Grafik Perkembangan Nilai */}
+                {isMounted && totalExams >= 1 && (
+                  <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-sm">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                      <TrendingUp size={12} className="text-indigo-500" /> Tren Perkembangan Nilai
+                    </h4>
+                    <div className="h-[160px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData} margin={CHART_MARGIN}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" vertical={false} />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={CHART_TICK_STYLE} />
+                          <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={CHART_TICK_STYLE} />
+                          <Tooltip 
+                            contentStyle={TOOLTIP_CONTENT_STYLE} 
+                            formatter={(value, name, props) => [`Nilai: ${value}`, `${props.payload.subject}`]}
+                          />
+                          <Line type="monotone" dataKey="nilai" stroke="#4f46e5" strokeWidth={2.5} activeDot={ACTIVE_DOT_PROPS} dot={DOT_PROPS} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
-                ) : totalExams === 0 ? (
-                  <div className="py-20 text-center bg-surface-container-low rounded-3xl border border-dashed border-surface-container flex flex-col items-center justify-center px-6 space-y-4">
-                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                      <Activity size={32} />
+                )}
+
+                {/* Kesimpulan Ringkas */}
+                <div className="bg-indigo-50/50 border border-indigo-100/50 rounded-2xl p-3.5">
+                  <p className="text-[11px] font-semibold text-indigo-900 leading-relaxed">
+                    {totalExams === 0 
+                      ? "Belum ada riwayat ujian yang tercatat pada sistem." 
+                      : `Siswa memperoleh rata-rata nilai sebesar ${avgScore.toFixed(1)} dari total ${totalExams} sesi ujian. Pelajaran dengan capaian terbaik diraih pada bidang ${bestSubject} dengan skor tertinggi ${highestScore}.`
+                    }
+                  </p>
+                </div>
+
+                {/* List Sesi Ujian */}
+                <div className="space-y-2">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Riwayat Sesi Ujian</h4>
+                  
+                  {isLoadingSummary ? (
+                    <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-400 bg-white border border-slate-100 rounded-3xl">
+                      <Loader2 size={24} className="animate-spin text-indigo-500" />
+                      <p className="text-[10px] font-bold uppercase tracking-wider">Memuat Ujian...</p>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-bold text-on-surface uppercase tracking-wider">Belum ada data akademik.</p>
-                      <p className="text-xs text-on-surface-variant">Siswa belum memiliki riwayat nilai ujian terdaftar di sistem.</p>
+                  ) : academicHistory.length === 0 ? (
+                    <div className="py-16 text-center bg-white border border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center px-4">
+                      <span className="material-symbols-outlined text-[28px] text-slate-350">import_contacts</span>
+                      <p className="text-[11px] font-bold text-slate-400 uppercase mt-2">Tidak ada data ujian</p>
                     </div>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    {/* Bento Academic Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      {/* Rata-rata Akademik */}
-                      <div className="bg-surface border border-outline-variant rounded-3xl p-5 shadow-sm space-y-2 relative group text-left">
-                        <p className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest">Rata-rata Akademik</p>
-                        <p className="text-3xl font-black text-primary font-outfit">{avgScore.toFixed(1)}</p>
-                        <p className="text-[10px] text-on-surface-variant font-medium leading-normal">
-                          Dihitung dari seluruh ujian yang telah dikerjakan.
-                        </p>
-                      </div>
-
-                      {/* Rasio Kelulusan */}
-                      <div className="bg-surface border border-outline-variant rounded-3xl p-5 shadow-sm space-y-2 text-left">
-                        <p className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest">Rasio Kelulusan</p>
-                        <p className="text-3xl font-black text-emerald-600 font-outfit">{passPercent}%</p>
-                        <p className="text-[10px] text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-100 font-bold inline-block">
-                          {passedExams} dari {totalExams} ujian tuntas
-                        </p>
-                      </div>
-
-                      {/* Total Sesi */}
-                      <div className="bg-surface border border-outline-variant rounded-3xl p-5 shadow-sm space-y-2 text-left">
-                        <p className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest">Total Sesi</p>
-                        <p className="text-3xl font-black text-secondary font-outfit">{totalExams}</p>
-                        <p className="text-[10px] text-on-surface-variant font-medium">Ujian terdaftar di kelas.</p>
-                      </div>
-                    </div>
-
-                    {/* Analisis Akademik */}
-                    <div className="bg-surface border border-outline-variant rounded-[2rem] p-5 sm:p-6 shadow-sm space-y-4 text-left">
-                      <h4 className="text-xs font-black text-on-surface-variant uppercase tracking-[0.2em] flex items-center gap-2">
-                        <Trophy size={14} className="text-amber-500" /> Analisis Akademik
-                      </h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left">
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Nilai Ujian Tertinggi</p>
-                          <p className="text-lg font-black text-primary font-outfit">{highestScore}</p>
-                        </div>
-                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left">
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Nilai Ujian Terendah</p>
-                          <p className="text-lg font-black text-rose-500 font-outfit">{lowestScore}</p>
-                        </div>
-                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left col-span-2 sm:col-span-1">
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pelajaran Terbaik</p>
-                          <p className="text-xs font-black text-emerald-700 font-outfit truncate">{bestSubject}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Insight Otomatis */}
-                    <div className="bg-gradient-to-br from-primary/5 to-secondary/5 border border-outline-variant p-5 rounded-[2rem] shadow-sm relative overflow-hidden text-left">
-                      <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-2 flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-base">psychology</span> Kesimpulan Akademik
-                      </h4>
-                      <p className="text-xs font-semibold text-primary leading-relaxed">
-                        {insightText}
-                      </p>
-                    </div>
-
-                    {/* Grafik Perkembangan Nilai */}
-                    {isMounted && totalExams >= 1 && (
-                      <div className="bg-surface border border-outline-variant rounded-[2rem] p-5 sm:p-6 shadow-sm space-y-4 text-left">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <h4 className="text-xs font-black text-on-surface-variant uppercase tracking-[0.2em] flex items-center gap-2">
-                            <TrendingUp size={14} className="text-secondary" /> Grafik Perkembangan Nilai
-                          </h4>
-                          {totalExams >= 2 && (
-                            <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border ${trendColor}`}>
-                              {trendText}
-                            </span>
-                          )}
-                        </div>
-                        <div className="h-[200px] w-full pt-4">
-                          <ResponsiveContainer width="99%" height={200}>
-                            <LineChart data={chartData} margin={CHART_MARGIN}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f4" vertical={false} />
-                              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={CHART_TICK_STYLE} />
-                              <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={CHART_TICK_STYLE} />
-                              <Tooltip 
-                                contentStyle={TOOLTIP_CONTENT_STYLE} 
-                                formatter={(value, name, props) => [`Nilai: ${value}`, `${props.payload.subject}`]}
-                              />
-                              <Line type="monotone" dataKey="nilai" stroke="#3b82f6" strokeWidth={3} activeDot={ACTIVE_DOT_PROPS} dot={DOT_PROPS} />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Rekam Jejak List */}
-                    <div className="space-y-3">
-                      <h4 className="text-xs font-black text-on-surface-variant/60 uppercase tracking-[0.2em] px-1 text-left">Daftar Sesi Ujian</h4>
-                      <div className="space-y-3">
-                        {academicHistory.map((grade: any, idx: number) => (
-                          <div key={idx} className="bg-white p-4 sm:p-5 rounded-2xl border border-surface-container flex items-center justify-between shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300">
-                            <div className="flex flex-col gap-1 min-w-0 flex-1 text-left">
-                              <h4 className="text-on-primary-fixed font-extrabold text-sm uppercase leading-tight truncate">{grade.sessionName}</h4>
-                              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider truncate">{grade.subject} • {formatDate(grade.date)}</p>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {academicHistory.map((grade: any, idx: number) => {
+                        const isPassing = grade.isPassing;
+                        return (
+                          <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-100/80 shadow-[0_2px_8px_rgba(0,0,0,0.01)] flex items-center justify-between transition-all hover:border-slate-200">
+                            <div className="min-w-0 flex-1 pr-3">
+                              <h4 className="text-slate-800 font-extrabold text-[12.5px] uppercase tracking-tight truncate leading-tight">{grade.sessionName}</h4>
+                              <p className="text-[9.5px] font-bold text-slate-400 uppercase mt-1 tracking-wide truncate">
+                                {grade.subject} • {formatDate(grade.date)}
+                              </p>
                             </div>
-                            <div className="text-right flex flex-col items-end gap-1.5 flex-shrink-0 ml-4">
-                              <p className={`text-xl sm:text-2xl font-black leading-none ${grade.isPassing ? 'text-secondary' : 'text-error'}`}>{grade.score}</p>
-                              <p className="text-[8px] font-black text-on-surface-variant uppercase bg-slate-100 px-1.5 py-0.5 rounded">KKM: {grade.kkm}</p>
-                              
+                            
+                            <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                              <p className={`text-xl font-black font-outfit leading-none ${isPassing ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                {grade.score}
+                              </p>
+                              <span className="text-[8px] font-bold text-slate-400 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded uppercase">
+                                KKM: {grade.kkm}
+                              </span>
+
+                              {/* Aksi Remedial / Share WA */}
                               {!isAdmin && grade.hasRemedialAvailable && onStartRemedial && (
                                 isParent ? (
                                   <button 
                                     disabled
-                                    title="Remedial hanya dapat dimulai dengan login menggunakan akun Google Siswa"
-                                    className="mt-1.5 px-3 py-1.5 bg-slate-200 text-slate-400 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 cursor-not-allowed opacity-80"
+                                    title="Remedial harus diakses oleh Siswa dengan Google Account"
+                                    className="mt-1 px-2.5 py-1 bg-slate-100 text-slate-400 rounded-lg text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 cursor-not-allowed opacity-80"
                                   >
-                                    <span className="material-symbols-outlined text-[12px]">edit_note</span>
-                                    Remedial (Siswa Saja)
+                                    Remedial (Siswa)
                                   </button>
                                 ) : (
                                   <button 
                                     onClick={() => onStartRemedial(grade.sessionName)}
-                                    className="mt-1.5 px-3 py-1.5 bg-rose-500 text-white hover:bg-rose-600 rounded-lg text-[9px] font-black uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm shadow-rose-500/20"
+                                    className="mt-1 px-2.5 py-1 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-[9px] font-extrabold uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm shadow-rose-500/10"
                                   >
-                                    <span className="material-symbols-outlined text-[12px]">edit_note</span>
-                                    Remedial
+                                    <span className="material-symbols-outlined text-[10px]">edit</span>
+                                    Mulai Remedial
                                   </button>
                                 )
                               )}
-                              {!grade.isPassing && isParent && (
+
+                              {!isPassing && isParent && (
                                 <button 
                                   onClick={() => {
                                     const deadlineText = grade.remedialDeadline ? formatDate(grade.remedialDeadline) : 'Batas Waktu Sesi';
@@ -1419,100 +1200,426 @@ export default function StudentProfileLayer({
                                     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
                                     window.open(waUrl, '_blank');
                                   }}
-                                  className="mt-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm shadow-emerald-600/20"
-                                  title="Bagikan informasi remedial ke WhatsApp"
+                                  className="mt-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[9px] font-extrabold uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm shadow-emerald-600/10"
+                                  title="Bagikan ke WhatsApp"
                                 >
-                                  <Share2 size={10} />
+                                  <Share2 size={9} />
                                   Bagikan WA
                                 </button>
                               )}
                             </div>
                           </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* TAB 3: ATTENDANCE (KEHADIRAN) */}
+          {activeTab === 'ATTENDANCE' && (
+            <div className="space-y-4 animate-in fade-in duration-300 text-left">
+              
+              {/* Ringkasan Presensi */}
+              <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-sm text-center">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Rasio Kehadiran Kelas</p>
+                <div className="py-4">
+                  <p className="text-4xl font-black text-emerald-600 font-outfit">{studentSummary?.attendance?.percentage ?? 0}%</p>
+                  <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">
+                    Hadir {studentSummary?.attendance?.present ?? 0} dari {studentSummary?.attendance?.total ?? 0} Pertemuan
+                  </p>
+                </div>
+                
+                {/* Pembagian Status */}
+                {(() => {
+                  const logs = attendanceLogs || [];
+                  const sakit = logs.filter(l => l.status === 'Sakit').length;
+                  const izin = logs.filter(l => l.status === 'Izin').length;
+                  const alfa = logs.filter(l => l.status === 'Alfa').length;
+                  return (
+                    <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-50">
+                      <div className="bg-slate-50 p-2 rounded-xl text-center">
+                        <p className="text-[8px] font-black text-slate-400 uppercase">Sakit</p>
+                        <p className="text-[13px] font-black text-amber-600 mt-0.5">{sakit}</p>
+                      </div>
+                      <div className="bg-slate-50 p-2 rounded-xl text-center">
+                        <p className="text-[8px] font-black text-slate-400 uppercase">Izin</p>
+                        <p className="text-[13px] font-black text-sky-600 mt-0.5">{izin}</p>
+                      </div>
+                      <div className="bg-slate-50 p-2 rounded-xl text-center">
+                        <p className="text-[8px] font-black text-slate-400 uppercase">Alfa</p>
+                        <p className="text-[13px] font-black text-rose-500 mt-0.5">{alfa}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Log Kehadiran */}
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Riwayat Kehadiran Harian</h4>
+                
+                {isLoadingAttendance ? (
+                  <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-400 bg-white border border-slate-100 rounded-3xl">
+                    <Loader2 size={24} className="animate-spin text-indigo-500" />
+                    <p className="text-[10px] font-bold uppercase tracking-wider">Memuat Presensi...</p>
+                  </div>
+                ) : attendanceLogs.length === 0 ? (
+                  <div className="py-16 text-center bg-white border border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center px-4">
+                    <span className="material-symbols-outlined text-[28px] text-slate-350">event_available</span>
+                    <p className="text-[11px] font-bold text-slate-400 uppercase mt-2">Tidak ada log presensi</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {attendanceLogs.map((log, idx) => {
+                      let statusBadge = "bg-emerald-50 text-emerald-700 border-emerald-100";
+                      if (log.status === 'Sakit') statusBadge = "bg-amber-50 text-amber-700 border-amber-100";
+                      else if (log.status === 'Izin') statusBadge = "bg-sky-50 text-sky-700 border-sky-100";
+                      else if (log.status === 'Alfa') statusBadge = "bg-rose-50 text-rose-700 border-rose-100";
+
+                      return (
+                        <div key={idx} className="bg-white px-4 py-3 rounded-2xl border border-slate-100 flex items-center justify-between shadow-[0_2px_8px_rgba(0,0,0,0.01)] transition-all">
+                          <div>
+                            <p className="font-extrabold text-[12px] text-slate-800 leading-tight">{log.subject}</p>
+                            <p className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider mt-1">{formatDate(log.date)}</p>
+                          </div>
+                          <span className={`text-[9.5px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${statusBadge}`}>
+                            {log.status}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: ACCOUNT (PROFIL, BERKAS & MANAJEMEN GURU) */}
+          {activeTab === 'ACCOUNT' && (
+            <div className="space-y-5 animate-in fade-in duration-300 text-left">
+              
+              {/* Profil & Point */}
+              <div className="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-sm relative text-center">
+                <div className="h-16 bg-gradient-to-r from-indigo-500/10 via-violet-500/15 to-indigo-500/10" />
+                <div className="px-4 pb-5 pt-0 -mt-8 flex flex-col items-center">
+                  <div className="w-18 h-18 rounded-3xl bg-white border-4 border-white flex items-center justify-center text-xl font-bold tracking-tight shrink-0 overflow-hidden shadow-md relative group">
+                    {currentAvatarUrl ? (
+                      <img src={currentAvatarUrl} alt={studentName} className="w-full h-full object-cover" />
+                    ) : (
+                      studentName.slice(0, 2).toUpperCase()
+                    )}
+                    {(canEditPhoto || isAdmin) && (
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploadingAvatar}
+                        className="absolute inset-0 bg-slate-900/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer active:opacity-100 disabled:opacity-50"
+                      >
+                        {isUploadingAvatar ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <Upload size={16} />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  
+                  <h3 className="font-extrabold text-[14px] uppercase tracking-wider text-slate-800 mt-2 font-outfit">{studentName}</h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">NISN/ID: {studentId}</p>
+
+                  <div className="mt-3.5 px-4 py-2 bg-indigo-50/50 border border-indigo-100/50 rounded-2xl inline-flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[15px] text-indigo-600">verified_user</span>
+                    <span className="text-[10px] font-black text-indigo-950 uppercase tracking-wider">
+                      Poin Kelakuan: <strong className="font-black text-indigo-600">{totalPoints} Poin</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Unduh Berkas / Rapor */}
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Unduh Berkas & Dokumen</h4>
+                
+                {isLoadingSummary ? (
+                  <div className="py-10 flex flex-col items-center justify-center gap-2.5 text-slate-400 bg-white border border-slate-100 rounded-3xl">
+                    <Loader2 size={20} className="animate-spin text-indigo-500" />
+                    <p className="text-[9px] font-bold uppercase tracking-wider">Menyiapkan berkas...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {studentSummary?.documents?.map((doc: any) => (
+                      <div key={doc.id} className={`bg-white p-3.5 rounded-2xl border border-slate-100 flex items-center justify-between shadow-[0_2px_8px_rgba(0,0,0,0.01)] transition-all ${!doc.ready ? 'opacity-50' : ''}`}>
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                            <FileText size={16} />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-slate-800 font-extrabold text-[12px] leading-tight truncate">{doc.name}</h4>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{doc.type} • {doc.size}</p>
+                          </div>
+                        </div>
+
+                        {doc.ready ? (
+                          <button 
+                            onClick={() => handleDownloadDocument(doc.id, doc.name)}
+                            disabled={downloadingDocId !== null}
+                            className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-100 flex items-center justify-center text-slate-600 transition-colors active:scale-95 disabled:opacity-50"
+                            title={`Unduh ${doc.name}`}
+                          >
+                            {downloadingDocId === doc.id ? (
+                              <Loader2 size={14} className="animate-spin text-indigo-600" />
+                            ) : (
+                              <DownloadCloud size={14} />
+                            )}
+                          </button>
+                        ) : (
+                          <span className="text-[8px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full uppercase shrink-0">
+                            Segera
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Form Manajemen Perilaku (Hanya Guru/Admin) */}
+              {isAdmin && (
+                <div className="space-y-3 pt-2 border-t border-slate-150/50">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Manajemen Perilaku Siswa (Guru)</h4>
+                  
+                  {/* Form input */}
+                  <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-sm space-y-3.5">
+                    <div>
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Tanggal Kejadian</label>
+                      <input 
+                        type="date" 
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="w-full mt-1 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-extrabold text-slate-800 outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Pilih Alasan Cepat (Pelanggaran)</label>
+                      <div className="grid grid-cols-1 gap-1.5 max-h-[160px] overflow-y-auto pr-1 no-scrollbar">
+                        {localReasons.map(r => (
+                          <button 
+                            key={r.text} 
+                            disabled={isUpdatingPoints}
+                            onClick={() => handleAddBehavior(r.weight, r.text)} 
+                            className="p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-100 hover:border-indigo-100 rounded-xl text-left transition-all active:scale-98 flex items-center justify-between group"
+                          >
+                            <span className="text-[10.5px] font-bold text-slate-700 truncate group-hover:text-indigo-900">{r.text}</span>
+                            <span className="text-[9.5px] font-black text-rose-500 shrink-0">+{r.weight} Poin</span>
+                          </button>
                         ))}
                       </div>
                     </div>
                   </div>
-                )}
-              </section>
-            );
-          })()}
 
-          {activeTab === 'DOCUMENTS' && (
-            <section className="space-y-6 pt-4 animate-in fade-in duration-300">
-              <h3 className="text-on-primary-fixed font-bold text-lg tracking-tight">Dokumen Tersedia</h3>
-              {isLoadingSummary ? (
-                 <div className="py-12 flex flex-col items-center justify-center gap-4 text-on-surface-variant">
-                   <Loader2 size={32} className="animate-spin" />
-                   <p className="text-xs font-bold uppercase">Menyiapkan...</p>
-                 </div>
-              ) : (
-                <div className="space-y-3">
-                   {studentSummary?.documents?.map((doc: any) => (
-                     <div key={doc.id} className={`bg-white p-4 rounded-xl border border-surface-container flex items-center justify-between shadow-sm ${!doc.ready ? 'opacity-40' : ''}`}>
-                       <div className="flex items-center gap-3">
-                          <FileText className="text-on-surface-variant" size={20} />
-                          <div>
-                            <h4 className="text-on-primary-fixed font-bold text-sm leading-tight truncate">{doc.name}</h4>
-                            <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider truncate">{doc.size}</p>
-                          </div>
-                       </div>
-                        {doc.ready && (
-                          <button 
-                            onClick={() => handleDownloadDocument(doc.id, doc.name)}
-                            disabled={downloadingDocId !== null}
-                            className="text-on-primary-fixed transition-colors hover:scale-110 disabled:opacity-50 active:scale-95"
-                            title={`Unduh ${doc.name}`}
-                          >
-                            {downloadingDocId === doc.id ? (
-                              <Loader2 size={18} className="animate-spin text-primary" />
-                            ) : (
-                              <DownloadCloud size={18} />
+                  {/* Log Perilaku Lengkap Admin */}
+                  <div className="space-y-2">
+                    <h5 className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest px-1">Log Kedisiplinan Lengkap</h5>
+                    
+                    {isLoadingLogs ? (
+                      <div className="py-8 flex flex-col items-center justify-center gap-2 text-slate-400 bg-white border border-slate-100 rounded-2xl">
+                        <Loader2 size={16} className="animate-spin text-indigo-500" />
+                        <p className="text-[9px] font-bold uppercase">Memuat log...</p>
+                      </div>
+                    ) : studentLogs.length === 0 ? (
+                      <div className="py-8 text-center bg-white border border-slate-100 rounded-2xl flex flex-col items-center justify-center">
+                        <p className="text-[10px] font-bold text-slate-450 uppercase">Belum ada catatan kelakuan</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {studentLogs.map((log) => (
+                          <div key={log.id} className="bg-white border border-slate-100 rounded-2xl p-3.5 flex flex-col shadow-sm">
+                            <div className="flex items-start justify-between gap-2.5">
+                              <div className="min-w-0 flex-1">
+                                <h4 className="font-extrabold text-slate-800 text-[11.5px] leading-snug break-words">{log.reason}</h4>
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
+                                    {formatDate(log.violation_date || log.created_at)}
+                                  </span>
+                                  <span className={`text-[9.5px] font-black ${log.points_delta > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                    {log.points_delta > 0 ? '+' : ''}{log.points_delta} Poin
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button 
+                                  onClick={() => {
+                                    setEditingLogId(log.id);
+                                    setEditForm({ reason: log.reason, points: Math.abs(log.points_delta), date: (log.violation_date || log.created_at).split('T')[0] });
+                                  }}
+                                  className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 border border-slate-100 transition-colors"
+                                >
+                                  <Pencil size={11} />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteLog(log.id)}
+                                  className="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 flex items-center justify-center text-rose-500 hover:text-rose-700 border border-rose-100/50 transition-colors"
+                                >
+                                  <Trash2 size={11} />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Form Edit Inline */}
+                            {editingLogId === log.id && (
+                              <div className="mt-3 pt-3 border-t border-slate-100 space-y-2.5 animate-in slide-in-from-top-2">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="text-[8px] font-black text-slate-400 uppercase">Tanggal</label>
+                                    <input 
+                                      type="date" 
+                                      value={editForm.date} 
+                                      onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
+                                      className="w-full mt-0.5 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 text-[10.5px] font-bold text-slate-800 outline-none"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[8px] font-black text-slate-400 uppercase">Bobot Poin</label>
+                                    <input 
+                                      type="number" 
+                                      value={editForm.points} 
+                                      onChange={(e) => setEditForm(prev => ({ ...prev, points: parseInt(e.target.value) || 0 }))}
+                                      className="w-full mt-0.5 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 text-[10.5px] font-bold text-slate-800 outline-none"
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-[8px] font-black text-slate-400 uppercase">Alasan Sikap</label>
+                                  <input 
+                                    type="text" 
+                                    value={editForm.reason} 
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reason: e.target.value }))}
+                                    className="w-full mt-0.5 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 text-[10.5px] font-bold text-slate-800 outline-none"
+                                  />
+                                </div>
+                                <div className="flex gap-2 pt-1">
+                                  <button 
+                                    onClick={() => handleUpdateLog(log.id)} 
+                                    className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[9.5px] font-black uppercase tracking-wider transition-all"
+                                  >
+                                    Simpan
+                                  </button>
+                                  <button 
+                                    onClick={() => setEditingLogId(null)} 
+                                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-650 rounded-lg text-[9.5px] font-bold uppercase transition-all"
+                                  >
+                                    Batal
+                                  </button>
+                                </div>
+                              </div>
                             )}
-                          </button>
-                        )}
-                     </div>
-                   ))}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
-            </section>
-          )}
 
-          {isAdmin && activeTab === 'MANAGE' && (
-            <section className="space-y-6 pt-4 animate-in fade-in duration-300">
-              <div className="space-y-4">
-                <input 
-                  type="date" 
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full bg-white border border-surface-container rounded-xl p-3 text-sm font-bold text-on-surface outline-none focus:border-on-primary-fixed transition-all"
-                />
-                <div className="grid grid-cols-1 gap-2">
-                  {localReasons.map(r => (
-                    <button 
-                      key={r.text} 
-                      disabled={isUpdatingPoints}
-                      onClick={() => handleAddBehavior(r.weight, r.text)} 
-                      className="p-4 bg-surface-container-low hover:bg-surface-container border border-surface-container rounded-xl text-left transition-all active:scale-95 flex items-center justify-between group"
+              {/* Logout Button */}
+              {onLogout && (
+                <button
+                  onClick={onLogout}
+                  className="w-full py-3.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-2xl text-[10.5px] font-extrabold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all mt-6 active:scale-98 border border-rose-100/50 shadow-sm"
+                >
+                  <LogOut size={13} />
+                  Keluar dari Aplikasi
+                </button>
+              )}
+            </div>
+          )}
+        </main>
+
+        {/* Bottom Navigation Bar (Permanen) */}
+        <nav className="absolute bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-150 px-4 py-2.5 flex justify-around pb-safe shrink-0 shadow-[0_-4px_16px_rgba(0,0,0,0.03)]">
+          <button 
+            onClick={() => setActiveTab('HOME')}
+            className={`flex flex-col items-center gap-1 transition-all ${
+              activeTab === 'HOME' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <Home size={19} className={activeTab === 'HOME' ? 'scale-105' : ''} />
+            <span className="text-[9px] font-black uppercase tracking-wider">Beranda</span>
+          </button>
+
+          <button 
+            onClick={() => setActiveTab('GRADES')}
+            className={`flex flex-col items-center gap-1 transition-all ${
+              activeTab === 'GRADES' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <BookOpen size={19} className={activeTab === 'GRADES' ? 'scale-105' : ''} />
+            <span className="text-[9px] font-black uppercase tracking-wider">Nilai</span>
+          </button>
+
+          <button 
+            onClick={() => setActiveTab('ATTENDANCE')}
+            className={`flex flex-col items-center gap-1 transition-all ${
+              activeTab === 'ATTENDANCE' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <Calendar size={19} className={activeTab === 'ATTENDANCE' ? 'scale-105' : ''} />
+            <span className="text-[9px] font-black uppercase tracking-wider">Kehadiran</span>
+          </button>
+
+          <button 
+            onClick={() => setActiveTab('ACCOUNT')}
+            className={`flex flex-col items-center gap-1 transition-all ${
+              activeTab === 'ACCOUNT' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <User size={19} className={activeTab === 'ACCOUNT' ? 'scale-105' : ''} />
+            <span className="text-[9px] font-black uppercase tracking-wider">Akun</span>
+          </button>
+        </nav>
+
+        {/* Modal Prestasi Siswa */}
+        {showAchievementsModal && (
+          <div className="absolute inset-0 z-50 flex items-end justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
+            <div className="bg-white rounded-t-[2.5rem] w-full max-h-[85%] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-250 pb-safe">
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+                <h3 className="font-extrabold text-slate-800 text-[13.5px] uppercase tracking-wider font-outfit flex items-center gap-2">
+                  <Trophy className="text-amber-500" size={16} /> Lencana Prestasi
+                </h3>
+                <button 
+                  onClick={() => setShowAchievementsModal(false)}
+                  className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-500 active:scale-95 transition-all border border-slate-100"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-4.5 space-y-3.5 no-scrollbar">
+                <p className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest">Lencana Penghargaan Siswa</p>
+                <div className="grid grid-cols-1 gap-2.5">
+                  {badges.map((badge) => (
+                    <div 
+                      key={badge.id} 
+                      className={`p-4 rounded-3xl border bg-gradient-to-r flex items-center gap-3.5 ${badge.color}`}
                     >
-                      <span className="text-[11px] font-bold text-on-surface uppercase tracking-wider truncate">{r.text}</span>
-                      <span className="text-[10px] font-black text-error">+ {r.weight} Pts</span>
-                    </button>
+                      <span className="text-2xl shrink-0">{badge.icon}</span>
+                      <div className="min-w-0">
+                        <h4 className="font-extrabold text-[12.5px] tracking-tight leading-tight uppercase font-outfit">{badge.label}</h4>
+                        <p className="text-[10px] font-semibold opacity-90 mt-1 leading-snug">{badge.desc}</p>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
-            </section>
-          )}
-        </div>
-      </main>
+            </div>
+          </div>
+        )}
 
-      {/* Hidden File Input */}
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        className="hidden" 
-        accept="image/*" 
-        onChange={handleAvatarUpload} 
-      />
+      </div>
     </div>
   );
 }
