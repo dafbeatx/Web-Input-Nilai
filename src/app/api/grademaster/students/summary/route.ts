@@ -128,20 +128,22 @@ export async function GET(req: NextRequest) {
       };
     })) || [];
 
-    // 3. Mock Documents (In real app, this might pull from a storage table)
-    const documents = [
-      { id: 'report-1', name: 'Laporan Progres Kelakuan', type: 'PDF', size: '1.2 MB', ready: true },
-      { id: 'cert-1', name: 'Sertifikat Kedisiplinan', type: 'JPG', size: '2.4 MB', ready: academicHistory.length > 0 },
-      { id: 'history-1', name: 'Rekap Nilai Tahunan', type: 'XLSX', size: '0.5 MB', ready: totalAttendance > 0 }
-    ];
-
-    // 4. Fetch latest total points to keep UI synced independently of local storage
+    // 3. Fetch latest total points to keep UI synced independently of local storage
     const { data: behaviorData } = await supabaseAdmin
       .from('gm_behaviors')
       .select('total_points')
       .eq('student_name', targetStudentName)
       .eq('academic_year', academicYear)
       .single();
+
+    const totalPoints = behaviorData?.total_points ?? 0;
+
+    // 4. Mock Documents (In real app, this might pull from a storage table)
+    const documents = [
+      { id: 'report-1', name: 'Laporan Progres Kelakuan', type: 'PDF', size: '1.2 MB', ready: true },
+      ...(totalPoints === 0 ? [{ id: 'cert-1', name: 'Sertifikat Kedisiplinan', type: 'JPG', size: '2.4 MB', ready: academicHistory.length > 0 }] : []),
+      { id: 'history-1', name: 'Rekap Nilai Tahunan', type: 'XLSX', size: '0.5 MB', ready: totalAttendance > 0 }
+    ];
 
     return NextResponse.json({
       attendance: {

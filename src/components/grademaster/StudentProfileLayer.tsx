@@ -395,9 +395,9 @@ export default function StudentProfileLayer({
 
         ctx.font = 'normal 16px Georgia, serif';
         ctx.fillStyle = '#1e293b';
-        ctx.fillText('Pembimbing OSIS,', 280, 630);
+        ctx.fillText('Kepala Sekolah,', 280, 630);
         ctx.font = 'bold 18px Georgia, serif';
-        ctx.fillText('Nurholis Majid, S.Pd., G.r.', 280, 700);
+        ctx.fillText('Farhan Sopian Sahid, S.Pd.I', 280, 700);
         ctx.strokeStyle = '#cbd5e1';
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -407,9 +407,9 @@ export default function StudentProfileLayer({
 
         ctx.font = 'normal 16px Georgia, serif';
         ctx.fillStyle = '#1e293b';
-        ctx.fillText('Kepala Sekolah,', canvas.width - 280, 630);
+        ctx.fillText('Pembina OSIS,', canvas.width - 280, 630);
         ctx.font = 'bold 18px Georgia, serif';
-        ctx.fillText('Farhan Sopian Sahid, S.Pd.I', canvas.width - 280, 700);
+        ctx.fillText('Nurholis Majid, S.Pd., G.r.', canvas.width - 280, 700);
         ctx.beginPath();
         ctx.moveTo(canvas.width - 380, 712);
         ctx.lineTo(canvas.width - 180, 712);
@@ -701,6 +701,7 @@ export default function StudentProfileLayer({
       setTotalPoints(newPts);
       onPointsUpdate?.(newPts);
       fetchStudentLogs();
+      fetchStudentSummary();
       setActiveTab('SUMMARY');
     } else {
       setToast({ message: result.error || "Gagal menambah catatan", type: "error" });
@@ -724,6 +725,7 @@ export default function StudentProfileLayer({
       onPointsUpdate?.(result.newTotal ?? totalPoints);
       setEditingLogId(null);
       fetchStudentLogs();
+      fetchStudentSummary();
     } else {
       setToast({ message: result.error || "Gagal memperbarui", type: "error" });
     }
@@ -740,6 +742,7 @@ export default function StudentProfileLayer({
       setTotalPoints(result.newTotal ?? totalPoints);
       onPointsUpdate?.(result.newTotal ?? totalPoints);
       fetchStudentLogs();
+      fetchStudentSummary();
     } else {
       setToast({ message: result.error || "Gagal menghapus", type: "error" });
     }
