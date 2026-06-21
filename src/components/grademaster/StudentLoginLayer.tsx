@@ -231,8 +231,17 @@ export default function StudentLoginLayer({
 
   // ── MAIN UI ─────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen bg-white flex flex-col font-inter transition-all duration-1000 ${isPageEntering ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'} selection:bg-slate-100`}>
+    <div className={`min-h-screen bg-white flex flex-col relative font-inter transition-all duration-1000 ${isPageEntering ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'} selection:bg-slate-100`}>
       
+      {/* Mascot Waving Character - Desktop Only */}
+      <div className="hidden lg:block absolute bottom-0 right-10 w-[240px] xl:w-[280px] z-0 select-none pointer-events-none animate-in slide-in-from-right-10 duration-1000 ease-out">
+        <img
+          src="/student-mascot.png"
+          alt="Student Mascot"
+          className="w-full h-auto object-contain opacity-90 hover:opacity-100 transition-opacity duration-300"
+        />
+      </div>
+
       {/* Background Decor — Clean & Sparse */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.03]">
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-slate-900 rounded-full blur-[120px]" />
