@@ -350,34 +350,34 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
           <p className="text-slate-400 text-sm font-medium max-w-sm">Guru belum mempublikasikan pelajaran harian untuk kelas {activeClassName} saat ini.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className={`grid grid-cols-1 ${isTab ? 'gap-5' : 'lg:grid-cols-12 gap-8'} items-start`}>
           
           {/* LEFT: MASTER LIST */}
-          <div className="lg:col-span-4 space-y-4">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Materi Terbit</h3>
-            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 no-scrollbar">
+          <div className={`${isTab ? '' : 'lg:col-span-4'} space-y-3`}>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Materi Terbit</h3>
+            <div className={`flex ${isTab ? 'flex-row overflow-x-auto gap-3 pb-2.5 scrollbar-thin' : 'flex-col space-y-3 max-h-[600px] overflow-y-auto'} pr-1 no-scrollbar`}>
               {lessons.map((lesson) => {
                 const isSelected = selectedLesson?.id === lesson.id;
                 return (
                   <button
                     key={lesson.id}
                     onClick={() => setSelectedLesson(lesson)}
-                    className={`w-full p-5 rounded-2xl border text-left transition-all duration-300 flex items-start gap-4 active:scale-[0.98] ${
+                    className={`${isTab ? 'min-w-[200px] max-w-[220px] p-4' : 'w-full p-5'} rounded-2xl border text-left transition-all duration-300 flex items-start gap-3.5 shrink-0 active:scale-[0.98] ${
                       isSelected 
                         ? 'bg-white border-emerald-500 shadow-md shadow-emerald-500/5 ring-1 ring-emerald-500' 
                         : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
                     }`}
                   >
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                      isSelected ? 'bg-emerald-500 text-white' : 'bg-slate-50 text-slate-400'
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                      isSelected ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20' : 'bg-slate-50 text-slate-400'
                     }`}>
-                      <FileText size={20} />
+                      <FileText size={18} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className="font-black text-slate-950 text-base truncate leading-snug">{lesson.subject}</h4>
-                      <div className="flex items-center gap-2 mt-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest">
-                        <Calendar size={12} />
-                        <span>{lesson.date}</span>
+                      <h4 className="font-black text-slate-950 text-sm truncate leading-snug">{lesson.subject}</h4>
+                      <div className="flex items-center gap-1.5 mt-1.5 text-slate-400 font-bold text-[9px] uppercase tracking-wider">
+                        <Calendar size={10} />
+                        <span className="truncate">{lesson.date}</span>
                       </div>
                     </div>
                   </button>
@@ -387,37 +387,37 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
           </div>
 
           {/* RIGHT: DETAIL VIEW */}
-          <div className="lg:col-span-8 bg-white border border-slate-200 rounded-[32px] p-6 sm:p-8 shadow-sm flex flex-col min-h-[500px]">
+          <div className={`${isTab ? 'p-5 rounded-3xl min-h-[400px]' : 'lg:col-span-8 p-6 sm:p-8 rounded-[32px] min-h-[500px]'} bg-white border border-slate-200 shadow-sm flex flex-col`}>
             {selectedLesson && (
               <>
                 {/* Subject Header */}
-                <div className="border-b border-slate-100 pb-6 mb-6">
-                  <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                    <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{selectedLesson.subject}</h2>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 font-mono">
-                      <Calendar size={12} /> {selectedLesson.date}
+                <div className={`${isTab ? 'pb-4 mb-4' : 'pb-6 mb-6'} border-b border-slate-100`}>
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-1.5">
+                    <h2 className={`${isTab ? 'text-xl' : 'text-2xl sm:text-3xl'} font-black text-slate-900 tracking-tight`}>{selectedLesson.subject}</h2>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1 font-mono">
+                      <Calendar size={11} /> {selectedLesson.date}
                     </span>
                   </div>
-                  <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Materi Kelas {activeClassName}</p>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Materi Kelas {activeClassName}</p>
                 </div>
 
                 {/* Tab selectors */}
                 <div className="flex border-b border-slate-100 mb-6 overflow-x-auto no-scrollbar">
                   {[
-                    { id: 'materi', label: 'Ringkasan Materi', icon: FileText },
-                    { id: 'chat_ai', label: 'Tanya AI Copilot', icon: Bot },
-                    { id: 'kuis', label: 'Kuis Harian', icon: Award }
+                    { id: 'materi', label: isTab ? 'Materi' : 'Ringkasan Materi', icon: FileText },
+                    { id: 'chat_ai', label: isTab ? 'Tanya AI' : 'Tanya AI Copilot', icon: Bot },
+                    { id: 'kuis', label: isTab ? 'Kuis' : 'Kuis Harian', icon: Award }
                   ].map(tab => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as TabType)}
-                      className={`flex items-center gap-2 px-5 py-3 border-b-2 transition-all whitespace-nowrap text-xs font-black uppercase tracking-widest min-h-[44px] ${
+                      className={`flex items-center gap-2 px-4 py-2.5 border-b-2 transition-all whitespace-nowrap text-xs font-black uppercase tracking-widest min-h-[40px] ${
                         activeTab === tab.id 
                           ? 'border-emerald-500 text-emerald-600' 
                           : 'border-transparent text-slate-400 hover:text-slate-600'
                       }`}
                     >
-                      <tab.icon size={16} /> {tab.label}
+                      <tab.icon size={14} /> {tab.label}
                     </button>
                   ))}
                 </div>
