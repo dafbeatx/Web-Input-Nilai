@@ -1357,6 +1357,7 @@ export default function GradeMaster() {
           onLogout={handleAdminLogout}
           onAvatarUpdate={(url) => setStudentData({ ...studentData, avatar_url: url })}
           onStartRemedial={handleStudentRemedialFromProfile}
+          semester={semester}
         />
       )}
 

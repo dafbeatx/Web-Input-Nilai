@@ -25,6 +25,7 @@ interface StudentLessonLayerProps {
   onBack: () => void;
   setToast: (t: ToastType) => void;
   semester?: string;
+  isTab?: boolean;
 }
 
 type TabType = 'materi' | 'chat_ai' | 'kuis';
@@ -34,7 +35,7 @@ interface ChatMessage {
   content: string;
 }
 
-export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganjil' }: StudentLessonLayerProps) {
+export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganjil', isTab = false }: StudentLessonLayerProps) {
   const { studentData, studentClass, academicYear } = useGradeMaster();
   const activeClassName = studentData?.class_name || studentClass || "";
 
@@ -309,25 +310,27 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
   };
 
   return (
-    <div className="min-h-dvh bg-slate-50/50 p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto page-pt md:pt-16 pb-24 font-outfit">
+    <div className={`${isTab ? 'min-h-full p-4 pb-28' : 'min-h-dvh p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto page-pt md:pt-16 pb-24'} bg-slate-50/50 font-outfit`}>
       {/* Header */}
-      <header className="mb-8 md:mb-10 animate-in fade-in slide-in-from-top-4 duration-500">
-        <button 
-          onClick={onBack}
-          className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-sm transition-all mb-4 group min-h-[44px]"
-        >
-          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Kembali ke Beranda
-        </button>
+      <header className={`${isTab ? 'mb-5' : 'mb-8 md:mb-10'} animate-in fade-in slide-in-from-top-4 duration-500`}>
+        {!isTab && (
+          <button 
+            onClick={onBack}
+            className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-sm transition-all mb-4 group min-h-[44px]"
+          >
+            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Kembali ke Beranda
+          </button>
+        )}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight leading-none">
+            <h1 className={`${isTab ? 'text-2xl font-black text-slate-900 tracking-tight' : 'text-3xl md:text-5xl font-black text-slate-900 tracking-tight leading-none'}`}>
               Pelajaran Saya
             </h1>
-            <p className="text-slate-500 text-sm md:text-base font-medium mt-2">
+            <p className="text-slate-500 text-xs sm:text-sm font-medium mt-2">
               Akses ringkasan materi AI, tanya jawab interaktif, dan kuis kelas {activeClassName}.
             </p>
           </div>
-          <div className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 text-xs font-black uppercase tracking-widest self-start sm:self-auto">
+          <div className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 text-[10px] font-black uppercase tracking-widest self-start sm:self-auto">
              Kelas {activeClassName}
           </div>
         </div>

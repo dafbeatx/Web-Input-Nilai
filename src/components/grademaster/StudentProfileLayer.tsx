@@ -6,7 +6,7 @@ import {
   Trash2, Pencil, ShieldCheck, ThumbsUp, X, Calendar, 
   Activity, History, DownloadCloud, Check, User,
   Settings, AlertCircle, LogOut, Share2, Trophy, TrendingUp, Target,
-  Home, BookOpen, Upload
+  Home, BookOpen, Upload, GraduationCap
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, Tooltip, 
@@ -25,6 +25,7 @@ import Image from 'next/image';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import StudentLessonLayer from './StudentLessonLayer';
 
 interface BehaviorLog {
   id: string;
@@ -51,6 +52,7 @@ interface StudentProfileLayerProps {
   onLogout?: () => void;
   onStartRemedial?: (sessionName: string) => void;
   behaviorReasons?: { text: string; weight: number }[];
+  semester?: string;
 }
 
 const CHART_MARGIN = { left: -20, right: 10, top: 10, bottom: 5 };
@@ -81,12 +83,13 @@ export default function StudentProfileLayer({
   onPointsUpdate,
   onLogout,
   onStartRemedial,
-  behaviorReasons = []
+  behaviorReasons = [],
+  semester = 'Ganjil'
 }: StudentProfileLayerProps) {
   const { isParent } = useGradeMaster();
   const [totalPoints, setTotalPoints] = useState(initialPoints);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(avatarUrl);
-  const [activeTab, setActiveTab] = useState<'HOME' | 'GRADES' | 'ATTENDANCE' | 'ACCOUNT'>('HOME');
+  const [activeTab, setActiveTab] = useState<'HOME' | 'GRADES' | 'LESSON' | 'ATTENDANCE' | 'ACCOUNT'>('HOME');
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
   const [attendanceLogs, setAttendanceLogs] = useState<{ subject: string; date: string; status: string }[]>([]);
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
@@ -826,7 +829,8 @@ export default function StudentProfileLayer({
       <div className="w-full max-w-md bg-slate-50 flex flex-col relative h-full shadow-[0_0_40px_rgba(0,0,0,0.06)] border-x border-slate-200/50 overflow-hidden">
         
         {/* Top AppBar */}
-        <header className="sticky top-0 w-full z-40 bg-white flex items-center justify-between px-4 h-14 border-b border-slate-100 shrink-0">
+        {activeTab !== 'LESSON' && (
+          <header className="sticky top-0 w-full z-40 bg-white flex items-center justify-between px-4 h-14 border-b border-slate-100 shrink-0">
           {activeTab === 'HOME' ? (
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               {isAdmin && (
@@ -883,11 +887,13 @@ export default function StudentProfileLayer({
             </button>
           </div>
         </header>
+        )}
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar pb-24">
-          
-             {activeTab === 'HOME' && (
+        {activeTab !== 'LESSON' ? (
+          <main className="flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar pb-24">
+            
+               {activeTab === 'HOME' && (
             <div className="space-y-4 animate-in fade-in duration-300">
 
               {/* Banner Notifikasi Remedial / Sukses */}
@@ -1550,6 +1556,16 @@ export default function StudentProfileLayer({
             </div>
           )}
         </main>
+        ) : (
+          <div className="flex-1 overflow-y-auto no-scrollbar">
+            <StudentLessonLayer
+              onBack={() => setActiveTab('HOME')}
+              setToast={setToast}
+              semester={semester}
+              isTab={true}
+            />
+          </div>
+        )}
 
         {/* Bottom Navigation Bar (Permanen) */}
         <nav className="absolute bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-150 px-4 py-2.5 flex justify-around pb-safe shrink-0 shadow-[0_-4px_16px_rgba(0,0,0,0.03)]">
@@ -1571,6 +1587,16 @@ export default function StudentProfileLayer({
           >
             <BookOpen size={19} className={activeTab === 'GRADES' ? 'scale-105' : ''} />
             <span className="text-[9px] font-black uppercase tracking-wider">Nilai</span>
+          </button>
+
+          <button 
+            onClick={() => setActiveTab('LESSON')}
+            className={`flex flex-col items-center gap-1 transition-all ${
+              activeTab === 'LESSON' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <GraduationCap size={19} className={activeTab === 'LESSON' ? 'scale-105' : ''} />
+            <span className="text-[9px] font-black uppercase tracking-wider">Pelajaran</span>
           </button>
 
           <button 
