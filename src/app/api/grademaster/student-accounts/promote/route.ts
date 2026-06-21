@@ -5,6 +5,20 @@ import { checkRateLimit } from '@/lib/grademaster/security';
 
 export const dynamic = 'force-dynamic';
 
+function generateUsername(name: string, className: string): string {
+  const cleanName = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '.');
+
+  const classSuffix = className
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+
+  return `${cleanName}.${classSuffix}`;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();
@@ -29,10 +43,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Seluruh parameter (fromClass, toClass, fromYear, toYear) wajib diisi' }, { status: 400 });
     }
 
-    // 1. Ambil daftar siswa yang aktif di kelas asal
+    // 1. Ambil daftar siswa yang aktif di kelas asal (termasuk id dan username saat ini)
     const { data: studentsToPromote, error: selectError } = await supabase
       .from('gm_student_accounts')
-      .select('student_name')
+      .select('id, student_name, username')
       .eq('class_name', fromClass.trim())
       .eq('academic_year', fromYear.trim());
 
@@ -45,28 +59,83 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Tidak ada siswa ditemukan di kelas ${fromClass} untuk tahun ajaran ${fromYear}` }, { status: 404 });
     }
 
-    // 2. Pembaruan massal (mass update) tabel gm_student_accounts
-    const { error: updateError } = await supabase
+    // Pre-check: Check if any student name being promoted already exists in destination class and year
+    const studentNamesToPromote = studentsToPromote.map(s => s.student_name);
+    const { data: conflictingStudents, error: conflictError } = await supabase
       .from('gm_student_accounts')
-      .update({
-        class_name: toClass.trim(),
-        academic_year: toYear.trim(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('class_name', fromClass.trim())
-      .eq('academic_year', fromYear.trim());
+      .select('student_name')
+      .eq('class_name', toClass.trim())
+      .eq('academic_year', toYear.trim())
+      .in('student_name', studentNamesToPromote);
 
-    if (updateError) {
-      console.error('[PROMOTE Student Accounts] Update error:', updateError);
-      return NextResponse.json({ error: `Gagal memperbarui akun siswa: ${updateError.message}` }, { status: 500 });
+    if (conflictError) {
+      console.error('[PROMOTE Student Accounts] Conflict check error:', conflictError);
+      return NextResponse.json({ error: `Gagal melakukan pengecekan konflik kelas tujuan: ${conflictError.message}` }, { status: 500 });
     }
 
-    // 3. Masukkan baris baru di gm_behaviors untuk pencatatan perilaku di kelas & tahun ajaran baru
+    if (conflictingStudents && conflictingStudents.length > 0) {
+      const conflictList = conflictingStudents.map(s => s.student_name).join(', ');
+      return NextResponse.json({ 
+        error: `Deteksi Konflik: Siswa berikut sudah memiliki akun di kelas ${toClass} (${toYear}): ${conflictList}. Batalkan promosi atau hapus akun mereka terlebih dahulu.` 
+      }, { status: 409 });
+    }
+
+    // Fetch all usernames in database to ensure unique username generation
+    const { data: allUsernames, error: usernamesError } = await supabase
+      .from('gm_student_accounts')
+      .select('username');
+
+    if (usernamesError) {
+      console.error('[PROMOTE Student Accounts] Fetch usernames error:', usernamesError);
+      return NextResponse.json({ error: `Gagal mengambil daftar username untuk validasi: ${usernamesError.message}` }, { status: 500 });
+    }
+
+    const usedUsernames = new Set((allUsernames || []).map((a: any) => a.username));
+    
+    // Free the current students' old usernames since they are changing suffix
+    studentsToPromote.forEach(s => {
+      usedUsernames.delete(s.username);
+    });
+
+    // 2. Pembaruan per siswa (update class, year, and new username with destination class suffix)
+    const updates = studentsToPromote.map(async (student) => {
+      let baseUsername = generateUsername(student.student_name, toClass);
+      let username = baseUsername;
+      let counter = 1;
+      while (usedUsernames.has(username)) {
+        username = `${baseUsername}${counter}`;
+        counter++;
+      }
+      usedUsernames.add(username);
+
+      const { error } = await supabase
+        .from('gm_student_accounts')
+        .update({
+          class_name: toClass.trim(),
+          academic_year: toYear.trim(),
+          username,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', student.id);
+
+      if (error) {
+        throw new Error(`Gagal mempromosikan ${student.student_name}: ${error.message}`);
+      }
+    });
+
+    try {
+      await Promise.all(updates);
+    } catch (updateErr: any) {
+      console.error('[PROMOTE Student Accounts] Update error:', updateErr);
+      return NextResponse.json({ error: updateErr.message || 'Gagal memperbarui akun siswa' }, { status: 500 });
+    }
+
+    // 3. Masukkan baris baru di gm_behaviors untuk pencatatan perilaku di kelas & tahun ajaran baru (default points: 0)
     const behaviorRows = studentsToPromote.map(student => ({
       student_name: student.student_name,
       class_name: toClass.trim(),
       academic_year: toYear.trim(),
-      total_points: 100,
+      total_points: 0,
       behavior_logs: []
     }));
 

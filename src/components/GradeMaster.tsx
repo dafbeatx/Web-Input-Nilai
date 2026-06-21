@@ -1399,6 +1399,10 @@ export default function GradeMaster() {
           setToast={setToast}
           activeClass={studentClass}
           activeYear={academicYear}
+          onPromoteSuccess={(newClass, newYear) => {
+            setStudentClass(newClass);
+            setAcademicYear(newYear);
+          }}
         />
       )}
 

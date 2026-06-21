@@ -80,6 +80,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ students: data || [] });
     }
 
+    if (mode === 'classes') {
+      const { data, error } = await supabase
+        .from('gm_student_accounts')
+        .select('class_name')
+        .eq('academic_year', academicYear);
+
+      if (error) {
+        console.error('[GET Student Accounts - Classes] Database error:', error);
+        return NextResponse.json({ error: 'Gagal memuat daftar kelas' }, { status: 500 });
+      }
+
+      const classes = Array.from(new Set(data?.map((d: any) => d.class_name) || []));
+      return NextResponse.json({ classes });
+    }
+
     // All other modes require admin session
     const adminSession = await getAdminSession();
     if (!adminSession) {

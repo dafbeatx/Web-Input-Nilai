@@ -13,13 +13,15 @@ interface StudentAccountsLayerProps {
   setToast: (t: ToastType) => void;
   activeClass?: string;
   activeYear?: string;
+  onPromoteSuccess?: (newClass: string, newYear: string) => void;
 }
 
 export default function StudentAccountsLayer({
   onBack,
   setToast,
   activeClass = '',
-  activeYear = '2025/2026'
+  activeYear = '2025/2026',
+  onPromoteSuccess
 }: StudentAccountsLayerProps) {
   const [accounts, setAccounts] = useState<StudentAccount[]>([]);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
@@ -63,9 +65,15 @@ export default function StudentAccountsLayer({
       if (res.ok) {
         setToast({ message: data.message || 'Kenaikan kelas siswa berhasil diproses!', type: 'success' });
         setShowPromoteModal(false);
+        const promotedClass = promoteToClass;
+        const promotedYear = promoteToYear;
         setPromoteToClass('');
-        fetchClasses();
-        fetchAccounts();
+        if (onPromoteSuccess) {
+          onPromoteSuccess(promotedClass, promotedYear);
+        } else {
+          fetchClasses();
+          fetchAccounts();
+        }
       } else {
         setToast({ message: data.error || 'Gagal memproses kenaikan kelas', type: 'error' });
       }
@@ -78,9 +86,19 @@ export default function StudentAccountsLayer({
 
   const fetchClasses = useCallback(async () => {
     try {
-      const res = await fetch(`/api/grademaster/behaviors?year=${encodeURIComponent(activeYear)}`);
-      const data = await res.json();
-      if (res.ok) setAvailableClasses(data.classes || []);
+      const [behRes, accRes] = await Promise.all([
+        fetch(`/api/grademaster/behaviors?year=${encodeURIComponent(activeYear)}`),
+        fetch(`/api/grademaster/student-accounts?mode=classes&year=${encodeURIComponent(activeYear)}`)
+      ]);
+      const behData = behRes.ok ? await behRes.json() : { classes: [] };
+      const accData = accRes.ok ? await accRes.json() : { classes: [] };
+      
+      const merged = Array.from(new Set([
+        ...(behData.classes || []),
+        ...(accData.classes || [])
+      ])).sort();
+      
+      setAvailableClasses(merged);
     } catch {
       // silent
     }
@@ -108,6 +126,12 @@ export default function StudentAccountsLayer({
 
   useEffect(() => { fetchClasses(); }, [fetchClasses]);
   useEffect(() => { fetchAccounts(); }, [fetchAccounts]);
+  
+  useEffect(() => {
+    if (activeClass) {
+      setSelectedClass(activeClass);
+    }
+  }, [activeClass]);
 
   const handleGenerate = async () => {
     if (!selectedClass || isGenerating) return;
