@@ -548,7 +548,7 @@ export async function submitRemedial(
   
   const calculatedScore = studentUpdate.final_score as number | undefined;
   const remedialScore = studentUpdate.remedial_score as number | undefined;
-  const originalScore = (student.original_score || student.final_score) as number | undefined;
+  const originalScore = ((student.original_score !== null && student.original_score !== undefined) ? student.original_score : student.final_score) as number | undefined;
 
   const finalScore =
      calculatedScore ??
@@ -848,9 +848,14 @@ export async function finalizeRemedial(
   if (student.is_cheated) throw new Error('Siswa curang, nilai sudah di 0');
   if (!student.teacher_reviewed) throw new Error('Guru belum mengoreksi nilai remedial');
 
-  const calculatedScore = Math.min(student.essay_score_final || student.remedial_score || 0, sessionKkm);
+  const calculatedScore = Math.min(
+    (student.essay_score_final !== null && student.essay_score_final !== undefined)
+      ? student.essay_score_final
+      : ((student.remedial_score !== null && student.remedial_score !== undefined) ? student.remedial_score : 0),
+    sessionKkm
+  );
   const remedialScore = student.remedial_score;
-  const originalScore = student.original_score || student.final_score;
+  const originalScore = (student.original_score !== null && student.original_score !== undefined) ? student.original_score : student.final_score;
 
   const finalScore =
      calculatedScore ??
