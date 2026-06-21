@@ -238,6 +238,55 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
   }, [learningMode, selectedLesson]);
 
   // Send message to Copilot AI
+  const suggestedLessonQuestions = [
+    "💡 Jelaskan materi gampangnya dong!",
+    "🔍 Berikan contoh nyata materi ini",
+    "📝 Buat 3 soal kuis latihan singkat",
+    "📚 Apa kesimpulan penting hari ini?"
+  ];
+
+  const handleSelectSuggestedQuestion = async (questionText: string) => {
+    if (isAiResponding || !selectedLesson) return;
+
+    const updatedMessages = [...chatMessages, { role: 'user' as const, content: questionText }];
+    setChatMessages(updatedMessages);
+    setIsAiResponding(true);
+
+    try {
+      const history = updatedMessages.map(msg => ({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        content: msg.content
+      }));
+
+      const res = await fetch('/api/grademaster/copilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: questionText,
+          history,
+          role: 'student',
+          currentLayer: 'student_lesson',
+          studentClass: activeClassName,
+          subject: selectedLesson.subject,
+          chatPrompt: selectedLesson.ai_chat_prompt
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal terhubung ke AI');
+
+      setChatMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+    } catch (err: any) {
+      console.error("AI response error:", err);
+      setChatMessages(prev => [
+        ...prev, 
+        { role: 'assistant', content: `Maaf, saya sedang mengalami kendala jaringan. Pertanyaan Anda: "${questionText}". Silakan coba tanyakan kembali.` }
+      ]);
+    } finally {
+      setIsAiResponding(false);
+    }
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isAiResponding || !selectedLesson) return;
@@ -263,7 +312,8 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
           role: 'student',
           currentLayer: 'student_lesson',
           studentClass: activeClassName,
-          subject: selectedLesson.subject
+          subject: selectedLesson.subject,
+          chatPrompt: selectedLesson.ai_chat_prompt
         })
       });
 
@@ -678,6 +728,22 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
                           </div>
                         )}
                       </div>
+
+                      {/* Rekomendasi Pertanyaan */}
+                      {!isAiResponding && (
+                        <div className="flex gap-2 pb-2.5 pt-1 overflow-x-auto no-scrollbar shrink-0">
+                          {suggestedLessonQuestions.map((q, qIdx) => (
+                            <button
+                              key={qIdx}
+                              type="button"
+                              onClick={() => handleSelectSuggestedQuestion(q)}
+                              className="px-3 py-1.5 bg-slate-50 border border-slate-200/50 hover:border-emerald-200 hover:bg-emerald-50/30 hover:text-emerald-700 rounded-full text-[10px] font-bold text-slate-500 transition-all active:scale-95 shrink-0 whitespace-nowrap"
+                            >
+                              {q}
+                            </button>
+                          ))}
+                        </div>
+                      )}
 
                       {/* Input Box */}
                       <form onSubmit={handleSendMessage} className="flex gap-2 pt-2 border-t border-slate-100">

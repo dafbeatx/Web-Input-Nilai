@@ -120,9 +120,18 @@ ATURAN RESPONS & KEAMANAN MUTLAK:
 
 JANGAN menulis penjelasan tambahan di luar JSON. Respon Anda harus langsung dimulai dengan '{' dan diakhiri dengan '}'.`;
 
+    // If we are in student lesson layer, use the tutoring prompt
+    let finalSystemPrompt = systemPrompt;
+    if (currentLayer === 'student_lesson') {
+      finalSystemPrompt = body.chatPrompt || `Anda adalah Tutor Cerdas AI khusus untuk mata pelajaran "${subject}" kelas ${studentClass}.
+Tugas Anda adalah membantu siswa mempelajari dan memahami materi pelajaran "${subject}" dengan bahasa Indonesia yang santai, interaktif, dan mudah dipahami.
+Berikan penjelasan yang terstruktur, singkat, dan sertakan analogi kehidupan nyata yang menyenangkan jika relevan. Posisikan diri Anda sebagai tutor/guru pendamping siswa yang asyik.
+Serta jika siswa menjawab "saya tidak faham" atau sejenisnya, berikan penjelasan alternatif atau analogi yang lebih gampang, jangan arahkan ke navigasi GradeMaster OS.`;
+    }
+
     // Map history to OpenAI format
     const messages = [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: finalSystemPrompt },
       ...safeHistory.slice(-6).map((h: any) => ({
         role: h.role === 'assistant' ? 'assistant' : 'user',
         content: h.content
