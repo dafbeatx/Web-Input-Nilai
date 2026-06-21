@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     let queryResult = await supabase
       .from('gm_students')
-      .select('id, name, final_score, remedial_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed, violation_count, is_blocked, remedial_extended_time, remedial_answers, essay_auto_details')
+      .select('id, name, final_score, remedial_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed, violation_count, is_blocked, remedial_extended_time, remedial_answers, essay_auto_details, remedial_score, original_score')
       .eq('session_id', sessionId)
       .ilike('name', studentName.trim())
       .eq('is_deleted', false)
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
       console.warn('[Remedial GET API] Column remedial_extended_time is missing, retrying query without it.');
       queryResult = await supabase
         .from('gm_students')
-        .select('id, name, final_score, remedial_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed, violation_count, is_blocked, remedial_answers, essay_auto_details')
+        .select('id, name, final_score, remedial_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed, violation_count, is_blocked, remedial_answers, essay_auto_details, remedial_score, original_score')
         .eq('session_id', sessionId)
         .ilike('name', studentName.trim())
         .eq('is_deleted', false)
@@ -72,16 +72,60 @@ export async function GET(req: NextRequest) {
 
     let remedialQuestions: string[] = [];
     let remedialAnswerKeys: string[] = [];
+    let kkm = 70;
     if (sessionId) {
       const { data: session } = await supabase
         .from('gm_sessions')
-        .select('scoring_config')
+        .select('scoring_config, kkm')
         .eq('id', sessionId)
         .single();
-      if (session?.scoring_config) {
-        remedialQuestions = session.scoring_config.remedialQuestions || [];
-        remedialAnswerKeys = session.scoring_config.remedialAnswerKeys || [];
+      if (session) {
+        kkm = session.kkm || 70;
+        if (session.scoring_config) {
+          remedialQuestions = session.scoring_config.remedialQuestions || [];
+          remedialAnswerKeys = session.scoring_config.remedialAnswerKeys || [];
+        }
       }
+    }
+
+    // Holdback calculation for GET
+    const { data: siblingStudents } = await supabaseAdmin
+      .from('gm_students')
+      .select('id, name, final_score, original_score, remedial_status')
+      .eq('session_id', sessionId)
+      .eq('is_deleted', false);
+
+    const isCandidate = (s: any) => {
+      const orig = s.original_score !== null && s.original_score !== undefined ? Number(s.original_score) : 0;
+      const fin = s.final_score !== null && s.final_score !== undefined ? Number(s.final_score) : 0;
+      const baseScore = (orig > 0) ? orig : fin;
+      return baseScore < kkm;
+    };
+
+    const pendingRemedialSiblings = (siblingStudents || []).filter(s => {
+      if (s.id === student.id) return false;
+      if (!isCandidate(s)) return false;
+      const finishedStates = ['COMPLETED', 'CHEATED', 'TIMEOUT', 'FAILED_EFFORT', 'TIME_UP', 'SUBMITTED'];
+      return !finishedStates.includes(s.remedial_status || 'NONE');
+    });
+
+    const ownCheated = student.remedial_status === 'CHEATED' || student.cheating_flags?.some((f: string) => f.toLowerCase().includes('curang') || f.toLowerCase().includes('sanksi') || f.toLowerCase().includes('didiskualifikasi'));
+    const isHeldBack = pendingRemedialSiblings.length > 0 && !ownCheated && (student.remedial_status === 'SUBMITTED' || student.remedial_status === 'TIME_UP' || student.remedial_status === 'COMPLETED');
+
+    let failedReason: string | null = null;
+    if (student.remedial_status === 'FAILED_EFFORT') {
+      const flags = student.cheating_flags || [];
+      const hasFast = flags.some((f: string) => f.includes('cepat') || f.includes('FAST_COMPLETION'));
+      const hasLowEffort = flags.some((f: string) => f.includes('pendek') || f.includes('asal-asalan') || f.includes('LOW_EFFORT'));
+      if (hasFast && hasLowEffort) {
+        failedReason = "Durasi pengerjaan terlalu cepat (di bawah 5 menit) dan sebagian besar jawaban tidak valid/asal-asalan.";
+      } else if (hasFast) {
+        failedReason = "Durasi pengerjaan terlalu cepat (di bawah 5 menit). Minimal pengerjaan adalah 5 menit.";
+      } else {
+        failedReason = "Sebagian besar jawaban terdeteksi asal-asalan, terlalu pendek, atau tidak memenuhi kriteria kelayakan esai.";
+      }
+    } else if (student.remedial_status === 'TIME_UP' && student.remedial_score === 0) {
+      failedReason = "Ujian remedial ditutup karena batas waktu habis tanpa ada jawaban esai yang cukup valid/memadai.";
     }
 
     const response = NextResponse.json({ 
@@ -95,7 +139,15 @@ export async function GET(req: NextRequest) {
       remedialAnswers: student.remedial_answers || [],
       essayAutoDetails: student.essay_auto_details || [],
       remedialQuestions,
-      remedialAnswerKeys
+      remedialAnswerKeys,
+      // NEW holdback fields:
+      isHeldBack,
+      remedialScore: student.remedial_score,
+      pendingRemedialCount: pendingRemedialSiblings.length,
+      holdbackReason: isHeldBack ? 'Nilai remedial ditahan sementara menunggu teman sekelas selesai' : null,
+      rawScore: student.essay_score_auto,
+      displayedScore: isHeldBack ? student.remedial_score : student.final_score,
+      failedReason
     });
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     return response;
@@ -159,7 +211,7 @@ export async function POST(req: NextRequest) {
        cameraStatus,
        riskLevel,
        isPenaltyApplied || false
-    )) as any;
+     )) as any;
 
     if (status === 'INITIATED') {
       import('@/lib/grademaster/services/push-notification.service').then(m => {
@@ -181,7 +233,17 @@ export async function POST(req: NextRequest) {
       className: data.class_name,
       remedialQuestions: data.remedialQuestions,
       essayDetails: data.essay_auto_details || [],
-      remedialAnswerKeys: data.remedialAnswerKeys || []
+      remedialAnswerKeys: data.remedialAnswerKeys || [],
+      // NEW FIELDS
+      isHeldBack: data.isHeldBack,
+      remedialScore: data.remedialScore,
+      pendingRemedialCount: data.pendingRemedialCount,
+      holdbackReason: data.holdbackReason,
+      rawScore: data.rawScore,
+      displayedScore: data.displayedScore,
+      scoringReason: data.scoringReason,
+      failedReason: data.failedReason,
+      penaltyApplied: data.penaltyApplied
     });
 
   } catch (err: unknown) {

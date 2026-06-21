@@ -285,7 +285,10 @@ export async function submitRemedial(
     risk_level: riskLevel || 'LOW',
   };
 
-  if (status === 'COMPLETED' || status === 'CHEATED') {
+  let failedReason: string | null = null;
+  let rawScore: number | null = null;
+
+  if (status === 'COMPLETED' || status === 'CHEATED' || status === 'TIMEOUT' || status === 'FAILED') {
     // Risk assessment
     const clientRisk = assessClientRisk(clientCheatingFlags);
 
@@ -330,6 +333,12 @@ export async function submitRemedial(
     });
 
     const hasEnoughEffort = validAnswers.length >= (answers.length / 2);
+    const hasAnyValidAnswer = validAnswers.length >= 1;
+    const totalAnswersLength = answers.map(a => (a || '').trim()).join('').length;
+    const isTooGarbage = answers.some(a => {
+      const text = (a || '').trim().toLowerCase();
+      return ['tidak tahu', 'kosong', 'gak tahu', 'ndak tahu', 'null', 'undefined', 'asdf', 'qwerty'].some(p => text === p);
+    });
 
     // Duration validation (Anti-Exploit: Too fast) - Validasi Backend Mutlak
     const minDurationMs = 5 * 60 * 1000; // 5 minutes minimal
@@ -366,7 +375,7 @@ export async function submitRemedial(
     // Update student cache
     studentUpdate.remedial_answers = answers;
     studentUpdate.remedial_note = note;
-    studentUpdate.is_cheated = systemFlagged || explicitlyBlocked || isTooFast; 
+    studentUpdate.is_cheated = systemFlagged || explicitlyBlocked || (isTooFast && status === 'COMPLETED'); 
 
     // Map finalFlags to human-readable Indonesian descriptions
     const mappedFlags: string[] = [];
@@ -498,7 +507,7 @@ export async function submitRemedial(
       }
     } else if (status === 'TIMEOUT' || status === 'FAILED') {
       // Jika TIMEOUT, nilai tetap dihitung dari apa yang sudah dikerjakan
-      if (!hasEnoughEffort && answers.join('').length < 20) {
+      if (!hasAnyValidAnswer && (totalAnswersLength < 20 || isTooGarbage)) {
         attemptUpdate.status = 'TIME_UP';
         studentUpdate.remedial_status = 'TIME_UP';
         studentUpdate.remedial_score = 0;
@@ -507,13 +516,31 @@ export async function submitRemedial(
         studentUpdate.teacher_reviewed = true;
       } else {
         const rawScore = essayResult.score;
-        studentUpdate.remedial_score = rawScore;
-        studentUpdate.final_score = rawScore;
-        studentUpdate.final_score_locked = rawScore;
+        const penaltyAmount = isPenaltyApplied ? 15 : 0;
+        const kkmScore = session.kkm || 75;
+        const finalScore = Math.max(0, Math.min(rawScore, kkmScore) - penaltyAmount);
+
+        studentUpdate.remedial_score = finalScore;
+        studentUpdate.final_score = finalScore;
+        studentUpdate.final_score_locked = finalScore;
         studentUpdate.remedial_status = 'TIME_UP';
         studentUpdate.teacher_reviewed = true;
         attemptUpdate.status = 'TIME_UP';
       }
+    }
+
+    rawScore = essayResult.score;
+
+    if (status === 'COMPLETED' && (!hasEnoughEffort || isTooFast)) {
+      if (isTooFast && !hasEnoughEffort) {
+        failedReason = "Durasi pengerjaan terlalu cepat (di bawah 5 menit) dan sebagian besar jawaban tidak valid/asal-asalan.";
+      } else if (isTooFast) {
+        failedReason = "Durasi pengerjaan terlalu cepat (di bawah 5 menit). Minimal pengerjaan adalah 5 menit.";
+      } else {
+        failedReason = "Sebagian besar jawaban terdeteksi asal-asalan, terlalu pendek, atau tidak memenuhi kriteria kelayakan esai.";
+      }
+    } else if ((status === 'TIMEOUT' || status === 'FAILED') && !hasAnyValidAnswer && (totalAnswersLength < 20 || isTooGarbage)) {
+      failedReason = "Ujian remedial ditutup karena batas waktu habis tanpa ada jawaban esai yang cukup valid/memadai.";
     }
   }
 
@@ -657,6 +684,15 @@ export async function submitRemedial(
     subject: session.subject,
     class_name: session.class_name,
     remedialAnswerKeys: answerKeys,
+    isHeldBack,
+    remedialScore: remedialScore ?? finalScore,
+    pendingRemedialCount: pendingRemedialSiblings.length,
+    holdbackReason: isHeldBack ? 'Nilai remedial ditahan sementara menunggu teman sekelas selesai' : null,
+    rawScore: rawScore,
+    displayedScore: isHeldBack ? (remedialScore ?? finalScore) : studentUpdate.final_score,
+    scoringReason: status === 'CHEATED' ? 'CHEATED' : (status === 'TIMEOUT' ? 'TIMEOUT' : 'COMPLETED'),
+    failedReason,
+    penaltyApplied: isPenaltyApplied,
   };
 }
 

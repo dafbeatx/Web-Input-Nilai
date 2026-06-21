@@ -274,6 +274,28 @@ export default function StudentRemedialLayer({
   const [finalScore, setFinalScore] = useState<number | null>(null);
   const [essayAutoDetails, setEssayAutoDetails] = useState<{ similarity: number; score: number }[]>([]);
   const [remedialAnswerKeys, setRemedialAnswerKeys] = useState<string[]>([]);
+  
+  // Holdback & Scoring States
+  const [isHeldBack, setIsHeldBack] = useState<boolean>(false);
+  const [remedialScore, setRemedialScore] = useState<number | null>(null);
+  const [pendingRemedialCount, setPendingRemedialCount] = useState<number>(0);
+  const [holdbackReason, setHoldbackReason] = useState<string | null>(null);
+  const [rawScore, setRawScore] = useState<number | null>(null);
+  const [displayedScore, setDisplayedScore] = useState<number | null>(null);
+  const [failedReason, setFailedReason] = useState<string | null>(null);
+
+  // Refs to prevent stale closures in timeout useEffect
+  const answersRef = useRef(answers);
+  const noteRef = useRef(note);
+
+  React.useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
+  React.useEffect(() => {
+    noteRef.current = note;
+  }, [note]);
+
   const hasSubmittedRef = useRef(false);
   const hasSentStartNotifRef = useRef(false);
   const wakeLockRef = useRef<any>(null); // Screen Wake Lock
@@ -997,9 +1019,18 @@ export default function StudentRemedialLayer({
                 const res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`, { cache: 'no-store' });
                 if (res.ok) {
                   const data = await res.json();
-                  if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
+                  if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'SUBMITTED', 'FAILED_EFFORT', 'TIME_UP'].includes(data.status)) {
                     setStep(data.status as RemedialStep);
                     if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
+                    
+                    setIsHeldBack(!!data.isHeldBack);
+                    setRemedialScore(data.remedialScore ?? null);
+                    setPendingRemedialCount(data.pendingRemedialCount || 0);
+                    setHoldbackReason(data.holdbackReason || null);
+                    setRawScore(data.rawScore ?? null);
+                    setDisplayedScore(data.displayedScore ?? null);
+                    setFailedReason(data.failedReason || null);
+                    
                     return;
                   }
                   if (data.status === null) {
@@ -1126,29 +1157,37 @@ export default function StudentRemedialLayer({
             }
           }
 
-          // If server says terminal status, override local state
-          if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'TIME_UP', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
-            setStep(data.status as RemedialStep);
-            if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
-            
-            if (['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
-              setFinalScore(data.finalScore);
-              if (data.remedialAnswers) setAnswers(data.remedialAnswers);
-              if (data.essayAutoDetails) setEssayAutoDetails(data.essayAutoDetails);
-              if (data.remedialQuestions && data.remedialQuestions.length > 0) {
-                setShuffledQuestions(data.remedialQuestions.map((q: string, i: number) => ({ text: q, originalIndex: i })));
-              }
-              if (data.remedialAnswerKeys) setRemedialAnswerKeys(data.remedialAnswerKeys);
-
-              // Pre-fetch friends list for results screen
-              fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`, { cache: 'no-store' })
-                .then(r => r.json())
-                .then(d => {
-                  setRemainingStudents(d.students || []);
-                  setSessionCreatedAt(d.sessionCreatedAt);
-                });
-            }
-          }
+           // If server says terminal status, override local state
+           if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'TIME_UP', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
+             setStep(data.status as RemedialStep);
+             if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
+             
+             setIsHeldBack(!!data.isHeldBack);
+             setRemedialScore(data.remedialScore ?? null);
+             setPendingRemedialCount(data.pendingRemedialCount || 0);
+             setHoldbackReason(data.holdbackReason || null);
+             setRawScore(data.rawScore ?? null);
+             setDisplayedScore(data.displayedScore ?? null);
+             setFailedReason(data.failedReason || null);
+             
+             if (['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT', 'TIME_UP'].includes(data.status)) {
+               setFinalScore(data.finalScore);
+               if (data.remedialAnswers) setAnswers(data.remedialAnswers);
+               if (data.essayAutoDetails) setEssayAutoDetails(data.essayAutoDetails);
+               if (data.remedialQuestions && data.remedialQuestions.length > 0) {
+                 setShuffledQuestions(data.remedialQuestions.map((q: string, i: number) => ({ text: q, originalIndex: i })));
+               }
+               if (data.remedialAnswerKeys) setRemedialAnswerKeys(data.remedialAnswerKeys);
+ 
+               // Pre-fetch friends list for results screen
+               fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`, { cache: 'no-store' })
+                 .then(r => r.json())
+                 .then(d => {
+                   setRemainingStudents(d.students || []);
+                   setSessionCreatedAt(d.sessionCreatedAt);
+                 });
+             }
+           }
         } else if (res.status === 400) {
           // Handle error cases (e.g. data deleted by admin)
           const errData = await res.json().catch(() => ({}));
@@ -1934,8 +1973,8 @@ export default function StudentRemedialLayer({
         startedAt: current?.startedAt || startedAtRef.current || Date.now(),
         refreshCount: current?.refreshCount || 0,
         ...current,
-        answers,
-        note,
+        answers: answersRef.current,
+        note: noteRef.current,
         className,
         subject,
         kkm: kkm || 70,
@@ -2185,28 +2224,47 @@ export default function StudentRemedialLayer({
 
 
 
-    const validateSubmission = () => {
-      const minLength = 20;
-      const garbagePhrases = ['tidak tahu', 'gak tahu', 'ndak tahu', 'kosong', 'null', 'undefined', 'asdf', 'qwerty'];
+    const evaluateAnswerValidity = (ans: string) => {
+      const text = (ans || '').trim().toLowerCase();
       
+      // 1. Min 20 characters
+      const lengthOk = text.length >= 20;
+      
+      // 2. Garbage phrases
+      const garbagePhrases = ['tidak tahu', 'kosong', 'gak tahu', 'ndak tahu', 'null', 'undefined', 'asdf', 'qwerty'];
+      const hasGarbage = garbagePhrases.some(phrase => text.includes(phrase));
+      
+      // 3. Repetitive characters
+      const hasRepetitiveChars = /(.)\1{9,}/.test(text);
+      
+      // 4. Repetitive words
+      const words = text.split(/\s+/);
+      const uniqueWords = new Set(words);
+      const hasRepetitiveWords = words.length > 5 && (uniqueWords.size / words.length) < 0.4;
+      
+      // 5. Min words (for backend effort logic alignment)
+      const filteredWords = text.split(/\s+/).filter(w => w.length > 2);
+      const uniqueFilteredWords = new Set(filteredWords);
+      const minWordsOk = filteredWords.length >= 5;
+      const minUniqueWordsOk = uniqueFilteredWords.size >= 3;
+      
+      const isValid = lengthOk && !hasGarbage && !hasRepetitiveChars && !hasRepetitiveWords && minWordsOk && minUniqueWordsOk;
+      
+      return {
+        lengthOk,
+        hasGarbage,
+        hasRepetitiveChars,
+        hasRepetitiveWords,
+        minWordsOk,
+        minUniqueWordsOk,
+        isValid
+      };
+    };
+
+    const validateSubmission = () => {
       const invalidIndices = answers.map((a, i) => {
-        const text = (a || '').trim().toLowerCase();
-        
-        // Check length
-        if (text.length < minLength) return i;
-        
-        // Check for garbage phrases
-        if (garbagePhrases.some(phrase => text.includes(phrase))) return i;
-        
-        // Check for repetitive characters (e.g., "aaaaaaaaaaaa")
-        if (/(.)\1{9,}/.test(text)) return i;
-        
-        // Check for repetitive words (e.g., "jawab jawab jawab")
-        const words = text.split(/\s+/);
-        const uniqueWords = new Set(words);
-        if (words.length > 5 && (uniqueWords.size / words.length) < 0.4) return i;
-        
-        return -1;
+        const evaluation = evaluateAnswerValidity(a);
+        return evaluation.isValid ? -1 : i;
       }).filter(index => index !== -1);
       
       if (invalidIndices.length > 0) {
@@ -2252,12 +2310,12 @@ export default function StudentRemedialLayer({
         const mappedAnswers = new Array(totalQ).fill("");
         shuffledQuestions.forEach((sq, i) => {
           if (sq.originalIndex < totalQ) {
-            mappedAnswers[sq.originalIndex] = answers[i] || "";
+            mappedAnswers[sq.originalIndex] = answersRef.current[i] || "";
           }
         });
         return mappedAnswers;
       })() : undefined,
-      note: status === 'COMPLETED' ? note : undefined,
+      note: status === 'COMPLETED' ? noteRef.current : undefined,
       clientCheatingFlags: allFlags.length > 0 ? allFlags : undefined,
       examMode,
       cameraStatus,
@@ -2319,6 +2377,14 @@ export default function StudentRemedialLayer({
           const finalStatus = data.status || status;
           if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
           
+          setIsHeldBack(!!data.isHeldBack);
+          setRemedialScore(data.remedialScore ?? null);
+          setPendingRemedialCount(data.pendingRemedialCount || 0);
+          setHoldbackReason(data.holdbackReason || null);
+          setRawScore(data.rawScore ?? null);
+          setDisplayedScore(data.displayedScore ?? null);
+          setFailedReason(data.failedReason || null);
+
           if (finalStatus === 'FAILED_EFFORT') {
             setToast({ message: "Sesi selesai: Jawaban dibatalkan karena terdeteksi tidak valid atau terlalu cepat.", type: "error" });
             setFinalScore(0);
@@ -2326,7 +2392,9 @@ export default function StudentRemedialLayer({
             const fScore = data.newFinalScore ?? data.final_score ?? 0;
             setFinalScore(fScore);
 
-            if (fScore < (kkm || 70)) {
+            if (data.isHeldBack) {
+              setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Nilai ditahan sementara.", type: "success" });
+            } else if (fScore < (kkm || 70)) {
               setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Nilai Anda belum mencapai KKM.", type: "error" });
             } else {
               setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Selamat, Anda LULUS KKM!", type: "success" });
@@ -2778,13 +2846,14 @@ export default function StudentRemedialLayer({
     );
   }
 
-  // RENDER: COMPLETED / CHEATED / TIMEOUT
+  // RENDER: COMPLETED / CHEATED / TIMEOUT / HELD_BACK
   if (step === 'CHEATED' || step === 'TIMEOUT' || step === 'TIME_UP' || step === 'COMPLETED' || step === 'SUBMITTED' || step === 'FAILED_EFFORT') {
     const isCheat = step === 'CHEATED';
     const isTimeout = step === 'TIMEOUT' || step === 'TIME_UP';
     const isFailedEffort = step === 'FAILED_EFFORT';
     const isSuccess = step === 'COMPLETED' || step === 'SUBMITTED';
     const isCompleted = isSuccess || isFailedEffort;
+    const isHeldBackActive = isHeldBack && !isCheat && !isFailedEffort;
 
     const getRemainingTimeStr = () => {
       return "Selesai";
@@ -2887,6 +2956,77 @@ export default function StudentRemedialLayer({
                    </p>
                  </div>
                </div>
+            ) : isFailedEffort ? (
+               <div className="space-y-4">
+                 <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide text-center">
+                   Ujian remedial Anda ditolak oleh sistem karena tidak memenuhi batas usaha pengerjaan minimal (Anti-Exploit).
+                 </p>
+                 {failedReason ? (
+                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 space-y-2">
+                     <p className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Detail Alasan Penolakan:</p>
+                     <p className="text-xs text-on-surface-variant font-medium leading-relaxed">{failedReason}</p>
+                   </div>
+                 ) : (
+                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 space-y-3">
+                     <p className="text-[11px] font-black text-amber-400 uppercase tracking-wider mb-1">Penyebab Penolakan Ujian:</p>
+                     <ul className="text-xs text-on-surface-variant font-medium space-y-2 list-disc list-inside">
+                       <li>
+                         <span className="text-amber-500 font-bold">Durasi Minimal:</span> Penginputan remedial membutuhkan fokus dan waktu pengerjaan minimal <span className="font-bold text-white">5 menit</span>.
+                       </li>
+                       <li>
+                         <span className="text-amber-500 font-bold">Kualitas Jawaban:</span> Lebih dari setengah dari jumlah soal essay wajib diisi dengan jawaban sah (minimal 20 karakter, 5 kata unik, dan tidak berisi kata asal-asalan seperti 'tidak tahu', 'kosong', dll).
+                       </li>
+                     </ul>
+                   </div>
+                 )}
+                 <p className="text-[11px] font-bold text-on-surface pt-3 border-t border-amber-500/10 text-center leading-normal">
+                   💡 <span className="text-amber-400">Silakan hubungi Guru Pengampu</span> untuk meminta reset sesi ujian jika Anda ingin mengulang dengan benar.
+                 </p>
+               </div>
+            ) : isHeldBackActive ? (
+               <div className="space-y-6 text-center animate-in fade-in duration-500">
+                  <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide">
+                    {isTimeout 
+                      ? "Waktu pengerjaan remedial habis. Jawaban Anda berhasil disimpan."
+                      : "Evaluasi Mandiri Selesai. Jawaban Anda Berhasil Disinkronkan."
+                    }
+                  </p>
+                  
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-6 md:p-8 space-y-4 text-left max-w-md mx-auto shadow-xl shadow-amber-500/5">
+                    <div className="flex items-center gap-3 pb-3 border-b border-amber-500/10">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                        <Clock className="animate-spin" style={{ animationDuration: '3s' }} size={20} />
+                      </div>
+                      <div>
+                        <h4 className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Nilai Remedial Ditahan Sementara</h4>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">Holdback Status Active</p>
+                      </div>
+                    </div>
+                    
+                    <p className="text-xs text-on-surface-variant font-medium leading-relaxed">
+                      {isTimeout
+                        ? "Sesi remedial ditutup otomatis karena batas waktu habis. Jawaban terakhir berhasil disimpan, tetapi nilai remedial Anda sedang ditahan sementara sampai semua siswa remedial di kelas ini selesai."
+                        : "Jawaban berhasil dikumpulkan. Nilai remedial Anda sedang ditahan sementara sampai semua siswa remedial di kelas ini selesai."
+                      }
+                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div className="p-3 bg-surface-variant/55 border border-outline-variant rounded-2xl text-center">
+                        <span className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest block mb-1">Skor Remedial</span>
+                        <span className="text-2xl font-black font-outfit text-primary">{remedialScore ?? '-'}</span>
+                      </div>
+                      <div className="p-3 bg-surface-variant/55 border border-outline-variant rounded-2xl text-center">
+                        <span className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest block mb-1">Tertunggak</span>
+                        <span className="text-2xl font-black font-outfit text-amber-400">{pendingRemedialCount} Siswa</span>
+                      </div>
+                    </div>
+                    
+                    <div className="p-3 bg-surface-variant/30 border border-outline-variant/60 rounded-2xl text-center">
+                      <span className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest block mb-0.5">Nilai Final Sementara (Original)</span>
+                      <span className="text-lg font-black font-outfit text-slate-300">{finalScore}</span>
+                    </div>
+                  </div>
+               </div>
             ) : isTimeout ? (
                <div className="space-y-4">
                  <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide text-center">
@@ -2908,30 +3048,17 @@ export default function StudentRemedialLayer({
                        </div>
                      </div>
                    ) : (
-                     <p className="text-[11px] font-bold text-rose-400 mt-2 bg-rose-500/5 p-3 rounded-xl border border-rose-500/10">
-                       ⚠️ Ujian berakhir tanpa adanya jawaban valid yang diisi. Skor akhir diatur menjadi 0.
-                     </p>
+                     <div className="mt-2 bg-rose-500/5 p-3 rounded-xl border border-rose-500/10 text-left">
+                       <p className="text-[11px] font-bold text-rose-400">
+                         ⚠️ Ujian berakhir tanpa adanya jawaban valid yang diisi. Skor akhir diatur menjadi 0.
+                       </p>
+                       {failedReason && (
+                         <p className="text-[10px] text-slate-400 font-bold mt-2 leading-relaxed uppercase">
+                           Detail Alasan: {failedReason}
+                         </p>
+                       )}
+                     </div>
                    )}
-                 </div>
-               </div>
-            ) : isFailedEffort ? (
-               <div className="space-y-4">
-                 <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide text-center">
-                   Ujian remedial Anda ditolak oleh sistem karena tidak memenuhi batas usaha pengerjaan minimal (Anti-Exploit).
-                 </p>
-                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 space-y-3">
-                   <p className="text-[11px] font-black text-amber-400 uppercase tracking-wider mb-1">Penyebab Penolakan Ujian:</p>
-                   <ul className="text-xs text-on-surface-variant font-medium space-y-2 list-disc list-inside">
-                     <li>
-                       <span className="text-amber-500 font-bold">Durasi Minimal:</span> Penginputan remedial membutuhkan fokus dan waktu pengerjaan minimal <span className="font-bold text-white">5 menit</span>.
-                     </li>
-                     <li>
-                       <span className="text-amber-500 font-bold">Kualitas Jawaban:</span> Lebih dari setengah dari jumlah soal essay wajib diisi dengan jawaban sah (minimal 20 karakter, 5 kata unik, dan tidak berisi kata asal-asalan seperti 'tidak tahu', 'kosong', dll).
-                     </li>
-                   </ul>
-                   <p className="text-[11px] font-bold text-on-surface pt-3 border-t border-amber-500/10 text-center leading-normal">
-                     💡 <span className="text-amber-400">Silakan hubungi Guru Pengampu</span> untuk meminta reset sesi ujian jika Anda ingin mengulang dengan benar.
-                   </p>
                  </div>
                </div>
             ) : (
@@ -2994,10 +3121,10 @@ export default function StudentRemedialLayer({
                          </div>
                        </div>
                      </>
-                   )}
-                   {(finalScore === null || finalScore >= 70) && (
+                  )}
+                  {(finalScore === null || finalScore >= 70) && (
                      <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 py-2 rounded-full border border-emerald-500/20 px-4 inline-block block mx-auto w-fit">✓ Lulus KKM (70)</p>
-                   )}
+                  )}
                </div>
             )}
           </div>
@@ -3005,7 +3132,7 @@ export default function StudentRemedialLayer({
           <div className="space-y-4">
             {isSuccess && (
               <>
-                 {finalScore !== null && finalScore < 70 ? (
+                 {(!isHeldBackActive && finalScore !== null && finalScore < 70) ? (
                     <button
                       onClick={() => { clearRemedialSession(); window.location.reload(); }}
                       className="w-full py-5 bg-primary text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all border border-outline-variant flex items-center justify-center gap-3"
@@ -3291,6 +3418,51 @@ export default function StudentRemedialLayer({
                    </div>
                 </div>
               </div>
+              
+              {/* Real-time Checklist */}
+              {(() => {
+                const evalResult = evaluateAnswerValidity(ans);
+                const showChecklist = ans.trim().length > 0;
+                
+                if (!showChecklist) {
+                  return (
+                    <p className="mt-3 text-[10px] text-on-surface-variant/60 font-bold uppercase tracking-wider pl-2 italic">
+                      Tulis jawaban untuk melihat verifikasi kriteria kelayakan.
+                    </p>
+                  );
+                }
+                
+                return (
+                  <div className="mt-4 p-4 rounded-2xl bg-surface-variant/40 border border-outline-variant/30 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider">
+                      <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black text-white ${evalResult.lengthOk ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+                        {evalResult.lengthOk ? '✓' : '✗'}
+                      </div>
+                      <span className={evalResult.lengthOk ? 'text-emerald-400' : 'text-rose-400'}>
+                        Min. 20 Karakter ({ans.length}/20)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider">
+                      <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black text-white ${(!evalResult.hasGarbage && !evalResult.hasRepetitiveChars && !evalResult.hasRepetitiveWords) ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+                        {(!evalResult.hasGarbage && !evalResult.hasRepetitiveChars && !evalResult.hasRepetitiveWords) ? '✓' : '✗'}
+                      </div>
+                      <span className={(!evalResult.hasGarbage && !evalResult.hasRepetitiveChars && !evalResult.hasRepetitiveWords) ? 'text-emerald-400' : 'text-rose-400'}>
+                        Bebas Kata Asal / Spam
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider">
+                      <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black text-white ${(evalResult.minWordsOk && evalResult.minUniqueWordsOk) ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+                        {(evalResult.minWordsOk && evalResult.minUniqueWordsOk) ? '✓' : '✗'}
+                      </div>
+                      <span className={(evalResult.minWordsOk && evalResult.minUniqueWordsOk) ? 'text-emerald-400' : 'text-rose-400'}>
+                        Min. 5 Kata Sah
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
               
               <div className="mt-6 flex items-center justify-between text-[10px] font-black text-on-surface-variant uppercase tracking-widest pl-2">
                 <span className="flex items-center gap-2">
