@@ -15,7 +15,9 @@ import {
   Loader2,
   HelpCircle,
   Award,
-  AlertCircle
+  AlertCircle,
+  Lightbulb,
+  Brain
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useGradeMaster } from '@/context/GradeMasterContext';
@@ -59,6 +61,34 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isAiResponding, setIsAiResponding] = useState(false);
+
+  // Simplified AI Mode State
+  const [learningMode, setLearningMode] = useState<'santai' | 'standar'>('santai');
+  const [simplifiedSlides, setSimplifiedSlides] = useState<any[]>([]);
+  const [isLoadingSimplify, setIsLoadingSimplify] = useState(false);
+  const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
+
+  const fetchSimplifiedContent = async (subject: string, content: string) => {
+    if (!content) return;
+    setIsLoadingSimplify(true);
+    try {
+      const res = await fetch('/api/grademaster/lessons/simplify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, content })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal menyederhanakan materi');
+      setSimplifiedSlides(data.slides || []);
+      setCurrentSlideIdx(0);
+    } catch (err: any) {
+      console.error(err);
+      setToast({ message: "Gagal memuat mode santai, beralih ke mode standar", type: 'error' });
+      setLearningMode('standar');
+    } finally {
+      setIsLoadingSimplify(false);
+    }
+  };
 
   // Load published lessons on mount
   useEffect(() => {
@@ -191,7 +221,21 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
         content: `Halo! Saya asisten AI GradeMaster OS. Saya siap membantumu mempelajari materi **${selectedLesson?.subject || 'pelajaran'}** hari ini. Ada konsep yang belum kamu pahami dari rangkuman materi?` 
       }
     ]);
+
+    // Reset and trigger simplify if needed
+    setSimplifiedSlides([]);
+    setCurrentSlideIdx(0);
+    if (selectedLesson && learningMode === 'santai') {
+      fetchSimplifiedContent(selectedLesson.subject, selectedLesson.content || selectedLesson.ai_reading_preview || "");
+    }
   }, [selectedLesson]);
+
+  // Trigger auto-simplification when mode is switched to 'santai' and we have no cached slides
+  useEffect(() => {
+    if (learningMode === 'santai' && selectedLesson && simplifiedSlides.length === 0 && !isLoadingSimplify) {
+      fetchSimplifiedContent(selectedLesson.subject, selectedLesson.content || selectedLesson.ai_reading_preview || "");
+    }
+  }, [learningMode, selectedLesson]);
 
   // Send message to Copilot AI
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -307,6 +351,119 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
     } finally {
       setIsSubmittingQuiz(false);
     }
+  };
+
+  const renderSimplifySkeleton = () => (
+    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4 animate-pulse flex flex-col justify-center items-center py-12 min-h-[300px]">
+      <div className="w-14 h-14 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center shrink-0 relative animate-bounce mb-3 border border-emerald-100/50">
+        <Sparkles size={24} className="text-emerald-650" />
+      </div>
+      <div className="h-4 bg-slate-200 rounded-full w-2/3 mx-auto"></div>
+      <div className="h-3 bg-slate-100 rounded-full w-1/2 mx-auto mt-2"></div>
+      <div className="space-y-2.5 w-full pt-6">
+        <div className="h-3 bg-slate-100 rounded-full w-full"></div>
+        <div className="h-3 bg-slate-100 rounded-full w-5/6"></div>
+        <div className="h-3 bg-slate-100 rounded-full w-4/5"></div>
+      </div>
+    </div>
+  );
+
+  const renderSlideDeck = () => {
+    if (simplifiedSlides.length === 0) return null;
+    const currentSlide = simplifiedSlides[currentSlideIdx];
+    const totalSlides = simplifiedSlides.length;
+
+    return (
+      <div className="flex flex-col gap-4 animate-in fade-in duration-300">
+        
+        {/* Slide Progress Indicator */}
+        <div className="flex gap-1.5 w-full px-1">
+          {Array.from({ length: totalSlides }).map((_, idx) => (
+            <div 
+              key={idx} 
+              className={`h-1.5 rounded-full flex-1 transition-all duration-300 ${
+                idx <= currentSlideIdx ? 'bg-emerald-500' : 'bg-slate-150'
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* The Card */}
+        <div className="bg-gradient-to-br from-emerald-50/20 to-teal-50/5 border border-emerald-500/10 rounded-[2rem] p-5 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[340px]">
+          
+          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-bl-full pointer-events-none" />
+
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-[9px] font-black uppercase tracking-widest text-emerald-650 bg-emerald-100/50 px-2.5 py-1 rounded-full border border-emerald-500/10">
+                Slide {currentSlideIdx + 1} dari {totalSlides}
+              </span>
+              <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                <Sparkles size={11} className="text-emerald-500 animate-pulse" /> Paham Kilat AI
+              </div>
+            </div>
+
+            <h3 className="text-base font-black text-slate-900 leading-tight font-outfit">
+              {currentSlide.title}
+            </h3>
+
+            <div className="text-slate-700 text-[12.5px] leading-relaxed whitespace-pre-wrap font-medium space-y-2">
+              {currentSlide.content.split('\n').map((para: string, pIdx: number) => {
+                const trimmed = para.trim();
+                if (trimmed.startsWith('-') || trimmed.startsWith('*')) {
+                  return (
+                    <div key={pIdx} className="flex items-start gap-2 pl-1 mt-1">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1.5 shrink-0" />
+                      <p className="flex-1 text-slate-750 font-bold">{trimmed.substring(1).trim()}</p>
+                    </div>
+                  );
+                }
+                return <p key={pIdx} className="text-slate-750 font-semibold">{trimmed}</p>;
+              })}
+            </div>
+
+            {/* Analogi Box */}
+            {currentSlide.analogy && (
+              <div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-3.5 mt-4 text-left flex items-start gap-2.5 animate-in slide-in-from-bottom-2 duration-300">
+                <div className="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                  <Lightbulb size={13} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h5 className="text-[10px] font-black text-amber-950 uppercase tracking-wider">💡 Gampangnya Gini:</h5>
+                  <p className="text-slate-650 text-[11.5px] font-semibold mt-0.5 leading-relaxed">
+                    {currentSlide.analogy}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Navigation buttons inside card */}
+          <div className="flex justify-between items-center gap-3 pt-5 border-t border-slate-100 mt-6 shrink-0">
+            <button
+              onClick={() => setCurrentSlideIdx(prev => Math.max(0, prev - 1))}
+              disabled={currentSlideIdx === 0}
+              className="px-3.5 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-[10.5px] font-black uppercase tracking-wider disabled:opacity-40 transition-all border border-slate-100 min-h-[38px] active:scale-95 flex items-center gap-1"
+            >
+              Kembali
+            </button>
+            <button
+              onClick={() => {
+                if (currentSlideIdx < totalSlides - 1) {
+                  setCurrentSlideIdx(prev => prev + 1);
+                } else {
+                  setToast({ message: "Hebat! Kamu sudah membaca semua materi hari ini 🚀", type: "success" });
+                }
+              }}
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[10.5px] font-black uppercase tracking-wider transition-all min-h-[38px] active:scale-95 shadow-sm shadow-emerald-500/15 flex items-center gap-1"
+            >
+              {currentSlideIdx === totalSlides - 1 ? 'Selesai' : 'Lanjut'}
+            </button>
+          </div>
+
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -427,25 +584,60 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
                   
                   {/* TAB: MATERIAL */}
                   {activeTab === 'materi' && (
-                    <div className="space-y-6">
-                      {selectedLesson.ai_reading_preview && (
-                        <div className="bg-emerald-50/50 rounded-2xl p-5 border border-emerald-100 flex items-start gap-4">
-                          <div className="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/10">
-                            <Sparkles size={18} />
-                          </div>
-                          <div>
-                            <h4 className="text-emerald-800 text-xs font-black uppercase tracking-widest mb-1.5">Rangkuman AI</h4>
-                            <p className="text-emerald-900 text-sm font-medium leading-relaxed">{selectedLesson.ai_reading_preview}</p>
+                    <div className="space-y-5">
+                      
+                      {/* Mode Belajar Toggle */}
+                      <div className="bg-slate-100/80 border border-slate-200/50 rounded-2xl p-1 flex">
+                        <button
+                          onClick={() => setLearningMode('santai')}
+                          className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all min-h-[36px] ${
+                            learningMode === 'santai'
+                              ? 'bg-white text-emerald-600 shadow-sm border border-slate-200/20'
+                              : 'text-slate-400 hover:text-slate-600'
+                          }`}
+                        >
+                          <Sparkles size={13} /> Paham Kilat AI
+                        </button>
+                        <button
+                          onClick={() => setLearningMode('standar')}
+                          className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all min-h-[36px] ${
+                            learningMode === 'standar'
+                              ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/20'
+                              : 'text-slate-400 hover:text-slate-600'
+                          }`}
+                        >
+                          <BookOpen size={13} /> Buku Teks
+                        </button>
+                      </div>
+
+                      {learningMode === 'santai' ? (
+                        isLoadingSimplify ? (
+                          renderSimplifySkeleton()
+                        ) : (
+                          renderSlideDeck()
+                        )
+                      ) : (
+                        <div className="space-y-5 animate-in fade-in duration-300">
+                          {selectedLesson.ai_reading_preview && (
+                            <div className="bg-emerald-50/50 rounded-2xl p-5 border border-emerald-100 flex items-start gap-4">
+                              <div className="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/10">
+                                <Sparkles size={18} />
+                              </div>
+                              <div>
+                                <h4 className="text-emerald-800 text-xs font-black uppercase tracking-widest mb-1.5">Rangkuman AI</h4>
+                                <p className="text-emerald-900 text-sm font-medium leading-relaxed">{selectedLesson.ai_reading_preview}</p>
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="space-y-3">
+                            <h4 className="text-slate-400 text-xs font-black uppercase tracking-widest pl-1">Isi Materi Lengkap</h4>
+                            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 sm:p-6 text-slate-800 text-sm leading-relaxed whitespace-pre-wrap font-medium">
+                              {selectedLesson.content || "Guru belum menambahkan isi materi detail."}
+                            </div>
                           </div>
                         </div>
                       )}
-                      
-                      <div className="space-y-3">
-                        <h4 className="text-slate-400 text-xs font-black uppercase tracking-widest pl-1">Isi Materi Lengkap</h4>
-                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 sm:p-6 text-slate-800 text-sm leading-relaxed whitespace-pre-wrap font-medium">
-                          {selectedLesson.content || "Guru belum menambahkan isi materi detail."}
-                        </div>
-                      </div>
                     </div>
                   )}
 
