@@ -47,7 +47,8 @@ export async function getStudentSession() {
         class_name,
         academic_year,
         username,
-        profile_photo_url
+        profile_photo_url,
+        google_email
       )
     `)
     .eq('token', token)
@@ -80,6 +81,7 @@ export async function getStudentSession() {
       username: accountData.username,
       photo_url: accountData.profile_photo_url,
       avatar_url: behaviorData?.avatar_url ?? null,
+      email: accountData.google_email ?? null,
     },
   };
 }

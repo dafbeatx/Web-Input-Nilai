@@ -259,6 +259,19 @@ export async function GET(req: NextRequest) {
 
     const totalPoints = behaviorData?.total_points ?? 0;
 
+    // Fetch google_email from gm_student_accounts
+    let accountQuery = supabaseAdmin
+      .from('gm_student_accounts')
+      .select('google_email')
+      .eq('student_name', targetStudentName);
+
+    if (className) {
+      accountQuery = accountQuery.eq('class_name', className);
+    }
+
+    const { data: accountData } = await accountQuery.maybeSingle();
+    const googleEmail = accountData?.google_email ?? null;
+
     // 4. Mock Documents (In real app, this might pull from a storage table)
     const documents = [
       { id: 'report-1', name: 'Laporan Progres Kelakuan', type: 'PDF', size: '1.2 MB', ready: true },
@@ -274,7 +287,8 @@ export async function GET(req: NextRequest) {
       },
       academicHistory,
       documents,
-      total_points: totalPoints
+      total_points: totalPoints,
+      email: googleEmail
     });
   } catch (err: any) {
     console.error('Student summary error:', err);

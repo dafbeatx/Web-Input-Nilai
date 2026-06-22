@@ -95,8 +95,10 @@ export default function StudentProfileLayer({
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
   const [studentLogs, setStudentLogs] = useState<BehaviorLog[]>([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
-  const [studentSummary, setStudentSummary] = useState<{ attendance: any, academicHistory: any[], documents: any[] } | null>(null);
+  const [studentSummary, setStudentSummary] = useState<{ attendance: any, academicHistory: any[], documents: any[], email?: string | null } | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const [loginLogs, setLoginLogs] = useState<{ id: string; ip_address: string; user_agent: string; created_at: string }[]>([]);
+  const [isLoadingLoginLogs, setIsLoadingLoginLogs] = useState(false);
   
   // Management States
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
@@ -641,12 +643,13 @@ export default function StudentProfileLayer({
     fetchStudentLogs();
     fetchStudentSummary();
     fetchAttendanceLogs();
+    fetchLoginLogs();
     if (isAdmin) {
       fetchBehaviorSettings();
     }
     setTotalPoints(initialPoints);
     setCurrentAvatarUrl(avatarUrl);
-  }, [studentId, studentName, initialPoints, avatarUrl, isAdmin]);
+  }, [studentId, studentName, initialPoints, avatarUrl, isAdmin, className]);
 
   const fetchBehaviorSettings = async () => {
     try {
@@ -681,6 +684,49 @@ export default function StudentProfileLayer({
     } finally {
       setIsLoadingAttendance(false);
     }
+  };
+
+  const fetchLoginLogs = async () => {
+    if (!studentName || !className) return;
+    setIsLoadingLoginLogs(true);
+    try {
+      const res = await fetch(`/api/grademaster/students/login-logs?name=${encodeURIComponent(studentName || '')}&class=${encodeURIComponent(className || '')}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.logs) {
+          setLoginLogs(data.logs);
+        }
+      }
+    } catch (err) {
+      console.error("Gagal mengambil logs login:", err);
+    } finally {
+      setIsLoadingLoginLogs(false);
+    }
+  };
+
+  const getDeviceFromUserAgent = (ua: string) => {
+    if (!ua) return "Perangkat Tidak Dikenal";
+    const lower = ua.toLowerCase();
+    
+    let os = "OS Tidak Dikenal";
+    if (lower.includes("windows")) os = "Windows";
+    else if (lower.includes("macintosh") || lower.includes("mac os")) os = "macOS";
+    else if (lower.includes("android")) os = "Android";
+    else if (lower.includes("iphone") || lower.includes("ipad")) os = "iOS";
+    else if (lower.includes("linux")) os = "Linux";
+    
+    let browser = "Browser";
+    if (lower.includes("chrome") || lower.includes("chromium")) {
+      if (lower.includes("edg/")) browser = "Edge";
+      else if (lower.includes("opr/") || lower.includes("opera")) browser = "Opera";
+      else browser = "Chrome";
+    } else if (lower.includes("safari")) {
+      browser = "Safari";
+    } else if (lower.includes("firefox")) {
+      browser = "Firefox";
+    }
+    
+    return `${browser} (${os})`;
   };
 
   const fetchStudentSummary = async () => {
@@ -1411,6 +1457,11 @@ export default function StudentProfileLayer({
                 <div className="min-w-0 flex-1">
                   <h3 className="font-extrabold text-[13px] uppercase tracking-wider text-slate-800 font-outfit truncate">{studentName}</h3>
                   <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">NISN/ID: {studentId}</p>
+                  {studentSummary?.email && (
+                    <p className="text-[9.5px] text-indigo-650 font-extrabold uppercase tracking-wider mt-0.5 truncate">
+                      Email: {studentSummary.email}
+                    </p>
+                  )}
                   <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Tahun Ajaran {academicYear}</p>
                 </div>
 
@@ -1461,6 +1512,57 @@ export default function StudentProfileLayer({
                             Segera
                           </span>
                         )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Riwayat Login */}
+              <div className="space-y-2 pt-2 border-t border-slate-150/50">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Riwayat Login Terakhir</h4>
+                
+                {isLoadingLoginLogs ? (
+                  <div className="py-8 flex flex-col items-center justify-center gap-2.5 text-slate-400 bg-white border border-slate-100 rounded-3xl shadow-sm">
+                    <Loader2 size={16} className="animate-spin text-indigo-500" />
+                    <p className="text-[9px] font-bold uppercase">Memuat riwayat login...</p>
+                  </div>
+                ) : loginLogs.length === 0 ? (
+                  <div className="py-8 text-center bg-white border border-slate-100 rounded-3xl flex flex-col items-center justify-center shadow-sm">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Belum ada riwayat login</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1 no-scrollbar">
+                    {loginLogs.map((log) => (
+                      <div key={log.id} className="bg-white p-3 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <div className="w-8 h-8 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                            <span className="material-symbols-outlined text-[18px]">devices</span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-slate-800 font-extrabold text-[11px] leading-tight truncate">
+                              {getDeviceFromUserAgent(log.user_agent)}
+                            </h4>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+                              IP: {log.ip_address}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wide block">
+                            {new Date(log.created_at).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </span>
+                          <span className="text-[8.5px] font-medium text-slate-450 block mt-0.5">
+                            {new Date(log.created_at).toLocaleTimeString('id-ID', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>

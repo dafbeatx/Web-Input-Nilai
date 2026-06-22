@@ -138,6 +138,16 @@ export async function POST(req: NextRequest) {
     // Create session to validate the identity
     await createStudentSession(account.id);
 
+    // Record the login log
+    const userAgent = req.headers.get('user-agent') || 'unknown';
+    await supabaseAdmin
+      .from('gm_student_login_logs')
+      .insert({
+        account_id: account.id,
+        ip_address: ip,
+        user_agent: userAgent
+      });
+
     return NextResponse.json({
       message: 'Berhasil mengaitkan profil Siswa secara permanen',
       student: {

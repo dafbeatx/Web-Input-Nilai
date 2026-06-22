@@ -1,9 +1,10 @@
 export const dynamic = "force-dynamic";
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSession, createStudentSession } from '@/lib/grademaster/studentAuth';
 import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     // 1. Check for standard student cookie session
     const session = await getStudentSession();
@@ -26,7 +27,7 @@ export async function GET() {
       // Look up student account bound to this Google email
       const { data: boundAccount, error: boundError } = await supabase
         .from('gm_student_accounts')
-        .select('id, student_name, class_name, academic_year, username, profile_photo_url')
+        .select('id, student_name, class_name, academic_year, username, profile_photo_url, google_email')
         .eq('google_email', email)
         .single();
 
@@ -42,6 +43,17 @@ export async function GET() {
         // Establish the application-specific session cookie
         await createStudentSession(boundAccount.id);
 
+        // Record the login log
+        const userAgent = req.headers.get('user-agent') || 'unknown';
+        const ipAddress = req.headers.get('x-forwarded-for') || 'unknown';
+        await supabaseAdmin
+          .from('gm_student_login_logs')
+          .insert({
+            account_id: boundAccount.id,
+            ip_address: ipAddress,
+            user_agent: userAgent
+          });
+
         return NextResponse.json({
           authenticated: true,
           role: 'student',
@@ -55,6 +67,7 @@ export async function GET() {
             username: boundAccount.username,
             photo_url: boundAccount.profile_photo_url,
             avatar_url: behaviorRecord?.avatar_url || null,
+            email: boundAccount.google_email || null,
             isGoogleLinked: true
           },
         });
