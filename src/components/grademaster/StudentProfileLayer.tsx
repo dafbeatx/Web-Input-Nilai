@@ -669,14 +669,12 @@ export default function StudentProfileLayer({
     if (!studentName) return;
     setIsLoadingAttendance(true);
     try {
-      const { data, error } = await supabase
-        .from('gm_attendance')
-        .select('subject, date, status')
-        .eq('student_name', studentName)
-        .order('date', { ascending: false });
-      
-      if (!error && data) {
-        setAttendanceLogs(data);
+      const res = await fetch(`/api/grademaster/students/attendance-logs?name=${encodeURIComponent(studentName)}&year=${encodeURIComponent(academicYear)}&class=${encodeURIComponent(className)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.logs) {
+          setAttendanceLogs(data.logs);
+        }
       }
     } catch (err) {
       console.error("Gagal mengambil logs kehadiran:", err);
@@ -688,7 +686,7 @@ export default function StudentProfileLayer({
   const fetchStudentSummary = async () => {
     setIsLoadingSummary(true);
     try {
-      const res = await fetch(`/api/grademaster/students/summary?name=${encodeURIComponent(studentName)}&year=${encodeURIComponent(academicYear)}`);
+      const res = await fetch(`/api/grademaster/students/summary?name=${encodeURIComponent(studentName)}&year=${encodeURIComponent(academicYear)}&class=${encodeURIComponent(className)}`);
       if (res.ok) {
         const data = await res.json();
         setStudentSummary(data);
@@ -926,10 +924,8 @@ export default function StudentProfileLayer({
 
               {/* Banner Notifikasi Remedial / Sukses */}
               {(() => {
-                const pendingRemedials = academicHistory.filter((g: any) => !g.isPassing);
-                const heldBackGrades = academicHistory.filter((g: any) => 
-                  Array.isArray(g.cheatingFlags) && g.cheatingFlags.some((f: string) => f.includes('Nilai remedial ditahan'))
-                );
+                const pendingRemedials = academicHistory.filter((g: any) => !g.isPassing && g.remedialUiState !== 'REMEDIAL_SUBMITTED_HELD_BACK');
+                const heldBackGrades = academicHistory.filter((g: any) => g.remedialUiState === 'REMEDIAL_SUBMITTED_HELD_BACK');
 
                 return (
                   <div className="space-y-2">
@@ -969,7 +965,7 @@ export default function StudentProfileLayer({
                           <div className="min-w-0 flex-1">
                             <h4 className="text-amber-950 font-black text-[10.5px] uppercase tracking-wider font-outfit">Nilai Remedial Ditahan</h4>
                             <p className="text-amber-800 text-[11.5px] font-semibold mt-0.5 leading-snug">
-                              Nilai remedial <strong>{g.subject} ({g.sessionName})</strong> ditahan sementara menunggu rekan kelas selesai, atau hingga {deadlineText}.
+                              Jawaban remedial untuk <strong>{g.subject} ({g.sessionName})</strong> sudah dikumpulkan. Nilai final masih ditahan sementara sampai teman sekelas selesai atau sampai {deadlineText}.
                             </p>
                           </div>
                         </div>
@@ -1209,18 +1205,44 @@ export default function StudentProfileLayer({
                               <p className="text-[9.5px] font-bold text-slate-400 uppercase mt-1 tracking-wide truncate">
                                 {grade.subject} • {formatDate(grade.date)}
                               </p>
+                              
+                              {/* Display remedial status text/message */}
+                              {grade.remedialMessage && (
+                                <div className="mt-1.5 flex items-center">
+                                  <span className={`text-[8.5px] font-bold px-2 py-0.5 rounded-full ${
+                                    grade.remedialUiState === 'REMEDIAL_SUBMITTED_HELD_BACK' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                                    grade.remedialUiState === 'FAILED_EFFORT' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                                    grade.remedialUiState === 'CHEATED' ? 'bg-rose-100 text-rose-800 border border-rose-200' :
+                                    grade.remedialUiState === 'TIME_UP' ? 'bg-slate-50 text-slate-600 border border-slate-100' :
+                                    grade.remedialUiState === 'PASSING' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                                    grade.remedialUiState === 'DEADLINE_PASSED' ? 'bg-slate-100 text-slate-500 border border-slate-200' :
+                                    'bg-slate-50 text-slate-500'
+                                  }`} title={grade.remedialMessage}>
+                                    {grade.remedialMessage}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                             
                             <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                              <p className={`text-xl font-black font-outfit leading-none ${isPassing ? 'text-emerald-600' : 'text-rose-500'}`}>
-                                {grade.score}
-                              </p>
-                              <span className="text-[8px] font-bold text-slate-400 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded uppercase">
+                              {grade.remedialUiState === 'REMEDIAL_SUBMITTED_HELD_BACK' ? (
+                                <div className="flex flex-col items-end gap-0.5">
+                                  <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Remedial: {grade.remedialScore} (Ditahan)</span>
+                                  <p className="text-xs font-bold text-slate-400 leading-none">
+                                    Final: {grade.score} (Sementara)
+                                  </p>
+                                </div>
+                              ) : (
+                                <p className={`text-xl font-black font-outfit leading-none ${isPassing ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                  {grade.score}
+                                </p>
+                              )}
+                              <span className="text-[8px] font-bold text-slate-400 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded uppercase mt-0.5">
                                 KKM: {grade.kkm}
                               </span>
 
                               {/* Aksi Remedial / Share WA */}
-                              {!isAdmin && grade.hasRemedialAvailable && onStartRemedial && (
+                              {!isAdmin && grade.canStartRemedial && onStartRemedial && (
                                 isParent ? (
                                   <button 
                                     disabled
@@ -1245,7 +1267,21 @@ export default function StudentProfileLayer({
                                   onClick={() => {
                                     const deadlineText = grade.remedialDeadline ? formatDate(grade.remedialDeadline) : 'Batas Waktu Sesi';
                                     const appUrl = typeof window !== 'undefined' ? `${window.location.origin}` : 'https://web-input-nilai.vercel.app';
-                                    const message = `*GradeMaster OS - Pemberitahuan Remedial* 🔄\n\nHalo, berikut adalah informasi pengerjaan remedial:\n👤 *Nama Siswa*: ${studentName}\n🏫 *Kelas*: ${className}\n📚 *Mata Pelajaran*: ${grade.subject}\n📝 *Sesi*: ${grade.sessionName}\n📊 *Nilai Ujian*: ${grade.score} (KKM: ${grade.kkm})\n⚠️ *Alasan*: Nilai di bawah batas kelulusan KKM.\n\nSilakan kerjakan remedial secara mandiri melalui tautan resmi ini:\n🔗 *Link Remedial*: ${appUrl}\n\n*Batas Waktu*: ${deadlineText}\nMohon diselesaikan sebelum tenggat waktu. Terima kasih!`;
+                                    
+                                    let reasonText = 'Nilai di bawah batas kelulusan KKM.';
+                                    if (grade.remedialUiState === 'REMEDIAL_SUBMITTED_HELD_BACK') {
+                                      reasonText = 'Nilai remedial ditahan sementara menunggu teman sekelas selesai.';
+                                    } else if (grade.remedialUiState === 'FAILED_EFFORT') {
+                                      reasonText = 'Remedial gagal karena pengerjaan asal-asalan atau terlalu cepat.';
+                                    } else if (grade.remedialUiState === 'TIME_UP') {
+                                      reasonText = 'Batas waktu pengerjaan habis.';
+                                    } else if (grade.remedialUiState === 'CHEATED') {
+                                      reasonText = 'Terdeteksi indikasi kecurangan selama remedial.';
+                                    } else if (grade.remedialUiState === 'DEADLINE_PASSED') {
+                                      reasonText = 'Batas waktu remedial telah terlewati.';
+                                    }
+                                    
+                                    const message = `*GradeMaster OS - Pemberitahuan Remedial* 🔄\n\nHalo, berikut adalah informasi pengerjaan remedial:\n👤 *Nama Siswa*: ${studentName}\n🏫 *Kelas*: ${className}\n📚 *Mata Pelajaran*: ${grade.subject}\n📝 *Sesi*: ${grade.sessionName}\n📊 *Nilai Ujian*: ${grade.score} (KKM: ${grade.kkm})\n⚠️ *Alasan*: ${reasonText}\n\nSilakan penuhi persyaratan ujian melalui tautan resmi ini:\n🔗 *Link Portal*: ${appUrl}\n\n*Batas Waktu*: ${deadlineText}\nMohon diselesaikan sebelum tenggat waktu. Terima kasih!`;
                                     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
                                     window.open(waUrl, '_blank');
                                   }}

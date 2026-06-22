@@ -1347,7 +1347,7 @@ export default function GradeMaster() {
           studentId={studentData.behavior_id || studentData.id}
           studentName={studentData.name}
           className={studentData.class_name}
-          academicYear={academicYear}
+          academicYear={studentData.academic_year ?? academicYear}
           initialPoints={studentData.total_points ?? 0}
           avatarUrl={studentData.avatar_url}
           canEditPhoto={!studentData.avatar_url}
