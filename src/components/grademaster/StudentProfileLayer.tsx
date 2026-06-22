@@ -908,7 +908,7 @@ export default function StudentProfileLayer({
                   <h3 className="text-white font-black text-lg mt-2.5 leading-tight font-outfit truncate">
                     Halo, {studentName.split(' ')[0]}! 👋
                   </h3>
-                  <p className="text-slate-350 text-[11px] font-semibold mt-1 leading-normal max-w-[210px]">
+                  <p className="text-slate-300 text-[11px] font-semibold mt-1 leading-normal max-w-[210px]">
                     Semoga hari belajarmu menyenangkan di {getSchoolName(className)}.
                   </p>
                 </div>
