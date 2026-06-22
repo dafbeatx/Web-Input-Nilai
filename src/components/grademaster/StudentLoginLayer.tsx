@@ -263,13 +263,23 @@ export default function StudentLoginLayer({
         <div className="w-full max-w-[400px] flex flex-col items-center">
           
           {/* Visual Identity */}
-          <div className="mb-12 relative">
-             <div className="w-[110px] h-[110px] bg-white border border-slate-100 rounded-[2.5rem] flex items-center justify-center shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)] transform -rotate-[6deg] hover:rotate-0 transition-all duration-700 ease-out">
+          <div className="mb-10 relative flex flex-col items-center">
+             {/* Mascot visible on mobile, hidden on desktop */}
+             <div className="lg:hidden w-[140px] h-[140px] select-none pointer-events-none animate-in fade-in slide-in-from-bottom-4 duration-1000 ease-out mb-2">
+                <img
+                  src="/student-mascot.png"
+                  alt="Student Mascot"
+                  className="w-full h-full object-contain"
+                />
+             </div>
+             
+             {/* Desktop-only Visual Identity Box */}
+             <div className="hidden lg:flex w-[110px] h-[110px] bg-white border border-slate-100 rounded-[2.5rem] items-center justify-center shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)] transform -rotate-[6deg] hover:rotate-0 transition-all duration-700 ease-out">
                 <div className="w-[85px] h-[85px] bg-[#0F172A] rounded-[2rem] flex items-center justify-center text-white">
                    <NeonGraduationCap size={44} />
                 </div>
              </div>
-             <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-emerald-500 text-white rounded-2xl flex items-center justify-center border-4 border-white shadow-lg animate-in zoom-in-50 duration-500 delay-700">
+             <div className="absolute -bottom-2 -right-2 hidden lg:flex w-10 h-10 bg-emerald-500 text-white rounded-2xl items-center justify-center border-4 border-white shadow-lg animate-in zoom-in-50 duration-500 delay-700">
                 <ShieldCheck size={20} strokeWidth={2.5} />
              </div>
           </div>

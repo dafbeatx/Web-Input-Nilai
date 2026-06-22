@@ -896,6 +896,34 @@ export default function StudentProfileLayer({
                {activeTab === 'HOME' && (
             <div className="space-y-4 animate-in fade-in duration-300">
 
+              {/* Welcome Hero Banner with Mascot */}
+              <div className="relative bg-gradient-to-r from-slate-900 to-indigo-950 border border-slate-800 rounded-[2.2rem] p-5 overflow-hidden flex items-center justify-between gap-4 shadow-lg shadow-indigo-950/15">
+                {/* Abstract light decor */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+                <div className="absolute -left-10 -bottom-10 w-24 h-24 bg-purple-500/10 rounded-full blur-xl pointer-events-none" />
+
+                <div className="min-w-0 z-10 text-left">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/10 text-white rounded-full text-[9px] font-extrabold uppercase tracking-widest backdrop-blur-md">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Siswa Aktif
+                  </span>
+                  <h3 className="text-white font-black text-lg mt-2.5 leading-tight font-outfit truncate">
+                    Halo, {studentName.split(' ')[0]}! 👋
+                  </h3>
+                  <p className="text-slate-350 text-[11px] font-semibold mt-1 leading-normal max-w-[210px]">
+                    Semoga hari belajarmu menyenangkan di {getSchoolName(className)}.
+                  </p>
+                </div>
+                
+                <div className="w-20 h-20 shrink-0 relative select-none pointer-events-none -mb-5 -mr-1">
+                  <img 
+                    src="/student-mascot.png" 
+                    alt="Waving Mascot" 
+                    className="w-full h-full object-contain transform scale-125 origin-bottom" 
+                  />
+                </div>
+              </div>
+
               {/* Banner Notifikasi Remedial / Sukses */}
               {(() => {
                 const pendingRemedials = academicHistory.filter((g: any) => !g.isPassing);
@@ -1622,35 +1650,80 @@ export default function StudentProfileLayer({
 
         {/* Modal Prestasi Siswa */}
         {showAchievementsModal && (
-          <div className="absolute inset-0 z-50 flex items-end justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
-            <div className="bg-white rounded-t-[2.5rem] w-full max-h-[85%] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-250 pb-safe">
-              <div className="p-4 border-b border-slate-100 flex items-center justify-between shrink-0">
-                <h3 className="font-extrabold text-slate-800 text-[13.5px] uppercase tracking-wider font-outfit flex items-center gap-2">
-                  <Trophy className="text-amber-500" size={16} /> Lencana Prestasi
-                </h3>
+          <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-950/60 backdrop-blur-[6px] animate-in fade-in duration-200">
+            <div className="bg-white rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-sm sm:max-w-md max-h-[80%] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-250 pb-safe border border-slate-100">
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center shadow-sm">
+                    <Trophy size={16} strokeWidth={2.5} />
+                  </div>
+                  <h3 className="font-extrabold text-slate-850 text-[14px] uppercase tracking-wider font-outfit">
+                    Lencana Prestasi
+                  </h3>
+                </div>
                 <button 
                   onClick={() => setShowAchievementsModal(false)}
-                  className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-500 active:scale-95 transition-all border border-slate-100"
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-650 active:scale-95 transition-all border border-slate-200/40"
                 >
                   <X size={14} />
                 </button>
               </div>
               
-              <div className="flex-1 overflow-y-auto p-4.5 space-y-3.5 no-scrollbar">
-                <p className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest">Lencana Penghargaan Siswa</p>
-                <div className="grid grid-cols-1 gap-2.5">
-                  {badges.map((badge) => (
-                    <div 
-                      key={badge.id} 
-                      className={`p-4 rounded-3xl border bg-gradient-to-r flex items-center gap-3.5 ${badge.color}`}
-                    >
-                      <span className="text-2xl shrink-0">{badge.icon}</span>
-                      <div className="min-w-0">
-                        <h4 className="font-extrabold text-[12.5px] tracking-tight leading-tight uppercase font-outfit">{badge.label}</h4>
-                        <p className="text-[10px] font-semibold opacity-90 mt-1 leading-snug">{badge.desc}</p>
+              <div className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar">
+                
+                {/* Mascot Banner inside Modal */}
+                <div className="relative bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-100/40 border border-indigo-100/50 rounded-[2rem] p-4.5 overflow-hidden flex items-center justify-between gap-4">
+                  <div className="min-w-0 z-10 text-left">
+                    <h4 className="text-indigo-950 font-black text-[12px] uppercase tracking-wide font-outfit">Prestasi Kamu</h4>
+                    <p className="text-indigo-850 text-[11px] font-semibold mt-1 leading-snug">
+                      Hebat! Kamu telah mengumpulkan <span className="font-black text-indigo-650">{badges.length} lencana</span> penghargaan semester ini.
+                    </p>
+                  </div>
+                  <div className="w-16 h-16 shrink-0 relative select-none pointer-events-none">
+                    <img 
+                      src="/student-mascot.png" 
+                      alt="Mascot Celebration" 
+                      className="w-full h-full object-contain transform scale-110 translate-y-1 scale-x-[-1]" 
+                    />
+                  </div>
+                </div>
+
+                <p className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest px-1 text-left">Lencana Penghargaan Siswa</p>
+                <div className="grid grid-cols-1 gap-3">
+                  {badges.map((badge) => {
+                    // Modern premium color styling overrides
+                    let premiumColor = badge.color;
+                    if (badge.id === 'gold_disc') {
+                      premiumColor = 'from-amber-400 via-yellow-300 to-amber-500 text-yellow-950 border-amber-400/40 shadow-[0_10px_25px_-5px_rgba(245,158,11,0.15)]';
+                    } else if (badge.id === 'silver_disc') {
+                      premiumColor = 'from-indigo-500/10 via-purple-500/5 to-indigo-500/15 text-indigo-950 border-indigo-500/20 shadow-[0_8px_20px_-6px_rgba(79,70,229,0.08)]';
+                    } else if (badge.id === 'perfect_pres') {
+                      premiumColor = 'from-emerald-500/10 via-teal-500/5 to-emerald-500/15 text-emerald-950 border-emerald-500/20 shadow-[0_8px_20px_-6px_rgba(16,185,129,0.08)]';
+                    } else if (badge.id === 'perfect_score') {
+                      premiumColor = 'from-amber-400 via-yellow-200 to-yellow-500 text-amber-950 border-yellow-400/50 shadow-[0_10px_25px_-5px_rgba(234,179,8,0.2)]';
+                    } else if (badge.id === 'high_score') {
+                      premiumColor = 'from-slate-100 via-slate-50 to-slate-200 text-slate-850 border-slate-300/50 shadow-[0_8px_20px_-6px_rgba(148,163,184,0.08)]';
+                    } else if (badge.id === 'academic_star') {
+                      premiumColor = 'from-violet-500/10 via-fuchsia-500/5 to-purple-500/15 text-purple-950 border-purple-500/20 shadow-[0_8px_20px_-6px_rgba(139,92,246,0.08)]';
+                    } else if (badge.id === 'member') {
+                      premiumColor = 'from-slate-50 via-slate-100/50 to-slate-100 text-slate-800 border-slate-200/60 shadow-[0_4px_12px_rgba(0,0,0,0.01)]';
+                    }
+
+                    return (
+                      <div 
+                        key={badge.id} 
+                        className={`p-4 rounded-[1.8rem] border bg-gradient-to-r flex items-center gap-4 transition-all hover:scale-[1.01] ${premiumColor}`}
+                      >
+                        <div className="w-12 h-12 rounded-2xl bg-white/40 backdrop-blur-sm flex items-center justify-center text-2xl shrink-0 border border-white/20 shadow-sm">
+                          {badge.icon}
+                        </div>
+                        <div className="min-w-0 text-left">
+                          <h4 className="font-extrabold text-[12.5px] tracking-tight leading-tight uppercase font-outfit">{badge.label}</h4>
+                          <p className="text-[10px] font-semibold opacity-90 mt-1 leading-snug">{badge.desc}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
