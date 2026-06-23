@@ -397,13 +397,13 @@ export default function GradeMaster() {
     }
   }, []);
 
-  // Tele-log: Catch when user reaches dashboard/home for the first time
+  // Tele-log: Catch when user reaches dashboard/home/student_profile for the first time
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || isAuthLoading) return;
     
-    const isPostLoginLayer = layer === 'dashboard' || layer === 'home';
+    const isPostLoginLayer = layer === 'dashboard' || layer === 'home' || layer === 'student_profile';
     // Only consider the user logged in for tele-log purposes if they are admin or a fully linked student
-    const isUserLoggedIn = isAdmin || (isStudent && studentData?.isGoogleLinked !== false);
+    const isUserLoggedIn = isAdmin || (isStudent && studentData && studentData.isGoogleLinked === true);
     
     if (isPostLoginLayer && isUserLoggedIn) {
       const role = isAdmin ? 'Admin' : 'Student';
@@ -439,7 +439,7 @@ export default function GradeMaster() {
         }
       }
     }
-  }, [layer, isAdmin, isStudent, adminUser, studentData]);
+  }, [layer, isAdmin, isStudent, adminUser, studentData, isAuthLoading]);
 
   // Check and handle mandatory push notification permission for Google-authenticated students
   const checkPushPermission = useCallback(async () => {
@@ -1456,7 +1456,7 @@ export default function GradeMaster() {
           }}
           onSuccess={async (data) => {
             setIsStudent(true);
-            setStudentData(data);
+            setStudentData({ ...data, isGoogleLinked: true });
             await checkAdmin();
           }}
           onLogout={() => {
