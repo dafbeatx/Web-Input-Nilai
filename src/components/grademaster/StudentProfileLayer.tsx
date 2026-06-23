@@ -108,6 +108,8 @@ export default function StudentProfileLayer({
   const [activeSessions, setActiveSessions] = useState<{ id: string; ip_address: string; user_agent: string; created_at: string; is_current: boolean }[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [isEndingSessions, setIsEndingSessions] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [isEquippingAvatar, setIsEquippingAvatar] = useState(false);
   
   // Management States
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
@@ -760,6 +762,46 @@ export default function StudentProfileLayer({
     }
   };
 
+  const isEmojiAvatar = (url: string | null | undefined) => {
+    if (!url) return false;
+    return url.length <= 4 && !url.startsWith('http') && !url.startsWith('/') && !url.startsWith('data:');
+  };
+
+  const getGradientForEmoji = (emoji: string | null | undefined) => {
+    switch (emoji) {
+      case '🌱': return 'from-emerald-400 to-teal-500';
+      case '📚': return 'from-indigo-400 to-violet-500';
+      case '⚡': return 'from-amber-400 to-orange-500';
+      case '🏆': return 'from-rose-400 to-pink-500';
+      case '👑': return 'from-violet-500 via-fuchsia-500 to-pink-500';
+      default: return 'from-slate-400 to-slate-550';
+    }
+  };
+
+  const handleEquipAvatar = async (emoji: string) => {
+    setIsEquippingAvatar(true);
+    try {
+      const res = await fetch('/api/grademaster/behaviors/avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, avatarEmoji: emoji })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setToast({ message: 'Avatar berhasil diperbarui!', type: 'success' });
+        setCurrentAvatarUrl(data.avatar_url);
+        onAvatarUpdate?.(data.avatar_url);
+        setShowAvatarModal(false);
+      } else {
+        throw new Error(data.error || 'Gagal mengganti avatar');
+      }
+    } catch (err: any) {
+      setToast({ message: err.message, type: 'error' });
+    } finally {
+      setIsEquippingAvatar(false);
+    }
+  };
+
   const getDeviceFromUserAgent = (ua: string) => {
     if (!ua) return "Perangkat Tidak Dikenal";
     const lower = ua.toLowerCase();
@@ -975,9 +1017,17 @@ export default function StudentProfileLayer({
                   <ArrowLeft size={14} />
                 </button>
               )}
-              <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-black tracking-tight shrink-0 overflow-hidden">
+              <div className={`w-8 h-8 rounded-full border text-slate-700 flex items-center justify-center text-[10px] font-black tracking-tight shrink-0 overflow-hidden ${
+                isEmojiAvatar(currentAvatarUrl) 
+                  ? `bg-gradient-to-br ${getGradientForEmoji(currentAvatarUrl)} text-white border-white/20 text-[14px]` 
+                  : 'bg-slate-100 border-slate-200'
+              }`}>
                 {currentAvatarUrl ? (
-                  <img src={currentAvatarUrl} alt={studentName} className="w-full h-full object-cover" />
+                  isEmojiAvatar(currentAvatarUrl) ? (
+                    currentAvatarUrl
+                  ) : (
+                    <img src={currentAvatarUrl} alt={studentName} className="w-full h-full object-cover" />
+                  )
                 ) : (
                   studentName.slice(0, 2).toUpperCase()
                 )}
@@ -1523,13 +1573,21 @@ export default function StudentProfileLayer({
               
               {/* Profil & Point (Flat Row Layout - No Overlap) */}
               <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-sm flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-base font-black tracking-tight shrink-0 overflow-hidden relative group">
+                <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center text-base font-black tracking-tight shrink-0 overflow-hidden relative group ${
+                  isEmojiAvatar(currentAvatarUrl) 
+                    ? `bg-gradient-to-br ${getGradientForEmoji(currentAvatarUrl)} text-white border-white/20 text-[22px]` 
+                    : 'bg-slate-50 border-slate-100'
+                }`}>
                   {currentAvatarUrl ? (
-                    <img src={currentAvatarUrl} alt={studentName} className="w-full h-full object-cover" />
+                    isEmojiAvatar(currentAvatarUrl) ? (
+                      currentAvatarUrl
+                    ) : (
+                      <img src={currentAvatarUrl} alt={studentName} className="w-full h-full object-cover" />
+                    )
                   ) : (
                     studentName.slice(0, 2).toUpperCase()
                   )}
-                  {(canEditPhoto || isAdmin) && (
+                  {isAdmin ? (
                     <button 
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isUploadingAvatar}
@@ -1540,6 +1598,13 @@ export default function StudentProfileLayer({
                       ) : (
                         <Upload size={12} />
                       )}
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => setShowAvatarModal(true)}
+                      className="absolute inset-0 bg-slate-900/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer active:opacity-100"
+                    >
+                      <Settings size={12} />
                     </button>
                   )}
                 </div>
@@ -1553,6 +1618,14 @@ export default function StudentProfileLayer({
                     </p>
                   )}
                   <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Tahun Ajaran {academicYear}</p>
+                  {!isAdmin && (
+                    <button 
+                      onClick={() => setShowAvatarModal(true)}
+                      className="text-[9px] font-black text-indigo-650 hover:text-indigo-850 uppercase tracking-widest mt-1.5 block hover:underline"
+                    >
+                      🎨 Ganti Avatar Gamifikasi
+                    </button>
+                  )}
                 </div>
 
                 <div className="px-3 py-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-2xl flex flex-col items-center justify-center shrink-0">
@@ -2251,6 +2324,98 @@ export default function StudentProfileLayer({
               >
                 Saya Memahami & Menyetujui
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Pilih Avatar (Gamifikasi) Modal */}
+        {showAvatarModal && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-300 text-left">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-650">
+                    <Trophy size={18} />
+                  </div>
+                  <h3 className="font-extrabold text-[13px] uppercase tracking-wider text-slate-800 font-outfit">Pilih Avatar</h3>
+                </div>
+                <button 
+                  onClick={() => setShowAvatarModal(false)}
+                  className="w-8 h-8 rounded-full hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-650 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Current Points Display */}
+              <div className="bg-gradient-to-r from-indigo-50 to-indigo-100/40 rounded-2xl p-4 border border-indigo-100/50 flex justify-between items-center">
+                <div>
+                  <h4 className="text-[10px] font-black text-indigo-950 uppercase tracking-wider">Poin Perilaku Kamu</h4>
+                  <p className="text-[11px] font-semibold text-indigo-850 mt-0.5">Pertahankan kedisiplinan untuk membuka avatar premium.</p>
+                </div>
+                <div className="bg-indigo-650 text-white px-3 py-1.5 rounded-xl font-black text-sm shadow-md shrink-0">
+                  {totalPoints} P
+                </div>
+              </div>
+
+              {/* Avatar Tier List */}
+              <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
+                {[
+                  { emoji: '🌱', label: 'Rookie Disciple', points: 0, gradient: 'from-emerald-400 to-teal-500' },
+                  { emoji: '📚', label: 'Academic Scholar', points: 50, gradient: 'from-indigo-400 to-violet-500' },
+                  { emoji: '⚡', label: 'Discipline Champion', points: 100, gradient: 'from-amber-400 to-orange-500' },
+                  { emoji: '🏆', label: 'Elite Master', points: 150, gradient: 'from-rose-400 to-pink-500' },
+                  { emoji: '👑', label: 'GradeMaster Legend', points: 250, gradient: 'from-violet-500 via-fuchsia-500 to-pink-500' },
+                ].map((tier) => {
+                  const isUnlocked = totalPoints >= tier.points;
+                  const isEquipped = currentAvatarUrl === tier.emoji;
+
+                  return (
+                    <div 
+                      key={tier.emoji} 
+                      className={`p-3 rounded-2xl border flex items-center justify-between gap-3 transition-all ${
+                        isEquipped 
+                          ? 'border-indigo-200 bg-indigo-50/20' 
+                          : 'border-slate-100 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 bg-gradient-to-br ${tier.gradient} text-white shadow-sm relative ${
+                          !isUnlocked ? 'opacity-40 grayscale' : ''
+                        }`}>
+                          {tier.emoji}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-slate-800 font-extrabold text-[12px] leading-tight truncate">{tier.label}</h4>
+                          <p className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+                            {tier.points === 0 ? 'Bebas' : `Butuh ${tier.points} Poin`}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0">
+                        {isEquipped ? (
+                          <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
+                            Aktif
+                          </span>
+                        ) : isUnlocked ? (
+                          <button
+                            onClick={() => handleEquipAvatar(tier.emoji)}
+                            disabled={isEquippingAvatar}
+                            className="text-[9px] font-black uppercase tracking-widest text-white bg-indigo-650 hover:bg-indigo-750 px-3 py-1.5 rounded-full transition-all active:scale-95 disabled:opacity-50 shadow-sm"
+                          >
+                            Gunakan
+                          </button>
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400" title="Terkunci">
+                            <span className="text-[14px]">🔒</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}

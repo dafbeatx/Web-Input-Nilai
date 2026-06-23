@@ -7,61 +7,133 @@ import { compressAndConvertToWebP } from '@/lib/grademaster/image-utils';
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Otorisasi - Admin atau Siswa yang bersangkutan (jika belum memiliki avatar)
+    // 1. Otorisasi - Admin atau Siswa yang bersangkutan
     const adminSession = await getAdminSession();
     const studentSessionData = !adminSession ? await getStudentSession() : null;
     const isStudentSession = !!studentSessionData;
 
     if (!adminSession && !isStudentSession) {
-      return NextResponse.json({ error: 'Unauthorized: Only admin or authenticated students can upload avatars' }, { status: 403 });
+      return NextResponse.json({ error: 'Unauthorized: Only admin or authenticated students can upload/set avatars' }, { status: 403 });
     }
 
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`avatar_upload:${ip}`)) {
-      return NextResponse.json({ error: 'Terlalu banyak unggahan (Rate Limited)' }, { status: 429 });
+      return NextResponse.json({ error: 'Terlalu banyak unggahan/perubahan (Rate Limited)' }, { status: 429 });
     }
 
-    // 2. Parse FormData
-    const formData = await req.formData();
-    const file = formData.get('file') as File | null;
-    const studentId = formData.get('studentId') as string | null;
+    // 2. Parse request based on content-type
+    const contentType = req.headers.get('content-type') || '';
+    let isJson = contentType.includes('application/json');
+    let studentId: string | null = null;
+    let file: File | null = null;
+    let avatarEmoji: string | null = null;
 
-    if (!file || !studentId) {
-      return NextResponse.json({ error: 'Data foto atau ID siswa tidak ditemukan' }, { status: 400 });
+    if (isJson) {
+      const body = await req.json();
+      studentId = body.studentId;
+      avatarEmoji = body.avatarEmoji;
+    } else {
+      const formData = await req.formData();
+      file = formData.get('file') as File | null;
+      studentId = formData.get('studentId') as string | null;
+    }
+
+    if (!studentId) {
+      return NextResponse.json({ error: 'ID siswa tidak ditemukan' }, { status: 400 });
     }
 
     // Validasi tambahan jika ini siswa
     if (isStudentSession && studentSessionData) {
       const studentBehaviorId = studentSessionData.student.behavior_id;
       if (!studentBehaviorId || studentId !== studentBehaviorId) {
-        return NextResponse.json({ error: 'Unauthorized: You can only upload your own profile photo' }, { status: 403 });
+        return NextResponse.json({ error: 'Unauthorized: You can only update your own profile photo' }, { status: 403 });
       }
 
-      // Periksa apakah avatar_url sudah ada di gm_behaviors
-      const { data: currentBehavior, error: behaviorErr } = await supabaseAdmin
-        .from('gm_behaviors')
-        .select('avatar_url')
-        .eq('id', studentId)
-        .maybeSingle();
+      // Validasi upload foto kustom (bukan emoji)
+      if (!avatarEmoji) {
+        const { data: currentBehavior, error: behaviorErr } = await supabaseAdmin
+          .from('gm_behaviors')
+          .select('avatar_url')
+          .eq('id', studentId)
+          .maybeSingle();
 
-      if (behaviorErr) {
-        console.error('[Avatar] Error checking existing avatar:', behaviorErr);
-        return NextResponse.json({ error: 'Gagal memverifikasi data profil' }, { status: 500 });
-      }
+        if (behaviorErr) {
+          console.error('[Avatar] Error checking existing avatar:', behaviorErr);
+          return NextResponse.json({ error: 'Gagal memverifikasi data profil' }, { status: 500 });
+        }
 
-      if (currentBehavior && currentBehavior.avatar_url && currentBehavior.avatar_url.trim() !== '') {
-        return NextResponse.json({ error: 'Foto profil sudah ada dan tidak dapat diubah oleh siswa' }, { status: 400 });
+        if (currentBehavior && currentBehavior.avatar_url && currentBehavior.avatar_url.trim() !== '') {
+          // Hanya blokir jika itu URL foto asli. Jika itu emoji, mereka boleh mengunggah foto baru.
+          const isUrl = currentBehavior.avatar_url.startsWith('http') || currentBehavior.avatar_url.startsWith('/') || currentBehavior.avatar_url.startsWith('data:');
+          if (isUrl) {
+            return NextResponse.json({ error: 'Foto profil sudah ada dan tidak dapat diubah oleh siswa' }, { status: 400 });
+          }
+        }
       }
     }
 
-    // Ekstraksi Buffer File
+    // A. JALUR GAMIFIKASI EMOTICON (JSON Payload)
+    if (avatarEmoji) {
+      const validEmojis = ['🌱', '📚', '⚡', '🏆', '👑'];
+      if (!validEmojis.includes(avatarEmoji)) {
+        return NextResponse.json({ error: 'Avatar emoji tidak valid' }, { status: 400 });
+      }
+
+      // Periksa poin siswa
+      const { data: behaviorData, error: behaviorErr } = await supabaseAdmin
+        .from('gm_behaviors')
+        .select('total_points')
+        .eq('id', studentId)
+        .maybeSingle();
+
+      if (behaviorErr || !behaviorData) {
+        return NextResponse.json({ error: 'Profil perilaku tidak ditemukan' }, { status: 404 });
+      }
+
+      const points = behaviorData.total_points || 0;
+      let requiredPoints = 0;
+      if (avatarEmoji === '🌱') requiredPoints = 0;
+      else if (avatarEmoji === '📚') requiredPoints = 50;
+      else if (avatarEmoji === '⚡') requiredPoints = 100;
+      else if (avatarEmoji === '🏆') requiredPoints = 150;
+      else if (avatarEmoji === '👑') requiredPoints = 250;
+
+      if (points < requiredPoints) {
+        return NextResponse.json({ 
+          error: `Poin tidak mencukupi! Anda butuh ${requiredPoints} poin untuk membuka avatar ini (Poin Anda: ${points})` 
+        }, { status: 403 });
+      }
+
+      // Update kolom avatar_url
+      const { error: dbError } = await supabaseAdmin
+        .from('gm_behaviors')
+        .update({ avatar_url: avatarEmoji })
+        .eq('id', studentId);
+
+      if (dbError) {
+        console.error('[Avatar] DB update failed for emoji:', dbError);
+        return NextResponse.json({ error: 'Gagal memperbarui avatar' }, { status: 500 });
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Avatar berhasil diperbarui!', 
+        avatar_url: avatarEmoji 
+      });
+    }
+
+    // B. JALUR UPLOAD FOTO KUSTOM (FormData Payload)
+    if (!file) {
+      return NextResponse.json({ error: 'Data foto tidak ditemukan' }, { status: 400 });
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // 3. Konversi Extrem via Sharp (Resizing + WebP + Compression 80%)
+    // Konversi via Sharp
     const processedImageBuffer = await compressAndConvertToWebP(buffer);
 
-    // 4. Upload ke Supabase Storage (Bucket: avatars) via admin client
+    // Upload ke Storage
     const filePath = `student_${studentId}_${Date.now()}.webp`;
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from('avatars')
@@ -88,7 +160,7 @@ export async function POST(req: NextRequest) {
 
     const publicAvatarUrl = publicUrlData.publicUrl;
 
-    // 5. Update Tabel gm_behaviors via admin client
+    // Update Tabel gm_behaviors
     const { error: dbError } = await supabaseAdmin
       .from('gm_behaviors')
       .update({ avatar_url: publicAvatarUrl })
