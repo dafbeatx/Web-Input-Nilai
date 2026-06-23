@@ -127,7 +127,11 @@ export default function StudentProfileLayer({
   // Leaderboard states
   const [classLeaderboard, setClassLeaderboard] = useState<{
     subjects: {
+      id: string;
       subject: string;
+      examType: string;
+      academicYear: string;
+      semester: string;
       ranks: { name: string; score: number }[];
     }[];
     behaviorRanks: { name: string; demerits: number; merits: number; avatarUrl?: string | null }[];
@@ -135,7 +139,8 @@ export default function StudentProfileLayer({
     highestMerits: { name: string; points: number } | null;
   } | null>(null);
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
-  const [selectedLeaderboardSub, setSelectedLeaderboardSub] = useState<string | null>(null);
+  const [showGradesLeaderboard, setShowGradesLeaderboard] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [showBehaviorLeaderboard, setShowBehaviorLeaderboard] = useState(false);
   const [behaviorLeaderboardTab, setBehaviorLeaderboardTab] = useState<'GOOD' | 'BAD'>('GOOD');
 
@@ -770,11 +775,18 @@ export default function StudentProfileLayer({
       // 2. Fetch class sessions & scores
       const { data: sessions, error: sessionsError } = await supabase
         .from('gm_sessions')
-        .select('id, subject')
+        .select('id, subject, exam_type, academic_year, semester')
         .eq('class_name', className)
         .eq('academic_year', academicYear);
 
-      const subjectsData: { subject: string; ranks: { name: string; score: number }[] }[] = [];
+      const subjectsData: {
+        id: string;
+        subject: string;
+        examType: string;
+        academicYear: string;
+        semester: string;
+        ranks: { name: string; score: number }[];
+      }[] = [];
 
       if (!sessionsError && sessions && sessions.length > 0) {
         const sessionIds = sessions.map(s => s.id);
@@ -785,35 +797,45 @@ export default function StudentProfileLayer({
           .eq('is_deleted', false);
 
         if (!gradesError && studentGrades) {
-          // Map session_id to subject
-          const sessionSubjectMap = sessions.reduce((map, s) => {
-            map[s.id] = s.subject;
+          // Map session_id to subject details
+          const sessionMap = sessions.reduce((map, s) => {
+            map[s.id] = {
+              subject: s.subject,
+              examType: s.exam_type,
+              academicYear: s.academic_year,
+              semester: s.semester
+            };
             return map;
-          }, {} as Record<string, string>);
+          }, {} as Record<string, { subject: string; examType: string; academicYear: string; semester: string }>);
 
-          // Group scores by subject & student name
-          const subjectScores: Record<string, Record<string, number>> = {};
+          // Group scores by session_id & student name
+          const sessionScores: Record<string, Record<string, number>> = {};
           studentGrades.forEach(g => {
-            const subject = sessionSubjectMap[g.session_id];
-            if (!subject) return;
+            const meta = sessionMap[g.session_id];
+            if (!meta) return;
 
-            if (!subjectScores[subject]) {
-              subjectScores[subject] = {};
+            if (!sessionScores[g.session_id]) {
+              sessionScores[g.session_id] = {};
             }
             const currentScore = Number(g.final_score) || 0;
-            const existingScore = subjectScores[subject][g.name] || 0;
-            subjectScores[subject][g.name] = Math.max(existingScore, currentScore);
+            const existingScore = sessionScores[g.session_id][g.name] || 0;
+            sessionScores[g.session_id][g.name] = Math.max(existingScore, currentScore);
           });
 
-          // Rank students per subject (Keep full ranks for detail modals)
-          Object.keys(subjectScores).forEach(sub => {
-            const rankedList = Object.keys(subjectScores[sub]).map(name => ({
+          // Rank students per session
+          Object.keys(sessionScores).forEach(sessionId => {
+            const meta = sessionMap[sessionId];
+            const rankedList = Object.keys(sessionScores[sessionId]).map(name => ({
               name,
-              score: subjectScores[sub][name]
+              score: sessionScores[sessionId][name]
             })).sort((a, b) => b.score - a.score);
 
             subjectsData.push({
-              subject: sub,
+              id: sessionId,
+              subject: meta.subject,
+              examType: meta.examType,
+              academicYear: meta.academicYear,
+              semester: meta.semester,
               ranks: rankedList
             });
           });
@@ -1406,63 +1428,49 @@ export default function StudentProfileLayer({
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {/* Card 1: Peringkat Nilai per Mata Pelajaran (Full Width) */}
-                    <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4 text-left">
-                      <div className="flex items-center gap-2 pb-1">
-                        <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 shadow-sm">
-                          <Trophy size={15} />
+                    {/* Card 1: Peringkat Nilai Kelas (Single beautiful card, opens a separate layer/modal) */}
+                    <div 
+                      onClick={() => {
+                        setShowGradesLeaderboard(true);
+                        if (classLeaderboard?.subjects && classLeaderboard.subjects.length > 0) {
+                          setSelectedSessionId(classLeaderboard.subjects[0].id);
+                        }
+                      }}
+                      className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4 hover:border-indigo-100 hover:shadow-md/40 transition-all cursor-pointer group active:scale-[0.99] text-left"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-200">
+                            <Trophy size={18} />
+                          </div>
+                          <div>
+                            <h4 className="text-[12.5px] font-black text-slate-800 uppercase tracking-wider font-outfit">Peringkat Nilai Kelas</h4>
+                            <p className="text-[9.5px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Lihat prestasi akademik terbaik di kelasmu</p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="text-[12px] font-black text-slate-800 uppercase tracking-wider font-outfit">Peringkat Nilai Kelas</h4>
-                          <p className="text-[9.5px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Top 3 per mata pelajaran • Klik untuk detail lengkap</p>
-                        </div>
+                        <span className="text-[9.5px] font-black text-indigo-650 opacity-60 group-hover:opacity-100 transition-opacity uppercase tracking-wider flex items-center gap-0.5 shrink-0 bg-indigo-50/50 border border-indigo-100/30 px-3 py-1.5 rounded-full font-outfit">
+                          Buka Peringkat <span className="material-symbols-outlined text-[10px] leading-none">arrow_forward</span>
+                        </span>
                       </div>
 
-                      {classLeaderboard?.subjects && classLeaderboard.subjects.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                          {classLeaderboard.subjects.map((sub, i) => (
-                            <div 
-                              key={i} 
-                              onClick={() => setSelectedLeaderboardSub(sub.subject)}
-                              className="bg-slate-50/60 hover:bg-indigo-50/30 active:scale-[0.99] border border-slate-100/80 rounded-2xl p-4 transition-all cursor-pointer group shadow-[0_2px_6px_rgba(0,0,0,0.01)] hover:border-indigo-200"
-                            >
-                              <div className="flex items-center justify-between mb-3.5">
-                                <h5 className="text-[10px] font-black text-indigo-950 uppercase tracking-wider font-outfit">{sub.subject}</h5>
-                                <span className="text-[9px] font-extrabold text-indigo-600 opacity-60 group-hover:opacity-100 transition-opacity uppercase tracking-wider flex items-center gap-0.5">
-                                  Detail <span className="material-symbols-outlined text-[10px] leading-none">arrow_forward</span>
-                                </span>
-                              </div>
-                              <div className="space-y-2">
-                                {sub.ranks.slice(0, 3).map((rank, idx) => {
-                                  const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉';
-                                  const textWeight = idx === 0 ? 'font-extrabold text-slate-855' : 'font-semibold text-slate-650';
-                                  const isSelf = studentName && rank.name.toLowerCase() === studentName.toLowerCase();
-                                  
-                                  return (
-                                    <div key={idx} className={`flex justify-between items-center text-[11.5px] py-1.5 px-2 rounded-xl transition-colors ${
-                                      isSelf ? 'bg-indigo-50/60 border border-indigo-100/50' : 'border border-transparent'
-                                    }`}>
-                                      <div className="flex items-center gap-2 min-w-0">
-                                        <span className="shrink-0">{medal}</span>
-                                        <span className={`${textWeight} break-words whitespace-normal leading-tight text-[11px]`}>
-                                          {rank.name}
-                                          {isSelf && <span className="text-[8px] font-black text-indigo-650 ml-1.5 uppercase tracking-widest bg-indigo-50 px-1 py-0.5 rounded-md">Kamu</span>}
-                                        </span>
-                                      </div>
-                                      <span className="font-black text-indigo-600 shrink-0 bg-white border border-slate-200/80 px-2 py-0.5 rounded-md text-[10px] font-outfit shadow-sm">{rank.score}</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ))}
+                      <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4 flex items-center justify-between">
+                        <div className="space-y-1">
+                          <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest leading-none block">Tahun Ajaran</span>
+                          <span className="text-[11.5px] font-extrabold text-slate-800 font-outfit">{academicYear}</span>
                         </div>
-                      ) : (
-                        <div className="py-12 text-center flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-2xl">
-                          <span className="material-symbols-outlined text-[20px] text-slate-350">school</span>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Belum ada ujian tercatat</p>
+                        <div className="h-6 w-px bg-slate-200" />
+                        <div className="space-y-1">
+                          <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest leading-none block">Semester Aktif</span>
+                          <span className="text-[11.5px] font-extrabold text-slate-800 font-outfit">{semester === 'Ganjil' ? 'Semester 1 (Ganjil)' : 'Semester 2 (Genap)'}</span>
                         </div>
-                      )}
+                        <div className="h-6 w-px bg-slate-200" />
+                        <div className="space-y-1">
+                          <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest leading-none block">Jumlah Ujian</span>
+                          <span className="text-[11.5px] font-extrabold text-indigo-600 font-outfit">
+                            {classLeaderboard?.subjects ? classLeaderboard.subjects.length : 0} Sesi
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Card 2: Sorotan Perilaku Kelas (Full Width & Clickable) */}
@@ -2801,10 +2809,11 @@ export default function StudentProfileLayer({
           </div>
         )}
 
-        {/* Modal Peringkat Detail Nilai Mata Pelajaran */}
-        {selectedLeaderboardSub && (
-          <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-4 bg-slate-950/60 backdrop-blur-[6px] animate-in fade-in duration-200">
+        {/* Modal Peringkat Nilai Akademik Kelas */}
+        {showGradesLeaderboard && (
+          <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-4 bg-slate-955/60 backdrop-blur-[6px] animate-in fade-in duration-200">
             <div className="bg-white rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-sm sm:max-w-md max-h-[85%] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-250 pb-safe border border-slate-100">
+              {/* Header */}
               <div className="p-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-sm">
@@ -2812,76 +2821,131 @@ export default function StudentProfileLayer({
                   </div>
                   <div className="text-left">
                     <h3 className="font-extrabold text-slate-855 text-[13px] uppercase tracking-wider font-outfit leading-none">
-                      Detail Peringkat Nilai
+                      Peringkat Nilai Akademik
                     </h3>
-                    <p className="text-[10px] font-bold text-indigo-650 mt-1.5 uppercase tracking-wider leading-none">
-                      {selectedLeaderboardSub}
+                    <p className="text-[10px] font-bold text-slate-400 mt-1.5 uppercase tracking-wider leading-none">
+                      Detail Nilai Kelas
                     </p>
                   </div>
                 </div>
                 <button 
-                  onClick={() => setSelectedLeaderboardSub(null)}
+                  onClick={() => {
+                    setShowGradesLeaderboard(false);
+                    setSelectedSessionId(null);
+                  }}
                   className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-655 active:scale-95 transition-all border border-slate-200/40"
                 >
                   <X size={14} />
                 </button>
               </div>
 
+              {/* Selector */}
+              <div className="p-5 border-b border-slate-100/50 bg-slate-50/30 flex flex-col gap-2 shrink-0">
+                <label className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest text-left">Pilih Ujian / Sesi Ujian</label>
+                {classLeaderboard?.subjects && classLeaderboard.subjects.length > 0 ? (
+                  <select
+                    value={selectedSessionId || ''}
+                    onChange={(e) => setSelectedSessionId(e.target.value)}
+                    className="w-full p-3 bg-white border border-slate-200 rounded-2xl text-[12px] font-extrabold text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all font-outfit"
+                  >
+                    {classLeaderboard.subjects.map((sub) => (
+                      <option key={sub.id} value={sub.id}>
+                        {sub.subject} ({sub.examType}) — Semester {sub.semester === 'Ganjil' ? '1' : '2'} — TA {sub.academicYear}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="p-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-100 rounded-xl text-center">
+                    Belum ada sesi ujian terdaftar
+                  </div>
+                )}
+              </div>
+
+              {/* List Content */}
               <div className="flex-1 overflow-y-auto p-5 space-y-3.5 no-scrollbar">
                 {(() => {
-                  const subjectData = classLeaderboard?.subjects?.find(sub => sub.subject === selectedLeaderboardSub);
-                  if (!subjectData || subjectData.ranks.length === 0) {
+                  const currentSession = classLeaderboard?.subjects?.find(sub => sub.id === selectedSessionId) 
+                    || classLeaderboard?.subjects?.[0];
+
+                  if (!currentSession) {
                     return (
                       <div className="py-12 text-center flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-2xl">
                         <span className="material-symbols-outlined text-[20px] text-slate-350">school</span>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Belum ada peringkat untuk mata pelajaran ini</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Belum ada peringkat ujian tercatat</p>
                       </div>
                     );
                   }
 
                   return (
-                    <div className="space-y-2 text-left">
-                      {subjectData.ranks.map((rank, idx) => {
-                        const isSelf = studentName && rank.name.toLowerCase() === studentName.toLowerCase();
-                        const isTop3 = idx < 3;
-                        const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
-
-                        return (
-                          <div 
-                            key={idx} 
-                            className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-all ${
-                              isSelf 
-                                ? 'border-indigo-200 bg-indigo-50/30 ring-2 ring-indigo-500/20' 
-                                : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black font-outfit text-[11px] shrink-0 ${
-                                idx === 0 ? 'bg-amber-100 text-amber-800' :
-                                idx === 1 ? 'bg-slate-200/70 text-slate-800' :
-                                idx === 2 ? 'bg-amber-550/10 text-amber-955' : 'bg-slate-100 text-slate-500'
-                              }`}>
-                                {medal ? medal : `#${idx + 1}`}
-                              </div>
-                              <div className="min-w-0">
-                                <h4 className={`text-slate-800 text-[12px] leading-tight break-words whitespace-normal ${
-                                  isSelf || isTop3 ? 'font-extrabold' : 'font-semibold'
-                                }`}>
-                                  {rank.name}
-                                </h4>
-                                {isSelf && (
-                                  <span className="text-[8px] font-black text-indigo-650 uppercase tracking-widest bg-indigo-50/80 px-1.5 py-0.5 rounded-md mt-1 inline-block">
-                                    Kamu
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="bg-white border border-slate-200/80 px-3 py-1 rounded-xl font-black text-[11.5px] text-slate-855 font-outfit shadow-sm shrink-0">
-                              {rank.score}
-                            </div>
+                    <div className="space-y-3 text-left">
+                      {/* Active Info Banner */}
+                      <div className="bg-gradient-to-r from-indigo-50/50 to-purple-50/30 border border-indigo-100/50 rounded-2xl p-4 space-y-2">
+                        <span className="text-[8.5px] font-black text-indigo-950 uppercase tracking-widest bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded-md inline-block">Info Sesi</span>
+                        <div className="grid grid-cols-2 gap-3 text-[11px]">
+                          <div>
+                            <span className="text-slate-400 font-bold block uppercase text-[8px] tracking-wider">Mata Pelajaran</span>
+                            <span className="font-extrabold text-slate-800">{currentSession.subject}</span>
                           </div>
-                        );
-                      })}
+                          <div>
+                            <span className="text-slate-400 font-bold block uppercase text-[8px] tracking-wider">Evaluasi</span>
+                            <span className="font-extrabold text-indigo-755 uppercase">{currentSession.examType}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 font-bold block uppercase text-[8px] tracking-wider">Semester</span>
+                            <span className="font-extrabold text-slate-800">
+                              {currentSession.semester === 'Ganjil' ? 'Semester 1 (Ganjil)' : 'Semester 2 (Genap)'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 font-bold block uppercase text-[8px] tracking-wider">Tahun Ajaran</span>
+                            <span className="font-extrabold text-slate-800 font-outfit">{currentSession.academicYear}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        {currentSession.ranks.map((rank, idx) => {
+                          const isSelf = studentName && rank.name.toLowerCase() === studentName.toLowerCase();
+                          const isTop3 = idx < 3;
+                          const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
+
+                          return (
+                            <div 
+                              key={idx} 
+                              className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-all ${
+                                isSelf 
+                                  ? 'border-indigo-200 bg-indigo-50/30 ring-2 ring-indigo-500/20' 
+                                  : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black font-outfit text-[11px] shrink-0 ${
+                                  idx === 0 ? 'bg-amber-100 text-amber-800' :
+                                  idx === 1 ? 'bg-slate-200/70 text-slate-800' :
+                                  idx === 2 ? 'bg-amber-550/10 text-amber-955' : 'bg-slate-100 text-slate-500'
+                                }`}>
+                                  {medal ? medal : `#${idx + 1}`}
+                                </div>
+                                <div className="min-w-0">
+                                  <h4 className={`text-slate-800 text-[12px] leading-tight break-words whitespace-normal ${
+                                    isSelf || isTop3 ? 'font-extrabold' : 'font-semibold'
+                                  }`}>
+                                    {rank.name}
+                                  </h4>
+                                  {isSelf && (
+                                    <span className="text-[8px] font-black text-indigo-650 uppercase tracking-widest bg-indigo-50/80 px-1.5 py-0.5 rounded-md mt-1 inline-block">
+                                      Kamu
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="bg-white border border-slate-200/80 px-3 py-1 rounded-xl font-black text-[11.5px] text-slate-855 font-outfit shadow-sm shrink-0">
+                                {rank.score}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })()}
