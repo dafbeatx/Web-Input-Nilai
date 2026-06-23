@@ -135,11 +135,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Create session to validate the identity
-    await createStudentSession(account.id);
-
-    // Record the login log
+    // Record the login log & create session to validate the identity
     const userAgent = req.headers.get('user-agent') || 'unknown';
+    await createStudentSession(account.id, userAgent, ip);
+
     await supabaseAdmin
       .from('gm_student_login_logs')
       .insert({

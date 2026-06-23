@@ -40,12 +40,11 @@ export async function GET(req: NextRequest) {
           .eq('class_name', boundAccount.class_name)
           .single();
 
-        // Establish the application-specific session cookie
-        await createStudentSession(boundAccount.id);
-
-        // Record the login log
+        // Record the login log & establish the application-specific session cookie
         const userAgent = req.headers.get('user-agent') || 'unknown';
         const ipAddress = req.headers.get('x-forwarded-for') || 'unknown';
+        await createStudentSession(boundAccount.id, userAgent, ipAddress);
+
         await supabaseAdmin
           .from('gm_student_login_logs')
           .insert({

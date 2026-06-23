@@ -6,7 +6,8 @@ import {
   Trash2, Pencil, ShieldCheck, ThumbsUp, X, Calendar, 
   Activity, History, DownloadCloud, Check, User,
   Settings, AlertCircle, LogOut, Share2, Trophy, TrendingUp, Target,
-  Home, BookOpen, Upload, GraduationCap, Bug, ArrowRight, Info, Scroll
+  Home, BookOpen, Upload, GraduationCap, Bug, ArrowRight, Info, Scroll,
+  Smartphone, Laptop, Globe, RefreshCw
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, Tooltip, 
@@ -104,6 +105,9 @@ export default function StudentProfileLayer({
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [isSendingBug, setIsSendingBug] = useState(false);
+  const [activeSessions, setActiveSessions] = useState<{ id: string; ip_address: string; user_agent: string; created_at: string; is_current: boolean }[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [isEndingSessions, setIsEndingSessions] = useState(false);
   
   // Management States
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
@@ -649,6 +653,7 @@ export default function StudentProfileLayer({
     fetchStudentSummary();
     fetchAttendanceLogs();
     fetchLoginLogs();
+    fetchActiveSessions();
     if (isAdmin) {
       fetchBehaviorSettings();
     }
@@ -706,6 +711,52 @@ export default function StudentProfileLayer({
       console.error("Gagal mengambil logs login:", err);
     } finally {
       setIsLoadingLoginLogs(false);
+    }
+  };
+
+  const fetchActiveSessions = async () => {
+    if (!studentId) return;
+    setIsLoadingSessions(true);
+    try {
+      const res = await fetch('/api/grademaster/students/sessions');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.sessions) {
+          setActiveSessions(data.sessions);
+        }
+      }
+    } catch (err) {
+      console.error("Gagal mengambil sesi aktif:", err);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
+
+  const handleEndOtherSessions = async (type: 'all_other' | 'specific', sessionId?: string) => {
+    setIsEndingSessions(true);
+    try {
+      const url = type === 'all_other' 
+        ? '/api/grademaster/students/sessions?type=all_other' 
+        : `/api/grademaster/students/sessions?id=${sessionId}`;
+        
+      const res = await fetch(url, { method: 'DELETE' });
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        setToast({ message: data.message || 'Sesi berhasil diakhiri', type: 'success' });
+        
+        if (data.is_current) {
+          window.location.reload();
+        } else {
+          await fetchActiveSessions();
+        }
+      } else {
+        throw new Error(data.error || 'Gagal mengakhiri sesi');
+      }
+    } catch (err: any) {
+      setToast({ message: err.message, type: 'error' });
+    } finally {
+      setIsEndingSessions(false);
     }
   };
 
@@ -1607,6 +1658,95 @@ export default function StudentProfileLayer({
                     </div>
                   </button>
                 </div>
+              </div>
+
+              {/* Sesi Perangkat Aktif */}
+              <div className="space-y-2 pt-2 border-t border-slate-150/50">
+                <div className="flex items-center justify-between px-1">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sesi Perangkat Aktif</h4>
+                  <button 
+                    onClick={fetchActiveSessions}
+                    disabled={isLoadingSessions}
+                    className="text-slate-400 hover:text-slate-650 transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw size={11} className={isLoadingSessions ? "animate-spin" : ""} />
+                  </button>
+                </div>
+                
+                {isLoadingSessions ? (
+                  <div className="py-8 flex flex-col items-center justify-center gap-2.5 text-slate-400 bg-white border border-slate-100 rounded-3xl shadow-sm">
+                    <Loader2 size={16} className="animate-spin text-indigo-500" />
+                    <p className="text-[9px] font-bold uppercase">Memuat sesi aktif...</p>
+                  </div>
+                ) : activeSessions.length === 0 ? (
+                  <div className="py-8 text-center bg-white border border-slate-100 rounded-3xl flex flex-col items-center justify-center shadow-sm">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Belum ada sesi tercatat</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 no-scrollbar text-left">
+                      {activeSessions.map((session) => {
+                        const isMobile = /mobile|android|iphone|ipad/i.test(session.user_agent);
+                        return (
+                          <div key={session.id} className="bg-white p-3 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
+                                session.is_current 
+                                  ? 'bg-emerald-50 border-emerald-100 text-emerald-600' 
+                                  : 'bg-slate-50 border-slate-100 text-slate-500'
+                              }`}>
+                                {isMobile ? <Smartphone size={16} /> : <Laptop size={16} />}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-slate-800 font-extrabold text-[11px] leading-tight truncate">
+                                    {getDeviceFromUserAgent(session.user_agent)}
+                                  </h4>
+                                  {session.is_current && (
+                                    <span className="text-[7.5px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full border border-emerald-100">
+                                      Sesi Ini
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+                                  IP: {session.ip_address}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {!session.is_current && (
+                              <button
+                                onClick={() => handleEndOtherSessions('specific', session.id)}
+                                disabled={isEndingSessions}
+                                className="w-7 h-7 rounded-lg hover:bg-rose-50 border border-slate-100 hover:border-rose-100 text-slate-400 hover:text-rose-550 flex items-center justify-center transition-all active:scale-95 disabled:opacity-50"
+                                title="Keluarkan Perangkat Ini"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {activeSessions.filter(s => !s.is_current).length > 0 && (
+                      <button
+                        onClick={() => handleEndOtherSessions('all_other')}
+                        disabled={isEndingSessions}
+                        className="w-full py-2.5 bg-rose-50 border border-rose-100 text-rose-650 font-black uppercase tracking-widest text-[8.5px] rounded-xl hover:bg-rose-100/70 transition-colors active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-1.5"
+                      >
+                        {isEndingSessions ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <>
+                            <LogOut size={12} />
+                            Keluarkan Semua Perangkat Lain
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Riwayat Login */}

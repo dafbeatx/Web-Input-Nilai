@@ -5,7 +5,7 @@ import { randomBytes } from 'crypto';
 const SESSION_COOKIE = 'gm_student_token';
 const SESSION_EXPIRY_DAYS = 7;
 
-export async function createStudentSession(accountId: string) {
+export async function createStudentSession(accountId: string, userAgent?: string, ipAddress?: string) {
   const token = randomBytes(32).toString('hex');
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + SESSION_EXPIRY_DAYS);
@@ -16,6 +16,8 @@ export async function createStudentSession(accountId: string) {
       account_id: accountId,
       token,
       expires_at: expiresAt.toISOString(),
+      user_agent: userAgent || 'unknown',
+      ip_address: ipAddress || 'unknown'
     });
 
   if (error) throw error;
