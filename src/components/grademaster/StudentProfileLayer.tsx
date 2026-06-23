@@ -2495,7 +2495,7 @@ export default function StudentProfileLayer({
               <div className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar">
                 
                 {/* Mascot Banner inside Modal */}
-                <div className="relative bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-100/40 border border-indigo-100/50 rounded-[2rem] p-4.5 overflow-hidden flex items-center justify-between gap-4">
+                <div className="relative bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-100/40 border border-indigo-100/50 rounded-2xl p-5 overflow-hidden flex items-center justify-between gap-4">
                   <div className="min-w-0 z-10 text-left">
                     <h4 className="text-indigo-950 font-black text-[12px] uppercase tracking-wide font-outfit">Prestasi Kamu</h4>
                     <p className="text-indigo-850 text-[11px] font-semibold mt-1 leading-snug">
