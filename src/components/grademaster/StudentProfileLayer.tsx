@@ -1424,19 +1424,18 @@ export default function StudentProfileLayer({
                 {isLoadingLeaderboard ? (
                   <div className="py-8 flex flex-col items-center justify-center gap-2.5 text-slate-400 bg-white border border-slate-100 rounded-3xl shadow-sm">
                     <Loader2 size={16} className="animate-spin text-indigo-500" />
-                    <p className="text-[9px] font-bold uppercase tracking-wider">Memuat peringkat kelas...</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {/* Card 1: Peringkat Nilai Kelas (Single beautiful card, opens a separate layer/modal) */}
-                    <div 
+                    <button 
                       onClick={() => {
                         setShowGradesLeaderboard(true);
                         if (classLeaderboard?.subjects && classLeaderboard.subjects.length > 0) {
                           setSelectedSessionId(classLeaderboard.subjects[0].id);
                         }
                       }}
-                      className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4 hover:border-indigo-100 hover:shadow-md/40 transition-all cursor-pointer group active:scale-[0.99] text-left"
+                      className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4 hover:border-indigo-100 hover:shadow-md/40 transition-all active:scale-[0.99] text-left w-full block group"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -1448,7 +1447,7 @@ export default function StudentProfileLayer({
                             <p className="text-[9.5px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Lihat prestasi akademik terbaik di kelasmu</p>
                           </div>
                         </div>
-                        <span className="text-[9.5px] font-black text-indigo-650 opacity-60 group-hover:opacity-100 transition-opacity uppercase tracking-wider flex items-center gap-0.5 shrink-0 bg-indigo-50/50 border border-indigo-100/30 px-3 py-1.5 rounded-full font-outfit">
+                        <span className="text-[9.5px] font-black text-indigo-655 opacity-60 group-hover:opacity-100 transition-opacity uppercase tracking-wider flex items-center gap-0.5 shrink-0 bg-indigo-50/50 border border-indigo-100/30 px-3 py-1.5 rounded-full font-outfit">
                           Buka Peringkat <span className="material-symbols-outlined text-[10px] leading-none">arrow_forward</span>
                         </span>
                       </div>
@@ -1471,12 +1470,12 @@ export default function StudentProfileLayer({
                           </span>
                         </div>
                       </div>
-                    </div>
+                    </button>
 
                     {/* Card 2: Sorotan Perilaku Kelas (Full Width & Clickable) */}
-                    <div 
+                    <button 
                       onClick={() => setShowBehaviorLeaderboard(true)}
-                      className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4 hover:border-emerald-100 hover:shadow-md/40 transition-all cursor-pointer group active:scale-[0.99] text-left"
+                      className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4 hover:border-emerald-100 hover:shadow-md/40 transition-all active:scale-[0.99] text-left w-full block group"
                     >
                       <div className="flex items-center justify-between border-b border-slate-50 pb-3">
                         <div className="flex items-center gap-2">
@@ -1504,7 +1503,7 @@ export default function StudentProfileLayer({
                             {classLeaderboard?.highestDemerits ? (
                               <p className="text-[11.5px] font-extrabold text-slate-850 mt-1.5 break-words whitespace-normal">
                                 {classLeaderboard.highestDemerits.name}{' '}
-                                <span className="text-rose-650 bg-white border border-rose-100 px-1.5 py-0.5 rounded text-[9px] ml-1 shrink-0 inline-block font-black font-outfit shadow-sm">
+                                <span className="text-rose-655 bg-white border border-rose-100 px-1.5 py-0.5 rounded text-[9px] ml-1 shrink-0 inline-block font-black font-outfit shadow-sm">
                                   {classLeaderboard.highestDemerits.points} P
                                 </span>
                               </p>
@@ -1536,7 +1535,7 @@ export default function StudentProfileLayer({
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </button>
                   </div>
                 )}
               </div>
@@ -2905,7 +2904,7 @@ export default function StudentProfileLayer({
 
                       <div className="space-y-2">
                         {currentSession.ranks.map((rank, idx) => {
-                          const isSelf = studentName && rank.name.toLowerCase() === studentName.toLowerCase();
+                          const isSelf = studentName && rank.name && rank.name.toLowerCase() === studentName.toLowerCase();
                           const isTop3 = idx < 3;
                           const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
 
@@ -3022,9 +3021,9 @@ export default function StudentProfileLayer({
                   const isGood = behaviorLeaderboardTab === 'GOOD';
                   const sortedData = [...classLeaderboard.behaviorRanks].sort((a, b) => {
                     if (isGood) {
-                      return b.merits - a.merits || a.name.localeCompare(b.name);
+                      return b.merits - a.merits || (a.name || '').localeCompare(b.name || '');
                     } else {
-                      return b.demerits - a.demerits || a.name.localeCompare(b.name);
+                      return b.demerits - a.demerits || (a.name || '').localeCompare(b.name || '');
                     }
                   });
 
@@ -3058,7 +3057,7 @@ export default function StudentProfileLayer({
                   return (
                     <div className="space-y-2 text-left">
                       {sortedData.map((rank, idx) => {
-                        const isSelf = studentName && rank.name.toLowerCase() === studentName.toLowerCase();
+                        const isSelf = studentName && rank.name && rank.name.toLowerCase() === studentName.toLowerCase();
                         const isTop3 = idx < 3;
                         const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
                         const pointsVal = isGood ? rank.merits : rank.demerits;
