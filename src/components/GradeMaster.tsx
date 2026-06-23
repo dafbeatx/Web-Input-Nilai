@@ -41,7 +41,33 @@ import { useGradeMaster } from "@/context/GradeMasterContext";
 import { subscribeUser, isPushSupported, checkSubscriptionStatus } from "@/lib/grademaster/pushHelper";
 import { supabase } from "@/lib/supabase/client";
 
+const safeLocalStorage = {
+  getItem(key: string): string | null {
+    try {
+      return typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+    } catch (e) {
+      console.warn(`[SafeStorage] Failed to getItem ${key}:`, e);
+      return null;
+    }
+  },
+  setItem(key: string, value: string): void {
+    try {
+      if (typeof window !== 'undefined') localStorage.setItem(key, value);
+    } catch (e) {
+      console.warn(`[SafeStorage] Failed to setItem ${key}:`, e);
+    }
+  },
+  removeItem(key: string): void {
+    try {
+      if (typeof window !== 'undefined') localStorage.removeItem(key);
+    } catch (e) {
+      console.warn(`[SafeStorage] Failed to removeItem ${key}:`, e);
+    }
+  }
+};
+
 const ESSAY_COUNT = 5;
+
 
 export default function GradeMaster() {
   const [sessions, setSessions] = useState<SessionMeta[]>([]);
@@ -113,10 +139,10 @@ export default function GradeMaster() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const savedSessionId = localStorage.getItem("gm_sessionId");
-    const savedSessionName = localStorage.getItem("gm_sessionName");
-    const savedSessionPassword = localStorage.getItem("gm_sessionPassword");
-    const savedIsPublicView = localStorage.getItem("gm_isPublicView") === "true";
+    const savedSessionId = safeLocalStorage.getItem("gm_sessionId");
+    const savedSessionName = safeLocalStorage.getItem("gm_sessionName");
+    const savedSessionPassword = safeLocalStorage.getItem("gm_sessionPassword");
+    const savedIsPublicView = safeLocalStorage.getItem("gm_isPublicView") === "true";
 
     // Restore active remedial exam session
     const remedialSession = loadRemedialSession();
@@ -192,12 +218,12 @@ export default function GradeMaster() {
   // Save state to localStorage (excluding layer which is handled by Context)
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("gm_sessionId", sessionId);
-      localStorage.setItem("gm_sessionName", sessionName);
-      localStorage.setItem("gm_sessionPassword", sessionPassword);
-      localStorage.setItem("gm_isPublicView", String(isPublicView));
-      localStorage.setItem("gm_studentName", studentName || "");
-      localStorage.setItem("gm_subject", subject || "");
+      safeLocalStorage.setItem("gm_sessionId", sessionId);
+      safeLocalStorage.setItem("gm_sessionName", sessionName);
+      safeLocalStorage.setItem("gm_sessionPassword", sessionPassword);
+      safeLocalStorage.setItem("gm_isPublicView", String(isPublicView));
+      safeLocalStorage.setItem("gm_studentName", studentName || "");
+      safeLocalStorage.setItem("gm_subject", subject || "");
     }
   }, [layer, sessionId, sessionName, sessionPassword, isPublicView, studentName, subject]);
 
@@ -214,7 +240,7 @@ export default function GradeMaster() {
 
   const checkAdmin = async () => {
     // If logged in as Parent, bypass backend session checks
-    if (localStorage.getItem('gm_isParent') === 'true') {
+    if (safeLocalStorage.getItem('gm_isParent') === 'true') {
       return;
     }
     try {
@@ -524,7 +550,7 @@ export default function GradeMaster() {
     
     // Store remedial password locally if provided (as a fallback/gatekeeper)
     if (remedialPass) {
-      localStorage.setItem('gm_remedial_password', remedialPass);
+      safeLocalStorage.setItem('gm_remedial_password', remedialPass);
     }
     
     setToast({ message: 'Profil admin berhasil diperbarui!', type: 'success' });

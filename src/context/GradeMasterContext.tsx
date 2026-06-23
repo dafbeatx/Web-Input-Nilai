@@ -3,6 +3,32 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useRe
 import { Layer, ToastType, ModalType } from '@/lib/grademaster/types';
 import { supabase } from '@/lib/supabase/client';
 
+const safeLocalStorage = {
+  getItem(key: string): string | null {
+    try {
+      return typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+    } catch (e) {
+      console.warn(`[SafeStorage] Failed to getItem ${key}:`, e);
+      return null;
+    }
+  },
+  setItem(key: string, value: string): void {
+    try {
+      if (typeof window !== 'undefined') localStorage.setItem(key, value);
+    } catch (e) {
+      console.warn(`[SafeStorage] Failed to setItem ${key}:`, e);
+    }
+  },
+  removeItem(key: string): void {
+    try {
+      if (typeof window !== 'undefined') localStorage.removeItem(key);
+    } catch (e) {
+      console.warn(`[SafeStorage] Failed to removeItem ${key}:`, e);
+    }
+  }
+};
+
+
 interface GradeMasterContextType {
   layer: Layer;
   setLayer: (layer: Layer) => void;
@@ -68,8 +94,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       'remedial_management', 'data_center', 'student_profile', 'student_lesson'
     ];
 
-    const savedClass = localStorage.getItem('gm_studentClass');
-    const savedYear = localStorage.getItem('gm_academicYear') || "2025/2026";
+    const savedClass = safeLocalStorage.getItem('gm_studentClass');
+    const savedYear = safeLocalStorage.getItem('gm_academicYear') || "2025/2026";
 
     if (savedClass) setStudentClass(savedClass);
     setAcademicYear(savedYear);
@@ -90,13 +116,13 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
 
         // If there's an active Google session, clean up any conflicting parent or legacy session data
         if (currentSession && currentSession.user) {
-          localStorage.removeItem('gm_isParent');
-          localStorage.removeItem('gm_studentData');
-          localStorage.removeItem('gm_admin_session');
+          safeLocalStorage.removeItem('gm_isParent');
+          safeLocalStorage.removeItem('gm_studentData');
+          safeLocalStorage.removeItem('gm_admin_session');
         }
 
-        const savedParent = localStorage.getItem('gm_isParent') === 'true';
-        const savedStudentData = localStorage.getItem('gm_studentData');
+        const savedParent = safeLocalStorage.getItem('gm_isParent') === 'true';
+        const savedStudentData = safeLocalStorage.getItem('gm_studentData');
 
         let activeAdmin = false;
         let activeStudent = false;
@@ -319,23 +345,32 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
 
     const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        let session: any = null;
+        try {
+          const res = await supabase.auth.getSession();
+          session = res.data?.session || null;
+        } catch (err) {
+          console.error("[AuthInit] supabase.auth.getSession() failed:", err);
+        }
+        
         if (isUnmounted) return;
         
         await checkAuthAndRoute(session);
         if (isUnmounted) return;
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-          await handleAuthStateChange(event, session);
-        });
-
-        activeSubscription = subscription;
+        try {
+          const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            await handleAuthStateChange(event, session);
+          });
+          activeSubscription = subscription;
+        } catch (subErr) {
+          console.error("[AuthInit] Failed to subscribe to auth changes:", subErr);
+        }
       } catch (err) {
-        console.error("[AuthInit] Initial session retrieval failed, starting fallback subscription:", err);
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-          await handleAuthStateChange(event, session);
-        });
-        activeSubscription = subscription;
+        console.error("[AuthInit] Critical error in initAuth:", err);
+        if (!isUnmounted) {
+          await checkAuthAndRoute(null);
+        }
       }
     };
 
@@ -376,19 +411,20 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+
   // Sync parent session & configurations to LocalStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    localStorage.setItem("gm_isParent", isParent.toString());
+    safeLocalStorage.setItem("gm_isParent", isParent.toString());
     if (isParent && studentData) {
-      localStorage.setItem("gm_studentData", JSON.stringify(studentData));
+      safeLocalStorage.setItem("gm_studentData", JSON.stringify(studentData));
     } else if (!isStudent) {
-      localStorage.removeItem("gm_studentData");
+      safeLocalStorage.removeItem("gm_studentData");
     }
 
-    localStorage.setItem("gm_studentClass", studentClass);
-    localStorage.setItem("gm_academicYear", academicYear);
+    safeLocalStorage.setItem("gm_studentClass", studentClass);
+    safeLocalStorage.setItem("gm_academicYear", academicYear);
   }, [isParent, isStudent, studentData, studentClass, academicYear]);
 
   // Navigate and apply Auth guards dynamically
@@ -440,14 +476,14 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     setIsParent(false);
     setStudentData(null);
 
-    localStorage.removeItem('gm_isParent');
-    localStorage.removeItem('gm_studentData');
-    localStorage.removeItem('gm_admin_session');
-    localStorage.removeItem('gm_sessionId');
-    localStorage.removeItem('gm_sessionName');
-    localStorage.removeItem('gm_sessionPassword');
-    localStorage.removeItem('gm_isPublicView');
-    localStorage.setItem('gm_remember_me', 'false'); // Force disable remember me status on logout
+    safeLocalStorage.removeItem('gm_isParent');
+    safeLocalStorage.removeItem('gm_studentData');
+    safeLocalStorage.removeItem('gm_admin_session');
+    safeLocalStorage.removeItem('gm_sessionId');
+    safeLocalStorage.removeItem('gm_sessionName');
+    safeLocalStorage.removeItem('gm_sessionPassword');
+    safeLocalStorage.removeItem('gm_isPublicView');
+    safeLocalStorage.setItem('gm_remember_me', 'false'); // Force disable remember me status on logout
 
     setLayer("student_login");
     window.history.pushState({ layer: 'student_login' }, '', '#student_login');
