@@ -102,6 +102,13 @@ export async function POST(req: NextRequest) {
                `⏰ Waktu: ${timestamp}${deviceStr}\n\n` +
                `🚫 <i>Siswa otomatis didiskualifikasi karena menggunakan bantuan AI eksternal.</i>`;
         break;
+      case 'BUG_REPORT':
+        text = `🐛 <b>LAPORAN BUG SISWA</b>${contextStr}\n\n` +
+               `👤 Pengirim: <b>${fallback(studentName)}</b>\n` +
+               `🏫 Kelas: ${fallback(className)}\n` +
+               `🐞 Deskripsi Bug:\n<pre>${message || 'Tidak ada deskripsi'}</pre>\n\n` +
+               `⏰ Dilaporkan: ${timestamp}${deviceStr}`;
+        break;
       default:
         text = message || 'Pesan otomatis dari GradeMaster';
     }

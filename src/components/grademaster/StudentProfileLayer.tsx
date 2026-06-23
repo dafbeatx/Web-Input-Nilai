@@ -6,7 +6,7 @@ import {
   Trash2, Pencil, ShieldCheck, ThumbsUp, X, Calendar, 
   Activity, History, DownloadCloud, Check, User,
   Settings, AlertCircle, LogOut, Share2, Trophy, TrendingUp, Target,
-  Home, BookOpen, Upload, GraduationCap
+  Home, BookOpen, Upload, GraduationCap, Bug, ArrowRight
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, Tooltip, 
@@ -99,6 +99,9 @@ export default function StudentProfileLayer({
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [loginLogs, setLoginLogs] = useState<{ id: string; ip_address: string; user_agent: string; created_at: string }[]>([]);
   const [isLoadingLoginLogs, setIsLoadingLoginLogs] = useState(false);
+  const [showBugModal, setShowBugModal] = useState(false);
+  const [bugDescription, setBugDescription] = useState('');
+  const [isSendingBug, setIsSendingBug] = useState(false);
   
   // Management States
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
@@ -760,6 +763,40 @@ export default function StudentProfileLayer({
       console.error("Failed to fetch student logs", err);
     } finally {
       setIsLoadingLogs(false);
+    }
+  };
+
+  const handleSendBugReport = async () => {
+    if (!bugDescription.trim() || isSendingBug) return;
+    setIsSendingBug(true);
+    
+    try {
+      const deviceInfo = typeof window !== 'undefined' ? navigator.userAgent : 'unknown';
+      const res = await fetch('/api/telegram/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentName,
+          className,
+          event: 'BUG_REPORT',
+          message: bugDescription.trim(),
+          deviceInfo,
+          academicYear
+        })
+      });
+      
+      if (res.ok) {
+        setToast({ message: "Laporan bug berhasil dikirim ke Admin/Guru!", type: "success" });
+        setShowBugModal(false);
+        setBugDescription('');
+      } else {
+        throw new Error("Gagal mengirim laporan");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setToast({ message: "Gagal mengirim laporan bug. Periksa koneksi.", type: "error" });
+    } finally {
+      setIsSendingBug(false);
     }
   };
 
@@ -1518,6 +1555,26 @@ export default function StudentProfileLayer({
                 )}
               </div>
 
+              {/* Laporkan Bug */}
+              <div className="space-y-2 pt-2 border-t border-slate-150/50">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Dukungan & Masalah</h4>
+                <button 
+                  onClick={() => setShowBugModal(true)}
+                  className="w-full bg-white p-3.5 rounded-2xl border border-slate-100 flex items-center justify-between shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:bg-slate-50 transition-all active:scale-[0.99] group text-left"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500 shrink-0 group-hover:scale-105 transition-transform">
+                      <Bug size={16} />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-slate-800 font-extrabold text-[12px] leading-tight">Laporkan Bug / Kendala</h4>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Kirim laporan error ke Telegram Admin</p>
+                    </div>
+                  </div>
+                  <ArrowRight size={14} className="text-slate-300 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              </div>
+
               {/* Riwayat Login */}
               <div className="space-y-2 pt-2 border-t border-slate-150/50">
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Riwayat Login Terakhir</h4>
@@ -1863,6 +1920,60 @@ export default function StudentProfileLayer({
                     );
                   })}
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bug Report Modal */}
+        {showBugModal && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-300 text-left">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500">
+                    <Bug size={18} />
+                  </div>
+                  <h3 className="font-extrabold text-[13px] uppercase tracking-wider text-slate-800 font-outfit">Laporkan Bug</h3>
+                </div>
+                <button 
+                  onClick={() => { setShowBugModal(false); setBugDescription(''); }}
+                  className="w-8 h-8 rounded-full hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-650 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              
+              <p className="text-[9.5px] font-bold text-slate-400 leading-normal uppercase tracking-wide">
+                Ceritakan masalah atau kendala sistem yang Anda temui. Laporan akan dikirim langsung ke Telegram Guru/Admin.
+              </p>
+              
+              <textarea
+                value={bugDescription}
+                onChange={(e) => setBugDescription(e.target.value)}
+                placeholder="Contoh: Fitur presensi tidak bisa dibuka atau terjadi kesalahan saat mengunduh sertifikat..."
+                rows={4}
+                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold text-slate-850 placeholder:text-slate-350 focus:outline-none focus:bg-white focus:border-rose-500 focus:ring-4 focus:ring-rose-50 transition-all resize-none"
+              />
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowBugModal(false); setBugDescription(''); }}
+                  className="flex-1 py-3 border border-slate-200 text-slate-500 font-black uppercase tracking-widest text-[9.5px] rounded-full hover:bg-slate-50 transition-colors active:scale-95"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleSendBugReport}
+                  disabled={isSendingBug || !bugDescription.trim()}
+                  className="flex-1 py-3 bg-rose-600 text-white font-black uppercase tracking-widest text-[9.5px] rounded-full hover:bg-rose-700 transition-colors active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-[0_10px_20px_rgba(225,29,72,0.2)]"
+                >
+                  {isSendingBug ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    'Kirim Bug'
+                  )}
+                </button>
               </div>
             </div>
           </div>
