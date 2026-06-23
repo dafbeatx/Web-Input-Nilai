@@ -2808,273 +2808,119 @@ export default function StudentProfileLayer({
           </div>
         )}
 
-        {/* Modal Peringkat Nilai Akademik Kelas */}
-        {showGradesLeaderboard && (
-          <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-4 bg-slate-955/60 backdrop-blur-[6px] animate-in fade-in duration-200">
-            <div className="bg-white rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-sm sm:max-w-md max-h-[85%] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-250 pb-safe border border-slate-100">
-              {/* Header */}
-              <div className="p-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-sm">
-                    <Trophy size={16} strokeWidth={2.5} />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="font-extrabold text-slate-855 text-[13px] uppercase tracking-wider font-outfit leading-none">
-                      Peringkat Nilai Akademik
-                    </h3>
-                    <p className="text-[10px] font-bold text-slate-400 mt-1.5 uppercase tracking-wider leading-none">
-                      Detail Nilai Kelas
-                    </p>
-                  </div>
+
+      </div>
+
+      {/* Modal Peringkat Nilai Akademik Kelas — rendered outside overflow-hidden container for mobile compatibility */}
+      {showGradesLeaderboard && (
+        <div className="fixed inset-0 z-[1001] flex items-end sm:items-center justify-center p-4 bg-slate-950/60 backdrop-blur-[6px] animate-in fade-in duration-200">
+          <div className="bg-white rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-sm sm:max-w-md max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-250 border border-slate-100">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-sm">
+                  <Trophy size={16} strokeWidth={2.5} />
                 </div>
-                <button 
-                  onClick={() => {
-                    setShowGradesLeaderboard(false);
-                    setSelectedSessionId(null);
-                  }}
-                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-655 active:scale-95 transition-all border border-slate-200/40"
+                <div className="text-left">
+                  <h3 className="font-extrabold text-slate-855 text-[13px] uppercase tracking-wider font-outfit leading-none">
+                    Peringkat Nilai Akademik
+                  </h3>
+                  <p className="text-[10px] font-bold text-slate-400 mt-1.5 uppercase tracking-wider leading-none">
+                    Detail Nilai Kelas
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowGradesLeaderboard(false);
+                  setSelectedSessionId(null);
+                }}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-655 active:scale-95 transition-all border border-slate-200/40"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Selector */}
+            <div className="p-5 border-b border-slate-100/50 bg-slate-50/30 flex flex-col gap-2 shrink-0">
+              <label className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest text-left">Pilih Ujian / Sesi Ujian</label>
+              {classLeaderboard?.subjects && classLeaderboard.subjects.length > 0 ? (
+                <select
+                  value={selectedSessionId || ''}
+                  onChange={(e) => setSelectedSessionId(e.target.value)}
+                  className="w-full p-3 bg-white border border-slate-200 rounded-2xl text-[12px] font-extrabold text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all font-outfit"
                 >
-                  <X size={14} />
-                </button>
-              </div>
+                  {classLeaderboard.subjects.map((sub) => (
+                    <option key={sub.id} value={sub.id}>
+                      {sub.subject} ({sub.examType}) — Semester {sub.semester === 'Ganjil' ? '1' : '2'} — TA {sub.academicYear}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="p-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-100 rounded-xl text-center">
+                  Belum ada sesi ujian terdaftar
+                </div>
+              )}
+            </div>
 
-              {/* Selector */}
-              <div className="p-5 border-b border-slate-100/50 bg-slate-50/30 flex flex-col gap-2 shrink-0">
-                <label className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest text-left">Pilih Ujian / Sesi Ujian</label>
-                {classLeaderboard?.subjects && classLeaderboard.subjects.length > 0 ? (
-                  <select
-                    value={selectedSessionId || ''}
-                    onChange={(e) => setSelectedSessionId(e.target.value)}
-                    className="w-full p-3 bg-white border border-slate-200 rounded-2xl text-[12px] font-extrabold text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all font-outfit"
-                  >
-                    {classLeaderboard.subjects.map((sub) => (
-                      <option key={sub.id} value={sub.id}>
-                        {sub.subject} ({sub.examType}) — Semester {sub.semester === 'Ganjil' ? '1' : '2'} — TA {sub.academicYear}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <div className="p-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-100 rounded-xl text-center">
-                    Belum ada sesi ujian terdaftar
-                  </div>
-                )}
-              </div>
+            {/* List Content */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-3.5 no-scrollbar">
+              {(() => {
+                const currentSession = classLeaderboard?.subjects?.find(sub => sub.id === selectedSessionId) 
+                  || classLeaderboard?.subjects?.[0];
 
-              {/* List Content */}
-              <div className="flex-1 overflow-y-auto p-5 space-y-3.5 no-scrollbar">
-                {(() => {
-                  const currentSession = classLeaderboard?.subjects?.find(sub => sub.id === selectedSessionId) 
-                    || classLeaderboard?.subjects?.[0];
-
-                  if (!currentSession) {
-                    return (
-                      <div className="py-12 text-center flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-2xl">
-                        <span className="material-symbols-outlined text-[20px] text-slate-350">school</span>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Belum ada peringkat ujian tercatat</p>
-                      </div>
-                    );
-                  }
-
+                if (!currentSession) {
                   return (
-                    <div className="space-y-3 text-left">
-                      {/* Active Info Banner */}
-                      <div className="bg-gradient-to-r from-indigo-50/50 to-purple-50/30 border border-indigo-100/50 rounded-2xl p-4 space-y-2">
-                        <span className="text-[8.5px] font-black text-indigo-950 uppercase tracking-widest bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded-md inline-block">Info Sesi</span>
-                        <div className="grid grid-cols-2 gap-3 text-[11px]">
-                          <div>
-                            <span className="text-slate-400 font-bold block uppercase text-[8px] tracking-wider">Mata Pelajaran</span>
-                            <span className="font-extrabold text-slate-800">{currentSession.subject}</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 font-bold block uppercase text-[8px] tracking-wider">Evaluasi</span>
-                            <span className="font-extrabold text-indigo-755 uppercase">{currentSession.examType}</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 font-bold block uppercase text-[8px] tracking-wider">Semester</span>
-                            <span className="font-extrabold text-slate-800">
-                              {currentSession.semester === 'Ganjil' ? 'Semester 1 (Ganjil)' : 'Semester 2 (Genap)'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 font-bold block uppercase text-[8px] tracking-wider">Tahun Ajaran</span>
-                            <span className="font-extrabold text-slate-800 font-outfit">{currentSession.academicYear}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        {currentSession.ranks.map((rank, idx) => {
-                          const isSelf = studentName && rank.name && rank.name.toLowerCase() === studentName.toLowerCase();
-                          const isTop3 = idx < 3;
-                          const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
-
-                          return (
-                            <div 
-                              key={idx} 
-                              className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-all ${
-                                isSelf 
-                                  ? 'border-indigo-200 bg-indigo-50/30 ring-2 ring-indigo-500/20' 
-                                  : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black font-outfit text-[11px] shrink-0 ${
-                                  idx === 0 ? 'bg-amber-100 text-amber-800' :
-                                  idx === 1 ? 'bg-slate-200/70 text-slate-800' :
-                                  idx === 2 ? 'bg-amber-550/10 text-amber-955' : 'bg-slate-100 text-slate-500'
-                                }`}>
-                                  {medal ? medal : `#${idx + 1}`}
-                                </div>
-                                <div className="min-w-0">
-                                  <h4 className={`text-slate-800 text-[12px] leading-tight break-words whitespace-normal ${
-                                    isSelf || isTop3 ? 'font-extrabold' : 'font-semibold'
-                                  }`}>
-                                    {rank.name}
-                                  </h4>
-                                  {isSelf && (
-                                    <span className="text-[8px] font-black text-indigo-650 uppercase tracking-widest bg-indigo-50/80 px-1.5 py-0.5 rounded-md mt-1 inline-block">
-                                      Kamu
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="bg-white border border-slate-200/80 px-3 py-1 rounded-xl font-black text-[11.5px] text-slate-855 font-outfit shadow-sm shrink-0">
-                                {rank.score}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                    <div className="py-12 text-center flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-2xl">
+                      <span className="material-symbols-outlined text-[20px] text-slate-350">school</span>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Belum ada peringkat ujian tercatat</p>
                     </div>
                   );
-                })()}
-              </div>
-            </div>
-          </div>
-        )}
+                }
 
-        {/* Modal Peringkat Perilaku Kelas */}
-        {showBehaviorLeaderboard && (
-          <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-4 bg-slate-950/60 backdrop-blur-[6px] animate-in fade-in duration-200">
-            <div className="bg-white rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-sm sm:max-w-md max-h-[85%] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-250 pb-safe border border-slate-100">
-              {/* Header */}
-              <div className="p-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
-                    <Activity size={16} strokeWidth={2.5} />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="font-extrabold text-slate-855 text-[13px] uppercase tracking-wider font-outfit leading-none">
-                      Peringkat Perilaku Kelas
-                    </h3>
-                    <p className="text-[10px] font-bold text-slate-400 mt-1.5 uppercase tracking-wider leading-none">
-                      Poin Sikap & Kedisiplinan
-                    </p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setShowBehaviorLeaderboard(false)}
-                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-655 active:scale-95 transition-all border border-slate-200/40"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-
-              {/* Tabs */}
-              <div className="px-5 pt-4 pb-2 flex gap-2 shrink-0 border-b border-slate-50">
-                <button
-                  onClick={() => setBehaviorLeaderboardTab('GOOD')}
-                  className={`flex-1 py-2.5 rounded-2xl font-black uppercase tracking-wider text-[10px] transition-all duration-200 flex items-center justify-center gap-1.5 ${
-                    behaviorLeaderboardTab === 'GOOD'
-                      ? 'bg-emerald-650 text-white shadow-md shadow-emerald-100'
-                      : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[13px] leading-none">award</span>
-                  Poin Kebaikan
-                </button>
-                <button
-                  onClick={() => setBehaviorLeaderboardTab('BAD')}
-                  className={`flex-1 py-2.5 rounded-2xl font-black uppercase tracking-wider text-[10px] transition-all duration-200 flex items-center justify-center gap-1.5 ${
-                    behaviorLeaderboardTab === 'BAD'
-                      ? 'bg-rose-650 text-white shadow-md shadow-rose-100'
-                      : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[13px] leading-none">gavel</span>
-                  Pelanggaran
-                </button>
-              </div>
-
-              {/* List Content */}
-              <div className="flex-1 overflow-y-auto p-5 space-y-3.5 no-scrollbar">
-                {(() => {
-                  if (!classLeaderboard?.behaviorRanks || classLeaderboard.behaviorRanks.length === 0) {
-                    return (
-                      <div className="py-12 text-center flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-2xl">
-                        <span className="material-symbols-outlined text-[20px] text-slate-350">sentiment_neutral</span>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Belum ada data perilaku terdaftar</p>
+                return (
+                  <div className="space-y-3 text-left">
+                    {/* Active Info Banner */}
+                    <div className="bg-gradient-to-r from-indigo-50/50 to-purple-50/30 border border-indigo-100/50 rounded-2xl p-4 space-y-2">
+                      <span className="text-[8.5px] font-black text-indigo-950 uppercase tracking-widest bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded-md inline-block">Info Sesi</span>
+                      <div className="grid grid-cols-2 gap-3 text-[11px]">
+                        <div>
+                          <span className="text-slate-400 font-bold block uppercase text-[8px] tracking-wider">Mata Pelajaran</span>
+                          <span className="font-extrabold text-slate-800">{currentSession.subject}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 font-bold block uppercase text-[8px] tracking-wider">Evaluasi</span>
+                          <span className="font-extrabold text-indigo-755 uppercase">{currentSession.examType}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 font-bold block uppercase text-[8px] tracking-wider">Semester</span>
+                          <span className="font-extrabold text-slate-800">
+                            {currentSession.semester === 'Ganjil' ? 'Semester 1 (Ganjil)' : 'Semester 2 (Genap)'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 font-bold block uppercase text-[8px] tracking-wider">Tahun Ajaran</span>
+                          <span className="font-extrabold text-slate-800 font-outfit">{currentSession.academicYear}</span>
+                        </div>
                       </div>
-                    );
-                  }
+                    </div>
 
-                  const isGood = behaviorLeaderboardTab === 'GOOD';
-                  const sortedData = [...classLeaderboard.behaviorRanks].sort((a, b) => {
-                    if (isGood) {
-                      return b.merits - a.merits || (a.name || '').localeCompare(b.name || '');
-                    } else {
-                      return b.demerits - a.demerits || (a.name || '').localeCompare(b.name || '');
-                    }
-                  });
-
-                  const totalPoints = classLeaderboard.behaviorRanks.reduce((sum, r) => sum + (isGood ? r.merits : r.demerits), 0);
-
-                  if (totalPoints === 0) {
-                    if (isGood) {
-                      return (
-                        <div className="py-12 text-center flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-2xl">
-                          <span className="material-symbols-outlined text-[24px] text-slate-350">award</span>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wide mt-2">
-                            Data poin kebaikan belum ada
-                          </p>
-                        </div>
-                      );
-                    } else {
-                      return (
-                        <div className="py-12 text-center flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-2xl bg-emerald-50/20 border-emerald-100">
-                          <span className="material-symbols-outlined text-[24px] text-emerald-500">verified</span>
-                          <p className="text-[10.5px] font-black text-emerald-700 uppercase tracking-wide mt-2">
-                            Semua siswa tertib
-                          </p>
-                          <p className="text-[9.5px] font-semibold text-slate-400 mt-1">
-                            Belum ada catatan pelanggaran kelas
-                          </p>
-                        </div>
-                      );
-                    }
-                  }
-
-                  return (
-                    <div className="space-y-2 text-left">
-                      {sortedData.map((rank, idx) => {
+                    <div className="space-y-2">
+                      {currentSession.ranks.map((rank, idx) => {
                         const isSelf = studentName && rank.name && rank.name.toLowerCase() === studentName.toLowerCase();
                         const isTop3 = idx < 3;
                         const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
-                        const pointsVal = isGood ? rank.merits : rank.demerits;
 
                         return (
                           <div 
                             key={idx} 
                             className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-all ${
                               isSelf 
-                                ? isGood 
-                                  ? 'border-emerald-200 bg-emerald-50/20 ring-2 ring-emerald-500/10'
-                                  : 'border-rose-200 bg-rose-50/20 ring-2 ring-rose-500/10'
+                                ? 'border-indigo-200 bg-indigo-50/30 ring-2 ring-indigo-500/20' 
                                 : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50'
                             }`}
                           >
                             <div className="flex items-center gap-3 min-w-0">
-                              {/* Rank */}
                               <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black font-outfit text-[11px] shrink-0 ${
                                 idx === 0 ? 'bg-amber-100 text-amber-800' :
                                 idx === 1 ? 'bg-slate-200/70 text-slate-800' :
@@ -3082,13 +2928,6 @@ export default function StudentProfileLayer({
                               }`}>
                                 {medal ? medal : `#${idx + 1}`}
                               </div>
-
-                              {/* Avatar Emoji */}
-                              <div className="w-8 h-8 rounded-full bg-white border border-slate-150 flex items-center justify-center text-sm shrink-0 shadow-sm">
-                                {rank.avatarUrl || '👤'}
-                              </div>
-
-                              {/* Student Name */}
                               <div className="min-w-0">
                                 <h4 className={`text-slate-800 text-[12px] leading-tight break-words whitespace-normal ${
                                   isSelf || isTop3 ? 'font-extrabold' : 'font-semibold'
@@ -3096,35 +2935,198 @@ export default function StudentProfileLayer({
                                   {rank.name}
                                 </h4>
                                 {isSelf && (
-                                  <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md mt-1 inline-block ${
-                                    isGood ? 'text-emerald-700 bg-emerald-50' : 'text-rose-700 bg-rose-50'
-                                  }`}>
+                                  <span className="text-[8px] font-black text-indigo-650 uppercase tracking-widest bg-indigo-50/80 px-1.5 py-0.5 rounded-md mt-1 inline-block">
                                     Kamu
                                   </span>
                                 )}
                               </div>
                             </div>
-
-                            {/* Point Value */}
-                            <div className={`px-3 py-1.5 rounded-xl font-black text-[11.5px] font-outfit shadow-sm shrink-0 border ${
-                              isGood
-                                ? 'bg-emerald-50/80 border-emerald-100 text-emerald-700'
-                                : 'bg-rose-50/80 border-rose-100 text-rose-700'
-                            }`}>
-                              {isGood ? '+' : ''}{pointsVal} P
+                            <div className="bg-white border border-slate-200/80 px-3 py-1 rounded-xl font-black text-[11.5px] text-slate-855 font-outfit shadow-sm shrink-0">
+                              {rank.score}
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                  );
-                })()}
-              </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-      </div>
+      {/* Modal Peringkat Perilaku Kelas — rendered outside overflow-hidden container for mobile compatibility */}
+      {showBehaviorLeaderboard && (
+        <div className="fixed inset-0 z-[1001] flex items-end sm:items-center justify-center p-4 bg-slate-950/60 backdrop-blur-[6px] animate-in fade-in duration-200">
+          <div className="bg-white rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-sm sm:max-w-md max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-250 border border-slate-100">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                  <Activity size={16} strokeWidth={2.5} />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-extrabold text-slate-855 text-[13px] uppercase tracking-wider font-outfit leading-none">
+                    Peringkat Perilaku Kelas
+                  </h3>
+                  <p className="text-[10px] font-bold text-slate-400 mt-1.5 uppercase tracking-wider leading-none">
+                    Poin Sikap & Kedisiplinan
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowBehaviorLeaderboard(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-655 active:scale-95 transition-all border border-slate-200/40"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="px-5 pt-4 pb-2 flex gap-2 shrink-0 border-b border-slate-50">
+              <button
+                onClick={() => setBehaviorLeaderboardTab('GOOD')}
+                className={`flex-1 py-2.5 rounded-2xl font-black uppercase tracking-wider text-[10px] transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                  behaviorLeaderboardTab === 'GOOD'
+                    ? 'bg-emerald-650 text-white shadow-md shadow-emerald-100'
+                    : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[13px] leading-none">award</span>
+                Poin Kebaikan
+              </button>
+              <button
+                onClick={() => setBehaviorLeaderboardTab('BAD')}
+                className={`flex-1 py-2.5 rounded-2xl font-black uppercase tracking-wider text-[10px] transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                  behaviorLeaderboardTab === 'BAD'
+                    ? 'bg-rose-650 text-white shadow-md shadow-rose-100'
+                    : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[13px] leading-none">gavel</span>
+                Pelanggaran
+              </button>
+            </div>
+
+            {/* List Content */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-3.5 no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+              {(() => {
+                if (!classLeaderboard?.behaviorRanks || classLeaderboard.behaviorRanks.length === 0) {
+                  return (
+                    <div className="py-12 text-center flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-2xl">
+                      <span className="material-symbols-outlined text-[20px] text-slate-350">sentiment_neutral</span>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Belum ada data perilaku terdaftar</p>
+                    </div>
+                  );
+                }
+
+                const isGood = behaviorLeaderboardTab === 'GOOD';
+                const sortedData = [...classLeaderboard.behaviorRanks].sort((a, b) => {
+                  if (isGood) {
+                    return b.merits - a.merits || (a.name || '').localeCompare(b.name || '');
+                  } else {
+                    return b.demerits - a.demerits || (a.name || '').localeCompare(b.name || '');
+                  }
+                });
+
+                const totalPoints = classLeaderboard.behaviorRanks.reduce((sum, r) => sum + (isGood ? r.merits : r.demerits), 0);
+
+                if (totalPoints === 0) {
+                  if (isGood) {
+                    return (
+                      <div className="py-12 text-center flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-2xl">
+                        <span className="material-symbols-outlined text-[24px] text-slate-350">award</span>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wide mt-2">
+                          Data poin kebaikan belum ada
+                        </p>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="py-12 text-center flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-2xl bg-emerald-50/20 border-emerald-100">
+                        <span className="material-symbols-outlined text-[24px] text-emerald-500">verified</span>
+                        <p className="text-[10.5px] font-black text-emerald-700 uppercase tracking-wide mt-2">
+                          Semua siswa tertib
+                        </p>
+                        <p className="text-[9.5px] font-semibold text-slate-400 mt-1">
+                          Belum ada catatan pelanggaran kelas
+                        </p>
+                      </div>
+                    );
+                  }
+                }
+
+                return (
+                  <div className="space-y-2 text-left">
+                    {sortedData.map((rank, idx) => {
+                      const isSelf = studentName && rank.name && rank.name.toLowerCase() === studentName.toLowerCase();
+                      const isTop3 = idx < 3;
+                      const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
+                      const pointsVal = isGood ? rank.merits : rank.demerits;
+
+                      return (
+                        <div 
+                          key={idx} 
+                          className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-all ${
+                            isSelf 
+                              ? isGood 
+                                ? 'border-emerald-200 bg-emerald-50/20 ring-2 ring-emerald-500/10'
+                                : 'border-rose-200 bg-rose-50/20 ring-2 ring-rose-500/10'
+                              : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            {/* Rank */}
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black font-outfit text-[11px] shrink-0 ${
+                              idx === 0 ? 'bg-amber-100 text-amber-800' :
+                              idx === 1 ? 'bg-slate-200/70 text-slate-800' :
+                              idx === 2 ? 'bg-amber-550/10 text-amber-955' : 'bg-slate-100 text-slate-500'
+                            }`}>
+                              {medal ? medal : `#${idx + 1}`}
+                            </div>
+
+                            {/* Avatar Emoji */}
+                            <div className="w-8 h-8 rounded-full bg-white border border-slate-150 flex items-center justify-center text-sm shrink-0 shadow-sm">
+                              {rank.avatarUrl || '👤'}
+                            </div>
+
+                            {/* Student Name */}
+                            <div className="min-w-0">
+                              <h4 className={`text-slate-800 text-[12px] leading-tight break-words whitespace-normal ${
+                                isSelf || isTop3 ? 'font-extrabold' : 'font-semibold'
+                              }`}>
+                                {rank.name}
+                              </h4>
+                              {isSelf && (
+                                <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md mt-1 inline-block ${
+                                  isGood ? 'text-emerald-700 bg-emerald-50' : 'text-rose-700 bg-rose-50'
+                                }`}>
+                                  Kamu
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Point Value */}
+                          <div className={`px-3 py-1.5 rounded-xl font-black text-[11.5px] font-outfit shadow-sm shrink-0 border ${
+                            isGood
+                              ? 'bg-emerald-50/80 border-emerald-100 text-emerald-700'
+                              : 'bg-rose-50/80 border-rose-100 text-rose-700'
+                          }`}>
+                            {isGood ? '+' : ''}{pointsVal} P
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
