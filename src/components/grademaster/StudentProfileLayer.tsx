@@ -124,6 +124,17 @@ export default function StudentProfileLayer({
   // Dual behavior point system states and calculations
   const [inputBehaviorType, setInputBehaviorType] = useState<'BAD' | 'GOOD'>('BAD');
 
+  // Leaderboard states
+  const [classLeaderboard, setClassLeaderboard] = useState<{
+    subjects: {
+      subject: string;
+      ranks: { name: string; score: number }[];
+    }[];
+    highestDemerits: { name: string; points: number } | null;
+    highestMerits: { name: string; points: number } | null;
+  } | null>(null);
+  const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
+
   const goodBehaviorPresets = useMemo(() => [
     { text: "Aktif Berdiskusi & Tanya Jawab", weight: 5 },
     { text: "Membantu Teman / Tutor Sebaya", weight: 5 },
@@ -680,6 +691,7 @@ export default function StudentProfileLayer({
     fetchAttendanceLogs();
     fetchLoginLogs();
     fetchActiveSessions();
+    fetchClassLeaderboard();
     if (isAdmin) {
       fetchBehaviorSettings();
     }
@@ -696,6 +708,118 @@ export default function StudentProfileLayer({
       }
     } catch (err) {
       console.error("Failed to load behavior settings", err);
+    }
+  };
+
+  const fetchClassLeaderboard = async () => {
+    if (!className) return;
+    setIsLoadingLeaderboard(true);
+    try {
+      // 1. Fetch class behaviors & logs
+      const { data: behaviors, error: behaviorsError } = await supabase
+        .from('gm_behaviors')
+        .select('id, student_name')
+        .eq('class_name', className)
+        .eq('academic_year', academicYear);
+
+      let highestDemerits: { name: string; points: number } | null = null;
+      let highestMerits: { name: string; points: number } | null = null;
+
+      if (!behaviorsError && behaviors && behaviors.length > 0) {
+        const studentIds = behaviors.map(b => b.id);
+        const { data: logs, error: logsError } = await supabase
+          .from('gm_behavior_logs')
+          .select('student_id, points_delta')
+          .in('student_id', studentIds);
+
+        if (!logsError && logs) {
+          const studentPoints = behaviors.map(b => {
+            const studentLogs = logs.filter(l => l.student_id === b.id);
+            const demerits = studentLogs.filter(l => l.points_delta > 0).reduce((sum, l) => sum + l.points_delta, 0);
+            const merits = studentLogs.filter(l => l.points_delta < 0).reduce((sum, l) => sum + Math.abs(l.points_delta), 0);
+            return {
+              name: b.student_name,
+              demerits,
+              merits
+            };
+          });
+
+          // Find highest demerits (> 0)
+          const sortedDemerits = [...studentPoints].sort((a, b) => b.demerits - a.demerits);
+          if (sortedDemerits.length > 0 && sortedDemerits[0].demerits > 0) {
+            highestDemerits = { name: sortedDemerits[0].name, points: sortedDemerits[0].demerits };
+          }
+
+          // Find highest merits (> 0)
+          const sortedMerits = [...studentPoints].sort((a, b) => b.merits - a.merits);
+          if (sortedMerits.length > 0 && sortedMerits[0].merits > 0) {
+            highestMerits = { name: sortedMerits[0].name, points: sortedMerits[0].merits };
+          }
+        }
+      }
+
+      // 2. Fetch class sessions & scores
+      const { data: sessions, error: sessionsError } = await supabase
+        .from('gm_sessions')
+        .select('id, subject')
+        .eq('class_name', className)
+        .eq('academic_year', academicYear);
+
+      const subjectsData: { subject: string; ranks: { name: string; score: number }[] }[] = [];
+
+      if (!sessionsError && sessions && sessions.length > 0) {
+        const sessionIds = sessions.map(s => s.id);
+        const { data: studentGrades, error: gradesError } = await supabase
+          .from('gm_students')
+          .select('session_id, name, final_score')
+          .in('session_id', sessionIds)
+          .eq('is_deleted', false);
+
+        if (!gradesError && studentGrades) {
+          // Map session_id to subject
+          const sessionSubjectMap = sessions.reduce((map, s) => {
+            map[s.id] = s.subject;
+            return map;
+          }, {} as Record<string, string>);
+
+          // Group scores by subject & student name
+          const subjectScores: Record<string, Record<string, number>> = {};
+          studentGrades.forEach(g => {
+            const subject = sessionSubjectMap[g.session_id];
+            if (!subject) return;
+
+            if (!subjectScores[subject]) {
+              subjectScores[subject] = {};
+            }
+            const currentScore = Number(g.final_score) || 0;
+            const existingScore = subjectScores[subject][g.name] || 0;
+            subjectScores[subject][g.name] = Math.max(existingScore, currentScore);
+          });
+
+          // Rank students per subject
+          Object.keys(subjectScores).forEach(sub => {
+            const rankedList = Object.keys(subjectScores[sub]).map(name => ({
+              name,
+              score: subjectScores[sub][name]
+            })).sort((a, b) => b.score - a.score);
+
+            subjectsData.push({
+              subject: sub,
+              ranks: rankedList.slice(0, 3) // Top 3
+            });
+          });
+        }
+      }
+
+      setClassLeaderboard({
+        subjects: subjectsData,
+        highestDemerits,
+        highestMerits
+      });
+    } catch (err) {
+      console.error("Failed to load class leaderboard", err);
+    } finally {
+      setIsLoadingLeaderboard(false);
     }
   };
 
@@ -1256,9 +1380,121 @@ export default function StudentProfileLayer({
                   <div>
                     <h4 className="text-[12px] font-black text-slate-800 tracking-tight leading-none font-outfit">Unduh Berkas</h4>
                     <p className="text-[13px] text-sky-600 font-black mt-1 font-outfit">{docsCount} Dokumen</p>
-                    <p className="text-[9px] text-slate-455 font-bold mt-1.5 leading-tight">Rapor & sertifikat</p>
+                  <p className="text-[9px] text-slate-455 font-bold mt-1.5 leading-tight">Rapor & sertifikat</p>
                   </div>
                 </button>
+              </div>
+
+              {/* Leaderboard Kelas (Peringkat Nilai & Poin Sikap) */}
+              <div className="space-y-3 pt-1 text-left">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Papan Peringkat Kelas</h3>
+                
+                {isLoadingLeaderboard ? (
+                  <div className="py-8 flex flex-col items-center justify-center gap-2.5 text-slate-400 bg-white border border-slate-100 rounded-3xl shadow-sm">
+                    <Loader2 size={16} className="animate-spin text-indigo-500" />
+                    <p className="text-[9px] font-bold uppercase tracking-wider">Memuat peringkat kelas...</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Card 1: Peringkat Nilai per Mata Pelajaran */}
+                    <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                            <Trophy size={15} />
+                          </div>
+                          <h4 className="text-[11.5px] font-black text-slate-800 uppercase tracking-wider font-outfit">Top 3 Nilai Terkini</h4>
+                        </div>
+
+                        {classLeaderboard?.subjects && classLeaderboard.subjects.length > 0 ? (
+                          <div className="space-y-3.5 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin">
+                            {classLeaderboard.subjects.map((sub, i) => (
+                              <div key={i} className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3 space-y-2">
+                                <h5 className="text-[9.5px] font-black text-indigo-950 uppercase tracking-wider">{sub.subject}</h5>
+                                <div className="space-y-2">
+                                  {sub.ranks.map((rank, idx) => {
+                                    const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉';
+                                    const textWeight = idx === 0 ? 'font-extrabold text-slate-800' : 'font-semibold text-slate-650';
+                                    return (
+                                      <div key={idx} className="flex justify-between items-center text-[11px]">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                          <span className="shrink-0">{medal}</span>
+                                          <span className={`truncate ${textWeight}`}>{rank.name}</span>
+                                        </div>
+                                        <span className="font-black text-indigo-650 shrink-0 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md text-[10px]">{rank.score}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="py-12 text-center flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-2xl">
+                            <span className="material-symbols-outlined text-[20px] text-slate-350">school</span>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Belum ada ujian tercatat</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Card 2: Sorotan Perilaku Kelas */}
+                    <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                            <Activity size={15} />
+                          </div>
+                          <h4 className="text-[11.5px] font-black text-slate-800 uppercase tracking-wider font-outfit">Sikap & Kedisiplinan Kelas</h4>
+                        </div>
+
+                        <div className="space-y-3">
+                          {/* Highest Demerits Card */}
+                          <div className="bg-rose-50/50 border border-rose-100/70 rounded-2xl p-3.5 text-left flex items-start gap-3">
+                            <div className="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                              <span className="material-symbols-outlined text-[15px]">gavel</span>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h5 className="text-[8.5px] font-black text-rose-500 uppercase tracking-wider leading-none">Poin Pelanggaran Tertinggi</h5>
+                              {classLeaderboard?.highestDemerits ? (
+                                <p className="text-[11.5px] font-extrabold text-slate-850 mt-1 truncate">
+                                  {classLeaderboard.highestDemerits.name}{' '}
+                                  <span className="text-rose-650 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded text-[9.5px] ml-1.5 shrink-0 inline-block font-black">
+                                    {classLeaderboard.highestDemerits.points} P
+                                  </span>
+                                </p>
+                              ) : (
+                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Semua siswa tertib</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Highest Merits Card */}
+                          <div className="bg-emerald-50/50 border border-emerald-100/70 rounded-2xl p-3.5 text-left flex items-start gap-3">
+                            <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                              <span className="material-symbols-outlined text-[15px]">award</span>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h5 className="text-[8.5px] font-black text-emerald-600 uppercase tracking-wider leading-none">Poin Kebaikan Tertinggi</h5>
+                              {classLeaderboard?.highestMerits ? (
+                                <p className="text-[11.5px] font-extrabold text-slate-850 mt-1 truncate">
+                                  {classLeaderboard.highestMerits.name}{' '}
+                                  <span className="text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded text-[9.5px] ml-1.5 shrink-0 inline-block font-black">
+                                    {classLeaderboard.highestMerits.points} P
+                                  </span>
+                                </p>
+                              ) : (
+                                <p className="text-[10px] font-black text-slate-400 mt-2 uppercase tracking-wide leading-snug">
+                                  Data poin kebaikan belum ada
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Catatan Perilaku Terbaru (Maksimal 2 log) */}
