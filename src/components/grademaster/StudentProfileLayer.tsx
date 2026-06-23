@@ -6,7 +6,7 @@ import {
   Trash2, Pencil, ShieldCheck, ThumbsUp, X, Calendar, 
   Activity, History, DownloadCloud, Check, User,
   Settings, AlertCircle, LogOut, Share2, Trophy, TrendingUp, Target,
-  Home, BookOpen, Upload, GraduationCap, Bug, ArrowRight
+  Home, BookOpen, Upload, GraduationCap, Bug, ArrowRight, Info, Scroll
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, Tooltip, 
@@ -101,6 +101,8 @@ export default function StudentProfileLayer({
   const [isLoadingLoginLogs, setIsLoadingLoginLogs] = useState(false);
   const [showBugModal, setShowBugModal] = useState(false);
   const [bugDescription, setBugDescription] = useState('');
+  const [showAboutModal, setShowAboutModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const [isSendingBug, setIsSendingBug] = useState(false);
   
   // Management States
@@ -1575,6 +1577,38 @@ export default function StudentProfileLayer({
                 </button>
               </div>
 
+              {/* Informasi & Legalitas */}
+              <div className="space-y-2 pt-2 border-t border-slate-150/50">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Informasi & Legalitas</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => setShowAboutModal(true)}
+                    className="bg-white p-3.5 rounded-2xl border border-slate-100 flex flex-col gap-2.5 items-start shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:bg-slate-50 transition-all active:scale-[0.99] group text-left"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-500 group-hover:scale-105 transition-transform">
+                      <Info size={16} />
+                    </div>
+                    <div>
+                      <h4 className="text-slate-800 font-extrabold text-[12px] leading-tight">Tentang Platform</h4>
+                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Mengenal GradeMaster OS</p>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => setShowTermsModal(true)}
+                    className="bg-white p-3.5 rounded-2xl border border-slate-100 flex flex-col gap-2.5 items-start shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:bg-slate-50 transition-all active:scale-[0.99] group text-left"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-650 group-hover:scale-105 transition-transform">
+                      <Scroll size={16} />
+                    </div>
+                    <div>
+                      <h4 className="text-slate-800 font-extrabold text-[12px] leading-tight">Syarat & Ketentuan</h4>
+                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Aturan Penggunaan Sistem</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               {/* Riwayat Login */}
               <div className="space-y-2 pt-2 border-t border-slate-150/50">
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Riwayat Login Terakhir</h4>
@@ -1975,6 +2009,108 @@ export default function StudentProfileLayer({
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tentang Platform Modal */}
+        {showAboutModal && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-300 text-left">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-650">
+                    <Info size={18} />
+                  </div>
+                  <h3 className="font-extrabold text-[13px] uppercase tracking-wider text-slate-800 font-outfit">Tentang Platform</h3>
+                </div>
+                <button 
+                  onClick={() => setShowAboutModal(false)}
+                  className="w-8 h-8 rounded-full hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-650 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              
+              <div className="space-y-3.5 text-xs text-slate-600 leading-relaxed font-medium">
+                <p>
+                  <strong>GradeMaster OS</strong> adalah sistem informasi sekolah dan manajemen kedisiplinan yang berfokus pada transparansi dan objektivitas data akademik serta perilaku siswa.
+                </p>
+                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-2">
+                  <p className="text-[10px] font-black text-indigo-650 uppercase tracking-wider">Fitur Siswa & Orang Tua</p>
+                  <ul className="space-y-1.5 list-none pl-0">
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-indigo-500">📊</span>
+                      <span><strong>Transparansi Nilai</strong>: Evaluasi pencapaian hasil belajar secara periodik.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-indigo-500">🛡️</span>
+                      <span><strong>Poin Disiplin</strong>: Rekaman lencana prestasi dan poin pelanggaran yang adil.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-indigo-500">🤖</span>
+                      <span><strong>Saran AI</strong>: Rekomendasi belajar personal untuk perbaikan nilai.</span>
+                    </li>
+                  </ul>
+                </div>
+                <p className="text-[10px] text-slate-400 text-center font-bold uppercase tracking-wider">Version 4.6.2 (Stable Edition)</p>
+              </div>
+
+              <button
+                onClick={() => setShowAboutModal(false)}
+                className="w-full py-3 bg-[#0F172A] text-white font-black uppercase tracking-widest text-[9.5px] rounded-full hover:bg-slate-800 transition-colors active:scale-95 shadow-lg shadow-slate-200"
+              >
+                Tutup Informasi
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Syarat & Ketentuan Modal */}
+        {showTermsModal && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-300 text-left">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-650">
+                    <Scroll size={18} />
+                  </div>
+                  <h3 className="font-extrabold text-[13px] uppercase tracking-wider text-slate-800 font-outfit">Syarat & Ketentuan</h3>
+                </div>
+                <button 
+                  onClick={() => setShowTermsModal(false)}
+                  className="w-8 h-8 rounded-full hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-650 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              
+              <div className="max-h-[280px] overflow-y-auto pr-1 space-y-3.5 text-xs text-slate-600 leading-relaxed font-medium scrollbar-thin">
+                <p>
+                  Dengan mengakses dan menggunakan sistem <strong>GradeMaster OS</strong>, Anda menyatakan bersetuju untuk tunduk pada aturan berikut:
+                </p>
+                <div className="space-y-3">
+                  <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3.5">
+                    <h4 className="font-bold text-slate-800 text-[11px] mb-1">1. Privasi & Kerahasiaan Data</h4>
+                    <p className="text-[11px]">Seluruh informasi akademis, kehadiran, dan poin kedisiplinan siswa dilindungi secara ketat. Pihak sekolah hanya menggunakan data ini untuk kepentingan bimbingan dan pelaporan hasil belajar resmi.</p>
+                  </div>
+                  <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3.5">
+                    <h4 className="font-bold text-slate-800 text-[11px] mb-1">2. Keamanan Akses Akun</h4>
+                    <p className="text-[11px]">Siswa wajib menjaga kerahasiaan tautan akun Google yang terintegrasi. Tindakan membagikan kredensial atau menyalahgunakan akun pihak lain merupakan pelanggaran tata tertib.</p>
+                  </div>
+                  <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3.5">
+                    <h4 className="font-bold text-slate-800 text-[11px] mb-1">3. Kebijakan Integritas</h4>
+                    <p className="text-[11px]">Setiap upaya memanipulasi data nilai, merekayasa logs kehadiran, atau meretas kelemahan sistem (exploits) akan terekam oleh audit log sistem dan diproses hukum/akademis.</p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowTermsModal(false)}
+                className="w-full py-3 bg-[#0F172A] text-white font-black uppercase tracking-widest text-[9.5px] rounded-full hover:bg-slate-800 transition-colors active:scale-95 shadow-lg shadow-slate-200"
+              >
+                Saya Memahami & Menyetujui
+              </button>
             </div>
           </div>
         )}
