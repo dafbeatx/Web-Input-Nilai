@@ -1603,71 +1603,97 @@ export default function StudentProfileLayer({
           {activeTab === 'ACCOUNT' && (
             <div className="space-y-5 animate-in fade-in duration-300 text-left">
               
-              {/* Profil & Point (Flat Row Layout - No Overlap) */}
-              <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-sm flex items-center gap-3.5">
-                <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center text-base font-black tracking-tight shrink-0 overflow-hidden relative group ${
-                  isEmojiAvatar(currentAvatarUrl) 
-                    ? `bg-gradient-to-br ${getGradientForEmoji(currentAvatarUrl)} text-white border-white/20 text-[22px]` 
-                    : 'bg-slate-50 border-slate-100'
-                }`}>
-                  {currentAvatarUrl ? (
-                    isEmojiAvatar(currentAvatarUrl) ? (
-                      currentAvatarUrl
-                    ) : (
-                      <img src={currentAvatarUrl} alt={studentName} className="w-full h-full object-cover" />
-                    )
-                  ) : (
-                    studentName.slice(0, 2).toUpperCase()
-                  )}
-                  {isAdmin ? (
-                    <button 
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isUploadingAvatar}
-                      className="absolute inset-0 bg-slate-900/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer active:opacity-100 disabled:opacity-50"
-                    >
-                      {isUploadingAvatar ? (
-                        <Loader2 size={12} className="animate-spin" />
+              {/* Profil Card Baru (Premium & Modern) */}
+              <div className="relative bg-gradient-to-br from-white to-slate-50/50 border border-slate-100 rounded-[2.5rem] p-6 shadow-xl shadow-slate-100/30 overflow-hidden text-center flex flex-col items-center">
+                {/* Light reflection decor */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none" />
+                <div className="absolute -left-10 -bottom-10 w-28 h-28 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+
+                {/* Avatar with gradient border */}
+                <div className="relative group">
+                  <div className={`w-20 h-20 rounded-[2rem] border-4 border-white shadow-md flex items-center justify-center text-3xl font-black tracking-tight shrink-0 overflow-hidden relative ${
+                    isEmojiAvatar(currentAvatarUrl) 
+                      ? `bg-gradient-to-br ${getGradientForEmoji(currentAvatarUrl)} text-white` 
+                      : 'bg-slate-50 border border-slate-100'
+                  }`}>
+                    {currentAvatarUrl ? (
+                      isEmojiAvatar(currentAvatarUrl) ? (
+                        currentAvatarUrl
                       ) : (
-                        <Upload size={12} />
-                      )}
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => setShowAvatarModal(true)}
-                      className="absolute inset-0 bg-slate-900/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer active:opacity-100"
-                    >
-                      <Settings size={12} />
-                    </button>
-                  )}
-                </div>
-                
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-extrabold text-[13px] uppercase tracking-wider text-slate-800 font-outfit truncate">{studentName}</h3>
-                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">NISN/ID: {studentId}</p>
-                  {studentSummary?.email && (
-                    <p className="text-[9.5px] text-indigo-650 font-extrabold uppercase tracking-wider mt-0.5 truncate">
-                      Email: {studentSummary.email}
-                    </p>
-                  )}
-                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Tahun Ajaran {academicYear}</p>
+                        <img src={currentAvatarUrl} alt={studentName} className="w-full h-full object-cover" />
+                      )
+                    ) : (
+                      studentName.slice(0, 2).toUpperCase()
+                    )}
+                    {isAdmin ? (
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploadingAvatar}
+                        className="absolute inset-0 bg-slate-900/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer active:opacity-100 disabled:opacity-50"
+                      >
+                        {isUploadingAvatar ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <Upload size={16} />
+                        )}
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => setShowAvatarModal(true)}
+                        className="absolute inset-0 bg-slate-900/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer active:opacity-100"
+                      >
+                        <Settings size={16} />
+                      </button>
+                    )}
+                  </div>
+                  {/* Floating edit button for avatar */}
                   {!isAdmin && (
-                    <button 
+                    <button
                       onClick={() => setShowAvatarModal(true)}
-                      className="text-[9px] font-black text-indigo-650 hover:text-indigo-850 uppercase tracking-widest mt-1.5 block hover:underline"
+                      className="absolute -bottom-1 -right-1 w-7.5 h-7.5 bg-white hover:bg-slate-50 text-indigo-600 rounded-full border border-slate-150 shadow-md flex items-center justify-center transition-all active:scale-90"
+                      title="Ganti Avatar"
                     >
-                      🎨 Ganti Avatar Gamifikasi
+                      <Settings size={13} />
                     </button>
                   )}
                 </div>
 
-                <div className="flex gap-1.5 shrink-0">
-                  <div className="px-2.5 py-1.5 bg-rose-50 border border-rose-100 text-rose-700 rounded-2xl flex flex-col items-center justify-center min-w-[54px]" title="Poin Pelanggaran">
-                    <span className="text-[11.5px] font-black leading-none">{totalDemerits}</span>
-                    <span className="text-[7px] font-bold uppercase tracking-wider mt-0.5">Pelanggaran</span>
+                {/* Profile Details */}
+                <div className="mt-4 w-full">
+                  <h3 className="font-extrabold text-[15px] text-slate-800 font-outfit tracking-tight leading-snug">{studentName}</h3>
+                  <div className="flex flex-wrap justify-center gap-1.5 mt-2">
+                    <span className="px-3 py-1 bg-slate-100 border border-slate-200/50 text-slate-500 rounded-full text-[9px] font-extrabold uppercase tracking-wider">
+                      Kelas {className}
+                    </span>
+                    <span className="px-3 py-1 bg-indigo-50 border border-indigo-100/50 text-indigo-700 rounded-full text-[9px] font-extrabold uppercase tracking-wider">
+                      ID: #{studentId.slice(0, 8).toUpperCase()}
+                    </span>
                   </div>
-                  <div className="px-2.5 py-1.5 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-2xl flex flex-col items-center justify-center min-w-[54px]" title="Poin Kebaikan">
-                    <span className="text-[11.5px] font-black leading-none">{totalMerits}</span>
-                    <span className="text-[7px] font-bold uppercase tracking-wider mt-0.5">Kebaikan</span>
+                  
+                  {studentSummary?.email && (
+                    <p className="text-[10px] text-indigo-650 font-bold mt-2.5 leading-none">
+                      {studentSummary.email}
+                    </p>
+                  )}
+                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-2">Tahun Ajaran {academicYear}</p>
+                </div>
+
+                {/* Score Grid (Pelanggaran vs Kebaikan - Big Modern Blocks) */}
+                <div className="grid grid-cols-2 gap-3 w-full mt-5 border-t border-slate-100/60 pt-4.5">
+                  <div className="bg-rose-50/50 border border-rose-100/70 rounded-[1.8rem] p-3.5 flex flex-col items-center justify-center relative overflow-hidden group hover:bg-rose-50 transition-colors">
+                    <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center mb-1.5 shrink-0">
+                      <span className="material-symbols-outlined text-[16px]">gavel</span>
+                    </div>
+                    <span className="text-[18px] font-black leading-none text-rose-700 font-outfit">{totalDemerits}</span>
+                    <span className="text-[8px] font-black uppercase tracking-widest text-rose-500 mt-1.5">Pelanggaran</span>
+                  </div>
+
+                  <div className="bg-emerald-50/50 border border-emerald-100/70 rounded-[1.8rem] p-3.5 flex flex-col items-center justify-center relative overflow-hidden group hover:bg-emerald-50 transition-colors">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-1.5 shrink-0">
+                      <span className="material-symbols-outlined text-[16px]">award</span>
+                    </div>
+                    <span className="text-[18px] font-black leading-none text-emerald-700 font-outfit">{totalMerits}</span>
+                    <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600 mt-1.5">Kebaikan</span>
                   </div>
                 </div>
               </div>
