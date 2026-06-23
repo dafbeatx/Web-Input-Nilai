@@ -79,18 +79,21 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Avatar emoji tidak valid' }, { status: 400 });
       }
 
-      // Periksa poin siswa
-      const { data: behaviorData, error: behaviorErr } = await supabaseAdmin
-        .from('gm_behaviors')
-        .select('total_points')
-        .eq('id', studentId)
-        .maybeSingle();
+      // Periksa akumulasi Poin Kebaikan siswa dari logs (points_delta < 0)
+      const { data: logs, error: logsErr } = await supabaseAdmin
+        .from('gm_behavior_logs')
+        .select('points_delta')
+        .eq('student_id', studentId);
 
-      if (behaviorErr || !behaviorData) {
-        return NextResponse.json({ error: 'Profil perilaku tidak ditemukan' }, { status: 404 });
+      if (logsErr) {
+        console.error('[Avatar] Error fetching logs:', logsErr);
+        return NextResponse.json({ error: 'Gagal memverifikasi poin perilaku' }, { status: 500 });
       }
 
-      const points = behaviorData.total_points || 0;
+      const points = (logs || [])
+        .filter((log: any) => log.points_delta < 0)
+        .reduce((sum: number, log: any) => sum + Math.abs(log.points_delta), 0);
+
       let requiredPoints = 0;
       if (avatarEmoji === '🌱') requiredPoints = 0;
       else if (avatarEmoji === '📚') requiredPoints = 50;
@@ -100,7 +103,7 @@ export async function POST(req: NextRequest) {
 
       if (points < requiredPoints) {
         return NextResponse.json({ 
-          error: `Poin tidak mencukupi! Anda butuh ${requiredPoints} poin untuk membuka avatar ini (Poin Anda: ${points})` 
+          error: `Poin tidak mencukupi! Anda butuh ${requiredPoints} Poin Kebaikan untuk membuka avatar ini (Poin Kebaikan Anda: ${points})` 
         }, { status: 403 });
       }
 

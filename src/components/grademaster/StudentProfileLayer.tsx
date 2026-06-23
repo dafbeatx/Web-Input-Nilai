@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   ArrowLeft, PlusCircle, MinusCircle, Loader2, FileText, 
   Trash2, Pencil, ShieldCheck, ThumbsUp, X, Calendar, 
@@ -120,6 +120,30 @@ export default function StudentProfileLayer({
   const [localReasons, setLocalReasons] = useState<{ text: string, weight: number }[]>(behaviorReasons);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
+
+  // Dual behavior point system states and calculations
+  const [inputBehaviorType, setInputBehaviorType] = useState<'BAD' | 'GOOD'>('BAD');
+
+  const goodBehaviorPresets = useMemo(() => [
+    { text: "Aktif Berdiskusi & Tanya Jawab", weight: 5 },
+    { text: "Membantu Teman / Tutor Sebaya", weight: 5 },
+    { text: "Menjaga Kebersihan Kelas (Piket)", weight: 5 },
+    { text: "Jujur & Menjunjung Integritas", weight: 10 },
+    { text: "Pencapaian Prestasi Sekolah", weight: 15 },
+    { text: "Sopan Santun & Ramah pada Guru", weight: 5 },
+  ], []);
+
+  const totalDemerits = useMemo(() => {
+    return studentLogs
+      .filter(log => log.points_delta > 0)
+      .reduce((sum, log) => sum + log.points_delta, 0);
+  }, [studentLogs]);
+
+  const totalMerits = useMemo(() => {
+    return studentLogs
+      .filter(log => log.points_delta < 0)
+      .reduce((sum, log) => sum + Math.abs(log.points_delta), 0);
+  }, [studentLogs]);
 
   const loadImage = (url: string): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
@@ -895,13 +919,15 @@ export default function StudentProfileLayer({
     }
   };
 
-  const handleAddBehavior = async (pointsDelta: number, reason: string) => {
+  const handleAddBehavior = async (pointsDelta: number, reason: string, isGood: boolean = false) => {
     if (isUpdatingPoints) return;
     setIsUpdatingPoints(true);
     
+    const delta = isGood ? -Math.abs(pointsDelta) : Math.abs(pointsDelta);
+    
     const result = await addBehaviorAction({
       studentId,
-      pointsDelta: Math.abs(pointsDelta),
+      pointsDelta: delta,
       reason,
       violationDate: selectedDate
     });
@@ -923,8 +949,14 @@ export default function StudentProfileLayer({
   const handleUpdateLog = async (logId: string) => {
     if (isUpdatingPoints) return;
     setIsUpdatingPoints(true);
+    
+    // Pastikan tanda (+/-) poin tetap terjaga sesuai tipe log awal
+    const originalLog = studentLogs.find(l => l.id === logId);
+    const isGood = originalLog ? originalLog.points_delta < 0 : false;
+    const signedPoints = isGood ? -Math.abs(editForm.points) : Math.abs(editForm.points);
+
     const result = await updateBehaviorAction(logId, {
-      pointsDelta: editForm.points,
+      pointsDelta: signedPoints,
       reason: editForm.reason,
       studentId,
       violationDate: editForm.date
@@ -1269,8 +1301,8 @@ export default function StudentProfileLayer({
                           <div className="min-w-0 flex-1 text-left">
                             <div className="flex justify-between items-baseline gap-2">
                               <h4 className="font-extrabold text-slate-800 text-[11.5px] tracking-tight leading-snug truncate">{log.reason}</h4>
-                              <span className={`font-black text-[12px] shrink-0 ${isNegative ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                {isNegative ? '+' : '-'}{Math.abs(log.points_delta)} Poin
+                              <span className={`font-black text-[10px] uppercase tracking-wider shrink-0 px-2 py-0.5 rounded-lg ${isNegative ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
+                                {isNegative ? `+${log.points_delta} Pelanggaran` : `+${Math.abs(log.points_delta)} Kebaikan`}
                               </span>
                             </div>
                             <p className="text-[9px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{formatDate(log.violation_date || log.created_at)}</p>
@@ -1628,9 +1660,15 @@ export default function StudentProfileLayer({
                   )}
                 </div>
 
-                <div className="px-3 py-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-2xl flex flex-col items-center justify-center shrink-0">
-                  <span className="text-[12px] font-black leading-none">{totalPoints}</span>
-                  <span className="text-[7.5px] font-bold uppercase tracking-wide mt-0.5">Poin</span>
+                <div className="flex gap-1.5 shrink-0">
+                  <div className="px-2.5 py-1.5 bg-rose-50 border border-rose-100 text-rose-700 rounded-2xl flex flex-col items-center justify-center min-w-[54px]" title="Poin Pelanggaran">
+                    <span className="text-[11.5px] font-black leading-none">{totalDemerits}</span>
+                    <span className="text-[7px] font-bold uppercase tracking-wider mt-0.5">Pelanggaran</span>
+                  </div>
+                  <div className="px-2.5 py-1.5 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-2xl flex flex-col items-center justify-center min-w-[54px]" title="Poin Kebaikan">
+                    <span className="text-[11.5px] font-black leading-none">{totalMerits}</span>
+                    <span className="text-[7px] font-bold uppercase tracking-wider mt-0.5">Kebaikan</span>
+                  </div>
                 </div>
               </div>
 
@@ -1890,20 +1928,65 @@ export default function StudentProfileLayer({
                       />
                     </div>
 
+                    {/* Tipe Catatan Switch */}
                     <div>
-                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Pilih Alasan Cepat (Pelanggaran)</label>
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Jenis Catatan Sikap</label>
+                      <div className="flex gap-1.5 p-1 bg-slate-50 border border-slate-100 rounded-2xl">
+                        <button
+                          type="button"
+                          onClick={() => setInputBehaviorType('BAD')}
+                          className={`flex-1 py-1.5 text-[9.5px] font-black uppercase tracking-wider rounded-xl transition-all ${
+                            inputBehaviorType === 'BAD'
+                              ? 'bg-rose-500 text-white shadow-sm'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          🔴 Pelanggaran
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setInputBehaviorType('GOOD')}
+                          className={`flex-1 py-1.5 text-[9.5px] font-black uppercase tracking-wider rounded-xl transition-all ${
+                            inputBehaviorType === 'GOOD'
+                              ? 'bg-emerald-600 text-white shadow-sm'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          🟢 Kebaikan
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">
+                        {inputBehaviorType === 'BAD' ? 'Pilih Alasan Cepat (Pelanggaran)' : 'Pilih Alasan Cepat (Kebaikan & Apresiasi)'}
+                      </label>
                       <div className="grid grid-cols-1 gap-1.5 max-h-[160px] overflow-y-auto pr-1 no-scrollbar">
-                        {localReasons.map(r => (
-                          <button 
-                            key={r.text} 
-                            disabled={isUpdatingPoints}
-                            onClick={() => handleAddBehavior(r.weight, r.text)} 
-                            className="p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-100 hover:border-indigo-100 rounded-xl text-left transition-all active:scale-98 flex items-center justify-between group"
-                          >
-                            <span className="text-[10.5px] font-bold text-slate-700 truncate group-hover:text-indigo-900">{r.text}</span>
-                            <span className="text-[9.5px] font-black text-rose-500 shrink-0">+{r.weight} Poin</span>
-                          </button>
-                        ))}
+                        {inputBehaviorType === 'BAD' ? (
+                          localReasons.map(r => (
+                            <button 
+                              key={r.text} 
+                              disabled={isUpdatingPoints}
+                              onClick={() => handleAddBehavior(r.weight, r.text, false)} 
+                              className="p-3 bg-slate-50 hover:bg-rose-50/50 border border-slate-100 hover:border-rose-100 rounded-xl text-left transition-all active:scale-98 flex items-center justify-between group"
+                            >
+                              <span className="text-[10.5px] font-bold text-slate-700 truncate group-hover:text-rose-900">{r.text}</span>
+                              <span className="text-[9.5px] font-black text-rose-500 shrink-0">+{r.weight} Poin</span>
+                            </button>
+                          ))
+                        ) : (
+                          goodBehaviorPresets.map(r => (
+                            <button 
+                              key={r.text} 
+                              disabled={isUpdatingPoints}
+                              onClick={() => handleAddBehavior(r.weight, r.text, true)} 
+                              className="p-3 bg-slate-50 hover:bg-emerald-50/50 border border-slate-100 hover:border-emerald-100 rounded-xl text-left transition-all active:scale-98 flex items-center justify-between group"
+                            >
+                              <span className="text-[10.5px] font-bold text-slate-700 truncate group-hover:text-emerald-900">{r.text}</span>
+                              <span className="text-[9.5px] font-black text-emerald-600 shrink-0">+{r.weight} Poin</span>
+                            </button>
+                          ))
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1932,8 +2015,8 @@ export default function StudentProfileLayer({
                                   <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
                                     {formatDate(log.violation_date || log.created_at)}
                                   </span>
-                                  <span className={`text-[9.5px] font-black ${log.points_delta > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                                    {log.points_delta > 0 ? '+' : ''}{log.points_delta} Poin
+                                  <span className={`text-[9.5px] font-black ${log.points_delta > 0 ? 'text-rose-500 bg-rose-50/50 px-1.5 py-0.5 rounded-md border border-rose-100/30' : 'text-emerald-700 bg-emerald-50/50 px-1.5 py-0.5 rounded-md border border-emerald-100/30'}`}>
+                                    {log.points_delta > 0 ? `+${log.points_delta} Pelanggaran` : `+${Math.abs(log.points_delta)} Kebaikan`}
                                   </span>
                                 </div>
                               </div>
@@ -2348,13 +2431,13 @@ export default function StudentProfileLayer({
               </div>
 
               {/* Current Points Display */}
-              <div className="bg-gradient-to-r from-indigo-50 to-indigo-100/40 rounded-2xl p-4 border border-indigo-100/50 flex justify-between items-center">
+              <div className="bg-gradient-to-r from-emerald-50 to-emerald-100/40 rounded-2xl p-4 border border-emerald-100/50 flex justify-between items-center">
                 <div>
-                  <h4 className="text-[10px] font-black text-indigo-950 uppercase tracking-wider">Poin Perilaku Kamu</h4>
-                  <p className="text-[11px] font-semibold text-indigo-850 mt-0.5">Pertahankan kedisiplinan untuk membuka avatar premium.</p>
+                  <h4 className="text-[10px] font-black text-emerald-950 uppercase tracking-wider">Poin Kebaikan Kamu</h4>
+                  <p className="text-[10.5px] font-semibold text-emerald-850 mt-0.5">Kumpulkan poin kebaikan dari apresiasi karakter untuk membuka avatar.</p>
                 </div>
-                <div className="bg-indigo-650 text-white px-3 py-1.5 rounded-xl font-black text-sm shadow-md shrink-0">
-                  {totalPoints} P
+                <div className="bg-emerald-600 text-white px-3 py-1.5 rounded-xl font-black text-sm shadow-md shrink-0">
+                  {totalMerits} P
                 </div>
               </div>
 
@@ -2367,7 +2450,7 @@ export default function StudentProfileLayer({
                   { emoji: '🏆', label: 'Elite Master', points: 150, gradient: 'from-rose-400 to-pink-500' },
                   { emoji: '👑', label: 'GradeMaster Legend', points: 250, gradient: 'from-violet-500 via-fuchsia-500 to-pink-500' },
                 ].map((tier) => {
-                  const isUnlocked = totalPoints >= tier.points;
+                  const isUnlocked = totalMerits >= tier.points;
                   const isEquipped = currentAvatarUrl === tier.emoji;
 
                   return (
