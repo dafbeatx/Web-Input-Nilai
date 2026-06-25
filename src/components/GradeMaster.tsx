@@ -1455,9 +1455,30 @@ export default function GradeMaster() {
             photo_url: studentData.photo_url || studentData.avatar_url
           }}
           onSuccess={async (data) => {
+            // Set student state immediately and navigate directly.
+            // DO NOT call checkAdmin() here — it resets all state (setIsStudent(false), 
+            // setStudentData(null)) causing the component to unmount and loop back.
             setIsStudent(true);
-            setStudentData({ ...data, isGoogleLinked: true });
-            await checkAdmin();
+            const linkedStudent = { ...data, isGoogleLinked: true };
+            setStudentData(linkedStudent);
+            if (data.class_name) setStudentClass(data.class_name);
+
+            // Navigate directly — we know the claim succeeded
+            setLayer('student_profile');
+
+            // Background refresh: re-fetch full student data (behavior_id, total_points, streak, etc.)
+            try {
+              const res = await fetch(`/api/student/check?t=${Date.now()}`, { cache: 'no-store' });
+              const checkData = await res.json();
+              if (checkData.authenticated && checkData.student) {
+                setStudentData({ ...checkData.student, isGoogleLinked: true });
+                if (checkData.student.class_name) {
+                  setStudentClass(checkData.student.class_name);
+                }
+              }
+            } catch (e) {
+              console.warn('[StudentClaim] Background refresh failed, using link-google data:', e);
+            }
           }}
           onLogout={() => {
             logout();
