@@ -1528,7 +1528,7 @@ export default function StudentProfileLayer({
                       <TrendingUp size={12} className="text-indigo-500" /> Tren Perkembangan Nilai
                     </h4>
                     <div className="h-[160px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                         <LineChart data={chartData} margin={CHART_MARGIN}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" vertical={false} />
                           <XAxis dataKey="name" axisLine={false} tickLine={false} tick={CHART_TICK_STYLE} />

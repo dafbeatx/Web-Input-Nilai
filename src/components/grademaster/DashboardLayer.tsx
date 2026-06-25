@@ -581,7 +581,7 @@ export default function DashboardLayer({
                   <TrendingUp size={14} className="text-tertiary" /> Distribusi Nilai Siswa
                 </h3>
                 <div className="h-[250px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                     <BarChart data={analytics.distribution}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
                       <XAxis dataKey="range" axisLine={false} tickLine={false} tick={CHART_TICK_STYLE_DASHBOARD} />
@@ -603,7 +603,7 @@ export default function DashboardLayer({
                 <div className="bg-surface-container-high p-6 rounded-[2rem] border border-outline-variant flex flex-col items-center">
                    <h3 className="text-xs font-black text-on-surface-variant uppercase tracking-[0.2em] mb-4 self-start">Tingkat Ketuntasan</h3>
                    <div className="h-[180px] w-full max-w-[180px]">
-                      <ResponsiveContainer width="100%" height="100%">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                         <PieChart>
                           <Pie
                             data={pieData}
