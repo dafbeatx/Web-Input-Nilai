@@ -701,7 +701,7 @@ export default function StudentProfileLayer({
     fetchAttendanceLogs();
     fetchLoginLogs();
     fetchActiveSessions();
-    fetchClassLeaderboard();
+    // fetchClassLeaderboard();
     if (isAdmin) {
       fetchBehaviorSettings();
     }
@@ -1412,132 +1412,9 @@ export default function StudentProfileLayer({
                   <div>
                     <h4 className="text-[12px] font-black text-slate-800 tracking-tight leading-none font-outfit">Unduh Berkas</h4>
                     <p className="text-[13px] text-sky-600 font-black mt-1 font-outfit">{docsCount} Dokumen</p>
-                  <p className="text-[9px] text-slate-455 font-bold mt-1.5 leading-tight">Rapor & sertifikat</p>
+                    <p className="text-[9px] text-slate-455 font-bold mt-1.5 leading-tight">Rapor & sertifikat</p>
                   </div>
                 </button>
-              </div>
-
-              {/* Leaderboard Kelas (Peringkat Nilai & Poin Sikap) */}
-              <div className="space-y-3 pt-1 text-left">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Papan Peringkat Kelas</h3>
-                
-                {isLoadingLeaderboard ? (
-                  <div className="py-8 flex flex-col items-center justify-center gap-2.5 text-slate-400 bg-white border border-slate-100 rounded-3xl shadow-sm">
-                    <Loader2 size={16} className="animate-spin text-indigo-500" />
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Card 1: Peringkat Nilai Kelas (Single beautiful card, opens a separate layer/modal) */}
-                    <button 
-                      onClick={() => {
-                        setShowGradesLeaderboard(true);
-                        if (classLeaderboard?.subjects && classLeaderboard.subjects.length > 0) {
-                          setSelectedSessionId(classLeaderboard.subjects[0].id);
-                        }
-                      }}
-                      className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4 hover:border-indigo-100 hover:shadow-md/40 transition-all active:scale-[0.99] text-left w-full block group"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-200">
-                            <Trophy size={18} />
-                          </div>
-                          <div>
-                            <h4 className="text-[12.5px] font-black text-slate-800 uppercase tracking-wider font-outfit">Peringkat Nilai Kelas</h4>
-                            <p className="text-[9.5px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Lihat prestasi akademik terbaik di kelasmu</p>
-                          </div>
-                        </div>
-                        <span className="text-[9.5px] font-black text-indigo-655 opacity-60 group-hover:opacity-100 transition-opacity uppercase tracking-wider flex items-center gap-0.5 shrink-0 bg-indigo-50/50 border border-indigo-100/30 px-3 py-1.5 rounded-full font-outfit">
-                          Buka Peringkat <span className="material-symbols-outlined text-[10px] leading-none">arrow_forward</span>
-                        </span>
-                      </div>
-
-                      <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4 flex items-center justify-between">
-                        <div className="space-y-1">
-                          <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest leading-none block">Tahun Ajaran</span>
-                          <span className="text-[11.5px] font-extrabold text-slate-800 font-outfit">{academicYear}</span>
-                        </div>
-                        <div className="h-6 w-px bg-slate-200" />
-                        <div className="space-y-1">
-                          <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest leading-none block">Semester Aktif</span>
-                          <span className="text-[11.5px] font-extrabold text-slate-800 font-outfit">{semester === 'Ganjil' ? 'Semester 1 (Ganjil)' : 'Semester 2 (Genap)'}</span>
-                        </div>
-                        <div className="h-6 w-px bg-slate-200" />
-                        <div className="space-y-1">
-                          <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest leading-none block">Jumlah Ujian</span>
-                          <span className="text-[11.5px] font-extrabold text-indigo-600 font-outfit">
-                            {classLeaderboard?.subjects ? classLeaderboard.subjects.length : 0} Sesi
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-
-                    {/* Card 2: Sorotan Perilaku Kelas (Full Width & Clickable) */}
-                    <button 
-                      onClick={() => setShowBehaviorLeaderboard(true)}
-                      className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4 hover:border-emerald-100 hover:shadow-md/40 transition-all active:scale-[0.99] text-left w-full block group"
-                    >
-                      <div className="flex items-center justify-between border-b border-slate-50 pb-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 shadow-sm">
-                            <Activity size={15} />
-                          </div>
-                          <div>
-                            <h4 className="text-[12px] font-black text-slate-800 uppercase tracking-wider font-outfit">Sikap & Kedisiplinan Kelas</h4>
-                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Sorotan Poin Perilaku Kelas • Klik untuk detail lengkap</p>
-                          </div>
-                        </div>
-                        <span className="text-[9px] font-black text-emerald-650 opacity-60 group-hover:opacity-100 transition-opacity uppercase tracking-wider flex items-center gap-0.5">
-                          Semua Peringkat <span className="material-symbols-outlined text-[10px] leading-none">arrow_forward</span>
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                        {/* Highest Demerits Card */}
-                        <div className="bg-rose-50/40 border border-rose-100/60 rounded-2xl p-4 text-left flex items-start gap-3 transition-all hover:bg-rose-50/60">
-                          <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 shadow-sm">
-                            <span className="material-symbols-outlined text-[16px]">gavel</span>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h5 className="text-[8.5px] font-black text-rose-500 uppercase tracking-wider leading-none">Poin Pelanggaran Tertinggi</h5>
-                            {classLeaderboard?.highestDemerits ? (
-                              <p className="text-[11.5px] font-extrabold text-slate-850 mt-1.5 break-words whitespace-normal">
-                                {classLeaderboard.highestDemerits.name}{' '}
-                                <span className="text-rose-655 bg-white border border-rose-100 px-1.5 py-0.5 rounded text-[9px] ml-1 shrink-0 inline-block font-black font-outfit shadow-sm">
-                                  {classLeaderboard.highestDemerits.points} P
-                                </span>
-                              </p>
-                            ) : (
-                              <p className="text-[9.5px] font-bold text-slate-400 mt-1.5 uppercase tracking-wider">Semua siswa tertib</p>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Highest Merits Card */}
-                        <div className="bg-emerald-50/40 border border-emerald-100/60 rounded-2xl p-4 text-left flex items-start gap-3 transition-all hover:bg-emerald-50/60">
-                          <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 shadow-sm">
-                            <span className="material-symbols-outlined text-[16px]">award</span>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h5 className="text-[8.5px] font-black text-emerald-600 uppercase tracking-wider leading-none">Poin Kebaikan Tertinggi</h5>
-                            {classLeaderboard?.highestMerits ? (
-                              <p className="text-[11.5px] font-extrabold text-slate-850 mt-1.5 break-words whitespace-normal">
-                                {classLeaderboard.highestMerits.name}{' '}
-                                <span className="text-emerald-700 bg-white border border-emerald-100 px-1.5 py-0.5 rounded text-[9px] ml-1 shrink-0 inline-block font-black font-outfit shadow-sm">
-                                  {classLeaderboard.highestMerits.points} P
-                                </span>
-                              </p>
-                            ) : (
-                              <p className="text-[9.5px] font-black text-slate-400 mt-1.5 uppercase tracking-wide leading-snug">
-                                Data poin kebaikan belum ada
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                )}
               </div>
 
               {/* Catatan Perilaku Terbaru (Maksimal 2 log) */}
