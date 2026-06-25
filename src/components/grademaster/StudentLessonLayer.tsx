@@ -22,6 +22,8 @@ import {
 import { supabase } from '@/lib/supabase/client';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import { DailyLesson, Quiz, ToastType } from '@/lib/grademaster/types';
+import NanoBananaMascot from './ui/NanoBananaMascot';
+import { addBehaviorAction } from '@/lib/actions/behavior';
 
 interface StudentLessonLayerProps {
   onBack: () => void;
@@ -35,6 +37,75 @@ type TabType = 'materi' | 'chat_ai' | 'kuis';
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+function fireConfetti() {
+  if (typeof window === 'undefined') return;
+  const canvas = document.createElement('canvas');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  canvas.style.position = 'fixed';
+  canvas.style.top = '0';
+  canvas.style.left = '0';
+  canvas.style.pointerEvents = 'none';
+  canvas.style.zIndex = '99999';
+  document.body.appendChild(canvas);
+  
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  
+  const colors = ['#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#ef4444'];
+  const confetti: any[] = [];
+  
+  for (let i = 0; i < 150; i++) {
+    confetti.push({
+      x: canvas.width / 2,
+      y: canvas.height + 20,
+      vx: (Math.random() - 0.5) * 15,
+      vy: -Math.random() * 20 - 10,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      r: Math.random() * 6 + 4,
+      rotation: Math.random() * 360,
+      rotationSpeed: (Math.random() - 0.5) * 10
+    });
+  }
+  
+  const gravity = 0.5;
+  let frames = 0;
+  
+  function update() {
+    ctx!.clearRect(0, 0, canvas.width, canvas.height);
+    let active = false;
+    
+    confetti.forEach(c => {
+      c.x += c.vx;
+      c.y += c.vy;
+      c.vy += gravity;
+      c.vx *= 0.98;
+      c.rotation += c.rotationSpeed;
+      
+      if (c.y < canvas.height && c.x > 0 && c.x < canvas.width) {
+        active = true;
+        ctx!.save();
+        ctx!.translate(c.x, c.y);
+        ctx!.rotate((c.rotation * Math.PI) / 180);
+        ctx!.fillStyle = c.color;
+        ctx!.fillRect(-c.r, -c.r, c.r * 2, c.r * 2);
+        ctx!.restore();
+      }
+    });
+    
+    frames++;
+    if (active && frames < 200) {
+      requestAnimationFrame(update);
+    } else {
+      try {
+        document.body.removeChild(canvas);
+      } catch (e) {}
+    }
+  }
+  
+  update();
 }
 
 export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganjil', isTab = false }: StudentLessonLayerProps) {
@@ -67,6 +138,119 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
   const [simplifiedSlides, setSimplifiedSlides] = useState<any[]>([]);
   const [isLoadingSimplify, setIsLoadingSimplify] = useState(false);
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
+
+  // Streak & Mascot states
+  const [streakCount, setStreakCount] = useState<number>(studentData?.study_streak || 0);
+  const [hasStreakUpdatedToday, setHasStreakUpdatedToday] = useState<boolean>(false);
+  const [mascotState, setMascotState] = useState<'idle' | 'success' | 'sad' | 'streak'>('idle');
+  const [mascotMessage, setMascotMessage] = useState<string>('Halo! Yuk kita mulai belajar materi hari ini. Pilih salah satu materi di kiri ya!');
+
+  const getLocalDateString = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  useEffect(() => {
+    if (studentData?.study_streak !== undefined) {
+      setStreakCount(studentData.study_streak || 0);
+    }
+  }, [studentData?.study_streak]);
+
+  useEffect(() => {
+    if (studentData?.last_active_date) {
+      const todayStr = getLocalDateString();
+      setHasStreakUpdatedToday(studentData.last_active_date === todayStr);
+    }
+  }, [studentData?.last_active_date]);
+
+  const triggerStreakUpdate = async () => {
+    if (!studentData?.id || hasStreakUpdatedToday) return;
+
+    try {
+      const todayStr = getLocalDateString();
+      const res = await fetch('/api/grademaster/students/streak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountId: studentData.id,
+          localDate: todayStr
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setStreakCount(data.streak);
+        setHasStreakUpdatedToday(true);
+        if (data.updated) {
+          setMascotState('streak');
+          setMascotMessage(`Hebat! Streak belajar harianmu meningkat menjadi 🔥 ${data.streak} hari berturut-turut!`);
+          fireConfetti();
+        }
+      } else if (data.error === 'database_migration_pending') {
+        console.warn('Database streak migration pending:', data.message);
+      } else {
+        console.error('Failed to update streak:', data.error);
+      }
+    } catch (err) {
+      console.error('Streak update network error:', err);
+    }
+  };
+
+  // Coordinator Effect for Mascot dialog bubble and expressions
+  useEffect(() => {
+    if (!selectedLesson) {
+      setMascotState('idle');
+      setMascotMessage('Halo! Yuk kita mulai belajar materi hari ini. Pilih salah satu materi di kiri ya!');
+      return;
+    }
+
+    if (activeTab === 'materi') {
+      if (learningMode === 'santai') {
+        if (simplifiedSlides.length === 0) {
+          setMascotState('idle');
+          setMascotMessage(`Yuk kita pelajari materi tentang ${selectedLesson.subject}!`);
+        } else {
+          const total = simplifiedSlides.length;
+          if (currentSlideIdx === 0) {
+            setMascotState('idle');
+            setMascotMessage(`Selamat datang di Paham Kilat AI! Yuk baca perlahan slide demi slide tentang ${selectedLesson.subject}.`);
+          } else if (currentSlideIdx === total - 1) {
+            setMascotState('success');
+            setMascotMessage(`Wah, kamu sampai di slide terakhir! Klik "Selesai" untuk melengkapi belajarmu hari ini.`);
+          } else {
+            setMascotState('idle');
+            setMascotMessage(`Bagus! Slide ${currentSlideIdx + 1} dari ${total}. Terus baca ya, kamu hebat!`);
+          }
+        }
+      } else {
+        setMascotState('idle');
+        setMascotMessage(`Kamu sedang membaca isi materi lengkap. Fokus dan serap ilmunya ya!`);
+      }
+    } else if (activeTab === 'chat_ai') {
+      setMascotState('idle');
+      setMascotMessage(`Ada bagian materi "${selectedLesson.subject}" yang kurang jelas? Tanyakan padaku! Aku siap membantu menjelaskan.`);
+    } else if (activeTab === 'kuis') {
+      if (showQuizResults && quizScoreRecord) {
+        const score = Math.round(quizScoreRecord.score);
+        if (score >= 70) {
+          setMascotState('success');
+          setMascotMessage(`Luar biasa! Kamu menyelesaikan kuis dengan nilai ${score}/100 dan mendapatkan +2 Poin Kebaikan! 🔥`);
+        } else {
+          setMascotState('sad');
+          setMascotMessage(`Kuis selesai dengan nilai ${score}/100. Jangan berkecil hati, mari pelajari lagi materinya agar lebih paham!`);
+        }
+      } else if (isBlockedFromSusulan) {
+        setMascotState('sad');
+        setMascotMessage(`Ujian susulan ditutup karena kamu sudah memiliki nilai untuk mata pelajaran ini.`);
+      } else {
+        setMascotState('idle');
+        setMascotMessage(`Siap menguji pemahamanmu tentang ${selectedLesson.subject}? Jawab kuis ini dengan nilai >= 70 untuk bonus +2 Poin Kebaikan!`);
+      }
+    }
+  }, [activeTab, selectedLesson, learningMode, simplifiedSlides.length, currentSlideIdx, showQuizResults, quizScoreRecord, isBlockedFromSusulan]);
 
   const fetchSimplifiedContent = async (subject: string, content: string) => {
     if (!content) return;
@@ -392,6 +576,43 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
 
       if (error) throw error;
 
+      // If score is passing (>= 70) and it was not previously completed (no quizScoreRecord existed yet)
+      const isFirstAttempt = !quizScoreRecord;
+      if (finalScore >= 70 && isFirstAttempt) {
+        // Trigger behavior action for +2 Poin Kebaikan
+        const behaviorId = studentData?.behavior_id || studentData?.student_id;
+        if (behaviorId) {
+          const behaviorResult = await addBehaviorAction({
+            studentId: behaviorId,
+            pointsDelta: -2, // Positive 2 merits/appreciation = negative delta in gm_behaviors
+            reason: `Menyelesaikan Kuis Harian: ${selectedLesson.subject} (Nilai: ${finalScore})`
+          });
+          if (behaviorResult.success) {
+            console.log('Successfully rewarded +2 Poin Kebaikan');
+          } else {
+            console.error('Failed to reward behavior points:', behaviorResult.error);
+          }
+        }
+
+        // Trigger streak update
+        await triggerStreakUpdate();
+        
+        // Fire confetti
+        fireConfetti();
+        
+        // Set mascot success state
+        setMascotState('success');
+        setMascotMessage(`Selamat! Kamu lulus kuis dengan nilai ${finalScore}/100! +2 Poin Kebaikan telah ditambahkan ke akunmu! 🌟`);
+      } else {
+        // Just trigger streak update if it's completed (even if they didn't pass, studying counts as streak activity!)
+        await triggerStreakUpdate();
+        
+        if (finalScore < 70) {
+          setMascotState('sad');
+          setMascotMessage(`Kuis selesai dengan nilai ${finalScore}/100. Yuk pelajari lagi materinya biar bisa dapat nilai lebih tinggi lain kali!`);
+        }
+      }
+
       setQuizScoreRecord(data);
       setShowQuizResults(true);
       setToast({ message: `Kuis berhasil dikirim! Nilaimu: ${finalScore}/100`, type: 'success' });
@@ -498,11 +719,12 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
               Kembali
             </button>
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (currentSlideIdx < totalSlides - 1) {
                   setCurrentSlideIdx(prev => prev + 1);
                 } else {
                   setToast({ message: "Hebat! Kamu sudah membaca semua materi hari ini 🚀", type: "success" });
+                  await triggerStreakUpdate();
                 }
               }}
               className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[10.5px] font-black uppercase tracking-wider transition-all min-h-[38px] active:scale-95 shadow-sm shadow-emerald-500/15 flex items-center gap-1"
@@ -537,8 +759,16 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
               Akses ringkasan materi AI, tanya jawab interaktif, dan kuis kelas {activeClassName}.
             </p>
           </div>
-          <div className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 text-[10px] font-black uppercase tracking-widest self-start sm:self-auto">
-             Kelas {activeClassName}
+          <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+            {/* Study Streak Widget */}
+            <div className="flex items-center gap-1.5 px-4.5 py-2 bg-amber-50 text-amber-700 rounded-full border border-amber-200/60 text-[10.5px] font-black uppercase tracking-wider shadow-sm animate-in fade-in slide-in-from-right-4 duration-500">
+              <span className="text-sm select-none">🔥</span>
+              <span>{streakCount} Hari Streak</span>
+            </div>
+
+            <div className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 text-[10px] font-black uppercase tracking-widest">
+               Kelas {activeClassName}
+            </div>
           </div>
         </div>
       </header>
@@ -628,6 +858,13 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
                     </button>
                   ))}
                 </div>
+
+                {/* Nano Banana Mascot Dialog */}
+                <NanoBananaMascot 
+                  state={mascotState} 
+                  message={mascotMessage} 
+                  className="mb-6 shadow-sm border border-slate-100/50" 
+                />
 
                 {/* TAB CONTENT */}
                 <div className="flex-1 flex flex-col">

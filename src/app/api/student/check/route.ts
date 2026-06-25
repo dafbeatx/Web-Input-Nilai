@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
       // Look up student account bound to this Google email
       const { data: boundAccount, error: boundError } = await supabase
         .from('gm_student_accounts')
-        .select('id, student_name, class_name, academic_year, username, profile_photo_url, google_email')
+        .select('id, student_name, class_name, academic_year, username, profile_photo_url, google_email, study_streak, last_active_date')
         .eq('google_email', email)
         .single();
 
@@ -67,7 +67,9 @@ export async function GET(req: NextRequest) {
             photo_url: boundAccount.profile_photo_url,
             avatar_url: behaviorRecord?.avatar_url || null,
             email: boundAccount.google_email || null,
-            isGoogleLinked: true
+            isGoogleLinked: true,
+            study_streak: boundAccount.study_streak || 0,
+            last_active_date: boundAccount.last_active_date || null
           },
         });
       }

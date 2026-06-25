@@ -50,7 +50,9 @@ export async function getStudentSession() {
         academic_year,
         username,
         profile_photo_url,
-        google_email
+        google_email,
+        study_streak,
+        last_active_date
       )
     `)
     .eq('token', token)
@@ -84,6 +86,8 @@ export async function getStudentSession() {
       photo_url: accountData.profile_photo_url,
       avatar_url: behaviorData?.avatar_url ?? null,
       email: accountData.google_email ?? null,
+      study_streak: accountData.study_streak || 0,
+      last_active_date: accountData.last_active_date || null,
     },
   };
 }
