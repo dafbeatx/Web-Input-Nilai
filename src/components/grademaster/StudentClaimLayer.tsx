@@ -50,7 +50,8 @@ export default function StudentClaimLayer({
   useEffect(() => {
     console.log('[DEBUG INIT] supabase client:', supabase ? 'INITIALIZED' : 'NULL/UNDEFINED');
     console.log('[DEBUG INIT] supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'MISSING');
-    console.log('[DEBUG INIT] supabase KEY:', process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ? 'SET' : 'MISSING');
+    console.log('[DEBUG INIT] supabase KEY (PUBLISHABLE):', process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ? 'SET' : 'MISSING');
+    console.log('[DEBUG INIT] supabase KEY (ANON):', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'MISSING');
   }, []);
 
   // Debounce the search input (300ms)

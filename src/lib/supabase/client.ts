@@ -21,7 +21,7 @@ if (typeof window !== 'undefined') {
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 let clientInstance: SupabaseClient | null = null;
 let currentStorageType: 'local' | 'session' | null = null;
@@ -34,7 +34,7 @@ export function getSupabaseClient(): SupabaseClient {
   if (!supabaseUrl || !supabaseKey) {
     throw new Error(
       "Supabase Client configuration is missing. " +
-      "Please ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY are set in your environment variables."
+      "Please ensure NEXT_PUBLIC_SUPABASE_URL and either NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY are set in your environment variables."
     );
   }
 
