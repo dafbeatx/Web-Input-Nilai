@@ -22,7 +22,7 @@ import {
 import { supabase } from '@/lib/supabase/client';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import { DailyLesson, Quiz, ToastType } from '@/lib/grademaster/types';
-import NanoBananaMascot from './ui/NanoBananaMascot';
+import GradeMasterMascot from './ui/GradeMasterMascot';
 import { addBehaviorAction } from '@/lib/actions/behavior';
 
 interface StudentLessonLayerProps {
@@ -859,8 +859,8 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
                   ))}
                 </div>
 
-                {/* Nano Banana Mascot Dialog */}
-                <NanoBananaMascot 
+                {/* GradeMaster Mascot Dialog */}
+                <GradeMasterMascot 
                   state={mascotState} 
                   message={mascotMessage} 
                   className="mb-6 shadow-sm border border-slate-100/50" 
