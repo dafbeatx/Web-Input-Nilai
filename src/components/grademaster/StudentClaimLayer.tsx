@@ -116,14 +116,22 @@ export default function StudentClaimLayer({
     fetchStudents();
   }, [debouncedQuery, setToast]);
 
-  const handleSelectStudent = (student: StudentOption) => {
+  const handleSelectStudent = (student: StudentOption, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     isStudentSelectedRef.current = true;
     setSelectedStudent(student);
     setSearchQuery(student.student_name);
     setShowDropdown(false);
   };
 
-  const handleClaim = async () => {
+  const handleClaim = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!selectedStudent) return;
 
     setIsSubmitting(true);
@@ -166,8 +174,9 @@ export default function StudentClaimLayer({
           <h1 className="text-sm font-black text-[#0F172A] tracking-tighter uppercase font-outfit">GradeMaster OS</h1>
         </div>
         <button 
-          onClick={onLogout}
-          className="flex items-center gap-2 px-4 py-2 text-slate-500 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all text-xs font-bold"
+          type="button"
+          onClick={(e) => { e.preventDefault(); onLogout(); }}
+          className="flex items-center gap-2 px-4 py-2 text-slate-500 hover:text-slate-900 hover:bg-slate-55 rounded-xl transition-all text-xs font-bold"
         >
           <LogOut size={16} />
           <span>Keluar</span>
@@ -238,8 +247,9 @@ export default function StudentClaimLayer({
                     <ul className="max-h-[300px] overflow-y-auto">
                       {students.map((s) => (
                         <button
+                          type="button"
                           key={s.id}
-                          onClick={() => handleSelectStudent(s)}
+                          onClick={(e) => handleSelectStudent(s, e)}
                           className="w-full px-7 py-4 text-left hover:bg-slate-50 flex items-center justify-between transition-colors group"
                         >
                           <div className="flex flex-col">
@@ -280,7 +290,8 @@ export default function StudentClaimLayer({
 
           {/* Primary Button */}
           <button
-            onClick={handleClaim}
+            type="button"
+            onClick={(e) => handleClaim(e)}
             disabled={!selectedStudent || isSubmitting}
             className="w-full py-6 bg-[#0F172A] text-white rounded-[2rem] font-black uppercase tracking-[0.3em] text-sm shadow-2xl shadow-slate-300 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-4 group mt-4 disabled:opacity-30 disabled:grayscale disabled:scale-100"
           >
