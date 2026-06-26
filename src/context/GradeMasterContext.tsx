@@ -475,6 +475,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     setIsStudent(false);
     setIsParent(false);
     setStudentData(null);
+    setStudentClass("");
 
     safeLocalStorage.removeItem('gm_isParent');
     safeLocalStorage.removeItem('gm_studentData');
@@ -483,6 +484,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     safeLocalStorage.removeItem('gm_sessionName');
     safeLocalStorage.removeItem('gm_sessionPassword');
     safeLocalStorage.removeItem('gm_isPublicView');
+    safeLocalStorage.removeItem('gm_studentClass');
     safeLocalStorage.setItem('gm_remember_me', 'false'); // Force disable remember me status on logout
 
     setLayer("student_login");

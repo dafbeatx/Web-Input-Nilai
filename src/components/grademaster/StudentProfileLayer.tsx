@@ -2298,6 +2298,7 @@ export default function StudentProfileLayer({
               setToast={setToast}
               semester={semester}
               isTab={true}
+              studentClassOverride={className}
             />
           </div>
         )}

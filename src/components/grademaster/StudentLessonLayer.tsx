@@ -30,6 +30,7 @@ interface StudentLessonLayerProps {
   setToast: (t: ToastType) => void;
   semester?: string;
   isTab?: boolean;
+  studentClassOverride?: string;
 }
 
 type TabType = 'materi' | 'chat_ai' | 'kuis';
@@ -108,9 +109,15 @@ function fireConfetti() {
   update();
 }
 
-export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganjil', isTab = false }: StudentLessonLayerProps) {
+export default function StudentLessonLayer({ 
+  onBack, 
+  setToast, 
+  semester = 'Ganjil', 
+  isTab = false,
+  studentClassOverride
+}: StudentLessonLayerProps) {
   const { studentData, studentClass, academicYear } = useGradeMaster();
-  const activeClassName = studentData?.class_name || studentClass || "";
+  const activeClassName = studentClassOverride || studentData?.class_name || studentClass || "";
 
   // Core State
   const [lessons, setLessons] = useState<DailyLesson[]>([]);
@@ -300,6 +307,8 @@ export default function StudentLessonLayer({ onBack, setToast, semester = 'Ganji
         setLessons(data || []);
         if (data && data.length > 0) {
           setSelectedLesson(data[0]);
+        } else {
+          setSelectedLesson(null);
         }
       } catch (err: any) {
         console.error("Failed to load lessons:", err);
