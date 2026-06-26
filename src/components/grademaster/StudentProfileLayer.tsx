@@ -1289,7 +1289,7 @@ export default function StudentProfileLayer({
                 
                 <div className="w-20 h-20 shrink-0 relative select-none pointer-events-none -mb-5 -mr-1">
                   <img 
-                    src="/student-mascot.png" 
+                    src="/mascot_hijab_idle.png" 
                     alt="Waving Mascot" 
                     className="w-full h-full object-contain transform scale-125 origin-bottom" 
                   />
@@ -2388,7 +2388,7 @@ export default function StudentProfileLayer({
                   </div>
                   <div className="w-16 h-16 shrink-0 relative select-none pointer-events-none">
                     <img 
-                      src="/student-mascot.png" 
+                      src="/mascot_hijab_success.png" 
                       alt="Mascot Celebration" 
                       className="w-full h-full object-contain transform scale-110 translate-y-1 scale-x-[-1]" 
                     />

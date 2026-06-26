@@ -236,7 +236,7 @@ export default function StudentLoginLayer({
       {/* Mascot Waving Character - Desktop Only */}
       <div className="hidden lg:block absolute bottom-0 right-10 w-[240px] xl:w-[280px] z-0 select-none pointer-events-none animate-in slide-in-from-right-10 duration-1000 ease-out">
         <img
-          src="/student-mascot.png"
+          src="/mascot_hijab_idle.png"
           alt="Student Mascot"
           className="w-full h-auto object-contain opacity-90 hover:opacity-100 transition-opacity duration-300"
         />
@@ -267,7 +267,7 @@ export default function StudentLoginLayer({
              {/* Mascot visible on mobile, hidden on desktop */}
              <div className="lg:hidden w-[140px] h-[140px] select-none pointer-events-none animate-in fade-in slide-in-from-bottom-4 duration-1000 ease-out mb-2">
                 <img
-                  src="/student-mascot.png"
+                  src="/mascot_hijab_idle.png"
                   alt="Student Mascot"
                   className="w-full h-full object-contain"
                 />
