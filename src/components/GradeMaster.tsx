@@ -1427,7 +1427,6 @@ export default function GradeMaster() {
           activeYear={academicYear}
           onPromoteSuccess={(newClass, newYear) => {
             setStudentClass(newClass);
-            setAcademicYear(newYear);
           }}
         />
       )}

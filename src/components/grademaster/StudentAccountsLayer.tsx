@@ -70,10 +70,9 @@ export default function StudentAccountsLayer({
         setPromoteToClass('');
         if (onPromoteSuccess) {
           onPromoteSuccess(promotedClass, promotedYear);
-        } else {
-          fetchClasses();
-          fetchAccounts();
         }
+        fetchClasses();
+        fetchAccounts();
       } else {
         setToast({ message: data.error || 'Gagal memproses kenaikan kelas', type: 'error' });
       }
