@@ -98,7 +98,7 @@ export default function StudentProfileLayer({
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
   const [studentLogs, setStudentLogs] = useState<BehaviorLog[]>([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
-  const [studentSummary, setStudentSummary] = useState<{ attendance: any, academicHistory: any[], documents: any[], email?: string | null } | null>(null);
+  const [studentSummary, setStudentSummary] = useState<{ attendance: any, academicHistory: any[], documents: any[], email?: string | null, enrollmentHistory?: any[] } | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [loginLogs, setLoginLogs] = useState<{ id: string; ip_address: string; user_agent: string; created_at: string }[]>([]);
   const [isLoadingLoginLogs, setIsLoadingLoginLogs] = useState(false);
@@ -698,13 +698,15 @@ export default function StudentProfileLayer({
   }, []);
 
   useEffect(() => {
-    fetchStudentSummary();
+    setActiveClass(className);
+    setActiveYear(academicYear);
     setTotalPoints(initialPoints);
     setCurrentAvatarUrl(avatarUrl);
   }, [studentId, studentName, initialPoints, avatarUrl, className, academicYear]);
 
   useEffect(() => {
     if (activeClass && activeYear) {
+      fetchStudentSummary(activeClass, activeYear);
       fetchStudentLogs();
       fetchAttendanceLogs();
       fetchLoginLogs();
@@ -1014,10 +1016,12 @@ export default function StudentProfileLayer({
     return `${browser} (${os})`;
   };
 
-  const fetchStudentSummary = async () => {
+  const fetchStudentSummary = async (overrideClass?: string, overrideYear?: string) => {
     setIsLoadingSummary(true);
     try {
-      const res = await fetch(`/api/grademaster/students/summary?name=${encodeURIComponent(studentName)}&year=${encodeURIComponent(academicYear)}&class=${encodeURIComponent(className)}`);
+      const cls = overrideClass || className;
+      const yr = overrideYear || academicYear;
+      const res = await fetch(`/api/grademaster/students/summary?name=${encodeURIComponent(studentName)}&year=${encodeURIComponent(yr)}&class=${encodeURIComponent(cls)}`);
       if (res.ok) {
         const data = await res.json();
         setStudentSummary(data);
@@ -1237,7 +1241,27 @@ export default function StudentProfileLayer({
                 <h2 className="text-slate-800 font-extrabold text-[11.5px] tracking-tight leading-tight uppercase font-outfit truncate">
                   {studentName} <span className="text-indigo-650 font-bold text-[9.5px] tracking-normal normal-case">({activeClass})</span>
                 </h2>
-                <p className="text-slate-400 text-[8px] font-bold uppercase tracking-wider leading-none mt-0.5">Tahun Ajaran {activeYear}</p>
+                {studentSummary?.enrollmentHistory && studentSummary.enrollmentHistory.length > 1 ? (
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <select
+                      value={`${activeClass}|${activeYear}`}
+                      onChange={(e) => {
+                        const [cls, yr] = e.target.value.split('|');
+                        setActiveClass(cls);
+                        setActiveYear(yr);
+                      }}
+                      className="bg-indigo-50 border border-indigo-100/60 rounded-lg px-2 py-0.5 text-[9px] font-bold text-indigo-700 outline-none cursor-pointer hover:bg-indigo-100/50 transition-all font-outfit"
+                    >
+                      {studentSummary.enrollmentHistory.map((h: any, i: number) => (
+                        <option key={i} value={`${h.class_name}|${h.academic_year}`} className="bg-white text-slate-700">
+                          {h.class_name} ({h.academic_year})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <p className="text-slate-400 text-[8px] font-bold uppercase tracking-wider leading-none mt-0.5">Tahun Ajaran {activeYear}</p>
+                )}
               </div>
             </div>
           ) : (

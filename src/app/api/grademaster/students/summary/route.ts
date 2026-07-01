@@ -291,6 +291,26 @@ export async function GET(req: NextRequest) {
     const { data: accountData } = await accountQuery.maybeSingle();
     const googleEmail = accountData?.google_email ?? null;
 
+    // Fetch enrollment history from gm_behaviors
+    const { data: rawEnrollment } = await supabaseAdmin
+      .from('gm_behaviors')
+      .select('class_name, academic_year')
+      .eq('student_name', targetStudentName)
+      .order('academic_year', { ascending: false });
+
+    const enrollmentHistory: { class_name: string; academic_year: string }[] = [];
+    const seen = new Set();
+    (rawEnrollment || []).forEach((h: any) => {
+      const key = `${h.class_name}|${h.academic_year}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        enrollmentHistory.push({
+          class_name: h.class_name,
+          academic_year: h.academic_year
+        });
+      }
+    });
+
     // 4. Mock Documents (In real app, this might pull from a storage table)
     const documents = [
       { id: 'report-1', name: 'Laporan Progres Kelakuan', type: 'PDF', size: '1.2 MB', ready: true },
@@ -301,6 +321,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       resolvedClass: targetClassName,
       resolvedYear: targetAcademicYear,
+      enrollmentHistory,
       attendance: {
         percentage: attendancePercent,
         total: totalAttendance,

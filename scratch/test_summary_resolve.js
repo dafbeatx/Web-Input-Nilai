@@ -35,12 +35,38 @@ async function testResolve() {
     }
   }
 
+  // Query raw enrollment history
+  const { data: rawEnrollment, error: enrollError } = await supabase
+    .from('gm_behaviors')
+    .select('class_name, academic_year')
+    .eq('student_name', targetStudentName)
+    .order('academic_year', { ascending: false });
+
+  if (enrollError) {
+    console.error('Error fetching enrollment history:', enrollError);
+    return;
+  }
+
+  const enrollmentHistory = [];
+  const seen = new Set();
+  (rawEnrollment || []).forEach((h) => {
+    const key = `${h.class_name}|${h.academic_year}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      enrollmentHistory.push({
+        class_name: h.class_name,
+        academic_year: h.academic_year
+      });
+    }
+  });
+
   console.log('=== TEST RESOLVE RESULT ===');
   console.log(`Original query: Class = ${className}, Year = ${academicYear}`);
   console.log(`Resolved query: Class = ${targetClassName}, Year = ${targetAcademicYear}`);
+  console.log('Enrollment History:', enrollmentHistory);
   
-  if (targetClassName === '9A' && targetAcademicYear === '2025/2026') {
-    console.log('✅ SUCCESS: Successfully resolved to last active class 9A (2025/2026)');
+  if (targetClassName === '9A' && targetAcademicYear === '2025/2026' && enrollmentHistory.length > 0) {
+    console.log('✅ SUCCESS: Successfully resolved to last active class 9A and generated enrollment history.');
   } else {
     console.log('❌ FAILURE: Resolved incorrectly');
   }
