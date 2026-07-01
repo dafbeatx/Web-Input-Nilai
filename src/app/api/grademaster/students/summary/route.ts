@@ -35,15 +35,35 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 1. Fetch Attendance Stats with className filter if provided
+    let targetClassName = className;
+    let targetAcademicYear = academicYear;
+
+    if (className === 'LULUS' || className === 'ALUMNI' || !className) {
+      const { data: pastBehavior } = await supabaseAdmin
+        .from('gm_behaviors')
+        .select('class_name, academic_year')
+        .eq('student_name', targetStudentName)
+        .not('class_name', 'eq', 'LULUS')
+        .not('class_name', 'eq', 'ALUMNI')
+        .order('academic_year', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (pastBehavior) {
+        targetClassName = pastBehavior.class_name;
+        targetAcademicYear = pastBehavior.academic_year;
+      }
+    }
+
+    // 1. Fetch Attendance Stats with targetClassName filter if provided
     let attQuery = supabaseAdmin
       .from('gm_attendance')
       .select('status')
       .eq('student_name', targetStudentName)
-      .eq('academic_year', academicYear);
+      .eq('academic_year', targetAcademicYear);
 
-    if (className) {
-      attQuery = attQuery.eq('class_name', className);
+    if (targetClassName) {
+      attQuery = attQuery.eq('class_name', targetClassName);
     }
 
     const { data: attData, error: attError } = await attQuery;
@@ -79,9 +99,9 @@ export async function GET(req: NextRequest) {
       .eq('name', targetStudentName)
       .eq('is_deleted', false);
 
-    gradeQuery = gradeQuery.eq('gm_sessions.academic_year', academicYear);
-    if (className) {
-      gradeQuery = gradeQuery.eq('gm_sessions.class_name', className);
+    gradeQuery = gradeQuery.eq('gm_sessions.academic_year', targetAcademicYear);
+    if (targetClassName) {
+      gradeQuery = gradeQuery.eq('gm_sessions.class_name', targetClassName);
     }
 
     const { data: gradeData, error: gradeError } = await gradeQuery.order('created_at', { ascending: false });
@@ -247,14 +267,13 @@ export async function GET(req: NextRequest) {
         cheatingFlags
       };
     })) || [];
-
     // 3. Fetch latest total points to keep UI synced independently of local storage
     const { data: behaviorData } = await supabaseAdmin
       .from('gm_behaviors')
       .select('total_points')
       .eq('student_name', targetStudentName)
-      .eq('academic_year', academicYear)
-      .eq('class_name', className || '')
+      .eq('academic_year', targetAcademicYear)
+      .eq('class_name', targetClassName || '')
       .maybeSingle();
 
     const totalPoints = behaviorData?.total_points ?? 0;
@@ -280,6 +299,8 @@ export async function GET(req: NextRequest) {
     ];
 
     return NextResponse.json({
+      resolvedClass: targetClassName,
+      resolvedYear: targetAcademicYear,
       attendance: {
         percentage: attendancePercent,
         total: totalAttendance,

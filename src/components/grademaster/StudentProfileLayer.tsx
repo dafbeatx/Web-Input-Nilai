@@ -91,6 +91,8 @@ export default function StudentProfileLayer({
   const [totalPoints, setTotalPoints] = useState(initialPoints);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(avatarUrl);
   const [activeTab, setActiveTab] = useState<'HOME' | 'GRADES' | 'LESSON' | 'ATTENDANCE' | 'ACCOUNT'>('HOME');
+  const [activeClass, setActiveClass] = useState(className);
+  const [activeYear, setActiveYear] = useState(academicYear);
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
   const [attendanceLogs, setAttendanceLogs] = useState<{ subject: string; date: string; status: string }[]>([]);
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
@@ -198,7 +200,7 @@ export default function StudentProfileLayer({
         doc.setLineWidth(0.5);
         doc.rect(10, 10, 190, 277);
 
-        const clsUpper = (className || '').toUpperCase();
+        const clsUpper = (activeClass || '').toUpperCase();
         const schoolName = clsUpper.includes('SMA') || clsUpper.includes('10') || clsUpper.includes('11') || clsUpper.includes('12') || clsUpper.includes('X') || clsUpper.includes('XI') || clsUpper.includes('XII')
           ? 'SMA TERPADU AS SALAAM'
           : 'SMP TERPADU AL-ITTIHADIYAH';
@@ -212,7 +214,7 @@ export default function StudentProfileLayer({
         
         doc.setFont("Times", "normal");
         doc.setFontSize(10);
-        doc.text(`Tahun Ajaran ${academicYear}`, 105, 31, { align: 'center' });
+        doc.text(`Tahun Ajaran ${activeYear}`, 105, 31, { align: 'center' });
         
         doc.setLineWidth(1);
         doc.line(14, 35, 196, 35);
@@ -226,7 +228,7 @@ export default function StudentProfileLayer({
         doc.text('Nama Siswa', 15, 46);
         doc.text(`:  ${studentName}`, 58, 46);
         doc.text('Kelas', 15, 52);
-        doc.text(`:  ${className}`, 58, 52);
+        doc.text(`:  ${activeClass}`, 58, 52);
         doc.text('Total Pengurangan Poin', 15, 58);
         doc.text(`:  ${totalPoints} Poin`, 58, 58);
         
@@ -370,7 +372,7 @@ export default function StudentProfileLayer({
         doc.setTextColor(120, 120, 120);
         doc.text('Dokumen dihasilkan otomatis oleh GradeMaster OS', 15, footerY + 5);
 
-        doc.save(`Laporan_Perilaku_${studentName.replace(/ /g, '_')}_${className}.pdf`);
+        doc.save(`Laporan_Perilaku_${studentName.replace(/ /g, '_')}_${activeClass}.pdf`);
         setToast({ message: "Berhasil mengunduh Laporan Progres Kelakuan", type: "success" });
 
       } else if (docId === 'cert-1') {
@@ -405,7 +407,7 @@ export default function StudentProfileLayer({
         drawCorner(32, canvas.height - 32, 1, -1);
         drawCorner(canvas.width - 32, canvas.height - 32, -1, -1);
 
-        const clsUpper = (className || '').toUpperCase();
+        const clsUpper = (activeClass || '').toUpperCase();
         const schoolName = clsUpper.includes('SMA') || clsUpper.includes('10') || clsUpper.includes('11') || clsUpper.includes('12') || clsUpper.includes('X') || clsUpper.includes('XI') || clsUpper.includes('XII')
           ? 'SMA TERPADU AS SALAAM'
           : 'SMP TERPADU AL-ITTIHADIYAH';
@@ -442,7 +444,7 @@ export default function StudentProfileLayer({
 
         ctx.font = 'bold 18px Arial, sans-serif';
         ctx.fillStyle = '#475569';
-        ctx.fillText(`Kelas ${className}  •  Tahun Ajaran ${academicYear}`, canvas.width / 2, 425);
+        ctx.fillText(`Kelas ${activeClass}  •  Tahun Ajaran ${activeYear}`, canvas.width / 2, 425);
 
         ctx.font = 'normal 16px Georgia, serif';
         ctx.fillStyle = '#334155';
@@ -491,7 +493,7 @@ export default function StudentProfileLayer({
         ctx.fillText('MASTER', canvas.width / 2, 658);
 
         const link = document.createElement('a');
-        link.download = `Sertifikat_Kedisiplinan_${studentName.replace(/ /g, '_')}_${className}.jpg`;
+        link.download = `Sertifikat_Kedisiplinan_${studentName.replace(/ /g, '_')}_${activeClass}.jpg`;
         link.href = canvas.toDataURL('image/jpeg', 0.95);
         link.click();
         setToast({ message: "Berhasil mengunduh Sertifikat Kedisiplinan (JPG)", type: "success" });
@@ -502,7 +504,7 @@ export default function StudentProfileLayer({
         const rows: any[] = [
           ['REKAPITULASI NILAI AKADEMIK TAHUNAN'],
           [`NAMA SISWA: ${studentName.toUpperCase()}`],
-          [`KELAS: ${className} • TAHUN AJARAN: ${academicYear}`],
+          [`KELAS: ${activeClass} • TAHUN AJARAN: ${activeYear}`],
           [],
           ['No', 'Mata Pelajaran', 'Ujian Sesi', 'KKM', 'Nilai Akhir', 'Status Kelulusan', 'Nilai Remedial']
         ];
@@ -555,7 +557,7 @@ export default function StudentProfileLayer({
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Rekap Akademik");
         
-        XLSX.writeFile(wb, `Rekap_Nilai_${studentName.replace(/ /g, '_')}_${className}.xlsx`);
+        XLSX.writeFile(wb, `Rekap_Nilai_${studentName.replace(/ /g, '_')}_${activeClass}.xlsx`);
         setToast({ message: "Berhasil mengunduh Rekap Nilai Tahunan (Excel)", type: "success" });
       }
     } catch (err: any) {
@@ -668,7 +670,7 @@ export default function StudentProfileLayer({
       list.push({
         id: 'member',
         label: 'Anggota Aktif',
-        desc: `Siswa ${getSchoolName(className)}`,
+        desc: `Siswa ${getSchoolName(activeClass)}`,
         icon: '🛡️',
         color: 'from-slate-500/10 to-slate-500/20 text-slate-800 border-slate-500/20'
       });
@@ -696,22 +698,27 @@ export default function StudentProfileLayer({
   }, []);
 
   useEffect(() => {
-    fetchStudentLogs();
     fetchStudentSummary();
-    fetchAttendanceLogs();
-    fetchLoginLogs();
-    fetchActiveSessions();
-    // fetchClassLeaderboard();
-    if (isAdmin) {
-      fetchBehaviorSettings();
-    }
     setTotalPoints(initialPoints);
     setCurrentAvatarUrl(avatarUrl);
-  }, [studentId, studentName, initialPoints, avatarUrl, isAdmin, className]);
+  }, [studentId, studentName, initialPoints, avatarUrl, className, academicYear]);
+
+  useEffect(() => {
+    if (activeClass && activeYear) {
+      fetchStudentLogs();
+      fetchAttendanceLogs();
+      fetchLoginLogs();
+      fetchActiveSessions();
+      // fetchClassLeaderboard();
+      if (isAdmin) {
+        fetchBehaviorSettings();
+      }
+    }
+  }, [studentId, studentName, activeClass, activeYear, isAdmin]);
 
   const fetchBehaviorSettings = async () => {
     try {
-      const res = await fetch(`/api/grademaster/behaviors/settings?year=${encodeURIComponent(academicYear)}`);
+      const res = await fetch(`/api/grademaster/behaviors/settings?year=${encodeURIComponent(activeYear)}`);
       const data = await res.json();
       if (res.ok && data.settings && Array.isArray(data.settings.reasons)) {
         setLocalReasons(data.settings.reasons);
@@ -722,15 +729,15 @@ export default function StudentProfileLayer({
   };
 
   const fetchClassLeaderboard = async () => {
-    if (!className) return;
+    if (!activeClass) return;
     setIsLoadingLeaderboard(true);
     try {
       // 1. Fetch class behaviors & logs
       const { data: behaviors, error: behaviorsError } = await supabase
         .from('gm_behaviors')
         .select('id, student_name, avatar_url')
-        .eq('class_name', className)
-        .eq('academic_year', academicYear);
+        .eq('class_name', activeClass)
+        .eq('academic_year', activeYear);
 
       let highestDemerits: { name: string; points: number } | null = null;
       let highestMerits: { name: string; points: number } | null = null;
@@ -776,8 +783,8 @@ export default function StudentProfileLayer({
       const { data: sessions, error: sessionsError } = await supabase
         .from('gm_sessions')
         .select('id, subject, exam_type, academic_year, semester')
-        .eq('class_name', className)
-        .eq('academic_year', academicYear);
+        .eq('class_name', activeClass)
+        .eq('academic_year', activeYear);
 
       const subjectsData: {
         id: string;
@@ -864,7 +871,7 @@ export default function StudentProfileLayer({
     if (!studentName) return;
     setIsLoadingAttendance(true);
     try {
-      const res = await fetch(`/api/grademaster/students/attendance-logs?name=${encodeURIComponent(studentName)}&year=${encodeURIComponent(academicYear)}&class=${encodeURIComponent(className)}`);
+      const res = await fetch(`/api/grademaster/students/attendance-logs?name=${encodeURIComponent(studentName)}&year=${encodeURIComponent(activeYear)}&class=${encodeURIComponent(activeClass)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.logs) {
@@ -879,10 +886,10 @@ export default function StudentProfileLayer({
   };
 
   const fetchLoginLogs = async () => {
-    if (!studentName || !className) return;
+    if (!studentName || !activeClass) return;
     setIsLoadingLoginLogs(true);
     try {
-      const res = await fetch(`/api/grademaster/students/login-logs?name=${encodeURIComponent(studentName || '')}&class=${encodeURIComponent(className || '')}`);
+      const res = await fetch(`/api/grademaster/students/login-logs?name=${encodeURIComponent(studentName || '')}&class=${encodeURIComponent(activeClass || '')}`);
       if (res.ok) {
         const data = await res.json();
         if (data.logs) {
@@ -1016,6 +1023,12 @@ export default function StudentProfileLayer({
         setStudentSummary(data);
         if (data.total_points !== undefined) {
           setTotalPoints(data.total_points);
+        }
+        if (data.resolvedClass) {
+          setActiveClass(data.resolvedClass);
+        }
+        if (data.resolvedYear) {
+          setActiveYear(data.resolvedYear);
         }
       }
     } catch (err) {
@@ -1222,9 +1235,9 @@ export default function StudentProfileLayer({
               </div>
               <div className="min-w-0 flex-1">
                 <h2 className="text-slate-800 font-extrabold text-[11.5px] tracking-tight leading-tight uppercase font-outfit truncate">
-                  {studentName} <span className="text-indigo-650 font-bold text-[9.5px] tracking-normal normal-case">({className})</span>
+                  {studentName} <span className="text-indigo-650 font-bold text-[9.5px] tracking-normal normal-case">({activeClass})</span>
                 </h2>
-                <p className="text-slate-400 text-[8px] font-bold uppercase tracking-wider leading-none mt-0.5">Tahun Ajaran {academicYear}</p>
+                <p className="text-slate-400 text-[8px] font-bold uppercase tracking-wider leading-none mt-0.5">Tahun Ajaran {activeYear}</p>
               </div>
             </div>
           ) : (
@@ -1283,7 +1296,7 @@ export default function StudentProfileLayer({
                     Halo, {studentName.split(' ')[0]}! 👋
                   </h3>
                   <p className="text-slate-300 text-[11px] font-semibold mt-1 leading-normal max-w-[210px]">
-                    Semoga hari belajarmu menyenangkan di {getSchoolName(className)}.
+                    Semoga hari belajarmu menyenangkan di {getSchoolName(activeClass)}.
                   </p>
                 </div>
                 
@@ -1819,7 +1832,7 @@ export default function StudentProfileLayer({
                   <h3 className="font-extrabold text-[15px] text-slate-800 font-outfit tracking-tight leading-snug">{studentName}</h3>
                   <div className="flex flex-wrap justify-center gap-1.5 mt-2">
                     <span className="px-3 py-1 bg-slate-100 border border-slate-200/50 text-slate-500 rounded-full text-[9px] font-extrabold uppercase tracking-wider">
-                      Kelas {className}
+                      Kelas {activeClass}
                     </span>
                     <span className="px-3 py-1 bg-indigo-50 border border-indigo-100/50 text-indigo-700 rounded-full text-[9px] font-extrabold uppercase tracking-wider">
                       ID: #{studentId.slice(0, 8).toUpperCase()}
@@ -1831,7 +1844,7 @@ export default function StudentProfileLayer({
                       {studentSummary.email}
                     </p>
                   )}
-                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-2">Tahun Ajaran {academicYear}</p>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-2">Tahun Ajaran {activeYear}</p>
                 </div>
 
                 {/* Score Grid (Pelanggaran vs Kebaikan - Big Modern Blocks) */}
