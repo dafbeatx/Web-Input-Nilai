@@ -36,6 +36,7 @@ export default function StudentAccountsLayer({
   const [promoteToYear, setPromoteToYear] = useState('');
   const [promoteToClassSelect, setPromoteToClassSelect] = useState('');
   const [isPromoting, setIsPromoting] = useState(false);
+  const [hasBehaviors, setHasBehaviors] = useState(false);
 
   useEffect(() => {
     setSelectedYear(activeYear);
@@ -81,7 +82,7 @@ export default function StudentAccountsLayer({
       });
       const data = await res.json();
       if (res.ok) {
-        setToast({ message: `Berhasil menaikkan ${accounts.length} siswa ke Kelas ${promoteToClass} 🎉`, type: 'success' });
+        setToast({ message: data.message || `Berhasil menaikkan siswa ke Kelas ${promoteToClass} 🎉`, type: 'success' });
         setShowPromoteModal(false);
         const promotedClass = promoteToClass;
         const promotedYear = promoteToYear;
@@ -121,6 +122,25 @@ export default function StudentAccountsLayer({
     }
   }, [selectedYear]);
 
+  // Cek apakah ada data behaviors (roster siswa) untuk kelas yang dipilih
+  const fetchBehaviorCount = useCallback(async () => {
+    if (!selectedClass) {
+      setHasBehaviors(false);
+      return;
+    }
+    try {
+      const res = await fetch(
+        `/api/grademaster/behaviors?class=${encodeURIComponent(selectedClass)}&year=${encodeURIComponent(selectedYear)}&countOnly=true`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setHasBehaviors((data.count || data.students?.length || 0) > 0);
+      }
+    } catch {
+      setHasBehaviors(false);
+    }
+  }, [selectedClass, selectedYear]);
+
   const fetchAccounts = useCallback(async () => {
     if (!selectedClass) return;
     setIsLoading(true);
@@ -143,6 +163,7 @@ export default function StudentAccountsLayer({
 
   useEffect(() => { fetchClasses(); }, [fetchClasses]);
   useEffect(() => { fetchAccounts(); }, [fetchAccounts]);
+  useEffect(() => { fetchBehaviorCount(); }, [fetchBehaviorCount]);
   
   useEffect(() => {
     if (activeClass) {
@@ -362,7 +383,7 @@ export default function StudentAccountsLayer({
               setPromoteToYear(getNextAcademicYear(selectedYear));
               setShowPromoteModal(true);
             }}
-            disabled={accounts.length === 0}
+            disabled={accounts.length === 0 && !hasBehaviors}
             className="flex items-center justify-center gap-2 px-4 py-3 bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 hover:bg-indigo-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 min-h-[44px]"
           >
             <TrendingUp size={16} />
