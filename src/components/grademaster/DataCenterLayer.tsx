@@ -24,7 +24,7 @@ interface StudentData {
 }
 
 export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
-  const { adminUser, setToast, academicYear } = useGradeMaster();
+  const { adminUser, setToast, academicYear, setAcademicYear: setGlobalAcademicYear } = useGradeMaster();
   const [isLoading, setIsLoading] = useState(true);
   const [students, setStudents] = useState<StudentData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -177,6 +177,11 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
   useEffect(() => {
     fetchStudents();
   }, []);
+
+  useEffect(() => {
+    setNewStudent(prev => ({ ...prev, academicYear }));
+    setImportMeta(prev => ({ ...prev, academicYear }));
+  }, [academicYear]);
 
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1240,13 +1245,17 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     }
   };
 
-  const uniqueClasses = ['Semua', ...Array.from(new Set(students.map(s => s.className))).sort()];
+  const uniqueClasses = [
+    'Semua', 
+    ...Array.from(new Set(students.filter(s => s.academicYear === academicYear).map(s => s.className))).sort()
+  ];
 
   const filteredStudents = students.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           s.className.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesClass = selectedClass === 'Semua' || s.className === selectedClass;
-    return matchesSearch && matchesClass;
+    const matchesYear = s.academicYear === academicYear;
+    return matchesSearch && matchesClass && matchesYear;
   });
 
   return (
@@ -1258,9 +1267,22 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
           </button>
           <h1 className="font-headline font-bold text-lg tracking-tight text-primary uppercase flex items-center gap-2">
              <Database size={18} /> Pusat Data Terpadu
-          </h1>
-        </div>
-      </header>
+           </h1>
+         </div>
+         <div className="flex items-center gap-2">
+           <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant/70">Tahun Ajaran:</span>
+           <select
+             value={academicYear}
+             onChange={(e) => setGlobalAcademicYear(e.target.value)}
+             className="bg-transparent text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#0061FF] hover:text-[#0052d4] cursor-pointer outline-none border-b border-dashed border-[#0061FF]/40 focus:border-[#0061FF] transition-all"
+           >
+             <option value="2024/2025" className="text-on-surface">2024/2025</option>
+             <option value="2025/2026" className="text-on-surface">2025/2026</option>
+             <option value="2026/2027" className="text-on-surface">2026/2027</option>
+             <option value="2027/2028" className="text-on-surface">2027/2028</option>
+           </select>
+         </div>
+       </header>
 
       <main className="flex-1 pt-24 pb-32 px-4 sm:px-6 flex flex-col gap-6 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
         
