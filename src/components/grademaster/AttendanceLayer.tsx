@@ -47,7 +47,7 @@ export default function AttendanceLayer({
   activeClass = '', 
   activeYear = '2025/2026' 
 }: AttendanceLayerProps) {
-  const { setLayer, adminUser, studentData } = useGradeMaster();
+  const { setLayer, adminUser, studentData, setAcademicYear: setGlobalAcademicYear } = useGradeMaster();
   const [className, setClassName] = useState(activeClass || '');
   const [academicYear, setAcademicYear] = useState(activeYear || '2025/2026');
   const [subject, setSubject] = useState('Informatika');
@@ -303,7 +303,19 @@ export default function AttendanceLayer({
         {/* Title Section */}
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 mb-1 block">Tahun Ajaran {academicYear}</span>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">Tahun Ajaran:</span>
+              <select
+                value={academicYear}
+                onChange={(e) => setGlobalAcademicYear(e.target.value)}
+                className="bg-transparent text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#0061FF] hover:text-[#0052d4] cursor-pointer outline-none border-b border-dashed border-[#0061FF]/40 focus:border-[#0061FF] transition-all"
+              >
+                <option value="2024/2025" className="text-on-surface">2024/2025</option>
+                <option value="2025/2026" className="text-on-surface">2025/2026</option>
+                <option value="2026/2027" className="text-on-surface">2026/2027</option>
+                <option value="2027/2028" className="text-on-surface">2027/2028</option>
+              </select>
+            </div>
             <div className="flex items-center gap-3">
               <button onClick={onBack} className="w-9 h-9 shrink-0 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors active:scale-95">
                 <span className="material-symbols-outlined text-slate-600 shrink-0">arrow_back</span>
