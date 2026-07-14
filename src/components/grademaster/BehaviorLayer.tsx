@@ -80,11 +80,13 @@ export default function BehaviorLayer({
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
 
   useEffect(() => {
-    fetchBehaviorSettings();
-    fetchAvailableClasses().then((classes) => {
+    const yearToUse = activeYear || '2025/2026';
+    setAcademicYear(yearToUse);
+    fetchBehaviorSettings(yearToUse);
+    fetchAvailableClasses(yearToUse).then(() => {
       const initialClass = activeClass && activeClass !== "" ? activeClass : 'Semua Kelas';
       setClassName(initialClass);
-      loadClassDirectly(initialClass, activeYear || '2025/2026');
+      loadClassDirectly(initialClass, yearToUse);
     });
   }, [activeClass, activeYear]);
 
@@ -131,9 +133,9 @@ export default function BehaviorLayer({
     };
   }, [isLoaded, selectedStudent, className, academicYear]);
 
-  const fetchBehaviorSettings = async () => {
+  const fetchBehaviorSettings = async (year = academicYear) => {
     try {
-      const res = await fetch(`/api/grademaster/behaviors/settings?year=${encodeURIComponent(academicYear)}`);
+      const res = await fetch(`/api/grademaster/behaviors/settings?year=${encodeURIComponent(year)}`);
       const data = await res.json();
       if (res.ok && data.settings && Array.isArray(data.settings.reasons)) {
         setBehaviorReasons(data.settings.reasons);
@@ -148,10 +150,10 @@ export default function BehaviorLayer({
 
 
 
-  const fetchAvailableClasses = async () => {
+  const fetchAvailableClasses = async (year = academicYear) => {
     setIsLoadingClasses(true);
     try {
-      const res = await fetch(`/api/grademaster/behaviors?year=${encodeURIComponent(academicYear)}`);
+      const res = await fetch(`/api/grademaster/behaviors?year=${encodeURIComponent(year)}`);
       const data = await res.json();
       if (res.ok) {
         const sortedClasses = (data.classes || []).sort((a: string, b: string) => 

@@ -70,6 +70,16 @@ export default function AttendanceLayer({
 
   const subjects = ["Informatika", "Matematika", "IPA", "IPS", "Bahasa Indonesia", "Bahasa Inggris", "PAI", "PJOK", "Seni Budaya", "PKn"];
 
+  // Sync props to state when they change
+  useEffect(() => {
+    if (activeYear) {
+      setAcademicYear(activeYear);
+    }
+    if (activeClass) {
+      setClassName(activeClass);
+    }
+  }, [activeClass, activeYear]);
+
   useEffect(() => {
     fetchAvailableClasses();
   }, [academicYear]);
