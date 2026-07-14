@@ -211,60 +211,82 @@ export async function POST(req: NextRequest) {
     if (!adminSession) return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
 
     const body = await req.json();
-    const { name, className, academicYear } = body;
+    const { name, names, className, academicYear } = body;
 
-    if (!name || !className) return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 });
+    // Support both single (name) and bulk (names) input
+    const nameList: string[] = names
+      ? (names as string[]).map((n: string) => n.trim()).filter((n: string) => n.length > 0)
+      : name ? [name.trim()] : [];
+
+    if (nameList.length === 0 || !className) {
+      return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 });
+    }
 
     const supabase = await createClient();
+    const year = academicYear || '2025/2026';
+    let added = 0;
+    let skipped = 0;
+    const skippedNames: string[] = [];
 
-    // Check existing
-    const { data: existing } = await supabase.from('gm_student_accounts')
-      .select('id').eq('student_name', name).eq('class_name', className).single();
-      
-    if (existing) {
-      return NextResponse.json({ error: 'Siswa sudah ada di kelas ini' }, { status: 400 });
-    }
+    for (const studentName of nameList) {
+      // Check existing
+      const { data: existing } = await supabase.from('gm_student_accounts')
+        .select('id').eq('student_name', studentName).eq('class_name', className).single();
 
-    // Find previous behavior data (if any) to carry over points/logs/avatar
-    const { data: prevBehavior } = await supabase
-      .from('gm_behaviors')
-      .select('total_points, behavior_logs, avatar_url')
-      .eq('student_name', name)
-      .order('academic_year', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      if (existing) {
+        skipped++;
+        skippedNames.push(studentName);
+        continue;
+      }
 
-    const totalPoints = prevBehavior?.total_points ?? 0;
-    const behaviorLogs = prevBehavior?.behavior_logs ?? [];
-    const avatarUrl = prevBehavior?.avatar_url ?? null;
+      // Find previous behavior data (if any) to carry over points/logs/avatar
+      const { data: prevBehavior } = await supabase
+        .from('gm_behaviors')
+        .select('total_points, behavior_logs, avatar_url')
+        .eq('student_name', studentName)
+        .order('academic_year', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    // Create the student account record
-    const { error: insertError } = await supabase.from('gm_student_accounts').insert({
-      student_name: name,
-      class_name: className,
-      academic_year: academicYear || '2025/2026',
-      username: name.toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 1000)
-    });
+      const totalPoints = prevBehavior?.total_points ?? 0;
+      const behaviorLogs = prevBehavior?.behavior_logs ?? [];
+      const avatarUrl = prevBehavior?.avatar_url ?? null;
 
-    if (insertError) throw insertError;
-
-    // Upsert the behavior record in gm_behaviors to link behavior data
-    const { error: behaviorError } = await supabase
-      .from('gm_behaviors')
-      .upsert({
-        student_name: name,
+      // Create the student account record
+      const { error: insertError } = await supabase.from('gm_student_accounts').insert({
+        student_name: studentName,
         class_name: className,
-        academic_year: academicYear || '2025/2026',
-        total_points: totalPoints,
-        behavior_logs: behaviorLogs,
-        avatar_url: avatarUrl
-      }, { onConflict: 'student_name,class_name,academic_year' });
+        academic_year: year,
+        username: studentName.toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 1000)
+      });
 
-    if (behaviorError) {
-      console.error('[POST Student] Error upserting behavior:', behaviorError);
+      if (insertError) {
+        skipped++;
+        skippedNames.push(studentName);
+        continue;
+      }
+
+      // Upsert the behavior record in gm_behaviors to link behavior data
+      await supabase
+        .from('gm_behaviors')
+        .upsert({
+          student_name: studentName,
+          class_name: className,
+          academic_year: year,
+          total_points: totalPoints,
+          behavior_logs: behaviorLogs,
+          avatar_url: avatarUrl
+        }, { onConflict: 'student_name,class_name,academic_year' });
+
+      added++;
     }
 
-    return NextResponse.json({ success: true, message: `Siswa ${name} berhasil ditambahkan.` });
+    let message = `${added} siswa berhasil ditambahkan ke Kelas ${className}.`;
+    if (skipped > 0) {
+      message += ` ${skipped} dilewati (sudah ada: ${skippedNames.join(', ')}).`;
+    }
+
+    return NextResponse.json({ success: true, message, added, skipped });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

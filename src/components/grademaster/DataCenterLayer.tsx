@@ -31,24 +31,9 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
   const [selectedClass, setSelectedClass] = useState<string>('Semua');
   
   const [isAddingStudent, setIsAddingStudent] = useState(false);
-  const [newStudent, setNewStudent] = useState({ name: '', className: '', academicYear: '2025/2026' });
-  const [showSuggestions, setShowSuggestions] = useState(false);
-
-  const studentSuggestions = React.useMemo(() => {
-    if (!newStudent.name || newStudent.name.length < 2) return [];
-    const seen = new Set<string>();
-    const filtered: StudentData[] = [];
-    for (const s of students) {
-      if (s.name.toLowerCase().includes(newStudent.name.toLowerCase()) && s.name.toLowerCase() !== newStudent.name.toLowerCase()) {
-        const key = `${s.name.toLowerCase()}__${s.className.toLowerCase()}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          filtered.push(s);
-        }
-      }
-    }
-    return filtered.slice(0, 5);
-  }, [newStudent.name, students]);
+  const [bulkNames, setBulkNames] = useState('');
+  const [bulkClassName, setBulkClassName] = useState('');
+  const [addMode, setAddMode] = useState<'single' | 'bulk'>('bulk');
 
   // Excel Import states
   const [isExcelImport, setIsExcelImport] = useState(false);
@@ -179,25 +164,29 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
   }, []);
 
   useEffect(() => {
-    setNewStudent(prev => ({ ...prev, academicYear }));
     setImportMeta(prev => ({ ...prev, academicYear }));
   }, [academicYear]);
 
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
+    const names = bulkNames.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+    if (names.length === 0 || !bulkClassName.trim()) {
+      setToast({ message: 'Nama siswa dan kelas wajib diisi', type: 'error' });
+      return;
+    }
     try {
       setIsSubmitting(true);
       const res = await fetch('/api/grademaster/data-center/students', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newStudent, academicYear: academicYear })
+        body: JSON.stringify({ names, className: bulkClassName.trim(), academicYear })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setToast({ message: data.message, type: 'success' });
       setIsAddingStudent(false);
-      setShowSuggestions(false);
-      setNewStudent({ name: '', className: '', academicYear: '2025/2026' });
+      setBulkNames('');
+      setBulkClassName('');
       fetchStudents();
     } catch (err: any) {
       setToast({ message: err.message, type: 'error' });
@@ -1245,17 +1234,13 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     }
   };
 
-  const uniqueClasses = [
-    'Semua', 
-    ...Array.from(new Set(students.filter(s => s.academicYear === academicYear).map(s => s.className))).sort()
-  ];
+  const uniqueClasses = ['Semua', ...Array.from(new Set(students.map(s => s.className))).sort()];
 
   const filteredStudents = students.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           s.className.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesClass = selectedClass === 'Semua' || s.className === selectedClass;
-    const matchesYear = s.academicYear === academicYear;
-    return matchesSearch && matchesClass && matchesYear;
+    return matchesSearch && matchesClass;
   });
 
   return (
@@ -1461,59 +1446,43 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       {/* Add Student Modal */}
       {isAddingStudent && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { if (!isSubmitting) { setIsAddingStudent(false); setShowSuggestions(false); } }} />
-          <div className="bg-surface rounded-3xl p-6 w-full max-w-sm relative z-10 border border-outline-variant/20 shadow-2xl animate-in zoom-in-95 duration-200">
-             <h3 className="text-lg font-headline font-bold text-primary mb-4 flex items-center gap-2"><Plus size={20} className="text-tertiary" /> Tambah Siswa Baru</h3>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { if (!isSubmitting) setIsAddingStudent(false); }} />
+          <div className="bg-surface rounded-3xl p-6 w-full max-w-md relative z-10 border border-outline-variant/20 shadow-2xl animate-in zoom-in-95 duration-200">
+             <h3 className="text-lg font-headline font-bold text-primary mb-1 flex items-center gap-2"><Plus size={20} className="text-tertiary" /> Tambah Siswa</h3>
+             <p className="text-[11px] text-on-surface-variant mb-4">Masukkan satu atau banyak nama siswa sekaligus (satu nama per baris).</p>
              <form onSubmit={handleAddStudent} className="space-y-4">
-               <div className="relative">
-                 <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1 mb-1 block">Nama Lengkap</label>
+               <div>
+                 <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1 mb-1 block">Kelas Tujuan</label>
                  <input 
                    required 
                    type="text" 
-                   value={newStudent.name} 
-                   onChange={e => {
-                     setNewStudent({...newStudent, name: e.target.value});
-                     setShowSuggestions(true);
-                   }} 
-                   onFocus={() => setShowSuggestions(true)}
+                   value={bulkClassName} 
+                   onChange={e => setBulkClassName(e.target.value)} 
                    className="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-primary focus:ring-1 focus:ring-tertiary/40 outline-none" 
-                   placeholder="Masukkan nama siswa..." 
+                   placeholder="Contoh: 8A" 
                  />
-                 {showSuggestions && studentSuggestions.length > 0 && (
-                   <>
-                     <div className="fixed inset-0 z-40" onClick={() => setShowSuggestions(false)} />
-                     <div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-outline-variant rounded-xl shadow-lg z-50 overflow-hidden max-h-48 overflow-y-auto">
-                       {studentSuggestions.map((s) => (
-                         <button
-                           key={s.id}
-                           type="button"
-                           onClick={() => {
-                             setNewStudent({
-                               ...newStudent,
-                               name: s.name,
-                             });
-                             setShowSuggestions(false);
-                           }}
-                           className="w-full text-left px-4 py-2.5 hover:bg-surface-variant text-xs text-primary font-bold border-b border-outline-variant/10 last:border-0 flex flex-col gap-0.5"
-                         >
-                           <span>{s.name}</span>
-                           <span className="text-[10px] text-on-surface-variant/70 font-normal">
-                             Sebelumnya: {s.className} • Poin: {s.behaviorPoints}
-                           </span>
-                         </button>
-                       ))}
-                     </div>
-                   </>
-                 )}
                </div>
                <div>
-                 <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1 mb-1 block">Kelas</label>
-                 <input required type="text" value={newStudent.className} onChange={e => setNewStudent({...newStudent, className: e.target.value})} className="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-primary focus:ring-1 focus:ring-tertiary/40 outline-none" placeholder="Contoh: 10 IPA 1" />
+                 <div className="flex items-center justify-between mb-1">
+                   <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Nama Siswa</label>
+                   <span className="text-[10px] font-bold text-tertiary">
+                     {bulkNames.split('\n').filter(n => n.trim()).length} siswa
+                   </span>
+                 </div>
+                 <textarea 
+                   required 
+                   value={bulkNames} 
+                   onChange={e => setBulkNames(e.target.value)} 
+                   rows={8}
+                   className="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-primary focus:ring-1 focus:ring-tertiary/40 outline-none resize-none font-mono leading-relaxed" 
+                   placeholder={"Ahmad Fauzi\nSiti Nurhaliza\nBudi Santoso\nDewi Lestari\n..."} 
+                 />
+                 <p className="text-[10px] text-on-surface-variant/60 mt-1 ml-1">Tahun Ajaran: <strong className="text-[#0061FF]">{academicYear}</strong> (sesuaikan di header jika perlu)</p>
                </div>
                <div className="flex gap-3 pt-2">
                   <button 
                     type="button" 
-                    onClick={() => { setIsAddingStudent(false); setShowSuggestions(false); }} 
+                    onClick={() => setIsAddingStudent(false)} 
                     disabled={isSubmitting}
                     className="flex-1 py-3 bg-surface-container text-on-surface-variant rounded-xl text-xs font-bold uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -1521,10 +1490,10 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
                   </button>
                   <button 
                     type="submit" 
-                    disabled={isSubmitting} 
+                    disabled={isSubmitting || bulkNames.split('\n').filter(n => n.trim()).length === 0} 
                     className="flex-1 py-3 bg-primary text-white rounded-xl text-xs font-bold uppercase tracking-widest flex justify-center items-center disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Simpan'}
+                    {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : `Simpan ${bulkNames.split('\n').filter(n => n.trim()).length} Siswa`}
                   </button>
                </div>
              </form>
