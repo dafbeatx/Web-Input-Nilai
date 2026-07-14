@@ -1,0 +1,126 @@
+import bcrypt from 'bcryptjs';
+
+const SALT_ROUNDS = 10;
+
+export async function hashPassword(plain: string): Promise<string> {
+  return bcrypt.hash(plain, SALT_ROUNDS);
+}
+
+export async function verifyPassword(plain: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(plain, hash);
+}
+
+export function validateSessionInput(body: {
+  sessionName?: string;
+  password?: string;
+  teacher?: string;
+  subject?: string;
+}): string | null {
+  if (!body.sessionName || body.sessionName.trim().length < 2) {
+    return 'Nama sesi minimal 2 karakter';
+  }
+  if (body.sessionName.trim().length > 100) {
+    return 'Nama sesi maksimal 100 karakter';
+  }
+  if (!body.password || body.password.trim().length < 4) {
+    return 'Password minimal 4 karakter';
+  }
+  if (body.password.trim().length > 72) {
+    return 'Password maksimal 72 karakter';
+  }
+  if (body.teacher && body.teacher.trim().length > 100) {
+    return 'Nama guru maksimal 100 karakter';
+  }
+  if (body.subject && body.subject.trim().length > 100) {
+    return 'Mata pelajaran maksimal 100 karakter';
+  }
+  return null;
+}
+
+// Simple in-memory rate limiter
+const attempts = new Map<string, { count: number; resetAt: number }>();
+const MAX_ATTEMPTS = 10;
+const WINDOW_MS = 60 * 1000; // 1 minute
+
+export function checkRateLimit(identifier: string): boolean {
+  const now = Date.now();
+  const entry = attempts.get(identifier);
+
+  if (!entry || now > entry.resetAt) {
+    attempts.set(identifier, { count: 1, resetAt: now + WINDOW_MS });
+    return true;
+  }
+
+  if (entry.count >= MAX_ATTEMPTS) {
+    return false;
+  }
+
+  entry.count++;
+  return true;
+}
+
+import { assessClientRisk, assessServerRisk, mergeRiskAssessments } from './services/risk-engine.service';
+
+/**
+ * Legacy wrapper — delegates to risk engine.
+ * Kept for backward compatibility with existing callers.
+ */
+export function detectCheating(
+  student: any,
+  allStudents: any[],
+  session: any,
+  submissionTimeMs: number
+): { isCheated: boolean; flags: string[] } {
+  const serverRisk = assessServerRisk(
+    student.remedialAnswers || [],
+    allStudents.map(s => ({
+      id: s.id,
+      name: s.name,
+      remedialAnswers: s.remedial_answers || s.remedialAnswers || [],
+    })),
+    student.id,
+    submissionTimeMs,
+    session.remedial_timer || 15
+  );
+
+  return {
+    isCheated: serverRisk.shouldAutoFlag,
+    flags: serverRisk.flags.map(f => f.event),
+  };
+}
+
+const BLACKLISTED_EMAILS = new Set([
+  'chintiaandini8103@gmail.com'
+]);
+
+export function isEmailBlacklisted(email: string): boolean {
+  if (!email) return false;
+  return BLACKLISTED_EMAILS.has(email.toLowerCase().trim());
+}
+
+/**
+ * Validates if the request contains the correct internal API token.
+ * This is used for secure service-to-service communication.
+ */
+export function validateInternalToken(req: Request): boolean {
+  const authHeader = req.headers.get('Authorization');
+  const internalToken = process.env.GRADEMASTER_INTERNAL_TOKEN;
+
+  if (!internalToken) return false;
+
+  // Support both "Bearer <token>" and direct "<token>" comparison
+  if (authHeader) {
+    if (authHeader === internalToken || authHeader === `Bearer ${internalToken}`) {
+      return true;
+    }
+  }
+
+  // Also check custom header x-internal-token
+  const customHeader = req.headers.get('x-internal-token');
+  if (customHeader && customHeader === internalToken) {
+    return true;
+  }
+
+  return false;
+}
+

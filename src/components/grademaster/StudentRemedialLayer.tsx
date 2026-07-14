@@ -1,0 +1,3935 @@
+"use client";
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ToastType } from '@/lib/grademaster/types';
+import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, CameraOff, Clock, CheckCircle2, MapPin, User, Star, ShieldCheck, ArrowRight, Cpu, MonitorOff, Play, Monitor, Activity, AppWindow, Wifi, Video, CloudLightning, Info, FileText, CircleHelp, Settings, LayoutTemplate, RefreshCw } from 'lucide-react';
+import ProctoringCamera from './ProctoringCamera';
+import { saveRemedialSession, loadRemedialSession, clearRemedialSession } from '@/lib/grademaster/session';
+import { assessClientRisk } from '@/lib/grademaster/services/risk-engine.service';
+import { useExamMonitor } from '@/lib/grademaster/hooks/useExamMonitor';
+
+interface StudentRemedialLayerProps {
+  studentName: string;
+  subject: string;
+  remedialEssayCount: number;
+  remedialTimer: number;
+  remedialQuestions: string[];
+  sessionId: string;
+  className: string;
+  academicYear: string;
+  examType: string;
+  semester: string;
+  kkm: number;
+  onBack: () => void;
+  setToast: (t: ToastType) => void;
+}
+
+type RemedialStep = 'RULES' | 'INFO' | 'GUIDE' | 'EXAM' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT' | 'SECOND_CHANCE' | 'AI_BOT_DETECTED' | 'SUBMITTED' | 'FAILED_EFFORT' | 'TIME_UP';
+
+const Badge = ({ children, color = 'indigo' }: { children: React.ReactNode; color?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'rose' }) => {
+  const colors = {
+    indigo: 'bg-primary/10 text-primary border-primary/20',
+    emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    slate: 'bg-surface-variant text-on-surface-variant border-outline-variant',
+    rose: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+  };
+  return (
+    <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-tight border shadow-sm inline-block ${colors[color]}`}>
+      {children}
+    </span>
+  );
+};
+const QuestionCanvas = ({ text }: { text: string }) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [dimensions, setDimensions] = useState({ width: 600, height: 100 });
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const updateSize = () => {
+      if (containerRef.current) {
+        setDimensions({
+          width: containerRef.current.clientWidth,
+          height: 0 
+        });
+      }
+    };
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || dimensions.width <= 0) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const font = 'italic bold 18px Outfit, Inter, sans-serif';
+    ctx.font = font;
+
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+    const maxWidth = dimensions.width - 40; 
+
+    for (let i = 0; i < words.length; i++) {
+      const testLine = currentLine ? currentLine + ' ' + words[i] : words[i];
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && i > 0) {
+        lines.push(currentLine);
+        currentLine = words[i];
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    const lineHeight = 28;
+    const padding = 20;
+    const calculatedHeight = lines.length * lineHeight + padding * 2;
+
+    canvas.width = dimensions.width * dpr;
+    canvas.height = calculatedHeight * dpr;
+    canvas.style.width = `${dimensions.width}px`;
+    canvas.style.height = `${calculatedHeight}px`;
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+
+    let textColor = '#cbd5e1'; 
+    if (containerRef.current) {
+      const computed = window.getComputedStyle(containerRef.current);
+      textColor = computed.color || textColor;
+    }
+
+    ctx.clearRect(0, 0, dimensions.width, calculatedHeight);
+    ctx.font = font;
+    ctx.fillStyle = textColor;
+    ctx.textBaseline = 'top';
+
+    lines.forEach((line, index) => {
+      ctx.fillText(line, padding, padding + index * lineHeight);
+    });
+  }, [text, dimensions.width]);
+
+  return (
+    <div ref={containerRef} className="w-full bg-surface-variant rounded-[2rem] border border-outline-variant shadow-sm overflow-hidden select-none" onContextMenu={(e) => e.preventDefault()}>
+      <canvas ref={canvasRef} className="block select-none pointer-events-none w-full" />
+    </div>
+  );
+};
+
+const compressImage = async (base64Str: string, maxWidth = 320, quality = 0.6): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxWidth) {
+        height = (maxWidth / width) * height;
+        width = maxWidth;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(base64Str);
+  });
+};
+
+const computeSimpleHash = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): string => {
+  const w = canvas.width;
+  const h = canvas.height;
+  const samplePoints = [
+    [Math.floor(w * 0.25), Math.floor(h * 0.25)],
+    [Math.floor(w * 0.5), Math.floor(h * 0.25)],
+    [Math.floor(w * 0.75), Math.floor(h * 0.25)],
+    [Math.floor(w * 0.25), Math.floor(h * 0.5)],
+    [Math.floor(w * 0.5), Math.floor(h * 0.5)],
+    [Math.floor(w * 0.75), Math.floor(h * 0.5)],
+    [Math.floor(w * 0.25), Math.floor(h * 0.75)],
+    [Math.floor(w * 0.5), Math.floor(h * 0.75)],
+    [Math.floor(w * 0.75), Math.floor(h * 0.75)],
+    [Math.floor(w * 0.1), Math.floor(h * 0.1)],
+    [Math.floor(w * 0.9), Math.floor(h * 0.9)],
+    [Math.floor(w * 0.5), Math.floor(h * 0.1)],
+  ];
+  let hash = '';
+  for (const [x, y] of samplePoints) {
+    const pixel = ctx.getImageData(x, y, 1, 1).data;
+    hash += `${Math.floor(pixel[0] / 16)}${Math.floor(pixel[1] / 16)}${Math.floor(pixel[2] / 16)}`;
+  }
+  return hash;
+};
+
+const getDeviceInfo = () => {
+  if (typeof window === 'undefined') return 'unknown';
+  const ua = navigator.userAgent;
+  let os = "Other";
+  if (ua.indexOf("Win") !== -1) os = "Windows";
+  if (ua.indexOf("Mac") !== -1) os = "MacOS";
+  if (ua.indexOf("Android") !== -1) os = "Android";
+  if (ua.indexOf("iPhone") !== -1 || ua.indexOf("iPad") !== -1) os = "iOS";
+
+  let browser = "Other";
+  if (ua.indexOf("Chrome") !== -1) browser = "Chrome";
+  else if (ua.indexOf("Firefox") !== -1) browser = "Firefox";
+  else if (ua.indexOf("Safari") !== -1) browser = "Safari";
+  else if (ua.indexOf("Edge") !== -1) browser = "Edge";
+  
+  return `${os} | ${browser}`;
+};
+
+const getNetworkInfo = () => {
+  if (typeof navigator === 'undefined') return 'unknown';
+  const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+  if (!conn) return 'unknown';
+  return `${conn.effectiveType || 'unknown'} (${conn.downlink || '?'}Mbps)`;
+};
+
+export default function StudentRemedialLayer({
+  studentName,
+  subject,
+  remedialEssayCount,
+  remedialTimer,
+  remedialQuestions,
+  sessionId,
+  className,
+  academicYear,
+  examType,
+  semester,
+  kkm,
+  onBack,
+  setToast,
+}: StudentRemedialLayerProps) {
+  const [step, setStep] = useState<RemedialStep>('RULES');
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<string[]>(() => {
+    const len = (remedialQuestions && remedialQuestions.length > 0) ? remedialQuestions.length : remedialEssayCount;
+    return new Array(len).fill("");
+  });
+  const [timeLeft, setTimeLeft] = useState(remedialTimer * 60);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionLabel, setSubmissionLabel] = useState("");
+  const [isSubmissionBackupSaved, setIsSubmissionBackupSaved] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<string>('');
+  const [note, setNote] = useState("");
+  const [shuffledQuestions, setShuffledQuestions] = useState<{text: string, originalIndex: number}[]>([]);
+  const [invalidQuestionIndices, setInvalidQuestionIndices] = useState<number[]>([]);
+  const [attemptId, setAttemptId] = useState<string | null>(null);
+  const [attemptToken, setAttemptToken] = useState<string | null>(null);
+  const [currentStudentId, setCurrentStudentId] = useState<string | null>(null);
+  
+  // Points & Time Extension State
+  const [pointsBal, setPointsBal] = useState<{total: number, usedToday: number} | null>(null);
+  const [showTimeUpModal, setShowTimeUpModal] = useState(false);
+  const [extendLoading, setExtendLoading] = useState(false);
+  const [pointsToSpend, setPointsToSpend] = useState<number>(3);
+  const hasActivatedRef = useRef(false);
+  const [cameraRetryCount, setCameraRetryCount] = useState(0);
+  const [cameraErrorDetail, setCameraErrorDetail] = useState<string | null>(null);
+  const [examMode, setExamMode] = useState<'STRICT' | 'LIMITED'>('STRICT');
+  const [cameraStatus, setCameraStatus] = useState<'ACTIVE' | 'FAILED'>('ACTIVE');
+  const [isCameraActive, setIsCameraActive] = useState(true);
+  const [faceStatus, setFaceStatus] = useState<'calibrating' | 'detected' | 'not_detected'>('calibrating');
+  const MAX_CAMERA_RETRIES = 5;
+  
+  const [warningCount, setWarningCount] = useState(0);
+  const [tabWarningCount, setTabWarningCount] = useState(0);
+  const [clientCheatingFlags, setClientCheatingFlags] = useState<string[]>([]);
+  const [serverCheatingFlags, setServerCheatingFlags] = useState<string[]>([]);
+  const hasTriggeredCheatingRef = useRef(false);
+  const hasTriggeredSecondChanceRef = useRef(false);
+  const hasProcessedOverlayWarningRef = useRef(false);
+  const startedAtRef = useRef<number>(0);
+  const isRefreshingRef = useRef(false);
+  const isDeploymentReloadRef = useRef(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [backPressCount, setBackPressCount] = useState(0);
+  const [secondChanceUsed, setSecondChanceUsed] = useState(false);
+  const [secondChanceReason, setSecondChanceReason] = useState('');
+  const [isOffline, setIsOffline] = useState(false);
+  const [networkWarningCount, setNetworkWarningCount] = useState(0);
+  const MAX_NETWORK_WARNINGS = 3;
+  const [activeWarning, setActiveWarning] = useState<{
+    type: 'TAB' | 'NETWORK' | 'CAMERA';
+    count: number;
+    limit: number;
+    message: string;
+  } | null>(null);
+  const [isTabHidden, setIsTabHidden] = useState(false);
+  const [isPermanentlyBlocked, setIsPermanentlyBlocked] = useState(false);
+  const [remainingStudents, setRemainingStudents] = useState<{name: string}[]>([]);
+  const [sessionCreatedAt, setSessionCreatedAt] = useState<string | null>(null);
+  const [finalScore, setFinalScore] = useState<number | null>(null);
+  const [essayAutoDetails, setEssayAutoDetails] = useState<{ similarity: number; score: number }[]>([]);
+  const [remedialAnswerKeys, setRemedialAnswerKeys] = useState<string[]>([]);
+  
+  // Holdback & Scoring States
+  const [isHeldBack, setIsHeldBack] = useState<boolean>(false);
+  const [remedialScore, setRemedialScore] = useState<number | null>(null);
+  const [pendingRemedialCount, setPendingRemedialCount] = useState<number>(0);
+  const [holdbackReason, setHoldbackReason] = useState<string | null>(null);
+  const [rawScore, setRawScore] = useState<number | null>(null);
+  const [displayedScore, setDisplayedScore] = useState<number | null>(null);
+  const [failedReason, setFailedReason] = useState<string | null>(null);
+
+  // Refs to prevent stale closures in timeout useEffect
+  const answersRef = useRef(answers);
+  const noteRef = useRef(note);
+
+  React.useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
+  React.useEffect(() => {
+    noteRef.current = note;
+  }, [note]);
+
+  const hasSubmittedRef = useRef(false);
+  const hasSentStartNotifRef = useRef(false);
+  const wakeLockRef = useRef<any>(null); // Screen Wake Lock
+  const lastPhotoHashRef = useRef<string>(''); // Dedup: track last sent photo hash
+  const consecutiveDupCountRef = useRef<number>(0); // Track how many dupes skipped in a row
+
+  const totalQuestions = shuffledQuestions.length > 0
+    ? shuffledQuestions.length
+    : ((remedialQuestions && remedialQuestions.length > 0) ? remedialQuestions.length : remedialEssayCount);
+
+  // Draggable PiP Camera State
+  const pipRef = useRef<HTMLDivElement>(null);
+  const [pipPos, setPipPos] = useState<{x: number, y: number} | null>(null);
+  const isDraggingRef = useRef(false);
+  const dragOffsetRef = useRef({x: 0, y: 0});
+  const dragStartPosRef = useRef({x: 0, y: 0});
+  const wasDraggedRef = useRef(false);
+  
+  // Face Education Popup State
+  const [showFaceEducation, setShowFaceEducation] = useState(false);
+  const lastEducationShownRef = useRef(0);
+  
+  const [showFiveMinWarning, setShowFiveMinWarning] = useState(false);
+  const hasShownFiveMinWarningRef = useRef(false);
+  const [isPenaltyApplied, setIsPenaltyApplied] = useState(false);
+  
+  // AI Bot & Screen Overlay Detection
+  const [showAiBotWarning, setShowAiBotWarning] = useState(false);
+  const [aiCountdown, setAiCountdown] = useState(10);
+  const aiDetectionRef = useRef<NodeJS.Timeout | null>(null);
+  const [overlayViolationCount, setOverlayViolationCount] = useState(0);
+  
+  // Monitoring & Lock States
+  const [isConnectionLocked, setIsConnectionLocked] = useState(false);
+  const [consecutiveHeartbeatFailures, setConsecutiveHeartbeatFailures] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Split Screen Detection
+  const [splitScreenViolationCount, setSplitScreenViolationCount] = useState(0);
+  const [isSplitLocked, setIsSplitLocked] = useState(false);
+  const [isScreenshotFlash, setIsScreenshotFlash] = useState(false);
+
+  // AI Proctoring Analyzer State
+  const [aiProctorStatus, setAiProctorStatus] = useState<'idle' | 'scanning' | 'safe' | 'warning' | 'critical'>('idle');
+  const [aiProctorFindings, setAiProctorFindings] = useState<string[]>([]);
+  const aiProctorIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const offlineBufferKey = `gm_log_buffer_${attemptId}`;
+
+  const getLogBuffer = (): any[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const saved = localStorage.getItem(offlineBufferKey);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  };
+
+  const saveLogBuffer = (logs: any[]) => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(offlineBufferKey, JSON.stringify(logs.slice(-100))); // Cap at 100
+    } catch (e) { console.error('Failed to save log buffer', e); }
+  };
+
+  const capturePhoto = useCallback((): string | undefined => {
+    if (!videoRef.current) return undefined;
+    try {
+      const video = videoRef.current;
+      if (video.paused || video.ended) {
+        try { video.play(); } catch { /* ignore */ }
+      }
+      if (video.readyState < 2) {
+        console.warn('Video not ready for capture (readyState:', video.readyState, ')');
+        return undefined;
+      }
+
+      const w = video.videoWidth || 320;
+      const h = video.videoHeight || 240;
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return undefined;
+
+      ctx.drawImage(video, 0, 0, w, h);
+
+      const samplePoints = [
+        [Math.floor(w / 2), Math.floor(h / 2)],
+        [Math.floor(w * 0.25), Math.floor(h * 0.25)],
+        [Math.floor(w * 0.75), Math.floor(h * 0.25)],
+        [Math.floor(w * 0.25), Math.floor(h * 0.75)],
+        [Math.floor(w * 0.75), Math.floor(h * 0.75)],
+      ];
+      let allBlack = true;
+      for (const [sx, sy] of samplePoints) {
+        const px = ctx.getImageData(sx, sy, 1, 1).data;
+        if (px[0] > 5 || px[1] > 5 || px[2] > 5) {
+          allBlack = false;
+          break;
+        }
+      }
+      if (allBlack) {
+        console.warn('Captured a blank/black frame (5-point check), skipping');
+        return undefined;
+      }
+
+      return canvas.toDataURL('image/jpeg', 0.6);
+    } catch (err) {
+      console.error('Failed to capture photo:', err);
+    }
+    return undefined;
+  }, []);
+
+  const sendTelegramNotify = useCallback(async (event: string, photo?: string, message?: string, score?: number) => {
+    try {
+      // 1. Triple-layered fallback: props -> recovered session state -> global storage -> 'Unknown'
+      const saved = loadRemedialSession();
+      const currentStudentName = studentName || saved?.studentName || (typeof window !== 'undefined' ? localStorage.getItem('gm_studentName') : '') || 'Unknown Student';
+      const currentClassName = className || saved?.className || (typeof window !== 'undefined' ? localStorage.getItem('gm_studentClass') : '') || 'Unknown Class';
+      const currentSubject = subject || saved?.subject || (typeof window !== 'undefined' ? localStorage.getItem('gm_subject') : '') || 'Unknown Subject';
+
+      const netInfo = getNetworkInfo();
+      const payload = {
+        studentName: currentStudentName,
+        className: currentClassName,
+        subject: currentSubject,
+        event,
+        message: message ? `${message}${message.includes('Network:') ? '' : ` | Network: ${netInfo}`}` : `Network: ${netInfo}`,
+        photo,
+        score,
+        kkm: kkm || saved?.kkm || 70,
+        academicYear: academicYear || '2025/2026',
+        examType: examType || 'UTS',
+        deviceInfo: getDeviceInfo()
+      };
+
+      await fetch('/api/telegram/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (err) {
+      console.error('Failed to send Telegram notify:', err);
+    }
+  }, [studentName, className, subject, kkm, academicYear, examType]);
+
+  const flushOfflineLogs = useCallback(async () => {
+    if (!attemptId || !navigator.onLine) return;
+    const buffer = getLogBuffer();
+    if (buffer.length === 0) return;
+
+    try {
+      const res = await fetch('/api/grademaster/activity-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId, events: buffer })
+      });
+      if (res.ok) {
+        localStorage.removeItem(offlineBufferKey);
+        console.log(`[Monitoring] Successfully flushed ${buffer.length} offline logs.`);
+      }
+    } catch (err) {
+      console.warn('[Monitoring] Flush failed, will retry later.', err);
+    }
+  }, [attemptId, offlineBufferKey]);
+
+  const syncWithServer = useCallback(async () => {
+    if (!attemptId || step !== 'EXAM') return;
+    setIsSyncing(true);
+    try {
+      // Perform a real handshake to ensure we are actually online and synced with the DB
+      const res = await fetch('/api/grademaster/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          attemptId, 
+          networkStatus: navigator.onLine ? 'ONLINE' : 'OFFLINE',
+          latencyMs: 0
+        })
+      });
+      if (res.ok) {
+        setIsConnectionLocked(false);
+        setConsecutiveHeartbeatFailures(0);
+        setToast({ message: "Koneksi pulih. Sinkronisasi sukses.", type: "success" });
+        flushOfflineLogs();
+      } else {
+        setToast({ message: "Sinkronisasi gagal. Pastikan internet stabil.", type: "error" });
+      }
+    } catch (err) {
+      setToast({ message: "Gagal terhubung ke server. Periksa koneksi Anda.", type: "error" });
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [attemptId, step, setToast, flushOfflineLogs]);
+
+  const handleNetworkChange = useCallback((online: boolean) => {
+    setIsOffline(!online);
+    if (!online) {
+      setIsConnectionLocked(true);
+    } else {
+      // Auto-sync on reconnect
+      syncWithServer();
+    }
+  }, [syncWithServer]);
+
+  const handleViolation = useCallback((type: string, message: string, severity: 'LOW' | 'MEDIUM' | 'HIGH') => {
+    if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
+    setWarningCount(prev => prev + 1);
+    if (type === 'TAB_SWITCH') {
+      setTabWarningCount(prev => {
+        const newCount = prev + 1;
+        
+        setTimeout(() => {
+          setActiveWarning({
+            type: 'TAB',
+            count: newCount,
+            limit: 3,
+            message: `⚠️ PERINGATAN PENGALIHAN FOKUS! Sistem mendeteksi Anda keluar dari halaman ujian atau membuka aplikasi/popup lain. Dilarang keras memindahkan fokus layar! (${newCount}/3)`
+          });
+          setToast({ message: "Peringatan: Jangan pindah tab atau aplikasi!", type: "error" });
+
+          // Sync violation to database in real-time (fire-and-forget)
+          fetch('/api/grademaster/students/remedial/violation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId, studentName })
+          }).then(async res => {
+            if (res.ok) {
+              const data = await res.json();
+              if (data.isBlocked) {
+                setIsPermanentlyBlocked(true);
+                setIsTabHidden(false);
+              }
+            }
+          }).catch(err => {
+            console.error('Failed to report violation to server:', err);
+          });
+        }, 0);
+        
+        return newCount;
+      });
+    }
+    if (type === 'SPLIT_SCREEN') {
+      setSplitScreenViolationCount(prev => prev + 1);
+      setTimeout(() => {
+        setToast({ message: "Layar Terbagi (Split Screen) Terdeteksi!", type: "error" });
+      }, 0);
+    }
+    
+    // Update DB with violation
+    sendTelegramNotify("SECURITY_VIOLATION", undefined, `${type}: ${message} (Severity: ${severity})`);
+  }, [sessionId, studentName, sendTelegramNotify, setToast]);
+
+  const handleExit = () => {
+    clearRemedialSession();
+    onBack();
+  };
+
+
+
+
+
+  const isPhotoDuplicate = (base64: string): boolean => {
+    try {
+      const img = new Image();
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = 320;
+      tempCanvas.height = 240;
+      const tempCtx = tempCanvas.getContext('2d');
+      if (!tempCtx || !videoRef.current) return false;
+
+      tempCtx.drawImage(videoRef.current, 0, 0, 320, 240);
+      const hash = computeSimpleHash(tempCanvas, tempCtx);
+
+      if (hash === lastPhotoHashRef.current) {
+        consecutiveDupCountRef.current++;
+        return true;
+      }
+
+      lastPhotoHashRef.current = hash;
+      consecutiveDupCountRef.current = 0;
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  const [agreedRules, setAgreedRules] = useState(false);
+    // ── ADVANCED MONITORING (Pulse & Surveillance) ──
+  const heartbeatTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isOnlineRef = useRef<boolean>(true);
+
+  const trackEvent = useCallback(async (type: string, severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL', points: number, metadata: Record<string, any> = {}) => {
+    const event = {
+      eventType: type,
+      severity,
+      riskPoints: points,
+      metadata: {
+        ...metadata,
+        timestamp: new Date().toISOString(),
+        network: getNetworkInfo(),
+        device: getDeviceInfo()
+      }
+    };
+
+    if (!navigator.onLine) {
+      const buffer = getLogBuffer();
+      saveLogBuffer([...buffer, event]);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/grademaster/activity-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId, events: [event] })
+      });
+      if (!res.ok) throw new Error('Network response not ok');
+    } catch (err) {
+      const buffer = getLogBuffer();
+      saveLogBuffer([...buffer, event]);
+    }
+  }, [attemptId]);
+
+  const sendHeartbeat = useCallback(async () => {
+    if (!attemptId || step !== 'EXAM') return;
+    
+    try {
+      const res = await fetch('/api/grademaster/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          attemptId, 
+          networkStatus: navigator.onLine ? 'ONLINE' : 'OFFLINE',
+          latencyMs: 0
+        })
+      });
+      
+      if (res.ok) {
+        setConsecutiveHeartbeatFailures(0);
+        flushOfflineLogs();
+      } else {
+        throw new Error('Heartbeat non-ok response');
+      }
+    } catch (err) {
+      console.warn('[Pulse] Heartbeat failed');
+      setConsecutiveHeartbeatFailures(prev => {
+        const newFailCount = prev + 1;
+        if (newFailCount >= 3) {
+          setIsConnectionLocked(true);
+        }
+        return newFailCount;
+      });
+    }
+  }, [attemptId, step, flushOfflineLogs]);
+  const sendActivityLog = useCallback(async (message: string, photo?: string, eventTypeOverride?: string) => {
+    if (step !== 'EXAM') return;
+
+    const netInfo = getNetworkInfo();
+    const formattedMessage = message.includes('Network:') ? message : `${message} | Network: ${netInfo}`;
+
+    // 1. Send to Telegram for real-time alert
+    sendTelegramNotify(eventTypeOverride || 'ACTIVITY', photo, formattedMessage);
+
+    // 2. Send to Activity Log API for database synchronization & Risk Scoring
+    if (attemptId) {
+      try {
+        const assessment = assessClientRisk([message]); // Map message to structured risk event
+        const events = assessment.flags.map(f => ({
+          eventType: eventTypeOverride || f.event,
+          severity: f.severity,
+          riskPoints: f.points,
+          metadata: { 
+            originalMessage: formattedMessage,
+            network: netInfo,
+            device: getDeviceInfo(),
+            timestamp: new Date().toISOString()
+          }
+        }));
+
+        await fetch('/api/grademaster/activity-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attemptId, events })
+        });
+      } catch (err) {
+        console.error('Failed to sync data log:', err);
+      }
+    }
+  }, [step, attemptId, sendTelegramNotify]);
+
+  // Monitor Hook Integration
+  const { sendLog } = useExamMonitor({
+    attemptId,
+    examState: step,
+    onNetworkChange: handleNetworkChange,
+    onViolation: handleViolation
+  });
+
+  // Permission states
+  const [cameraOk, setCameraOk] = useState(false);
+  const [locationOk, setLocationOk] = useState(false);
+  const [checkingPerms, setCheckingPerms] = useState(false);
+
+  // Camera dimensions
+  const CAM_W = 160;
+  const CAM_H = 112; // Adjusted to match h-28 for standardizing with tailwind classes (will mostly be handled by CSS now)
+
+  const MAX_TAB_WARNINGS = 3;
+
+  // Navigation lock during exam
+  useEffect(() => {
+    if (step !== 'EXAM') return;
+
+    const handleBeforeUnload2 = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, '', window.location.href);
+      setBackPressCount(prev => {
+        const next = prev + 1;
+        const reason = `Mencoba menekan tombol kembali ${next} kali`;
+        sendActivityLog(`Mencoba menekan tombol Kembali (Back Button) - Percobaan ke-${next}`);
+        if (next >= 5) {
+          setClientCheatingFlags(f => [...f, reason]);
+          if (secondChanceUsed) {
+            hasTriggeredCheatingRef.current = true;
+            setToast({ message: 'Batas percobaan navigasi terlampaui. Ujian dihentikan.', type: 'error' });
+            handleStatusUpdate('CHEATED', reason);
+          } else {
+            setSecondChanceReason(reason);
+            setStep('SECOND_CHANCE');
+            sendTelegramNotify('SECOND_CHANCE', capturePhoto() || undefined, reason);
+          }
+        } else if (next >= 3) {
+          setToast({ message: `⚠️ PERINGATAN: Jika mengetuk kembali lagi, sistem akan menandakan anda curang! (${next}/5)`, type: 'error' });
+        } else {
+          setToast({ message: '⛔ Anda tidak diperbolehkan keluar saat ujian berlangsung!', type: 'error' });
+        }
+        return next;
+      });
+    };
+
+    const handlePrint = (e: any) => {
+      e.preventDefault();
+      setToast({ message: 'Aksi Cetak/Print tidak diizinkan!', type: 'error' });
+      sendActivityLog("Mencoba mencetak halaman/soal (Print/PDF Attempt)");
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload2);
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('beforeprint', handlePrint);
+
+    // Error Logging: Detect if user closes the tab during exam (Abandoned)
+    const handleAbandoned = () => {
+      if (!isRefreshingRef.current && !isSubmittingRef.current && !isDeploymentReloadRef.current) {
+        const payload = JSON.stringify({
+          studentName, className, subject, event: 'ACTIVITY', message: 'Siswa menutup browser / Hard Close', deviceInfo: getDeviceInfo()
+        });
+        navigator.sendBeacon('/api/telegram/notify', payload);
+      }
+    };
+    window.addEventListener('unload', handleAbandoned);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload2);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('unload', handleAbandoned);
+      window.removeEventListener('beforeprint', handlePrint);
+    };
+  }, [step]);
+
+  const getCameraErrorMessage = (err: any): string => {
+    const name = err?.name || '';
+    if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+      return 'Izin Kamera Diblokir! Cara cepat mengaktifkannya:\n\n1. Ketuk ikon gembok kecil / pengaturan di sebelah kiri alamat URL website pada bar atas browser Chrome.\n2. Ketuk "Setelan Situs" (Site Settings) atau "Reset Izin" (Reset permissions) yang langsung muncul.\n3. Ubah izin Kamera menjadi "Izinkan" atau pilih "Hapus & Setel Ulang" (Clear & Reset).\n4. Muat ulang (refresh) halaman ini, lalu ketuk tombol "Aktifkan" kembali.';
+    }
+    if (name === 'NotReadableError' || name === 'TrackStartError') {
+      return 'Kamera sedang dipakai aplikasi lain (misal WhatsApp Video, Zoom, atau HP sedang merekam). Tutup aplikasi tersebut lalu coba lagi.';
+    }
+    if (name === 'AbortError') {
+      return 'Permintaan kamera dibatalkan oleh sistem. Kemungkinan ada balon/overlay dari aplikasi lain yang menghalangi. Tutup semua overlay lalu coba lagi.';
+    }
+    if (name === 'OverconstrainedError') {
+      return 'Kamera perangkat Anda tidak mendukung spesifikasi yang diminta. Hubungi guru untuk bantuan.';
+    }
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+      return 'Tidak ditemukan kamera di perangkat ini. Pastikan perangkat memiliki kamera depan.';
+    }
+    if (name === 'SecurityError') {
+      return 'Browser memblokir akses kamera (keamanan). Pastikan jangan membuka link dari dalam aplikasi (misal Telegram/Line/WA). Salin link dan buka di Chrome.';
+    }
+    return `Gagal mengakses kamera (${name || 'unknown'}). Pastikan tidak ada aplikasi lain yang menggunakan kamera, atau salin link dan buka di Google Chrome.`;
+  };
+
+  // Check permissions (camera only — location is best-effort logging)
+  const checkPermissions = async () => {
+    setCheckingPerms(true);
+    setCameraErrorDetail(null);
+    let camReady = false;
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const errMsg = 'Browser atau HP Anda tidak mendukung akses kamera secara langsung. Harap salin link ini dan buka pada aplikasi Google Chrome terbaru.';
+      setCameraErrorDetail(errMsg);
+      setCameraRetryCount(3);
+      sendTelegramNotify('ERROR', undefined, `Kamera gagal total (mediaDevices undefined). Siswa mengakses panel Bypass.`);
+      camReady = false;
+    } else {
+      const constraintsList: MediaTrackConstraints[] = [
+        { width: 160, height: 120, facingMode: 'user' },
+        { width: { ideal: 160 }, height: { ideal: 120 }, facingMode: 'user' },
+        { facingMode: 'user' },
+        { facingMode: { ideal: 'user' } },
+        { width: { ideal: 160 } },
+        true as unknown as MediaTrackConstraints,
+      ];
+
+      let lastCamErr: Error | null = null;
+      for (const constraint of constraintsList) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: constraint, audio: false });
+          stream.getTracks().forEach(t => t.stop());
+          camReady = true;
+          setCameraRetryCount(0);
+          setCameraErrorDetail(null);
+          setExamMode('STRICT');
+          setCameraStatus('ACTIVE');
+          break;
+        } catch (err: unknown) {
+          lastCamErr = err instanceof Error ? err : new Error(String(err));
+          const errName = (err as { name?: string })?.name || '';
+          if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
+            // Log to Telegram: Student explicitly denied camera
+            sendTelegramNotify('ACTIVITY', undefined, `🚫 Siswa MENOLAK izin kamera pada perangkatnya.`);
+            break;
+          }
+          if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
+            break;
+          }
+        }
+      }
+
+      if (!camReady && lastCamErr) {
+        const detail = getCameraErrorMessage(lastCamErr);
+        setCameraErrorDetail(detail);
+        setCameraRetryCount(prev => {
+          const next = prev + 1;
+          if (next >= MAX_CAMERA_RETRIES) {
+            sendTelegramNotify('ACTIVITY', undefined, `Kamera gagal ${next}x (${(lastCamErr as { name?: string })?.name}). Siswa diarahkan ke Mode Terbatas.`);
+          }
+          return next;
+        });
+        sendTelegramNotify('ACTIVITY', undefined, `Kamera error: ${(lastCamErr as { name?: string })?.name || 'unknown'} (percobaan ${cameraRetryCount + 1}/${MAX_CAMERA_RETRIES})`);
+      }
+    }
+    setCameraOk(camReady);
+
+    // Location: best-effort only, never blocks exam access
+    try {
+      const pos = await getPosition();
+      const locStr = `${pos.coords.latitude},${pos.coords.longitude}`;
+      setCurrentLocation(locStr);
+      setLocationOk(true);
+    } catch {
+      setLocationOk(false);
+      setCurrentLocation('UNAVAILABLE');
+    }
+
+    setCheckingPerms(false);
+
+    if (!camReady) {
+      setToast({ message: 'Anda harus mengaktifkan Kamera untuk melanjutkan ujian.', type: 'error' });
+    }
+  };
+
+  // Wake Lock: Keep screen on during EXAM
+  useEffect(() => {
+    if (step !== 'EXAM') {
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().then(() => { wakeLockRef.current = null; });
+      }
+      return;
+    }
+
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator && (navigator as any).wakeLock) {
+          wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+          console.log('Screen Wake Lock is active');
+        }
+      } catch (err: any) {
+        console.warn(`Wake Lock error: ${err.name}, ${err.message}`);
+      }
+    };
+
+    requestWakeLock();
+
+    // Re-acquire on focus
+    const handleReacquire = () => {
+      if (document.visibilityState === 'visible' && step === 'EXAM') {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleReacquire);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleReacquire);
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().then(() => { wakeLockRef.current = null; });
+      }
+    };
+  }, [step]);
+
+  // 1. Visitor Tracking & Logging
+  useEffect(() => {
+    const trackVisit = async () => {
+      let visitorId = localStorage.getItem('gm_visitor_id');
+      const isReturning = !!visitorId;
+      
+      if (!visitorId) {
+        visitorId = 'v_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+        localStorage.setItem('gm_visitor_id', visitorId);
+      }
+
+      // Prevent spamming Telegram notifications if the student reloads/remounts within 5 minutes
+      const cacheKey = `gm_last_log_${sessionId || 'default'}_${studentName || 'unknown'}`;
+      const lastLogStr = localStorage.getItem(cacheKey);
+      if (lastLogStr) {
+        const lastLogTime = parseInt(lastLogStr, 10);
+        if (Date.now() - lastLogTime < 5 * 60 * 1000) {
+          console.log('[Visitor Log] Throttled client-side visitor tracking to prevent notification spam.');
+          return;
+        }
+      }
+
+      try {
+        const res = await fetch('/api/grademaster/visitor/log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            visitorId,
+            isReturning,
+            studentName: studentName || 'Unknown',
+            sessionId,
+            subject,
+            className
+          })
+        });
+
+        if (res.ok) {
+          localStorage.setItem(cacheKey, Date.now().toString());
+          if (isReturning) {
+            const data = await res.json();
+            // Notify returning visitor as requested "beritahu orangnya"
+            // setToast({ 
+            //   message: `Sistem mendeteksi kehadiran Anda kembali. Pengawasan proctoring tetap aktif. (IP: ${data.ip})`, 
+            //   type: 'success' 
+            // });
+          }
+        }
+      } catch (err) {
+        console.error('Visitor tracking failed:', err);
+      }
+    };
+
+    trackVisit();
+  }, []);
+
+  // Restore session on mount (localStorage)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const failedRaw = localStorage.getItem('gm_failed_submission');
+      if (failedRaw) {
+        setIsSubmissionBackupSaved(true);
+      }
+    }
+    const saved = loadRemedialSession();
+    if (saved && (saved.studentName === studentName || !studentName)) {
+      // CRITICAL: Validate that the saved session belongs to the SAME session (sessionId).
+      // If a student navigated here from their profile for a DIFFERENT exam session,
+      // the old localStorage data must be discarded to prevent cross-session contamination.
+      if (saved.sessionId && sessionId && saved.sessionId !== sessionId) {
+        console.warn(`[Remedial] Stale session detected: saved=${saved.sessionId}, current=${sessionId}. Clearing.`);
+        clearRemedialSession();
+        setStep('RULES');
+        return;
+      }
+
+      if (['EXAM', 'INFO', 'GUIDE'].includes(saved.step)) {
+        // Determine if questions are available before restoring EXAM step
+        const hasPropsQuestions = remedialQuestions && remedialQuestions.length > 0;
+        const hasSavedQuestions = saved.remedialQuestions && saved.remedialQuestions.length > 0;
+        const questionsAvailable = hasPropsQuestions || hasSavedQuestions;
+
+        // Only restore non-EXAM meta immediately; EXAM step requires verified questions
+        const expectedLen = (saved.remedialQuestions && saved.remedialQuestions.length > 0)
+          ? saved.remedialQuestions.length
+          : ((remedialQuestions && remedialQuestions.length > 0) ? remedialQuestions.length : remedialEssayCount);
+        setAnswers(saved.answers && saved.answers.length === expectedLen ? saved.answers : new Array(expectedLen).fill(""));
+        setNote(saved.note || '');
+        setCurrentLocation(saved.location || '');
+        startedAtRef.current = saved.startedAt;
+        if (saved.attemptId) setAttemptId(saved.attemptId);
+        if (saved.attemptToken) setAttemptToken(saved.attemptToken);
+        if (saved.studentId) setCurrentStudentId(saved.studentId);
+        if (saved.examMode) {
+          setExamMode(saved.examMode);
+          setCameraStatus(saved.cameraStatus || 'ACTIVE');
+        }
+        if (saved.isPenaltyApplied) {
+          setIsPenaltyApplied(true);
+        }
+
+        if (questionsAvailable) {
+          // Questions confirmed — safe to restore step
+          setStep(saved.step as RemedialStep);
+          console.log(hasPropsQuestions ? "Questions from props" : "Recovering questions from local session...");
+        } else {
+          // No questions in props or localStorage — fetch from server before setting EXAM
+          console.warn("No questions available on mount. Fetching from server before restoring EXAM...");
+          const fetchQuestionsWithRetry = async (retries = 3) => {
+            for (let i = 0; i < retries; i++) {
+              try {
+                const res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`, { cache: 'no-store' });
+                if (res.ok) {
+                  const data = await res.json();
+                  if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'SUBMITTED', 'FAILED_EFFORT', 'TIME_UP'].includes(data.status)) {
+                    setStep(data.status as RemedialStep);
+                    if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
+                    
+                    setIsHeldBack(!!data.isHeldBack);
+                    setRemedialScore(data.remedialScore ?? null);
+                    setPendingRemedialCount(data.pendingRemedialCount || 0);
+                    setHoldbackReason(data.holdbackReason || null);
+                    setRawScore(data.rawScore ?? null);
+                    setDisplayedScore(data.displayedScore ?? null);
+                    setFailedReason(data.failedReason || null);
+                    
+                    return;
+                  }
+                  if (data.status === null) {
+                    clearRemedialSession();
+                    setStep('RULES');
+                    return;
+                  }
+                }
+                // Status is active but we still need questions — re-fetch via INITIATED (idempotent)
+                const initRes = await fetch('/api/grademaster/students/remedial', {
+                  method: 'POST',
+                  cache: 'no-store' as RequestCache,
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ sessionId, studentName, status: 'INITIATED' })
+                });
+                if (initRes.ok) {
+                  const initData = await initRes.json();
+                  const serverQuestions = initData.remedialQuestions || [];
+                  if (serverQuestions.length > 0) {
+                    saveRemedialSession({ ...saved, remedialQuestions: serverQuestions });
+                    const indices = saved.shuffledIndices && saved.shuffledIndices.length > 0
+                      ? saved.shuffledIndices
+                      : serverQuestions.map((_: string, idx: number) => idx);
+                    setShuffledQuestions(indices.map((idx: number) => ({ text: serverQuestions[idx] || '', originalIndex: idx })));
+                    if (saved.answers && saved.answers.length === serverQuestions.length) {
+                      setAnswers(saved.answers);
+                    } else {
+                      const next = new Array(serverQuestions.length).fill("");
+                      if (saved.answers) {
+                        saved.answers.forEach((val: string, idx: number) => {
+                          if (idx < next.length) next[idx] = val;
+                        });
+                      }
+                      setAnswers(next);
+                    }
+                    setStep(saved.step as RemedialStep);
+                    // setToast({ message: "Soal berhasil dimuat dari server. Melanjutkan ujian...", type: "success" });
+                    return;
+                  }
+                }
+              } catch {
+                // Network error — retry with backoff
+              }
+              if (i < retries - 1) {
+                await new Promise(r => setTimeout(r, 2000 * (i + 1)));
+              }
+            }
+            // All retries exhausted
+            setToast({ message: "Data soal tidak ditemukan. Silakan masuk kembali.", type: "error" });
+            setTimeout(() => { clearRemedialSession(); handleExit(); }, 2000);
+          };
+          fetchQuestionsWithRetry();
+          return;
+        }
+
+        const baseTimer = (saved.remedialTimer || remedialTimer) * 60;
+        const elapsedSeconds = Math.floor((Date.now() - saved.startedAt) / 1000);
+        let remaining = baseTimer + (saved.extendedTime || 0) - elapsedSeconds;
+        if (remaining < 0) remaining = 0;
+        setTimeLeft(remaining);
+
+        // setToast({ message: "Melanjutkan sesi remedial sebelumnya...", type: "success" });
+        saveRemedialSession({ ...saved, refreshCount: (saved.refreshCount || 0) + 1 });
+      } else if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'TIME_UP', 'SUBMITTED', 'FAILED_EFFORT'].includes(saved.step)) {
+        setStep(saved.step as RemedialStep);
+      }
+    }
+  }, [sessionId, studentName, remedialEssayCount, remedialTimer]);
+
+  // Check server status (Database) - Persist terminal state across devices/hard-clears + poll every 10s
+  useEffect(() => {
+    // Guard: only fetch if we have identifying info
+    if (!sessionId || !studentName) return;
+
+    const checkServerStatus = async () => {
+      let res;
+      try {
+        res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.isBlocked) {
+             setIsPermanentlyBlocked(true);
+             setIsTabHidden(false);
+             if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
+          }
+          if (data.violationCount) {
+             setTabWarningCount(data.violationCount);
+          }
+          
+          // RESET DETECTION: If server says status is null/NONE and we were in the exam/timeout phase, clear local
+          if (data.status === null && !['RULES', 'INFO', 'GUIDE'].includes(step)) {
+            console.log("Server indicated session reset. Moving to RULES...");
+            clearRemedialSession();
+            setToast({ message: "Sesi Anda telah direset oleh Guru. Silakan masuk kembali.", type: "success" });
+            setStep('RULES');
+            return;
+          }
+
+          // Handle teacher extending the time dynamically
+          if (data.remedialExtendedTime !== undefined) {
+            const newExtendedSeconds = (data.remedialExtendedTime || 0) * 60;
+            const saved = loadRemedialSession();
+            if (saved) {
+              const prevExtended = saved.extendedTime || 0;
+              if (newExtendedSeconds !== prevExtended) {
+                console.log(`[Timer Extension] Updating extended time from ${prevExtended} to ${newExtendedSeconds} seconds`);
+                const updated = { ...saved, extendedTime: newExtendedSeconds };
+                saveRemedialSession(updated);
+
+                const baseTimer = (saved.remedialTimer || remedialTimer) * 60;
+                const elapsedSeconds = Math.floor((Date.now() - saved.startedAt) / 1000);
+                let remaining = baseTimer + newExtendedSeconds - elapsedSeconds;
+                if (remaining < 0) remaining = 0;
+                setTimeLeft(remaining);
+
+                if (remaining > 0) {
+                  setIsTimeoutTriggered(false);
+                  if (step === 'TIMEOUT' || step === 'TIME_UP') {
+                    setStep('EXAM');
+                    setToast({ message: "Waktu tambahan telah diberikan oleh guru. Silakan lanjutkan!", type: "success" });
+                  }
+                }
+              }
+            }
+          }
+
+           // If server says terminal status, override local state
+           if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'TIME_UP', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
+             setStep(data.status as RemedialStep);
+             if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
+             
+             setIsHeldBack(!!data.isHeldBack);
+             setRemedialScore(data.remedialScore ?? null);
+             setPendingRemedialCount(data.pendingRemedialCount || 0);
+             setHoldbackReason(data.holdbackReason || null);
+             setRawScore(data.rawScore ?? null);
+             setDisplayedScore(data.displayedScore ?? null);
+             setFailedReason(data.failedReason || null);
+             
+             if (['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT', 'TIME_UP'].includes(data.status)) {
+               setFinalScore(data.finalScore);
+               if (data.remedialAnswers) setAnswers(data.remedialAnswers);
+               if (data.essayAutoDetails) setEssayAutoDetails(data.essayAutoDetails);
+               if (data.remedialQuestions && data.remedialQuestions.length > 0) {
+                 setShuffledQuestions(data.remedialQuestions.map((q: string, i: number) => ({ text: q, originalIndex: i })));
+               }
+               if (data.remedialAnswerKeys) setRemedialAnswerKeys(data.remedialAnswerKeys);
+ 
+               // Pre-fetch friends list for results screen
+               fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`, { cache: 'no-store' })
+                 .then(r => r.json())
+                 .then(d => {
+                   setRemainingStudents(d.students || []);
+                   setSessionCreatedAt(d.sessionCreatedAt);
+                 });
+             }
+           }
+        } else if (res.status === 400) {
+          // Handle error cases (e.g. data deleted by admin)
+          const errData = await res.json().catch(() => ({}));
+          if (errData.error === 'RESET_REQUIRED') {
+            console.log("Server indicated reset is required. Clearing local session...");
+            clearRemedialSession();
+            setStep('RULES');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch server-side status:', err);
+      }
+      
+      // Fetch behavior points for time extension
+      try {
+        const pRes = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(className)}&year=${encodeURIComponent(academicYear)}`);
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          const pRecord = pData.students?.find((s: any) => s.student_name === studentName);
+          if (pRecord) {
+            const currentDate = new Date().toISOString().split('T')[0];
+            const usedToday = pRecord.points_date === currentDate ? (pRecord.points_used_today || 0) : 0;
+            setPointsBal({ total: pRecord.total_points, usedToday });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch points status:', err);
+      }
+    };
+
+    checkServerStatus();
+    const intervalId = setInterval(checkServerStatus, 10000);
+    return () => clearInterval(intervalId);
+  }, [sessionId, studentName, step, remedialTimer, className, academicYear]);
+
+  // Mark refresh vs tab-leave
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      isRefreshingRef.current = true;
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Detect deployment reload flag set by DeploymentGuard
+    if (typeof window !== 'undefined') {
+      const deployFlag = localStorage.getItem('gm_deployment_reload_active');
+      if (deployFlag === 'true') {
+        isDeploymentReloadRef.current = true;
+        isRefreshingRef.current = true;
+        setTimeout(() => { isDeploymentReloadRef.current = false; }, 5000);
+      }
+    }
+
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
+  // Persist session state & backup answers (survives refreshes/hot-reloads)
+  // Debounced to prevent blocking the main thread when typing on mobile/low-end devices
+  useEffect(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      const saved = loadRemedialSession();
+      const refreshCount = saved?.refreshCount || 0;
+      const prevQuestions = saved?.remedialQuestions || [];
+      const prevTimer = saved?.remedialTimer || 0;
+
+      saveRemedialSession({
+        ...saved,
+        sessionId,
+        studentName,
+        step,
+        startedAt: startedAtRef.current || saved?.startedAt || Date.now(),
+        answers,
+        note,
+        location: currentLocation,
+        refreshCount,
+        shuffledIndices: shuffledQuestions.length > 0
+          ? shuffledQuestions.map(q => q.originalIndex)
+          : (saved?.shuffledIndices || remedialQuestions.map((_, idx) => idx)),
+        studentId: currentStudentId || undefined,
+        examMode,
+        cameraStatus,
+        className,
+        subject,
+        remedialQuestions: (remedialQuestions && remedialQuestions.length > 0) ? remedialQuestions : prevQuestions,
+        remedialTimer: (remedialTimer && remedialTimer > 0) ? remedialTimer : prevTimer,
+        semester,
+        remedialEssayCount,
+      });
+
+      // Backup answers to a separate key that survives session resets
+      if (step === 'EXAM' && answers && answers.some(a => a && a.trim() !== '')) {
+        const backupKey = `gm_remedial_backup_${sessionId}_${studentName.toLowerCase().trim()}`;
+        localStorage.setItem(backupKey, JSON.stringify(answers));
+      }
+    }, 1000); // 1-second debounce
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [answers, note, step, sessionId, studentName, className, subject, currentLocation, shuffledQuestions, currentStudentId, examMode, cameraStatus, remedialQuestions, remedialTimer, semester, remedialEssayCount]);
+
+  const isSubmittingRef = useRef(isSubmitting);
+  useEffect(() => { isSubmittingRef.current = isSubmitting; });
+
+  // ── AI Proctoring Analyzer — Periodic Snapshot Analysis (30s) ──
+  useEffect(() => {
+    if (step !== 'EXAM' || !attemptId) {
+      if (aiProctorIntervalRef.current) {
+        clearInterval(aiProctorIntervalRef.current);
+        aiProctorIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Initial delay of 10s before first AI scan
+    const initialTimeout = setTimeout(() => {
+      runAiProctorScan();
+    }, 10_000);
+
+    // Then every 30 seconds
+    aiProctorIntervalRef.current = setInterval(() => {
+      runAiProctorScan();
+    }, 30_000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      if (aiProctorIntervalRef.current) {
+        clearInterval(aiProctorIntervalRef.current);
+        aiProctorIntervalRef.current = null;
+      }
+    };
+
+    async function runAiProctorScan() {
+      if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
+
+      const snap = capturePhoto();
+      if (!snap) return;
+
+      setAiProctorStatus('scanning');
+
+      try {
+        const res = await fetch('/api/grademaster/proctoring-analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attemptId, imageData: snap }),
+        });
+
+        if (!res.ok) {
+          setAiProctorStatus('idle');
+          return;
+        }
+
+        const data = await res.json();
+        const analysis = data?.analysis;
+
+        if (!analysis) {
+          setAiProctorStatus('idle');
+          return;
+        }
+
+        setAiProctorStatus(analysis.threat_level);
+        setAiProctorFindings(analysis.findings || []);
+
+        let violationDetected = false;
+
+        // 1. Detect missing face or multiple people
+        if (analysis.persons_detected === 0) {
+          handleCameraViolation('NO_FACE');
+          violationDetected = true;
+        } else if (analysis.persons_detected > 1) {
+          handleCameraViolation('MULTIPLE_FACES');
+          violationDetected = true;
+        }
+
+        // 2. Detect specific suspicious objects
+        if (analysis.suspicious_objects?.includes('phone')) {
+          handleCameraViolation('PHONE_DETECTED');
+          violationDetected = true;
+        }
+        if (analysis.suspicious_objects?.includes('book') || analysis.suspicious_objects?.includes('notes')) {
+          handleCameraViolation('BOOK_DETECTED');
+          violationDetected = true;
+        }
+        if (analysis.suspicious_objects?.includes('earpiece')) {
+          handleCameraViolation('EARPIECE_DETECTED');
+          violationDetected = true;
+        }
+        if (analysis.suspicious_objects?.includes('extra_screen')) {
+          handleCameraViolation('EXTRA_SCREEN_DETECTED');
+          violationDetected = true;
+        }
+
+        // 3. Fallbacks and general gaze behavior detection
+        if (!violationDetected) {
+          const hasSuspiciousGaze = analysis.findings?.some((f: string) => 
+            f.toLowerCase().includes('menoleh') || 
+            f.toLowerCase().includes('tidak menatap') || 
+            f.toLowerCase().includes('tidak sejajar') ||
+            f.toLowerCase().includes('gaze') ||
+            f.toLowerCase().includes('samping')
+          );
+
+          if (hasSuspiciousGaze) {
+            handleCameraViolation('FACE_UNALIGNED');
+          } else if (analysis.threat_level === 'warning') {
+            handleCameraViolation('FACE_UNALIGNED');
+          } else if (analysis.threat_level === 'critical') {
+            handleCameraViolation('PHONE_DETECTED'); // General critical fallback
+          }
+        }
+
+        // Reset to idle after a display period
+        if (analysis.threat_level === 'safe') {
+          setTimeout(() => setAiProctorStatus('idle'), 5000);
+        }
+      } catch (err) {
+        console.error('[AI Proctoring Client] Scan error:', err);
+        setAiProctorStatus('idle');
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, attemptId]);
+
+  // ── Session Health Monitoring ──
+  const healthCheckAttemptedRef = useRef(false);
+  useEffect(() => {
+    if (step === 'EXAM' && shuffledQuestions.length === 0 && !isSubmitting && !isRefreshingRef.current && !healthCheckAttemptedRef.current) {
+      healthCheckAttemptedRef.current = true;
+      console.warn("Detected EXAM step with 0 questions. Attempting question recovery...");
+      sendTelegramNotify('ERROR', undefined, `⚠️ [HEALTH_CHECK] ${studentName} - Sesi EXAM tapi soal kosong. Mencoba recovery soal dari server...`);
+
+      const attemptRecovery = async () => {
+        // 1. Check terminal status first
+        try {
+          const res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`, { cache: 'no-store' });
+          if (res.ok) {
+            const data = await res.json();
+            if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) {
+              setStep(data.status as RemedialStep);
+              if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
+              if (['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT'].includes(data.status)) setFinalScore(data.finalScore);
+              return;
+            }
+            if (data.status === null) {
+              clearRemedialSession();
+              setStep('RULES');
+              return;
+            }
+          }
+        } catch { /* continue to question recovery */ }
+
+        // 2. Try recovering questions from localStorage
+        const saved = loadRemedialSession();
+        if (saved?.remedialQuestions && saved.remedialQuestions.length > 0) {
+          const indices = saved.shuffledIndices && saved.shuffledIndices.length > 0
+            ? saved.shuffledIndices
+            : saved.remedialQuestions.map((_: string, i: number) => i);
+          setShuffledQuestions(indices.map((idx: number) => ({ text: saved.remedialQuestions![idx] || '', originalIndex: idx })));
+          setAnswers(prev => {
+            if (prev.length === saved.remedialQuestions!.length) return prev;
+            const next = new Array(saved.remedialQuestions!.length).fill("");
+            prev.forEach((val, idx) => {
+              if (idx < next.length) next[idx] = val;
+            });
+            return next;
+          });
+          sendTelegramNotify('ACTIVITY', undefined, `[HEALTH_CHECK] Recovery berhasil dari localStorage (${saved.remedialQuestions.length} soal)`);
+          healthCheckAttemptedRef.current = false;
+          return;
+        }
+
+        // 3. Fetch questions via INITIATED endpoint with retry (idempotent, critical for 3G)
+        for (let retry = 0; retry < 3; retry++) {
+          try {
+            const initRes = await fetch('/api/grademaster/students/remedial', {
+              method: 'POST',
+              cache: 'no-store' as RequestCache,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionId, studentName, status: 'INITIATED' })
+            });
+            if (initRes.ok) {
+              const initData = await initRes.json();
+              const serverQuestions = initData.remedialQuestions || [];
+              if (serverQuestions.length > 0) {
+                const indices = saved?.shuffledIndices && saved.shuffledIndices.length > 0
+                  ? saved.shuffledIndices
+                  : serverQuestions.map((_: string, i: number) => i);
+                setShuffledQuestions(indices.map((idx: number) => ({ text: serverQuestions[idx] || '', originalIndex: idx })));
+                setAnswers(prev => {
+                  if (prev.length === serverQuestions.length) return prev;
+                  const next = new Array(serverQuestions.length).fill("");
+                  prev.forEach((val, idx) => {
+                    if (idx < next.length) next[idx] = val;
+                  });
+                  return next;
+                });
+                if (saved) {
+                  saveRemedialSession({ ...saved, remedialQuestions: serverQuestions });
+                }
+                // setToast({ message: "Soal berhasil dimuat ulang dari server.", type: "success" });
+                sendTelegramNotify('ACTIVITY', undefined, `[HEALTH_CHECK] Recovery berhasil dari server API (${serverQuestions.length} soal, retry ${retry + 1})`);
+                healthCheckAttemptedRef.current = false;
+                return;
+              }
+            }
+          } catch { /* network error, retry */ }
+          await new Promise(r => setTimeout(r, 3000 * (retry + 1)));
+        }
+
+        // 4. All recovery paths exhausted — reset
+        setToast({ message: "Sesi tidak valid (soal kosong). Silakan masuk kembali.", type: "error" });
+        setTimeout(() => {
+          clearRemedialSession();
+          handleExit();
+          window.location.reload();
+        }, 2000);
+      };
+      attemptRecovery();
+    }
+  }, [step, shuffledQuestions.length]);
+
+  const handleCameraErrorDuringExam = useCallback((errorMsg: string) => {
+    console.warn('Camera error during exam:', errorMsg);
+    setIsCameraActive(false);
+    sendTelegramNotify('ACTIVITY', undefined, `⚠️ Kamera Dinonaktifkan/Error saat ujian: ${errorMsg}`);
+  }, [sendTelegramNotify]);
+
+  const handleCameraReadyDuringExam = useCallback(() => {
+    console.log('Camera ready/recovered during exam.');
+    setIsCameraActive(true);
+  }, []);
+
+  const handleCameraViolation = useCallback((type: string) => {
+    if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
+
+    let flagMessage = "";
+    if (type === 'NO_FACE') flagMessage = "Wajah tidak terdeteksi";
+    else if (type === 'MULTIPLE_FACES') flagMessage = "Terdeteksi lebih dari satu orang";
+    else if (type === 'FACE_UNALIGNED') flagMessage = "Posisi wajah tidak sejajar";
+    else if (type === 'PHONE_DETECTED') flagMessage = "Terdeteksi penggunaan HP (Ponsel)";
+    else if (type === 'BOOK_DETECTED') flagMessage = "Terdeteksi membuka buku/catatan";
+    else if (type === 'EARPIECE_DETECTED') flagMessage = "Terdeteksi menggunakan earpiece/headphone";
+    else if (type === 'EXTRA_SCREEN_DETECTED') flagMessage = "Terdeteksi layar/perangkat tambahan";
+
+    setWarningCount(prev => {
+      const newCount = prev + 1;
+      const reason = `${flagMessage} (${newCount} kali)`;
+
+      setTimeout(() => {
+        setClientCheatingFlags(oldFlags => {
+          if (!oldFlags.includes(flagMessage)) {
+             return [...oldFlags, flagMessage];
+          }
+          return oldFlags;
+        });
+
+        if (newCount >= 10) {
+          setClientCheatingFlags(f => f.includes(reason) ? f : [...f, reason]);
+          if (secondChanceUsed) {
+            if (!hasTriggeredCheatingRef.current) {
+              hasTriggeredCheatingRef.current = true;
+              setToast({ message: "Batas pelanggaran terlampaui. Ujian dihentikan.", type: "error" });
+              handleStatusUpdate('CHEATED', reason);
+            }
+          } else {
+            if (!hasTriggeredSecondChanceRef.current) {
+              hasTriggeredSecondChanceRef.current = true;
+              setSecondChanceReason(reason);
+              setStep('SECOND_CHANCE');
+              sendTelegramNotify('SECOND_CHANCE', capturePhoto() || undefined, reason);
+            }
+          }
+        } else {
+          // Handle specific detections
+          if (type === 'PHONE_DETECTED') {
+              const snap = capturePhoto();
+              sendTelegramNotify('PHONE_DETECTED', snap || undefined);
+              setActiveWarning({
+                  type: 'CAMERA',
+                  count: newCount,
+                  limit: 10,
+                  message: "⚠️ HP TERDETEKSI! Sistem AI mendeteksi adanya ponsel di depan kamera. Penggunaan HP dilarang keras selama ujian! Aktivitas ini telah dilaporkan ke Admin Telegram."
+              });
+          } else if (type === 'BOOK_DETECTED') {
+              const snap = capturePhoto();
+              sendTelegramNotify('BOOK_DETECTED', snap || undefined, "Terdeteksi membuka buku/catatan");
+              setActiveWarning({
+                  type: 'CAMERA',
+                  count: newCount,
+                  limit: 10,
+                  message: "⚠️ BUKU/CATATAN TERDETEKSI! Sistem AI mendeteksi buku, kertas contekan, atau catatan di dekat Anda. Harap singkirkan benda tersebut segera!"
+              });
+          } else if (type === 'EARPIECE_DETECTED') {
+              const snap = capturePhoto();
+              sendTelegramNotify('EARPIECE_DETECTED', snap || undefined, "Terdeteksi menggunakan earpiece/headphone");
+              setActiveWarning({
+                  type: 'CAMERA',
+                  count: newCount,
+                  limit: 10,
+                  message: "⚠️ EARPHONE TERDETEKSI! Penggunaan headset, earphone, atau earpiece dilarang selama ujian demi mencegah komunikasi eksternal."
+              });
+          } else if (type === 'EXTRA_SCREEN_DETECTED') {
+              const snap = capturePhoto();
+              sendTelegramNotify('EXTRA_SCREEN_DETECTED', snap || undefined, "Terdeteksi layar/perangkat tambahan");
+              setActiveWarning({
+                  type: 'CAMERA',
+                  count: newCount,
+                  limit: 10,
+                  message: "⚠️ PERANGKAT TAMBAHAN TERDETEKSI! Sistem AI mendeteksi adanya monitor, tablet, atau layar tambahan di sekitar Anda."
+              });
+          } else if ((type === 'NO_FACE' || type === 'MULTIPLE_FACES') && Date.now() - lastEducationShownRef.current > 15000) {
+            setActiveWarning({
+              type: 'CAMERA',
+              count: newCount,
+              limit: 10,
+              message: type === 'NO_FACE' 
+                ? "⚠️ WAJAH TIDAK TERDETEKSI! Pastikan wajah Anda selalu menatap layar selama ujian berlangsung. Menjauh dari layar dianggap indikasi pelanggaran."
+                : "⚠️ MULTI-FACE DETECTED! Sistem mendeteksi lebih dari satu wajah. Ujian harus dikerjakan secara mandiri!"
+            });
+            lastEducationShownRef.current = Date.now();
+          } else if (type === 'FACE_UNALIGNED' && Date.now() - lastEducationShownRef.current > 15000) {
+            setActiveWarning({
+              type: 'CAMERA',
+              count: newCount,
+              limit: 10,
+              message: "⚠️ POSISI WAJAH TIDAK SEJAJAR! Sistem mendeteksi wajah Anda terlalu sering menoleh ke samping atau berpaling dari layar."
+            });
+            lastEducationShownRef.current = Date.now();
+          }
+        }
+      }, 0);
+
+      return newCount;
+    });
+  }, [secondChanceUsed, capturePhoto]);
+
+  // Shuffle logic
+  useEffect(() => {
+    const saved = loadRemedialSession();
+    if ((!remedialQuestions || remedialQuestions.length === 0) && (!saved?.remedialQuestions || saved.remedialQuestions.length === 0)) return;
+
+    let indices: number[] = [];
+    let sourceQuestions = remedialQuestions;
+
+    // Prioritize indices from saved session to keep order consistent on refresh
+    if (saved && saved.sessionId === sessionId) {
+      if (saved.shuffledIndices && saved.shuffledIndices.length > 0) {
+        indices = saved.shuffledIndices;
+        // If prop is empty, use questions from session
+        if ((!sourceQuestions || sourceQuestions.length === 0) && saved.remedialQuestions) {
+          sourceQuestions = saved.remedialQuestions;
+        }
+      }
+    }
+    
+    if (indices.length === 0 && sourceQuestions && sourceQuestions.length > 0) {
+      // Generate new shuffle
+      indices = sourceQuestions.map((_, i) => i);
+      for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+      }
+    }
+
+    if (sourceQuestions && sourceQuestions.length > 0) {
+      const mapped = indices.map(idx => ({ text: sourceQuestions[idx] || '', originalIndex: idx }));
+      setShuffledQuestions(mapped);
+    }
+  }, [remedialQuestions, sessionId]);
+
+  // Activate EXAM when mounted
+  useEffect(() => {
+    if (step === 'EXAM' && attemptId && attemptToken && currentStudentId && !hasActivatedRef.current) {
+      hasActivatedRef.current = true;
+      const activate = async () => {
+        try {
+          const res = await fetch('/api/grademaster/students/remedial/activate', {
+             method: 'POST',
+             cache: 'no-store' as RequestCache,
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({
+               action: 'ACTIVATE',
+               attemptId,
+               studentId: currentStudentId,
+               token: attemptToken
+             })
+          });
+          
+          if (!res.ok) {
+            const errorData = await res.json();
+            if (errorData.error === 'RESET_REQUIRED') {
+              setToast({ message: "Sesi sebelumnya telah direset oleh guru. Silakan mulai ulang.", type: "error" });
+              clearRemedialSession();
+              setStep('RULES');
+              hasActivatedRef.current = false;
+              return;
+            }
+            // Token expired or attempt mismatch — gracefully restart instead of crash-loop
+            console.warn(`[Remedial] Activation failed: ${errorData.error}. Falling back to RULES.`);
+            setToast({ message: "Sesi sebelumnya tidak valid. Silakan mulai ulang proses remedial.", type: "error" });
+            clearRemedialSession();
+            setStep('RULES');
+            hasActivatedRef.current = false;
+            return;
+          }
+        } catch (e: any) {
+          console.error('[Remedial] Activation network error:', e);
+          // Network error during activation — don't crash-loop, just let the exam continue
+          // The exam can still work locally and sync on submission
+          setToast({ message: "Koneksi gagal saat aktivasi. Ujian tetap berjalan.", type: "error" });
+        }
+      };
+      activate();
+    }
+  }, [step, attemptId, attemptToken, currentStudentId]);
+
+
+
+  const getPosition = (): Promise<{ coords: { latitude: number; longitude: number } }> => {
+    return new Promise((resolve) => {
+      // Bypassing browser GPS permission prompt entirely to prevent popup
+      // Quietly fall back to IP-based geolocation
+      fetch('https://get.geojs.io/v1/ip/geo.json')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.latitude && data.longitude) {
+            resolve({ coords: { latitude: parseFloat(data.latitude), longitude: parseFloat(data.longitude) } });
+          } else {
+            resolve({ coords: { latitude: 0, longitude: 0 } });
+          }
+        })
+        .catch(() => resolve({ coords: { latitude: 0, longitude: 0 } }));
+    });
+  };
+
+  const getLocationErrorMessage = (err: any): string => {
+    const code = err?.code;
+    if (code === 1) return 'Akses Lokasi ditolak. Buka Pengaturan Browser → Izin Situs → Lokasi → Izinkan, lalu coba lagi.';
+    if (code === 2) return 'Lokasi tidak tersedia. Pastikan GPS aktif di Pengaturan HP Anda dan browser tidak dalam mode penyamaran/privat.';
+    if (code === 3) return 'Waktu permintaan lokasi habis. Pastikan Anda berada di area dengan sinyal GPS yang baik, lalu coba lagi.';
+    if (code === 0) return 'Browser Anda tidak mendukung fitur Lokasi. Gunakan browser Chrome, Firefox, atau Edge versi terbaru.';
+    return 'Gagal mendapatkan lokasi. Pastikan GPS aktif dan izin lokasi telah diberikan.';
+  };
+
+  const startExam = async () => {
+    setIsSubmitting(true);
+    setSubmissionLabel("Memulai sesi...");
+
+    const saved = loadRemedialSession();
+    let effectiveQuestions = remedialQuestions;
+    
+    // Check local session fallback if prop is empty
+    if ((!effectiveQuestions || effectiveQuestions.length === 0) && saved?.remedialQuestions) {
+      effectiveQuestions = saved.remedialQuestions;
+    }
+
+    if (!effectiveQuestions || effectiveQuestions.length === 0) {
+      const errMsg = "Soal remedial belum diatur atau sesi Anda telah direset oleh guru. Silakan masuk kembali.";
+      setToast({ message: errMsg, type: "error" });
+      
+      // Try to get some metadata for the log even if it's currently empty state
+      const logName = studentName || saved?.studentName || 'Siswa Unknown';
+      const logClass = className || saved?.location?.split(' - ')[0] || 'Kelas Unknown';
+      
+      sendTelegramNotify('ERROR', undefined, `⚠️ [${logClass}] ${logName} - Gagal Mulai: Soal Kosong (Mapel: ${subject || 'Informatika'})`);
+      
+      // Clear persistence and reload to let student re-type their name/session
+      setTimeout(() => {
+        clearRemedialSession();
+        window.location.reload();
+      }, 3000);
+      
+      setIsSubmitting(false);
+      setSubmissionLabel("");
+      return;
+    }
+
+    // 1. Get Location (best-effort — never blocks exam start)
+    let locStr = currentLocation || 'UNAVAILABLE';
+    try {
+      const pos = await getPosition();
+      locStr = `${pos.coords.latitude},${pos.coords.longitude}`;
+      setCurrentLocation(locStr);
+    } catch {
+      locStr = 'UNAVAILABLE';
+      setCurrentLocation('UNAVAILABLE');
+    }
+
+    // Capture & Compress Photo (non-blocking — exam proceeds even if photo fails)
+    let capturedImg = capturePhoto();
+    if (!capturedImg && examMode !== 'LIMITED') {
+      // Small delay to wait for video to reach readyState if just mounted
+      await new Promise(r => setTimeout(r, 500));
+      capturedImg = capturePhoto();
+    }
+
+    if (capturedImg) {
+      capturedImg = await compressImage(capturedImg);
+    } else {
+      if (examMode === 'LIMITED') {
+        setClientCheatingFlags(f => [...f, "Ujian dimulai dengan Mode Terbatas (Tanpa Kamera/Lokasi)"]);
+        sendTelegramNotify('ACTIVITY', undefined, `⚠️ Siswa melanjutkan ujian dengan mode LIMITED karena perangkat tidak mendukung.`);
+      } else {
+        sendTelegramNotify('ACTIVITY', undefined, "Foto verifikasi gagal diambil (kamera mungkin belum sepenuhnya siap)");
+      }
+    }
+
+    let attemptIdFromServer: string | undefined;
+    let attemptTokenFromServer: string | undefined;
+    let studentIdFromServer: string | undefined;
+
+      // 3. Start Session on Server
+    try {
+      const res = await fetch('/api/grademaster/students/remedial', {
+        method: 'POST',
+        cache: 'no-store' as RequestCache,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          sessionId, 
+          studentName, 
+          status: 'INITIATED', 
+          location: locStr, 
+          photo: capturedImg 
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        if (data.error === 'RESET_REQUIRED') {
+          setToast({ message: "Sesi anda telah direset. Silakan login kembali.", type: "error" });
+          setTimeout(() => {
+            clearRemedialSession();
+            window.location.reload();
+          }, 3000);
+          return;
+        }
+        
+        // Handle specifically missing questions from server side
+        if (data.error?.includes('INVALID_SESSION_DATA') || data.error?.includes('Guru belum mengatur')) {
+          setToast({ message: "Gagal memulai: Soal remedial belum diatur oleh guru.", type: "error" });
+          sendTelegramNotify('ERROR', undefined, `⚠️ ${studentName} - Gagal Mulai: Soal Kosong di Server (Mapel: ${subject})`);
+          setIsSubmitting(false);
+          setSubmissionLabel("");
+          return;
+        }
+
+        const errMsg = data.error || "Terjadi kesalahan saat memulai ujian. Coba lagi.";
+        setToast({ message: errMsg, type: "error" });
+        sendTelegramNotify('ERROR', undefined, `Gagal API Mulai: ${errMsg}`);
+        if (data.error?.includes('permanen')) {
+            setStep('CHEATED'); 
+        }
+        setIsSubmitting(false);
+        setSubmissionLabel("");
+        return;
+      }
+
+      // If server returned fresh questions, update local state
+      if (data.remedialQuestions && data.remedialQuestions.length > 0) {
+        setShuffledQuestions(data.remedialQuestions.map((q: string, i: number) => ({ text: q, originalIndex: i })));
+      }
+      
+      if (data.attemptId && data.attemptToken && data.studentId) {
+        attemptIdFromServer = data.attemptId;
+        attemptTokenFromServer = data.attemptToken;
+        studentIdFromServer = data.studentId;
+
+        setAttemptId(data.attemptId);
+        setAttemptToken(data.attemptToken);
+        setCurrentStudentId(data.studentId);
+      }
+
+      // MediaPipe ProctoringCamera will handle media access and stream locally
+      startedAtRef.current = Date.now();
+      
+      // 4. Generate initial shuffle on start
+      // Use the most up-to-date questions (possibly refreshed from server above)
+      const activeQuestions = data.remedialQuestions && data.remedialQuestions.length > 0 
+        ? data.remedialQuestions 
+        : effectiveQuestions;
+
+      const indices = activeQuestions.map((_: any, i: number) => i);
+      for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+      }
+
+      const initialShuffled = indices.map((idx: number) => ({ 
+        text: activeQuestions[idx], 
+        originalIndex: idx 
+      }));
+      
+      setShuffledQuestions(initialShuffled);
+      
+      // Try to recover from backup first
+      let initialAnswers = new Array(activeQuestions.length).fill("");
+      if (typeof window !== 'undefined') {
+        const backupKey = `gm_remedial_backup_${sessionId}_${studentName.toLowerCase().trim()}`;
+        const backupRaw = localStorage.getItem(backupKey);
+        if (backupRaw) {
+          try {
+            const parsed = JSON.parse(backupRaw);
+            if (Array.isArray(parsed) && parsed.length === activeQuestions.length) {
+              initialAnswers = parsed;
+              console.log("Restored answers from backup on exam start:", parsed);
+            }
+          } catch {}
+        }
+      }
+      setAnswers(initialAnswers);
+
+      saveRemedialSession({
+        sessionId,
+        studentName,
+        step: 'EXAM',
+        startedAt: startedAtRef.current,
+        answers: initialAnswers,
+        note,
+        location: locStr || 'UNAVAILABLE',
+        refreshCount: 0,
+        shuffledIndices: indices,
+        attemptId: attemptIdFromServer || attemptId || undefined,
+        attemptToken: attemptTokenFromServer || attemptToken || undefined,
+        studentId: studentIdFromServer || currentStudentId || undefined,
+        examMode,
+        cameraStatus,
+        remedialQuestions: activeQuestions,
+        remedialTimer,
+        kkm: kkm || 70,
+        academicYear: academicYear || '2025/2026',
+        examType: examType || 'UTS',
+        semester,
+        remedialEssayCount,
+      });
+      // Initialize session and set step to EXAM
+      setIsSubmitting(false);
+      setSubmissionLabel("");
+      setStep('EXAM');
+    } catch (e) {
+      setToast({ message: "Terjadi kesalahan saat menghubungi server. Coba lagi.", type: "error" });
+      sendTelegramNotify('ERROR', undefined, "Gagal Network: Put Remedial failed");
+      setIsSubmitting(false);
+      setSubmissionLabel("");
+      return;
+    }
+  };
+
+  // Flag to decouple timeout execution from the fast-updating answers/timeLeft state
+  const [isTimeoutTriggered, setIsTimeoutTriggered] = useState(false);
+
+  // Timer countdown (strictly separated from answers to avoid re-render loops)
+  useEffect(() => {
+    if (step !== 'EXAM' || showTimeUpModal || isTimeoutTriggered) return;
+    
+    const timerId = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timerId);
+          setIsTimeoutTriggered(true);
+          return 0;
+        }
+        
+        // Trigger 5 minute warning
+        if (prev === 300 && !hasShownFiveMinWarningRef.current) {
+          hasShownFiveMinWarningRef.current = true;
+          setShowFiveMinWarning(true);
+        }
+        
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timerId);
+  }, [step, showTimeUpModal, isTimeoutTriggered]);
+
+  // Execute Timeout logic exactly ONCE when triggered
+  useEffect(() => {
+    if (isTimeoutTriggered && step === 'EXAM' && !isSubmitting) {
+      const current = loadRemedialSession();
+      saveRemedialSession({
+        sessionId,
+        studentName,
+        startedAt: current?.startedAt || startedAtRef.current || Date.now(),
+        refreshCount: current?.refreshCount || 0,
+        ...current,
+        answers: answersRef.current,
+        note: noteRef.current,
+        className,
+        subject,
+        kkm: kkm || 70,
+        academicYear: academicYear || '2025/2026',
+        examType: examType || 'UTS',
+        semester,
+        remedialEssayCount,
+        step: 'EXAM',
+        isPenaltyApplied,
+        lastUpdated: Date.now()
+      });
+      handleStatusUpdate('TIMEOUT');
+    }
+  }, [isTimeoutTriggered, isSubmitting, step]);
+
+  // Proctoring: START photo + 30s auto-snap (depends ONLY on step, NOT timeLeft)
+  useEffect(() => {
+    if (step !== 'EXAM' || isSubmitting) return;
+
+    // Helper: retry capture with short delay between attempts
+    const captureWithRetry = async (maxAttempts = 3, delayMs = 500): Promise<string | undefined> => {
+      for (let i = 0; i < maxAttempts; i++) {
+        const snap = capturePhoto();
+        if (snap) return snap;
+        if (i < maxAttempts - 1) {
+          await new Promise(r => setTimeout(r, delayMs));
+        }
+      }
+      return undefined;
+    };
+
+    // Auto-capture START photo when exam interface is fully rendered
+    if (!hasSentStartNotifRef.current) {
+      hasSentStartNotifRef.current = true;
+      setTimeout(async () => {
+        const snap = await captureWithRetry(4, 800);
+        const compressed = snap ? await compressImage(snap) : undefined;
+        sendTelegramNotify('START', compressed);
+        
+        const net = getNetworkInfo();
+        if (net.includes('2g') || net.includes('3g')) {
+          // setToast({ message: "Koneksi lambat terdeteksi. Harap bersabar saat mengunggah jawaban.", type: "error" });
+        }
+      }, 2500);
+    }
+
+    // Auto-Snap for Proctoring (Telegram)
+    // Using recursive setTimeout instead of setInterval to prevent overlap and backlog issues
+    let isProctoringActive = true;
+    let proctorTimerId: NodeJS.Timeout;
+    const PROCTOR_INTERVAL = 30000;
+    let consecutiveFailCount = 0;
+    const MAX_CONSECUTIVE_FAIL_BEFORE_ALERT = 5;
+
+    const runProctorCycle = async () => {
+      if (!isProctoringActive || step !== 'EXAM') return;
+      
+      try {
+        if (!document.hidden) {
+          const snap = await captureWithRetry(3, 500);
+          if (snap) {
+            consecutiveFailCount = 0;
+
+            if (isPhotoDuplicate(snap) && consecutiveDupCountRef.current < 5) {
+              // Skip duplicate, tapi jangan terlalu lama — setelah 5 skip, kirim tetap
+            } else {
+              if (consecutiveDupCountRef.current >= 5) {
+                consecutiveDupCountRef.current = 0;
+                lastPhotoHashRef.current = '';
+              }
+              const compressed = await compressImage(snap);
+              await sendTelegramNotify('PROCTORING', compressed, `📸 Auto-Snap`);
+            }
+          } else {
+            consecutiveFailCount++;
+            console.warn(`Proctoring snap gagal (${consecutiveFailCount}x berturut-turut)`);
+
+            if (consecutiveFailCount === MAX_CONSECUTIVE_FAIL_BEFORE_ALERT) {
+              sendTelegramNotify('ACTIVITY', undefined, `⚠️ Kamera siswa gagal di-capture ${MAX_CONSECUTIVE_FAIL_BEFORE_ALERT}x berturut-turut. Kemungkinan kamera mati / tertutup.`);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Proctoring auto-snap error:", err);
+      } finally {
+        if (isProctoringActive && step === 'EXAM') {
+          proctorTimerId = setTimeout(runProctorCycle, PROCTOR_INTERVAL);
+        }
+      }
+    };
+
+    // Initial trigger after 30 seconds
+    proctorTimerId = setTimeout(runProctorCycle, PROCTOR_INTERVAL);
+
+    return () => {
+      isProctoringActive = false;
+      clearTimeout(proctorTimerId);
+    };
+  }, [step, isSubmitting]);
+
+  // ── MONITORING SETUP (Heartbeat & Event Listeners) ──
+  useEffect(() => {
+    if (step !== 'EXAM' || !attemptId || isSubmitting) return;
+
+    // 1. Start Heartbeat Pulse (20s)
+    heartbeatTimerRef.current = setInterval(sendHeartbeat, 20000);
+    sendHeartbeat(); // Immediate first beat
+
+    // 1.5 Fast Network Polling (2s) for instant offline detection
+    const fastNetworkPoll = setInterval(() => {
+      if (!navigator.onLine) {
+        setIsConnectionLocked(true);
+        setIsOffline(true);
+      }
+    }, 2000);
+
+    // 2. Network Listeners
+    const handleOnline = () => {
+      // Don't auto-unlock immediately, wait for syncWithServer handshake
+      syncWithServer();
+      trackEvent('NETWORK_ONLINE', 'LOW', 0, { reason: 'Connection restored' });
+    };
+    const handleOffline = () => {
+      setIsConnectionLocked(true);
+      trackEvent('NETWORK_OFFLINE', 'HIGH', 15, { reason: 'Connection lost' });
+    };
+
+    const handleBlur = () => {
+      if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
+      setIsScreenshotFlash(true); // Instant white screen to block partial OS screenshots
+      setTimeout(() => setIsScreenshotFlash(false), 2000);
+
+      trackEvent('WINDOW_BLUR', 'HIGH', 15, { reason: 'Window lost focus / popup / third-party overlay' });
+      setTabWarningCount(prev => {
+        const newCount = prev + 1;
+        setTimeout(() => {
+          setActiveWarning({
+            type: 'TAB',
+            count: newCount,
+            limit: 3,
+            message: `⚠️ INDIKASI KECURANGAN! Sistem mendeteksi Pindah Aplikasi / Perekam Layar (Screen Recorder) / Tarik Notifikasi. Dilarang keras memindahkan fokus layar! (${newCount}/3)`
+          });
+        }, 0);
+        return newCount;
+      });
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        trackEvent('VISIBILITY_LOST', 'MEDIUM', 15, { reason: 'Siswa meminimalisir tab / buka aplikasi lain' });
+        handleBlur(); // Bind the exact same penalty for losing app focus
+      } else {
+        trackEvent('VISIBILITY_RESTORED', 'LOW', 0, { reason: 'Siswa kembali fokus ke tab ujian' });
+        syncWithServer();
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('blur', handleBlur);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('blur', handleBlur);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
+      clearInterval(fastNetworkPoll);
+    };
+  }, [step, attemptId, isSubmitting]);
+
+  // Anti-cheat mechanism — basic keyboard protection
+  useEffect(() => {
+    if (step !== 'EXAM') return;
+
+    const handleCopyPaste = (e: ClipboardEvent) => {
+      e.preventDefault();
+      setToast({ message: "Tidak diperkenankan untuk menyalin lembar soal", type: "error" });
+      sendLog('CLIPBOARD_VIOLATION', 'LOW', { action: e.type });
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Print Screen
+      if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
+        setIsScreenshotFlash(true);
+        setToast({ message: "Tangkapan Layar (Screenshot) Dilarang!", type: "error" });
+        sendLog('SCREENSHOT_ATTEMPT', 'HIGH');
+        e.preventDefault();
+        setTimeout(() => setIsScreenshotFlash(false), 2000);
+      }
+      // Windows/Mac Shift + S / Shift + 3 / Shift + 4
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 's' || e.key === 'S' || e.key === '3' || e.key === '4')) {
+        setIsScreenshotFlash(true);
+        setToast({ message: "Tangkapan Layar (Screenshot) Dilarang!", type: "error" });
+        sendLog('SCREENSHOT_ATTEMPT', 'HIGH');
+        e.preventDefault();
+        setTimeout(() => setIsScreenshotFlash(false), 2000);
+      }
+    };
+
+    document.addEventListener("copy", handleCopyPaste);
+    document.addEventListener("paste", handleCopyPaste);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("copy", handleCopyPaste);
+      document.removeEventListener("paste", handleCopyPaste);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [step, setToast, sendLog]);
+
+  // AI Warning Feedback Timer (WITH AUTO-LOCK ON STRIKE 3)
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (showAiBotWarning && aiCountdown > 0) {
+      hasProcessedOverlayWarningRef.current = false; // Reset guard when active countdown runs
+      timer = setInterval(() => {
+        setAiCountdown(prev => prev - 1);
+        
+        // Auto-release warning if they fix the issue (focus back & PiP closed)
+        if (document.hasFocus() && !document.pictureInPictureElement) {
+           setShowAiBotWarning(false);
+        }
+      }, 1000);
+    } else if (showAiBotWarning && aiCountdown === 0) {
+      if (!hasProcessedOverlayWarningRef.current) {
+        hasProcessedOverlayWarningRef.current = true;
+        if (overlayViolationCount >= 3) {
+          // LOCKOUT: Time is up and violation still detected on Strike 3
+          setShowAiBotWarning(false);
+          handleStatusUpdate('CHEATED', 'Terdeteksi penggunaan Layer/Overlay secara berulang (Auto-Lock)');
+        } else {
+          // Flag instead of Lockout: Add to flags but don't terminate session for Strike 1 & 2
+          const reason = `Indikasi Layer/Overlay (Strike ${overlayViolationCount}/3)`;
+          setClientCheatingFlags(f => f.includes(reason) ? f : [...f, reason]);
+          
+          // Send synchronized log (DB + Tele) with Medium Confidence
+          sendActivityLog(`⚠️ ${reason} | Tingkat Kepercayaan: MEDIUM (Persisten 10s)`);
+          
+          // Stay visible for 5 more seconds then hide automatically
+          setTimeout(() => setShowAiBotWarning(false), 5000);
+        }
+      }
+    }
+    return () => clearInterval(timer);
+  }, [showAiBotWarning, aiCountdown, overlayViolationCount]);
+
+
+
+    const evaluateAnswerValidity = (ans: string) => {
+      const text = (ans || '').trim().toLowerCase();
+      
+      // 1. Min 20 characters
+      const lengthOk = text.length >= 20;
+      
+      // 2. Garbage phrases
+      const garbagePhrases = ['tidak tahu', 'kosong', 'gak tahu', 'ndak tahu', 'null', 'undefined', 'asdf', 'qwerty'];
+      const hasGarbage = garbagePhrases.some(phrase => text.includes(phrase));
+      
+      // 3. Repetitive characters
+      const hasRepetitiveChars = /(.)\1{9,}/.test(text);
+      
+      // 4. Repetitive words
+      const words = text.split(/\s+/);
+      const uniqueWords = new Set(words);
+      const hasRepetitiveWords = words.length > 5 && (uniqueWords.size / words.length) < 0.4;
+      
+      // 5. Min words (for backend effort logic alignment)
+      const filteredWords = text.split(/\s+/).filter(w => w.length > 2);
+      const uniqueFilteredWords = new Set(filteredWords);
+      const minWordsOk = filteredWords.length >= 5;
+      const minUniqueWordsOk = uniqueFilteredWords.size >= 3;
+      
+      const isValid = lengthOk && !hasGarbage && !hasRepetitiveChars && !hasRepetitiveWords && minWordsOk && minUniqueWordsOk;
+      
+      return {
+        lengthOk,
+        hasGarbage,
+        hasRepetitiveChars,
+        hasRepetitiveWords,
+        minWordsOk,
+        minUniqueWordsOk,
+        isValid
+      };
+    };
+
+    const validateSubmission = () => {
+      const invalidIndices = answers.map((a, i) => {
+        const evaluation = evaluateAnswerValidity(a);
+        return evaluation.isValid ? -1 : i;
+      }).filter(index => index !== -1);
+      
+      if (invalidIndices.length > 0) {
+        setInvalidQuestionIndices(invalidIndices);
+        const questionNumbers = invalidIndices.map(i => i + 1).join(', ');
+        setToast({ 
+          message: `⚠️ JAWABAN TIDAK VALID: Soal nomor ${questionNumbers} belum diisi dengan jawaban yang memadai atau terdeteksi asal-asalan.`, 
+          type: "error"
+        });
+        // Auto-scroll to first invalid question
+        const firstInvalidEl = document.getElementById(`question-card-${invalidIndices[0]}`);
+        if (firstInvalidEl) {
+          firstInvalidEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return false;
+      }
+      setInvalidQuestionIndices([]);
+      return true;
+    };
+
+    const handleStatusUpdate = async (status: 'COMPLETED' | 'CHEATED' | 'TIMEOUT', explicitReason?: string) => {
+      // For manual completion, we require validation
+      if (status === 'COMPLETED' && !validateSubmission()) {
+        return;
+      }
+
+      if (hasSubmittedRef.current) return;
+      hasSubmittedRef.current = true;
+    
+      setIsSubmitting(true);
+      if (status === 'COMPLETED') {
+        setSubmissionLabel("Mengirim jawaban...");
+      } else if (status === 'TIMEOUT') {
+        setSubmissionLabel("Menyimpan jawaban saat waktu habis...");
+      } else {
+        setSubmissionLabel("Memproses...");
+      }
+
+      const allFlags = explicitReason 
+        ? (clientCheatingFlags.includes(explicitReason) ? clientCheatingFlags : [...clientCheatingFlags, explicitReason])
+        : clientCheatingFlags;
+
+      const payload = { 
+        sessionId, 
+        studentName, 
+        status, 
+        location: currentLocation,
+        answers: (status === 'COMPLETED' || status === 'TIMEOUT') ? (() => {
+          const totalQ = shuffledQuestions.length > 0 ? shuffledQuestions.length : remedialEssayCount;
+          const mappedAnswers = new Array(totalQ).fill("");
+          shuffledQuestions.forEach((sq, i) => {
+            if (sq.originalIndex < totalQ) {
+              mappedAnswers[sq.originalIndex] = answersRef.current[i] || "";
+            }
+          });
+          return mappedAnswers;
+        })() : undefined,
+        note: status === 'COMPLETED' ? noteRef.current : undefined,
+        clientCheatingFlags: allFlags.length > 0 ? allFlags : undefined,
+        examMode,
+        cameraStatus,
+        riskLevel: allFlags.length > 0 ? 'HIGH' : (examMode === 'LIMITED' ? 'MEDIUM' : 'LOW'),
+        cheatingReason: explicitReason,
+        isPenaltyApplied
+      };
+
+      const MAX_SUBMIT_RETRIES = 3;
+      let lastError = '';
+
+      for (let attempt = 1; attempt <= MAX_SUBMIT_RETRIES; attempt++) {
+        if (attempt > 1) {
+          setSubmissionLabel(`Mencoba ulang pengiriman (${attempt}/${MAX_SUBMIT_RETRIES})...`);
+        }
+        try {
+          const res = await fetch('/api/grademaster/students/remedial', {
+            method: 'POST',
+            cache: 'no-store' as RequestCache,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            
+            if (errorData.error === 'RESET_REQUIRED') {
+              setToast({ message: "Sesi anda telah direset oleh proktor. Data lokal dihapus.", type: "error" });
+              setTimeout(() => {
+                clearRemedialSession();
+                window.location.reload();
+              }, 3000);
+              return;
+            }
+
+            const errMsg = errorData.error || "Terjadi kesalahan saat mengirim jawaban.";
+            
+            if (errorData.error?.includes('sudah pernah dilakukan') || errorData.error?.includes('permanen') || res.status === 403) {
+              clearRemedialSession();
+              setStep('CHEATED');
+              setToast({ message: errMsg, type: "error" });
+              setIsSubmitting(false);
+              setSubmissionLabel("");
+              return;
+            }
+
+            lastError = errMsg;
+            if (attempt < MAX_SUBMIT_RETRIES) {
+              const delay = 500 * Math.pow(2, attempt - 1);
+              setToast({ message: `Gagal mengirim (${attempt}/${MAX_SUBMIT_RETRIES}). Mencoba ulang...`, type: "error" });
+              await new Promise(resolve => setTimeout(resolve, delay));
+              continue;
+            }
+          } else {
+            const data = await res.json();
+            
+            clearRemedialSession();
+            if (typeof window !== 'undefined') {
+              const backupKey = `gm_remedial_backup_${sessionId}_${studentName.toLowerCase().trim()}`;
+              localStorage.removeItem(backupKey);
+            }
+            
+            const finalStatus = data.status || status;
+            if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
+            
+            setIsHeldBack(!!data.isHeldBack);
+            setRemedialScore(data.remedialScore ?? null);
+            setPendingRemedialCount(data.pendingRemedialCount || 0);
+            setHoldbackReason(data.holdbackReason || null);
+            setRawScore(data.rawScore ?? null);
+            setDisplayedScore(data.displayedScore ?? null);
+            setFailedReason(data.failedReason || null);
+
+            if (finalStatus === 'FAILED_EFFORT') {
+              setToast({ message: "Sesi selesai: Jawaban dibatalkan karena terdeteksi tidak valid atau terlalu cepat.", type: "error" });
+              setFinalScore(0);
+            } else if (['COMPLETED', 'SUBMITTED', 'REMEDIAL'].includes(finalStatus)) {
+              const fScore = data.newFinalScore ?? data.final_score ?? 0;
+              setFinalScore(fScore);
+
+              if (data.isHeldBack) {
+                setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Nilai ditahan sementara.", type: "success" });
+              } else if (fScore < (kkm || 70)) {
+                setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Nilai Anda belum mencapai KKM.", type: "error" });
+              } else {
+                setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Selamat, Anda LULUS KKM!", type: "success" });
+              }
+
+              if (data.essayDetails) setEssayAutoDetails(data.essayDetails);
+              if (data.remedialAnswerKeys) setRemedialAnswerKeys(data.remedialAnswerKeys);
+
+              sendTelegramNotify('FINISH', undefined, undefined, fScore);
+              
+              fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`, { cache: 'no-store' })
+                .then(r => r.json())
+                .then(d => {
+                  setRemainingStudents(d.students || []);
+                  setSessionCreatedAt(d.sessionCreatedAt);
+                });
+            } else if (finalStatus === 'CHEATED' || finalStatus === 'AI_BOT_DETECTED') {
+              let photo = capturePhoto();
+              const cheatedReason = explicitReason || allFlags.join(', ') || 'Pelanggaran proctoring terdeteksi oleh sistem';
+              const eventType = finalStatus === 'AI_BOT_DETECTED' ? 'AI_BOT_DETECTED' : 'CHEATED';
+              
+              compressImage(photo || "").then(compressed => {
+                sendTelegramNotify(eventType, compressed || photo || undefined, cheatedReason);
+              });
+              // Pastikan UI langsung merender 0
+              setFinalScore(0);
+            } else if (finalStatus === 'TIMEOUT' || finalStatus === 'TIME_UP') {
+              const fScore = data.newFinalScore ?? data.final_score ?? 0;
+              setFinalScore(fScore);
+            }
+            setStep(finalStatus === 'REMEDIAL' ? 'SUBMITTED' : (finalStatus as RemedialStep));
+            setIsSubmitting(false);
+            setSubmissionLabel("");
+            setIsSubmissionBackupSaved(false);
+            return;
+          }
+        } catch (e) {
+          lastError = "Kesalahan jaringan";
+          if (attempt < MAX_SUBMIT_RETRIES) {
+            const delay = 500 * Math.pow(2, attempt - 1);
+            setToast({ message: `Koneksi gagal (${attempt}/${MAX_SUBMIT_RETRIES}). Mencoba ulang...`, type: "error" });
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+        }
+      }
+
+      // All retries failed — save to localStorage as safety net
+      try {
+        localStorage.setItem('gm_failed_submission', JSON.stringify({ ...payload, failedAt: Date.now() }));
+        setIsSubmissionBackupSaved(true);
+      } catch { /* localStorage might be full */ }
+
+      setToast({ message: `Gagal mengirim jawaban setelah ${MAX_SUBMIT_RETRIES} percobaan: ${lastError}. Data tersimpan lokal, hubungi guru.`, type: "error" });
+      sendTelegramNotify('ERROR', undefined, `Submit gagal ${MAX_SUBMIT_RETRIES}x: ${lastError}`);
+      setIsSubmitting(false);
+      setSubmissionLabel("");
+      hasSubmittedRef.current = false; // ALLOW RETRY
+    };
+
+    const handleChange = (index: number, val: string) => {
+      const newAnswers = [...answers];
+      newAnswers[index] = val;
+      setAnswers(newAnswers);
+      if (invalidQuestionIndices.includes(index)) {
+        setInvalidQuestionIndices(prev => prev.filter(i => i !== index));
+      }
+    };
+
+  // Enforce Tab limits
+  useEffect(() => {
+    if (tabWarningCount >= 3 && step === 'EXAM') {
+      const reason = `Mencapai batas maksimal pengalihan layar (${tabWarningCount} kali)`;
+      if (secondChanceUsed) {
+        if (!hasTriggeredCheatingRef.current) {
+          hasTriggeredCheatingRef.current = true;
+          setToast({ message: "Batas pengalihan layar terlampaui. Ujian dihentikan.", type: "error" });
+          setClientCheatingFlags(oldFlags => {
+            if (!oldFlags.includes(reason)) return [...oldFlags, reason];
+            return oldFlags;
+          });
+          handleStatusUpdate('CHEATED', reason);
+        }
+      } else {
+        if (!hasTriggeredSecondChanceRef.current) {
+          hasTriggeredSecondChanceRef.current = true;
+          setSecondChanceReason(reason);
+          setClientCheatingFlags(oldFlags => {
+            if (!oldFlags.includes(reason)) return [...oldFlags, reason];
+            return oldFlags;
+          });
+          setStep('SECOND_CHANCE');
+          sendTelegramNotify('SECOND_CHANCE', typeof capturePhoto === 'function' ? capturePhoto() || undefined : undefined, reason);
+        }
+      }
+    }
+  }, [tabWarningCount, step, secondChanceUsed]);
+
+  const handleSubmit = async () => {
+    const isAnyEmpty = answers.some(a => !a.trim());
+    if (isAnyEmpty) {
+      setToast({ message: "Harap isi semua soal essay sebelum mengumpulkan.", type: "error" });
+      return;
+    }
+    await handleStatusUpdate('COMPLETED');
+  };
+
+  // RENDER: PERMANENTLY BLOCKED SCREEN
+  if (isPermanentlyBlocked) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-slate-950 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#f43f5e15,transparent)] pointer-events-none"></div>
+         <div className="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-[2rem] flex items-center justify-center mb-8 border border-rose-500/25 animate-pulse shadow-2xl shadow-rose-500/20">
+            <ShieldX size={48} />
+         </div>
+         <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-3 font-outfit">Sesi Ujian Ditangguhkan!</h2>
+         <p className="text-rose-400 font-bold max-w-md mb-6 leading-relaxed text-xs uppercase tracking-wide">
+           Sistem keamanan memblokir akun Anda secara permanen karena terdeteksi melanggar aturan proctoring ujian secara berulang.
+         </p>
+
+         <div className="bg-slate-900 border border-slate-800 max-w-md w-full rounded-3xl p-6 mb-8 text-left space-y-4 shadow-xl">
+           <div className="pb-3 border-b border-slate-800 flex justify-between items-center">
+             <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-400">Riwayat Pelanggaran Terdeteksi:</h4>
+             <span className="text-[9px] font-bold px-2 py-0.5 bg-rose-500/15 text-rose-400 border border-rose-500/25 rounded-md uppercase">Locked</span>
+           </div>
+           
+           <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+             {(serverCheatingFlags.length > 0 ? serverCheatingFlags : clientCheatingFlags).length > 0 ? (
+               (serverCheatingFlags.length > 0 ? serverCheatingFlags : clientCheatingFlags).map((flag, idx) => {
+                 let label = flag;
+                 let desc = "";
+                 if (flag === 'TAB_SWITCH' || flag.includes('Meninggalkan halaman') || flag.includes('Tab Switch')) {
+                   label = "Meninggalkan Halaman Ujian (Tab Switch)";
+                   desc = "Membuka tab baru, menekan tombol Home, atau berpindah ke aplikasi lain.";
+                 } else if (flag === 'BACK_PRESS' || flag.includes('tombol kembali')) {
+                   label = "Navigasi Kembali (Back Press)";
+                   desc = "Mencoba menekan tombol kembali pada perangkat browser.";
+                 } else if (flag === 'COPY_ATTEMPT' || flag.includes('menyalin') || flag.includes('copy')) {
+                   label = "Mencoba Menyalin Soal (Copy)";
+                   desc = "Tindakan menyalin teks soal atau jawaban dilarang oleh sistem.";
+                 } else if (flag === 'PASTE_ATTEMPT' || flag.includes('paste')) {
+                   label = "Mencoba Menempel Teks (Paste)";
+                   desc = "Tindakan menempel teks dari luar halaman ujian dibatasi.";
+                 } else if (flag === 'NO_FACE' || flag.includes('Wajah tidak terdeteksi')) {
+                   label = "Wajah Tidak Terdeteksi Kamera";
+                   desc = "Kamera pengawas tidak dapat menemukan wajah Anda di area ujian.";
+                 } else if (flag === 'MULTI_FACE' || flag.includes('lebih dari satu')) {
+                   label = "Deteksi Wajah Ganda";
+                   desc = "Sistem mendeteksi lebih dari satu orang di depan kamera.";
+                 } else if (flag === 'PIP_ACTIVE' || flag.includes('PICTURE-IN-PICTURE')) {
+                   label = "Mode Picture-in-Picture Aktif";
+                   desc = "Menampilkan layar di atas aplikasi lain (PiP/floating window) terdeteksi.";
+                 } else if (flag === 'OVERLAY_INDICATION' || flag.includes('Layer/Overlay')) {
+                   label = "Indikasi Layar Mengambang/Overlay";
+                   desc = "Aplikasi perekam layar atau overlay pihak ketiga terdeteksi aktif.";
+                 } else if (flag === 'FAST_COMPLETION') {
+                   label = "Pengumpulan Terlalu Cepat";
+                   desc = "Ujian diselesaikan dalam waktu kurang dari batas minimal pengerjaan (5 menit).";
+                 } else if (flag === 'LOW_EFFORT') {
+                   label = "Jawaban Kosong atau Asal-asalan";
+                   desc = "Sebagian besar jawaban terdeteksi kosong, terlalu pendek, atau berisi kata acak.";
+                 } else if (flag === 'IDENTICAL_ESSAY' || flag.includes('HIGH_ESSAY_SIMILARITY')) {
+                   label = "Plagiarisme / Kesamaan Esai Tinggi";
+                   desc = "Jawaban yang dikirim memiliki kemiripan ekstrem dengan siswa lain.";
+                 } else if (flag.includes('AI Vision')) {
+                   label = "AI Proctoring — Pelanggaran Terdeteksi";
+                   desc = flag.replace('AI Vision: ', '').replace('AI Vision Critical: ', '');
+                 }
+
+                 return (
+                   <div key={idx} className="p-3 rounded-2xl bg-rose-500/5 border border-rose-500/10">
+                     <p className="text-[11px] font-black text-rose-400 uppercase tracking-tight">{label}</p>
+                     {desc && <p className="text-[10px] text-slate-400 font-medium mt-1 leading-normal">{desc}</p>}
+                   </div>
+                 );
+               })
+             ) : (
+               <div className="p-4 text-center rounded-2xl bg-rose-500/5 border border-rose-500/10">
+                 <p className="text-xs text-rose-400 font-bold">Terdeteksi aktivitas mencurigakan yang melanggar integritas ujian.</p>
+               </div>
+             )}
+           </div>
+           
+           <p className="text-[10px] font-medium text-slate-400 pt-3 border-t border-slate-800 text-center leading-relaxed">
+             💡 Silakan hubungi <span className="text-white font-bold">Guru Pengampu atau Pengawas Ujian</span> untuk memverifikasi identitas Anda dan membuka kunci sesi ini.
+           </p>
+         </div>
+         
+         <div className="mt-8">
+            <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">GradeMaster Dynamic Security v2.0</p>
+         </div>
+      </div>
+    );
+  }
+
+  // RENDER: RULES SCREEN (Pre-exam instruction popup)
+  if (step === 'RULES') {
+    return (
+      <div className="fixed inset-0 z-[100] bg-transparent overflow-y-auto">
+        <div className="flex min-h-full flex-col items-center justify-center p-4">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#3b82f615,transparent)]"></div>
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-30"></div>
+        
+        <div className="w-full max-w-xl relative bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant rounded-[2.5rem] premium-shadow p-6 md:p-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+           <header className="text-center mb-8">
+              <div className="w-20 h-20 bg-primary/20 rounded-[2rem] border border-primary/30 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/20">
+                 <ShieldCheck size={40} className="text-primary" />
+              </div>
+              <h2 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight uppercase leading-tight font-outfit">Protokol Keamanan <br /><span className="text-primary italic">GradeMaster OS</span></h2>
+              <div className="flex justify-center gap-2 mt-4">
+                 <Badge color="indigo">{subject}</Badge>
+                 <Badge color="emerald">{examType}</Badge>
+              </div>
+           </header>
+
+           <div className="space-y-4 mb-8 h-[320px] overflow-y-auto pr-2 custom-scrollbar focus:outline-none">
+              {[
+                { icon: <MonitorOff size={18}/>, title: "Layar Penuh", desc: "Sistem akan mendeteksi aktifitas pemisahan layar atau pergantian tab secara instan." },
+                { icon: <Camera size={18}/>, title: "Monitoring Visual", desc: "Akses kamera diperlukan untuk verifikasi identitas dan pengawasan berkelanjutan." },
+                { icon: <Monitor size={18}/>, title: "Cek Screen Overlay", desc: "Terdeteksinya aplikasi melayang atau screen recorder akan mengunci sesi Anda." },
+                { icon: <Activity size={18}/>, title: "Koneksi Stabil", desc: "Setiap aksi disinkronisasi setiap detik. Pastikan internet Anda stabil." },
+                { icon: <AppWindow size={18}/>, title: "Deteksi Multi-Aplikasi", desc: "Menutup browser atau berpindah aplikasi akan dianggap pelanggaran berat." }
+              ].map((rule, idx) => (
+                <div key={idx} className="flex gap-4 p-4 rounded-2xl bg-surface-variant border border-outline-variant hover:bg-surface-container-highest transition-all group">
+                   <div className="w-10 h-10 shrink-0 bg-primary/10 text-primary rounded-xl flex items-center justify-center border border-primary/20 group-hover:scale-110 transition-transform">
+                      {rule.icon}
+                   </div>
+                   <div>
+                      <h4 className="text-[11px] font-black uppercase tracking-widest text-on-surface mb-1">{rule.title}</h4>
+                      <p className="text-[10px] md:text-xs font-bold text-on-surface-variant leading-relaxed text-left">{rule.desc}</p>
+                   </div>
+                </div>
+              ))}
+           </div>
+
+           <label className="flex items-center gap-3 p-5 bg-primary/5 border border-primary/10 rounded-2xl mb-8 cursor-pointer select-none hover:bg-primary/10 transition-all">
+             <input
+               type="checkbox"
+               checked={agreedRules}
+               onChange={() => setAgreedRules(!agreedRules)}
+               className="w-6 h-6 rounded-lg border-2 border-primary/30 bg-slate-900 text-primary focus:ring-primary/20 accent-primary"
+             />
+             <span className="text-[11px] md:text-xs font-black text-primary uppercase tracking-widest text-left">Saya siap mengikuti ujian dengan jujur</span>
+           </label>
+
+           <button 
+             onClick={() => setStep('INFO')}
+             disabled={!agreedRules}
+             className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 group border border-outline-variant disabled:opacity-30 disabled:grayscale disabled:pointer-events-none"
+           >
+             Mulai Verifikasi Sistem <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+           </button>
+        </div>
+        </div>
+      </div>
+    );
+  }
+
+  // RENDER: INFO SCREEN (Camera/GPS/Timer confirmation + Permission Check)
+  if (step === 'INFO') {
+    const allPermsOk = examMode === 'LIMITED' || cameraOk;
+
+    return (
+      <div className="fixed inset-0 z-[100] bg-transparent overflow-y-auto pt-safe">
+        <div className="flex min-h-full flex-col items-center justify-center p-4">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#3b82f610,transparent)]"></div>
+        <div className="w-full max-w-lg relative bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant rounded-[2.5rem] premium-shadow p-6 md:p-10 animate-in zoom-in duration-500">
+           <button onClick={() => setStep('RULES')} className="flex items-center gap-2 text-on-surface-variant hover:text-white font-black text-[10px] uppercase tracking-widest transition-all mb-8 group">
+            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Kembali ke Peraturan
+          </button>
+          
+          <header className="flex flex-col items-center text-center mb-8">
+            <div className="w-20 h-20 bg-rose-500/10 text-rose-400 rounded-[2rem] border border-rose-500/20 flex items-center justify-center mb-6 shadow-2xl shadow-rose-500/10">
+              <Camera size={40} />
+            </div>
+            <h2 className="text-2xl font-black text-on-surface tracking-tight uppercase font-outfit">Persiapan Teknis</h2>
+            <p className="text-[10px] md:text-xs font-bold text-on-surface-variant mt-2 uppercase tracking-widest">Verifikasi lingkungan pengerjaan</p>
+          </header>
+
+          <div className="bg-surface-variant border border-outline-variant rounded-2xl p-6 mb-8 space-y-4">
+            <div className="flex items-center justify-between pb-4 border-b border-outline-variant">
+               <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Identitas Peserta</span>
+               <Badge color="emerald">{studentName}</Badge>
+            </div>
+            <div className="grid grid-cols-2 gap-4 pt-safe">
+              <div>
+                <p className="text-[9px] text-on-surface-variant font-black uppercase tracking-tighter mb-1.5">Mata Pelajaran</p>
+                <div className="text-[11px] font-bold text-on-surface uppercase truncate">{subject}</div>
+              </div>
+              <div>
+                <p className="text-[9px] text-on-surface-variant font-black uppercase tracking-tighter mb-1.5">Waktu Ujian</p>
+                <div className="text-[11px] font-bold text-on-surface uppercase">{remedialTimer} Menit</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 mb-8">
+            <div className={`p-4 rounded-2xl border transition-all flex items-center gap-4 ${checkingPerms ? 'bg-amber-500/5 border-amber-500/20' : cameraOk ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-surface-variant border-outline-variant'}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${checkingPerms ? 'bg-amber-500/20 text-amber-400 border-amber-500/20' : cameraOk ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20' : 'bg-surface-variant text-slate-600 border-outline-variant'}`}>
+                <Camera size={18} />
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] font-black uppercase tracking-wider text-on-surface-variant mb-0.5">Sensor Kamera</p>
+                <p className={`text-[11px] font-black uppercase ${checkingPerms ? 'text-amber-400 animate-pulse' : cameraOk ? 'text-emerald-400' : 'text-on-surface-variant'}`}>
+                  {checkingPerms ? 'Mengevaluasi...' : cameraOk ? 'Terhubung' : 'Terputus'}
+                </p>
+              </div>
+              {!cameraOk && !checkingPerms && (
+                <button onClick={checkPermissions} className="px-4 py-2 bg-primary text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">Aktifkan</button>
+              )}
+            </div>
+          </div>
+
+          {cameraErrorDetail && !cameraOk && (
+            <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex flex-col gap-3 animate-in fade-in">
+              <div className="flex gap-3">
+                <AlertTriangle className="text-rose-400 shrink-0 mt-0.5" size={16} />
+                <div>
+                  <p className="text-[10px] font-black text-rose-400 uppercase tracking-wider mb-1">Akses Kamera Ditolak / Bermasalah</p>
+                  <p className="text-[10px] text-rose-300/80 font-bold leading-relaxed whitespace-pre-line">{cameraErrorDetail}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setExamMode('LIMITED');
+                  setCameraOk(true);
+                  setToast({ message: "Beralih ke Mode Terbatas. Kamera dinonaktifkan.", type: "success" });
+                }}
+                disabled={isSubmitting}
+                className="mt-2 w-full py-2.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Lanjut Mode Terbatas
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={() => setStep('GUIDE')}
+            disabled={isSubmitting || !allPermsOk || (remedialQuestions.length === 0 && !loadRemedialSession()?.remedialQuestions)}
+            className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all border border-outline-variant disabled:opacity-30 disabled:grayscale disabled:pointer-events-none group flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? 'Sinkronisasi...' : 
+             (remedialQuestions.length === 0 && !loadRemedialSession()?.remedialQuestions) ? 'Mengunduh Data...' :
+             !allPermsOk ? 'Izin Diperlukan' : 'Lanjutkan ke Panduan'}
+             {allPermsOk && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
+          </button>
+        </div>
+      </div>
+    </div>
+    );
+  }
+
+  // RENDER: GUIDE SCREEN (Educational instructions for proctoring camera)
+  if (step === 'GUIDE') {
+    return (
+      <div className="fixed inset-0 z-[100] bg-transparent overflow-y-auto pt-safe">
+        <div className="flex min-h-full flex-col items-center justify-center p-4">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,#3b82f610,transparent)]"></div>
+        <div className="w-full max-w-xl relative bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant rounded-[2.5rem] premium-shadow p-6 md:p-10 animate-in slide-in-from-bottom-8 duration-700">
+          <button onClick={() => setStep('INFO')} className="flex items-center gap-2 text-on-surface-variant hover:text-white font-black text-[10px] uppercase tracking-widest transition-all mb-8 group">
+            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Kembali ke Persiapan
+          </button>
+          
+          <header className="text-center mb-8">
+            <div className="w-20 h-20 bg-emerald-500/10 text-emerald-400 rounded-[2rem] border border-emerald-500/20 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-emerald-500/10">
+              <ShieldCheck size={40} />
+            </div>
+            <h2 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight uppercase font-outfit">Panduan Visual</h2>
+            <p className="text-[10px] md:text-xs font-bold text-on-surface-variant mt-2 uppercase tracking-widest">Optimalkan Pengawasan Sistem</p>
+          </header>
+
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            {[
+              { icon: <User size={20}/>, title: "Wajah Jelas", desc: "Dahi hingga dagu harus terlihat penuh." },
+              { icon: <ShieldX size={20}/>, title: "Tanpa Masker", desc: "Jangan menutupi wajah dengan benda apapun." },
+              { icon: <Star size={20}/>, title: "Cahaya Cukup", desc: "Pastikan area wajah terang & tidak silau." },
+              { icon: <Camera size={20}/>, title: "Tetap Fokus", desc: "Jangan bergerak keluar dari jangkauan kamera." }
+            ].map((item, idx) => (
+              <div key={idx} className="bg-surface-variant border border-outline-variant p-5 rounded-2xl flex flex-col items-center text-center group hover:bg-surface-container-highest transition-all hover:border-primary/30">
+                 <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center mb-4 border border-primary/20 group-hover:scale-110 transition-transform">
+                   {item.icon}
+                 </div>
+                 <h4 className="text-[10px] font-black uppercase tracking-widest text-on-surface mb-1.5">{item.title}</h4>
+                 <p className="text-[9px] text-on-surface-variant font-bold leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-rose-500/5 border border-rose-500/20 rounded-2xl p-5 mb-8 flex gap-4 items-center">
+            <div className="w-10 h-10 shrink-0 bg-rose-500/20 text-rose-400 rounded-xl flex items-center justify-center border border-rose-500/20">
+               <AlertTriangle size={20} />
+            </div>
+            <p className="text-[10px] md:text-xs text-rose-400 font-black leading-relaxed uppercase tracking-tight text-left">
+              Pelanggaran posisi wajah yang disengaja akan memicu diskualifikasi otomatis & nilai <span className="text-rose-500">NOL</span>.
+            </p>
+          </div>
+
+          <button
+            onClick={startExam}
+            disabled={isSubmitting}
+            className="w-full py-5 bg-emerald-500 text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all border border-outline-variant flex items-center justify-center gap-3 group"
+          >
+            {isSubmitting ? (submissionLabel || 'Inisialisasi...') : 'Saya Mengerti, Mulai Sesi'}
+            {!isSubmitting && <Play size={18} className="fill-current group-hover:translate-x-1 transition-transform" />}
+          </button>
+        </div>
+      </div>
+    </div>
+    );
+  }
+
+
+  // RENDER: SECOND CHANCE SCREEN
+  if (step === 'SECOND_CHANCE') {
+    const handleUseSecondChance = () => {
+      setSecondChanceUsed(true);
+      setWarningCount(0);
+      setTabWarningCount(0);
+      setBackPressCount(0);
+      setClientCheatingFlags([]); 
+      hasTriggeredCheatingRef.current = false;
+      setStep('EXAM');
+      setToast({ message: '⚠️ Kesempatan Terakhir Aktif. Fokus!', type: 'error' });
+      sendTelegramNotify('ACTIVITY', capturePhoto() || undefined, `Siswa menggunakan kesempatan kedua. Alasan: ${secondChanceReason}`);
+    };
+
+    return (
+      <div className="fixed inset-0 z-[1000] bg-transparent flex items-center justify-center p-4 pt-safe">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#f59e0b10,transparent)]"></div>
+        <div className="bg-surface premium-shadow backdrop-blur-2xl border border-amber-500/20 max-w-lg w-full rounded-[2.5rem] p-8 md:p-10 premium-shadow text-center relative">
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
+          <div className="w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-6 bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse">
+            <AlertTriangle size={40} />
+          </div>
+
+          <h2 className="text-2xl font-black text-on-surface mb-2 tracking-tight uppercase font-outfit">Pelanggaran Terdeteksi</h2>
+          <p className="text-[10px] md:text-xs font-bold text-on-surface-variant mb-6 uppercase tracking-widest leading-relaxed">
+            Sistem merekam aktivitas mencurigakan pada sesi Anda
+          </p>
+
+          <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-5 mb-8">
+            <p className="text-[11px] font-black text-rose-400 uppercase tracking-tight">{secondChanceReason}</p>
+          </div>
+
+          <div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-6 mb-8 text-left space-y-4">
+             <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-amber-500 shadow-lg shadow-amber-500/50"></div>
+                <p className="text-[10px] font-black text-on-surface uppercase tracking-widest">Kesempatan Terakhir (1/1)</p>
+             </div>
+             <p className="text-[11px] text-on-surface-variant font-bold leading-relaxed">
+               Anda diberikan <span className="text-amber-500">satu</span> kali kesempatan untuk melanjutkan. Pelanggaran berikutnya akan memicu diskualifikasi otomatis & nilai <span className="text-rose-500 font-black">NOL</span>.
+             </p>
+          </div>
+
+          <button
+            onClick={handleUseSecondChance}
+            className="w-full py-5 bg-amber-500 text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-amber-500/20 hover:scale-[1.02] active:scale-95 transition-all border border-outline-variant flex items-center justify-center gap-3 mb-4"
+          >
+            Pulihkan Sesi Ujian <Play size={18} className="fill-current" />
+          </button>
+
+          <p className="text-[9px] text-slate-600 font-black uppercase tracking-[0.2em]">Tetap Fokus Pada Layar</p>
+        </div>
+      </div>
+    );
+  }
+
+  // RENDER: COMPLETED / CHEATED / TIMEOUT / HELD_BACK
+  if (step === 'CHEATED' || step === 'TIMEOUT' || step === 'TIME_UP' || step === 'COMPLETED' || step === 'SUBMITTED' || step === 'FAILED_EFFORT') {
+    const isCheat = step === 'CHEATED';
+    const isTimeout = step === 'TIMEOUT' || step === 'TIME_UP';
+    const isFailedEffort = step === 'FAILED_EFFORT';
+    const isSuccess = step === 'COMPLETED' || step === 'SUBMITTED';
+    const isCompleted = isSuccess || isFailedEffort;
+    const isHeldBackActive = isHeldBack && !isCheat && !isFailedEffort;
+
+    const getRemainingTimeStr = () => {
+      return "Selesai";
+    };
+
+    const handleShare = () => {
+      const timeStr = getRemainingTimeStr();
+      
+      // Randomize classmate who is also in remedial from remainingStudents list
+      let targetFriend = "";
+      if (remainingStudents && remainingStudents.length > 0) {
+        const randIndex = Math.floor(Math.random() * remainingStudents.length);
+        targetFriend = remainingStudents[randIndex].name;
+      }
+
+      const friendPart = targetFriend ? `Khusus untuk *${targetFriend}* dan rekan lainnya, ` : '';
+      const text = `*GradeMaster OS - Pengingat Remedial* 🔄\n\nHalo! Saya (*${studentName}*) sudah berhasil menyelesaikan remedial ujian *${subject}*.\n\n${friendPart}karena nilai kita akan ditahan sementara oleh sistem sampai semua rekan sekelas selesai mengerjakan, mohon segera diselesaikan pengerjaannya ya!\n\nLink Pengerjaan: ${window.location.origin}\nTerima kasih! 🙏`;
+      
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+    };
+
+    return (
+      <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4 overflow-y-auto custom-scrollbar">
+        <div className={`absolute inset-0 opacity-20 ${isCheat ? 'bg-rose-500/10' : (isTimeout || isFailedEffort) ? 'bg-amber-500/10' : 'bg-emerald-500/10'}`}></div>
+        
+        <div className={`w-full max-w-xl relative bg-surface premium-shadow backdrop-blur-2xl border rounded-[2.5rem] p-8 md:p-12 text-center animate-in zoom-in-95 duration-700 ${isCheat ? 'border-rose-500/20' : (isTimeout || isFailedEffort) ? 'border-amber-500/20' : 'border-emerald-500/20'}`}>
+          <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-${isCheat ? 'rose' : (isTimeout || isFailedEffort) ? 'amber' : 'emerald'}-500/50 to-transparent`}></div>
+          
+          <div className={`w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border ${isCheat ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : isTimeout ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : isFailedEffort ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
+            {isCheat ? <ShieldX size={48} /> : isTimeout ? <Clock size={48} /> : isFailedEffort ? <AlertTriangle size={48} /> : <CheckCircle2 size={48} />}
+          </div>
+          
+          <h2 className="text-3xl font-black text-on-surface mb-3 tracking-tight uppercase font-outfit">
+            {isCheat ? 'Diskualifikasi!' : isTimeout ? 'Waktu Berakhir' : isFailedEffort ? 'Ujian Ditolak!' : 'Sesi Selesai!'}
+          </h2>
+          
+          <div className="space-y-6 mb-10 text-left">
+            {isCheat ? (
+               <div className="space-y-4">
+                 <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide text-center">
+                   Pelanggaran berat terdeteksi. Skor otomatis diatur menjadi <span className="text-rose-500 font-black">NOL</span>. Silakan hubungi Guru Pengampu.
+                 </p>
+                 <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-5 space-y-3">
+                   <p className="text-[11px] font-black text-rose-400 uppercase tracking-wider mb-2">Riwayat Pelanggaran Keamanan:</p>
+                   <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                     {(serverCheatingFlags.length > 0 ? serverCheatingFlags : clientCheatingFlags).filter(f => !f.includes('Nilai remedial ditahan')).map((flag, idx) => {
+                       let label = flag;
+                       let desc = "";
+                       if (flag === 'TAB_SWITCH' || flag.includes('Meninggalkan halaman') || flag.includes('Tab Switch')) {
+                         label = "Meninggalkan Halaman Ujian (Tab Switch)";
+                         desc = "Membuka tab baru, menekan tombol Home, atau berpindah ke aplikasi lain.";
+                       } else if (flag === 'BACK_PRESS' || flag.includes('tombol kembali')) {
+                         label = "Navigasi Kembali (Back Press)";
+                         desc = "Mencoba menekan tombol kembali pada perangkat browser.";
+                       } else if (flag === 'COPY_ATTEMPT' || flag.includes('menyalin') || flag.includes('copy')) {
+                         label = "Mencoba Menyalin Soal (Copy)";
+                         desc = "Tindakan menyalin teks soal atau jawaban dilarang oleh sistem.";
+                       } else if (flag === 'PASTE_ATTEMPT' || flag.includes('paste')) {
+                         label = "Mencoba Menempel Teks (Paste)";
+                         desc = "Tindakan menempel teks dari luar halaman ujian dibatasi.";
+                       } else if (flag === 'NO_FACE' || flag.includes('Wajah tidak terdeteksi')) {
+                         label = "Wajah Tidak Terdeteksi Kamera";
+                         desc = "Kamera pengawas tidak dapat menemukan wajah Anda di area ujian.";
+                       } else if (flag === 'MULTI_FACE' || flag.includes('lebih dari satu')) {
+                         label = "Deteksi Wajah Ganda";
+                         desc = "Sistem mendeteksi lebih dari satu orang di depan kamera.";
+                       } else if (flag === 'PIP_ACTIVE' || flag.includes('PICTURE-IN-PICTURE')) {
+                         label = "Mode Picture-in-Picture Aktif";
+                         desc = "Menampilkan layar di atas aplikasi lain (PiP/floating window) terdeteksi.";
+                       } else if (flag === 'OVERLAY_INDICATION' || flag.includes('Layer/Overlay')) {
+                         label = "Indikasi Layar Mengambang/Overlay";
+                         desc = "Aplikasi perekam layar atau overlay pihak ketiga terdeteksi aktif.";
+                       } else if (flag === 'FAST_COMPLETION') {
+                         label = "Pengumpulan Terlalu Cepat";
+                         desc = "Ujian diselesaikan dalam waktu kurang dari batas minimal pengerjaan (5 menit).";
+                       } else if (flag === 'LOW_EFFORT') {
+                         label = "Jawaban Kosong atau Asal-asalan";
+                         desc = "Sebagian besar jawaban terdeteksi kosong, terlalu pendek, atau berisi kata acak.";
+                       } else if (flag === 'IDENTICAL_ESSAY' || flag.includes('HIGH_ESSAY_SIMILARITY')) {
+                         label = "Plagiarisme / Kesamaan Esai Tinggi";
+                         desc = "Jawaban yang dikirim memiliki kemiripan ekstrem dengan siswa lain.";
+                       } else if (flag.includes('AI Vision')) {
+                         label = "AI Proctoring — Pelanggaran Terdeteksi";
+                         desc = flag.replace('AI Vision: ', '').replace('AI Vision Critical: ', '');
+                       }
+
+                       return (
+                         <div key={idx} className="p-3 rounded-xl bg-surface-variant/50 border border-outline-variant">
+                           <p className="text-[11px] font-bold text-rose-400 uppercase tracking-tight">{label}</p>
+                           {desc && <p className="text-[10px] text-on-surface-variant font-medium mt-1 leading-normal">{desc}</p>}
+                         </div>
+                       );
+                     })}
+                     {((serverCheatingFlags.length > 0 ? serverCheatingFlags : clientCheatingFlags).filter(f => !f.includes('Nilai remedial ditahan')).length === 0) && (
+                       <p className="text-xs text-on-surface-variant font-medium text-center">Pelanggaran aturan proctoring ujian terdeteksi secara otomatis oleh sistem.</p>
+                     )}
+                   </div>
+                   <p className="text-[10px] font-bold text-slate-500 pt-3 border-t border-rose-500/10 text-center uppercase tracking-wider">
+                     Sesi dikunci secara permanen
+                   </p>
+                 </div>
+               </div>
+            ) : isFailedEffort ? (
+               <div className="space-y-4">
+                 <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide text-center">
+                   Ujian remedial Anda ditolak oleh sistem karena tidak memenuhi batas usaha pengerjaan minimal (Anti-Exploit).
+                 </p>
+                 {failedReason ? (
+                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 space-y-2">
+                     <p className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Detail Alasan Penolakan:</p>
+                     <p className="text-xs text-on-surface-variant font-medium leading-relaxed">{failedReason}</p>
+                   </div>
+                 ) : (
+                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 space-y-3">
+                     <p className="text-[11px] font-black text-amber-400 uppercase tracking-wider mb-1">Penyebab Penolakan Ujian:</p>
+                     <ul className="text-xs text-on-surface-variant font-medium space-y-2 list-disc list-inside">
+                       <li>
+                         <span className="text-amber-500 font-bold">Durasi Minimal:</span> Penginputan remedial membutuhkan fokus dan waktu pengerjaan minimal <span className="font-bold text-white">5 menit</span>.
+                       </li>
+                       <li>
+                         <span className="text-amber-500 font-bold">Kualitas Jawaban:</span> Lebih dari setengah dari jumlah soal essay wajib diisi dengan jawaban sah (minimal 20 karakter, 5 kata unik, dan tidak berisi kata asal-asalan seperti 'tidak tahu', 'kosong', dll).
+                       </li>
+                     </ul>
+                   </div>
+                 )}
+                 <p className="text-[11px] font-bold text-on-surface pt-3 border-t border-amber-500/10 text-center leading-normal">
+                   💡 <span className="text-amber-400">Silakan hubungi Guru Pengampu</span> untuk meminta reset sesi ujian jika Anda ingin mengulang dengan benar.
+                 </p>
+               </div>
+            ) : isHeldBackActive ? (
+               <div className="space-y-6 text-center animate-in fade-in duration-500">
+                  <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide">
+                    {isTimeout 
+                      ? "Waktu pengerjaan remedial habis. Jawaban Anda berhasil disimpan."
+                      : "Evaluasi Mandiri Selesai. Jawaban Anda Berhasil Disinkronkan."
+                    }
+                  </p>
+                  
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-6 md:p-8 space-y-4 text-left max-w-md mx-auto shadow-xl shadow-amber-500/5">
+                    <div className="flex items-center gap-3 pb-3 border-b border-amber-500/10">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                        <Clock className="animate-spin" style={{ animationDuration: '3s' }} size={20} />
+                      </div>
+                      <div>
+                        <h4 className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Nilai Remedial Ditahan Sementara</h4>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">Holdback Status Active</p>
+                      </div>
+                    </div>
+                    
+                    <p className="text-xs text-on-surface-variant font-medium leading-relaxed">
+                      {isTimeout
+                        ? "Sesi remedial ditutup otomatis karena batas waktu habis. Jawaban terakhir berhasil disimpan, tetapi nilai remedial Anda sedang ditahan sementara sampai semua siswa remedial di kelas ini selesai."
+                        : "Jawaban berhasil dikumpulkan. Nilai remedial Anda sedang ditahan sementara sampai semua siswa remedial di kelas ini selesai."
+                      }
+                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div className="p-3 bg-surface-variant/55 border border-outline-variant rounded-2xl text-center">
+                        <span className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest block mb-1">Skor Remedial</span>
+                        <span className="text-2xl font-black font-outfit text-primary">{remedialScore ?? '-'}</span>
+                      </div>
+                      <div className="p-3 bg-surface-variant/55 border border-outline-variant rounded-2xl text-center">
+                        <span className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest block mb-1">Tertunggak</span>
+                        <span className="text-2xl font-black font-outfit text-amber-400">{pendingRemedialCount} Siswa</span>
+                      </div>
+                    </div>
+                    
+                    <div className="p-3 bg-surface-variant/30 border border-outline-variant/60 rounded-2xl text-center">
+                      <span className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest block mb-0.5">Nilai Final Sementara (Original)</span>
+                      <span className="text-lg font-black font-outfit text-slate-300">{finalScore}</span>
+                    </div>
+                  </div>
+               </div>
+            ) : isTimeout ? (
+               <div className="space-y-4">
+                 <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide text-center">
+                   Sesi ditutup otomatis oleh sistem karena batas waktu habis.
+                 </p>
+                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 space-y-2">
+                   <p className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Informasi Batas Waktu:</p>
+                   <p className="text-xs text-on-surface-variant font-medium leading-relaxed">
+                     Sesi ujian remedial Anda ditutup secara otomatis karena waktu pengerjaan yang ditentukan telah berakhir.
+                   </p>
+                   {finalScore !== null && finalScore > 0 ? (
+                     <div className="mt-3">
+                       <p className="text-[11px] font-bold text-emerald-400 bg-emerald-500/5 p-3 rounded-xl border border-emerald-500/10">
+                         ✓ Jawaban terakhir Anda telah berhasil disimpan dan dinilai secara otomatis oleh Server.
+                       </p>
+                       <div className="mt-3 p-3 bg-surface-variant rounded-xl border border-outline-variant text-center">
+                         <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block mb-1">Skor Akhir</span>
+                         <span className={`text-3xl font-black font-outfit ${finalScore < 70 ? 'text-rose-500' : 'text-emerald-500'}`}>{finalScore}</span>
+                       </div>
+                     </div>
+                   ) : (
+                     <div className="mt-2 bg-rose-500/5 p-3 rounded-xl border border-rose-500/10 text-left">
+                       <p className="text-[11px] font-bold text-rose-400">
+                         ⚠️ Ujian berakhir tanpa adanya jawaban valid yang diisi. Skor akhir diatur menjadi 0.
+                       </p>
+                       {failedReason && (
+                         <p className="text-[10px] text-slate-400 font-bold mt-2 leading-relaxed uppercase">
+                           Detail Alasan: {failedReason}
+                         </p>
+                       )}
+                     </div>
+                   )}
+                 </div>
+               </div>
+            ) : (
+               <div className="space-y-4 text-center">
+                  <p className="text-[12px] md:text-sm text-on-surface-variant font-bold leading-relaxed uppercase tracking-wide">Evaluasi mandiri selesai. Data Anda telah disinkronisasi dengan Server Nilai Pusat.</p>
+                  <div className="py-6 px-10 bg-surface-variant border border-outline-variant rounded-3xl inline-block">
+                    <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] mb-1">Skor Akhir</p>
+                    <p className={`text-5xl font-black font-outfit tracking-tighter ${finalScore !== null && finalScore < 70 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                      {finalScore}
+                    </p>
+                  </div>
+                  {finalScore !== null && finalScore < 70 && (
+                     <>
+                       <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest bg-rose-500/10 py-2 rounded-full border border-rose-500/20 px-4 block mx-auto w-fit">⚠️ Belum Mencapai KKM (70)</p>
+                       
+                       <div className="mt-8 text-left space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar focus:outline-none">
+                         <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
+                           <h4 className="text-[11px] font-black text-rose-400 uppercase tracking-wider mb-1 flex items-center gap-2">
+                             <AlertTriangle size={14} /> Analisis Koreksi Ujian
+                           </h4>
+                           <p className="text-[10px] text-on-surface-variant font-bold leading-normal uppercase">
+                             Berikut adalah detail evaluasi per soal yang terindikasi kurang tepat untuk dipelajari kembali:
+                           </p>
+                         </div>
+                         
+                         <div className="space-y-4">
+                           {(shuffledQuestions.length > 0 ? shuffledQuestions : answers.map((_, i) => ({ text: `Soal Essay ${i + 1}`, originalIndex: i }))).map((q, idx) => {
+                             const detail = essayAutoDetails[idx];
+                             const score = detail ? detail.score : 0;
+                             const answerKey = remedialAnswerKeys[idx];
+                             const isLowScore = score < 70;
+                             
+                             return (
+                               <div key={idx} className={`p-5 rounded-3xl border transition-all ${isLowScore ? 'bg-rose-500/5 border-rose-500/15' : 'bg-emerald-500/5 border-emerald-500/15'}`}>
+                                 <div className="flex items-center justify-between mb-3 pb-2 border-b border-outline-variant/40">
+                                   <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Soal {idx + 1}</span>
+                                   <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${isLowScore ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}`}>
+                                     Skor: {score} / 100
+                                   </span>
+                                 </div>
+                                 
+                                 <p className="text-[11px] font-black text-on-surface uppercase tracking-tight mb-2 leading-relaxed text-left">{q.text}</p>
+                                 
+                                 <div className="mt-3 space-y-2 text-[10px] font-bold">
+                                   <div className="p-3 bg-surface-variant/40 rounded-xl border border-outline-variant/30 text-left">
+                                     <span className="text-on-surface-variant uppercase tracking-wider block mb-1 text-[9px]">Jawaban Anda:</span>
+                                     <p className="text-on-surface text-[11px] whitespace-pre-line leading-relaxed">{answers[idx] || "Tidak dijawab"}</p>
+                                   </div>
+                                   
+                                   {isLowScore && answerKey && (
+                                     <div className="p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10 text-left">
+                                       <span className="text-emerald-400 uppercase tracking-wider block mb-1 text-[9px]">Referensi Kunci Jawaban:</span>
+                                       <p className="text-on-surface text-[11px] whitespace-pre-line leading-relaxed">{answerKey}</p>
+                                     </div>
+                                   )}
+                                 </div>
+                               </div>
+                             );
+                           })}
+                         </div>
+                       </div>
+                     </>
+                  )}
+                  {(finalScore === null || finalScore >= 70) && (
+                     <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 py-2 rounded-full border border-emerald-500/20 px-4 block mx-auto w-fit">✓ Lulus KKM (70)</p>
+                  )}
+               </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            {isSuccess && (
+              <>
+                 {(!isHeldBackActive && finalScore !== null && finalScore < 70) ? (
+                    <button
+                      onClick={() => { clearRemedialSession(); window.location.reload(); }}
+                      className="w-full py-5 bg-primary text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all border border-outline-variant flex items-center justify-center gap-3"
+                    >
+                      Coba Lagi Sekarang <RefreshCw size={18} />
+                    </button>
+                 ) : (
+                    <button
+                      onClick={handleShare}
+                      className="w-full py-5 bg-emerald-500 text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all border border-outline-variant flex items-center justify-center gap-3"
+                    >
+                      Ingatkan Teman via WA <Send size={18} />
+                    </button>
+                 )}
+              </>
+            )}
+            
+            <button
+              onClick={handleExit}
+              className={`w-full py-4 rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] transition-all border border-outline-variant ${isCheat ? 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20' : 'bg-surface-variant text-on-surface-variant hover:bg-surface-container-highest'}`}
+            >
+              Keluar ke Dasbor
+            </button>
+          </div>
+
+          {isCompleted && remainingStudents.length > 0 && (
+            <div className="mt-12 pt-8 border-t border-outline-variant text-left">
+              <div className="flex items-center justify-between mb-6">
+                <h4 className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Rekan Belum Mengerjakan</h4>
+                <Badge color="rose">Sisa {getRemainingTimeStr()}</Badge>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                {remainingStudents.map((s, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-surface-variant border border-outline-variant group hover:border-primary/30 transition-all">
+                    <span className="text-[11px] font-bold text-on-surface-variant truncate group-hover:text-white transition-colors">{s.name}</span>
+                    <div className="w-2 h-2 rounded-full bg-rose-500/50"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // RENDER: EXAM SCREEN
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="relative min-h-screen bg-transparent font-inter text-on-surface selection:bg-primary/30 selection:text-white overflow-x-hidden">
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,#3b82f605,transparent)] pointer-events-none"></div>
+      
+      {/* Dynamic Watermark Overlay */}
+      {step === 'EXAM' && (
+        <>
+          <div className="fixed inset-0 pointer-events-none z-[60] overflow-hidden select-none">
+            <div className="absolute bottom-4 right-4 text-[10px] font-black text-on-surface-variant/20 uppercase tracking-widest whitespace-nowrap select-none pointer-events-none">
+              {studentName} • SECURE SESSION
+            </div>
+          </div>
+          {/* Subtle Forensic Watermark Overlay (Anti-Screenshot fallback for mobile) */}
+          <div className="fixed inset-0 pointer-events-none z-[59] overflow-hidden select-none opacity-[0.03]">
+            <div className="watermark-grid absolute -inset-[100%] flex flex-wrap justify-center items-center gap-20 transform -rotate-45 pointer-events-none select-none">
+              {Array.from({ length: 50 }).map((_, i) => (
+                <span key={i} className="text-[24px] font-black text-on-surface-variant uppercase tracking-widest whitespace-nowrap">
+                  {studentName} • {studentName}
+                </span>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+      
+      {/* Screenshot Flash Overlay */}
+      {isScreenshotFlash && (
+        <div className="fixed inset-0 z-[9999] bg-white pointer-events-none"></div>
+      )}
+      
+      {/* ── TOP APP BAR (GradeMaster OS Header) ── */}
+      <header className="fixed top-0 w-full z-[80] bg-surface premium-shadow backdrop-blur-2xl border-b border-outline-variant px-6 py-4">
+        <div className="flex justify-between items-center w-full max-w-7xl mx-auto">
+          <div className="flex items-center gap-4 pt-safe">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/10">
+              <span className="text-primary font-black text-lg">
+                {studentName.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div className="hidden xs:flex flex-col">
+              <h1 className="text-sm font-black tracking-tight text-on-surface uppercase font-outfit leading-tight">{studentName}</h1>
+              <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-primary italic">Sesi Remedial Terproteksi</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-8">
+            {/* Timer */}
+            <div className="flex items-center gap-4 sm:gap-6 pt-safe">
+              <div className="flex flex-col items-center">
+                <span className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest mb-1">Durasi Tersisa</span>
+                <span className={`text-xl font-black font-outfit tabular-nums tracking-tighter ${timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-on-surface'}`}>
+                  {formatTime(timeLeft)}
+                </span>
+              </div>
+              <div className="hidden sm:block h-8 w-px bg-surface-variant"></div>
+              <div className="hidden sm:flex flex-col">
+                <span className="text-[11px] font-black text-on-surface uppercase tracking-tight truncate max-w-[150px]">{subject}</span>
+                <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-tighter">{examType} • {academicYear}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 pt-safe">
+              <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-variant border border-outline-variant">
+                <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'}`}></div>
+                <span className={`text-[10px] font-black uppercase tracking-widest ${isOffline ? 'text-rose-400' : 'text-emerald-400'}`}>
+                  {isOffline ? 'Offline' : 'Server Aktif'}
+                </span>
+              </div>
+              <button 
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="bg-primary text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-30 flex items-center gap-2 border border-outline-variant disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="animate-spin" size={14} />
+                    {submissionLabel || 'Submit...'}
+                  </>
+                ) : (
+                  <>
+                    <Send size={14} />
+                    Submit
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* ── MAIN CONTENT ── */}
+      <main className={`max-w-7xl mx-auto px-6 pt-[calc(6.5rem+env(safe-area-inset-top,0px))] pb-[calc(5rem+env(safe-area-inset-bottom,0px))] lg:pt-32 lg:pb-32 flex flex-col gap-6 transition-opacity duration-700 ${(isTabHidden || isPermanentlyBlocked || isOffline || isConnectionLocked) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        
+        {isSubmissionBackupSaved && (
+          <div className="w-full bg-rose-500/10 border-2 border-rose-500 rounded-3xl p-5 flex flex-col sm:flex-row items-center gap-4 text-left animate-in slide-in-from-top duration-300">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-rose-500/20">
+              <span className="material-symbols-outlined text-[24px]">cloud_off</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-rose-400 font-black text-xs uppercase tracking-widest font-outfit">Jawaban Disimpan Secara Lokal (Koneksi Terputus)</h4>
+              <p className="text-rose-200/80 text-[11px] font-bold mt-1 leading-relaxed uppercase tracking-wider">
+                Pengiriman ke server gagal setelah beberapa kali percobaan karena kendala jaringan. Jawaban Anda **TIDAK HILANG** dan telah dicadangkan di memori browser ini. **Jangan menutup browser Anda, segera laporkan ke proktor/guru untuk bantuan sinkronisasi manual.**
+              </p>
+            </div>
+            <button
+              onClick={() => handleStatusUpdate('COMPLETED')}
+              disabled={isSubmitting}
+              className="px-5 py-2.5 bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+            >
+              {isSubmitting ? <RefreshCw className="animate-spin" size={14} /> : <span className="material-symbols-outlined text-[16px]">sync</span>}
+              Coba Kirim Ulang
+            </button>
+          </div>
+        )}
+
+        <div className="flex flex-col lg:flex-row gap-8 w-full">
+          {/* Monitoring Panel */}
+        <aside className="w-full lg:w-72 lg:sticky lg:top-32 h-fit lg:space-y-6">
+          {/* Desktop/Tablet Panel */}
+          <div className="hidden lg:block bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant p-6 rounded-[2rem] shadow-xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface">Telemetri</h2>
+              <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+                <Activity size={16} />
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-4 bg-surface-variant border border-outline-variant rounded-2xl">
+                 <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+                   <ShieldCheck size={16} />
+                 </div>
+                 <div>
+                   <p className="text-[10px] font-black text-on-surface uppercase tracking-widest">Proteksi AI</p>
+                   <p className="text-[9px] font-bold text-emerald-400 uppercase">Terverifikasi</p>
+                 </div>
+              </div>
+              
+              <div className={`flex items-center gap-3 p-4 bg-surface-variant border rounded-2xl transition-colors ${tabWarningCount > 0 ? 'border-rose-500/30' : 'border-outline-variant'}`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${tabWarningCount > 0 ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-surface-variant text-on-surface-variant border-outline-variant'}`}>
+                  <AppWindow size={16} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-on-surface uppercase tracking-widest">Layar Aktif</p>
+                  <p className={`text-[9px] font-bold uppercase ${tabWarningCount > 0 ? 'text-rose-400' : 'text-on-surface-variant'}`}>
+                    Warn: {tabWarningCount}/{MAX_TAB_WARNINGS}
+                  </p>
+                </div>
+              </div>
+
+              <div className={`flex items-center gap-3 p-4 bg-surface-variant border rounded-2xl transition-colors ${isOffline ? 'border-rose-500/30' : 'border-outline-variant'}`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${isOffline ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-surface-variant text-on-surface-variant border-outline-variant'}`}>
+                  <Wifi size={16} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-on-surface uppercase tracking-widest">Konektivitas</p>
+                  <p className={`text-[9px] font-bold uppercase ${isOffline ? 'text-rose-400' : 'text-emerald-400'}`}>
+                    {isOffline ? 'Terputus' : 'Stabil'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden lg:block bg-primary/5 border border-primary/20 p-6 rounded-[2rem] shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/20 transition-colors"></div>
+            <p className="text-[9px] font-black text-primary uppercase tracking-[0.3em] mb-4">Statistik Progres</p>
+            <div className="flex items-baseline justify-between mb-4">
+              <span className="text-4xl font-black font-outfit text-on-surface tracking-tighter">
+                {answers.filter(a => a.trim() !== '').length}
+              </span>
+              <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">/ {totalQuestions} Soal</span>
+            </div>
+            <div className="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden border border-outline-variant">
+              <div 
+                className="h-full bg-primary shadow-[0_0_12px_rgba(59,130,246,0.5)] transition-all duration-1000 ease-out" 
+                style={{ width: `${(answers.filter(a => a.trim() !== '').length / totalQuestions) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Compact Mobile Panel */}
+          <div className="block lg:hidden w-full bg-surface/80 backdrop-blur-md border border-outline-variant p-4 rounded-2xl premium-shadow space-y-3">
+            {/* Row 1: Status pills */}
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[9px] font-black uppercase tracking-wider">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 animate-in fade-in">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>AI Aktif</span>
+              </div>
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full ${tabWarningCount > 0 ? 'bg-rose-500/10 text-rose-400 border-rose-500/15' : 'bg-surface-variant text-on-surface-variant border border-outline-variant'}`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${tabWarningCount > 0 ? 'bg-rose-500 animate-pulse' : 'bg-on-surface-variant'}`} />
+                <span>Layar: {tabWarningCount}/{MAX_TAB_WARNINGS}</span>
+              </div>
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full ${isOffline ? 'bg-rose-500/10 text-rose-400 border-rose-500/15' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/15'}`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`} />
+                <span>{isOffline ? 'Offline' : 'Server Aktif'}</span>
+              </div>
+            </div>
+
+            {/* Row 2: Progress */}
+            <div className="flex items-center justify-between gap-4 border-t border-outline-variant/50 pt-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Progres:</span>
+                <span className="text-xs font-black font-outfit text-on-surface">
+                  {answers.filter(a => a.trim() !== '').length} / {totalQuestions} Soal
+                </span>
+              </div>
+              <div className="flex-1 max-w-[150px] h-1 bg-surface-variant rounded-full overflow-hidden border border-outline-variant">
+                <div 
+                  className="h-full bg-primary shadow-[0_0_12px_rgba(59,130,246,0.5)] transition-all duration-1000 ease-out" 
+                  style={{ width: `${(answers.filter(a => a.trim() !== '').length / totalQuestions) * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Question Area */}
+        <section className="flex-1 space-y-8 animate-in fade-in duration-1000">
+          {answers.map((ans, idx) => {
+            const isInvalid = invalidQuestionIndices.includes(idx);
+            return (
+            <div key={idx} id={`question-card-${idx}`} className={`bg-surface premium-shadow backdrop-blur-2xl rounded-[2.5rem] p-8 md:p-12 border premium-shadow relative overflow-hidden group transition-all ${isInvalid ? 'border-rose-500/60 ring-2 ring-rose-500/20 shadow-rose-500/10' : 'border-outline-variant hover:border-primary/30'}`}>
+              <div className={`absolute top-0 left-0 w-1.5 h-full transition-all duration-500 ${isInvalid ? 'bg-rose-500' : 'bg-primary/20 group-hover:bg-primary'}`} />
+              
+              <div className="flex items-center gap-4 mb-8">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg border shadow-lg ${isInvalid ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 shadow-rose-500/20' : 'bg-primary/10 text-primary border-primary/20 shadow-primary/20'}`}>
+                  {idx + 1}
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-on-surface tracking-tight font-outfit uppercase">Soal Essay {idx + 1}</h3>
+                  {isInvalid ? (
+                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-1">
+                      <AlertTriangle size={10} /> Jawaban Tidak Valid — Perbaiki Jawaban Anda
+                    </p>
+                  ) : (
+                    <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em]">Kategori Pengerjaan Mandiri</p>
+                  )}
+                </div>
+              </div>
+
+              {shuffledQuestions[idx] && (
+                <div className="mb-10">
+                  <QuestionCanvas text={shuffledQuestions[idx].text} />
+                </div>
+              )}
+
+              <div className="relative">
+                <textarea
+                  className="w-full bg-surface-variant border border-outline-variant rounded-[2rem] p-8 text-lg font-bold text-on-surface outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all resize-none min-h-[320px] shadow-sm custom-scrollbar"
+                  placeholder="Ketikkan argumentasi jawaban Anda secara sistematis di sini..."
+                  value={ans}
+                  onChange={(e) => handleChange(idx, e.target.value)}
+                  onCopy={(e) => e.preventDefault()}
+                  onPaste={(e) => e.preventDefault()}
+                  autoComplete="off"
+                  spellCheck="false"
+                />
+                <div className="absolute top-4 right-8">
+                   <div className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
+                     <span className="text-[9px] font-black text-primary uppercase tracking-widest">Essay Mode</span>
+                   </div>
+                </div>
+              </div>
+              
+              {/* Real-time Checklist */}
+              {(() => {
+                const evalResult = evaluateAnswerValidity(ans);
+                const showChecklist = ans.trim().length > 0;
+                
+                if (!showChecklist) {
+                  return (
+                    <p className="mt-3 text-[10px] text-on-surface-variant/60 font-bold uppercase tracking-wider pl-2 italic">
+                      Tulis jawaban untuk melihat verifikasi kriteria kelayakan.
+                    </p>
+                  );
+                }
+                
+                return (
+                  <div className="mt-4 p-4 rounded-2xl bg-surface-variant/40 border border-outline-variant/30 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider">
+                      <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black text-white ${evalResult.lengthOk ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+                        {evalResult.lengthOk ? '✓' : '✗'}
+                      </div>
+                      <span className={evalResult.lengthOk ? 'text-emerald-400' : 'text-rose-400'}>
+                        Min. 20 Karakter ({ans.length}/20)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider">
+                      <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black text-white ${(!evalResult.hasGarbage && !evalResult.hasRepetitiveChars && !evalResult.hasRepetitiveWords) ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+                        {(!evalResult.hasGarbage && !evalResult.hasRepetitiveChars && !evalResult.hasRepetitiveWords) ? '✓' : '✗'}
+                      </div>
+                      <span className={(!evalResult.hasGarbage && !evalResult.hasRepetitiveChars && !evalResult.hasRepetitiveWords) ? 'text-emerald-400' : 'text-rose-400'}>
+                        Bebas Kata Asal / Spam
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider">
+                      <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black text-white ${(evalResult.minWordsOk && evalResult.minUniqueWordsOk) ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+                        {(evalResult.minWordsOk && evalResult.minUniqueWordsOk) ? '✓' : '✗'}
+                      </div>
+                      <span className={(evalResult.minWordsOk && evalResult.minUniqueWordsOk) ? 'text-emerald-400' : 'text-rose-400'}>
+                        Min. 5 Kata Sah
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+              
+              <div className="mt-6 flex items-center justify-between text-[10px] font-black text-on-surface-variant uppercase tracking-widest pl-2">
+                <span className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
+                  Sistem Sinkronisasi Aktif
+                </span>
+                <span className="bg-surface-variant px-4 py-1.5 rounded-full border border-outline-variant">{ans.length} Karakter</span>
+              </div>
+            </div>
+          );
+          })}
+
+          {/* Bottom Actions */}
+          <div className="bg-surface premium-shadow backdrop-blur-2xl p-10 md:p-16 rounded-[3rem] border border-outline-variant flex flex-col items-center text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,#3b82f605,transparent)]"></div>
+            <div className="w-20 h-20 bg-primary/10 text-primary rounded-[2rem] flex items-center justify-center mb-8 border border-primary/20 shadow-2xl shadow-primary/20">
+              <ShieldCheck size={36} />
+            </div>
+            <h3 className="text-2xl md:text-3xl font-black text-on-surface mb-3 font-outfit uppercase tracking-tight">Finalisasi Jawaban</h3>
+            <p className="text-[11px] md:text-xs text-on-surface-variant font-bold mb-10 max-w-sm uppercase tracking-widest leading-loose">Pastikan seluruh poin argumentasi telah terjawab secara komprehensif sebelum mengunci sesi ujian.</p>
+            
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting || isOffline}
+              className={`group flex items-center gap-4 px-12 py-5 rounded-2xl text-[11px] md:text-xs font-black uppercase tracking-[0.3em] transition-all premium-shadow border border-outline-variant ${
+                isSubmitting || isOffline 
+                  ? 'bg-slate-800 text-slate-600 border-outline-variant cursor-not-allowed grayscale' 
+                  : 'bg-primary text-white hover:scale-105 active:scale-95 shadow-primary/20'
+              }`}
+            >
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="animate-spin" size={20} />
+                  {submissionLabel || 'Sinkronisasi...'}
+                </>
+              ) : (
+                <>
+                  Kumpulkan Seluruh Jawaban <Send className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" size={20} />
+                </>
+              )}
+            </button>
+          </div>
+        </section>
+        </div>
+      </main>
+
+      {/* ── DRAGGABLE CAMERA (GradeMaster PiP) ── */}
+      {step === 'EXAM' && !isSubmitting && (
+        <div
+          ref={pipRef}
+          id="draggable-pip-container"
+          className="fixed z-[90] rounded-2xl border border-white/10 bg-slate-950/85 backdrop-blur-md px-4 py-2.5 premium-shadow animate-in slide-in-from-right duration-500 cursor-grab active:cursor-grabbing select-none touch-none flex flex-col gap-1.5 min-w-[140px] md:w-48 md:h-72 md:p-0 md:rounded-3xl md:border-2 md:border-white/20 md:bg-slate-900 md:overflow-hidden md:gap-0"
+          style={pipPos
+            ? { left: `${pipPos.x}px`, top: `${pipPos.y}px`, transition: isDraggingRef.current ? 'none' : 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)' }
+            : { right: '32px', bottom: '32px' }
+          }
+          onMouseDown={(e) => {
+            if (!pipRef.current) return;
+            const rect = pipRef.current.getBoundingClientRect();
+            isDraggingRef.current = true;
+            wasDraggedRef.current = false;
+            dragOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            dragStartPosRef.current = { x: e.clientX, y: e.clientY };
+            e.preventDefault();
+
+            const onMove = (ev: MouseEvent) => {
+              const dx = Math.abs(ev.clientX - dragStartPosRef.current.x);
+              const dy = Math.abs(ev.clientY - dragStartPosRef.current.y);
+              if (dx > 3 || dy > 3) wasDraggedRef.current = true;
+              const elW = pipRef.current?.offsetWidth || 112;
+              const elH = pipRef.current?.offsetHeight || 160;
+              const newX = Math.min(Math.max(12, ev.clientX - dragOffsetRef.current.x), window.innerWidth - elW - 12);
+              const newY = Math.min(Math.max(12, ev.clientY - dragOffsetRef.current.y), window.innerHeight - elH - 12);
+              setPipPos({ x: newX, y: newY });
+            };
+            const onUp = (ev: MouseEvent) => {
+              isDraggingRef.current = false;
+              window.removeEventListener('mousemove', onMove);
+              window.removeEventListener('mouseup', onUp);
+              if (pipRef.current) {
+                const elW = pipRef.current.offsetWidth;
+                const rectInner = pipRef.current.getBoundingClientRect();
+                const centerX = rectInner.left + elW / 2;
+                const snapX = centerX < window.innerWidth / 2 ? 24 : window.innerWidth - elW - 24;
+                const curY = Math.min(Math.max(24, rectInner.top), window.innerHeight - pipRef.current.offsetHeight - 24);
+                setPipPos({ x: snapX, y: curY });
+              }
+            };
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onUp);
+          }}
+          onTouchStart={(e) => {
+            if (!pipRef.current) return;
+            const touch = e.touches[0];
+            const rect = pipRef.current.getBoundingClientRect();
+            isDraggingRef.current = true;
+            wasDraggedRef.current = false;
+            dragOffsetRef.current = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+            dragStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+          }}
+          onTouchMove={(e) => {
+            if (!isDraggingRef.current || !pipRef.current) return;
+            const touch = e.touches[0];
+            const dx = Math.abs(touch.clientX - dragStartPosRef.current.x);
+            const dy = Math.abs(touch.clientY - dragStartPosRef.current.y);
+            if (dx > 3 || dy > 3) wasDraggedRef.current = true;
+            const elW = pipRef.current?.offsetWidth || 112;
+            const elH = pipRef.current?.offsetHeight || 160;
+            const newX = Math.min(Math.max(12, touch.clientX - dragOffsetRef.current.x), window.innerWidth - elW - 12);
+            const newY = Math.min(Math.max(12, touch.clientY - dragOffsetRef.current.y), window.innerHeight - elH - 12);
+            setPipPos({ x: newX, y: newY });
+          }}
+          onTouchEnd={(e) => {
+            isDraggingRef.current = false;
+            if (pipRef.current) {
+              const elW = pipRef.current.offsetWidth;
+              const rectInner = pipRef.current.getBoundingClientRect();
+              const centerX = rectInner.left + elW / 2;
+              const snapX = centerX < window.innerWidth / 2 ? 24 : window.innerWidth - elW - 24;
+              const snapY = Math.min(Math.max(24, rectInner.top), window.innerHeight - pipRef.current.offsetHeight - 24);
+              setPipPos({ x: snapX, y: snapY });
+            }
+          }}
+        >
+          {/* Mobile View Content */}
+          <div className="flex flex-col gap-1.5 w-full md:hidden">
+            {/* Camera + Face Status Row */}
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full animate-pulse ${
+                faceStatus === 'calibrating' ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.7)]' :
+                faceStatus === 'not_detected' ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.7)]' :
+                'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]'
+              }`} />
+              <span className={`text-[10px] font-black tracking-widest font-outfit ${
+                faceStatus === 'calibrating' ? 'text-blue-400' :
+                faceStatus === 'not_detected' ? 'text-amber-400' :
+                'text-emerald-400'
+              }`}>
+                {faceStatus === 'calibrating' ? 'Kamera aktif · Kalibrasi...' :
+                 faceStatus === 'not_detected' ? 'Kamera aktif · Wajah tidak terlihat' :
+                 'Kamera aktif · Mata terdeteksi'}
+              </span>
+            </div>
+            
+            {/* AI Status and Timer Row */}
+            <div className="flex items-center justify-between border-t border-white/10 pt-1.5 gap-4">
+              <div className="flex items-center gap-1.5">
+                <div className={`w-1.5 h-1.5 rounded-full ${
+                  aiProctorStatus === 'scanning' ? 'bg-blue-400 shadow-blue-400/50 animate-pulse' :
+                  aiProctorStatus === 'warning' ? 'bg-amber-400 shadow-amber-400/50 animate-pulse' :
+                  aiProctorStatus === 'critical' ? 'bg-rose-500 shadow-rose-500/50 animate-bounce' :
+                  'bg-emerald-500 shadow-emerald-500/50 animate-pulse'
+                }`} />
+                <span className={`text-[8px] font-black uppercase tracking-wider ${
+                  aiProctorStatus === 'scanning' ? 'text-blue-400' :
+                  aiProctorStatus === 'warning' ? 'text-amber-400 font-black' :
+                  aiProctorStatus === 'critical' ? 'text-rose-400 font-black animate-pulse' :
+                  'text-emerald-400'
+                }`}>
+                  {aiProctorStatus === 'scanning' ? 'AI: Scan...' :
+                   aiProctorStatus === 'safe' ? 'AI: Aman' :
+                   aiProctorStatus === 'warning' ? 'AI: Rawan' :
+                   aiProctorStatus === 'critical' ? 'AI: Kritis' :
+                   'AI: Aktif'}
+                </span>
+              </div>
+              <span className="text-[9px] font-bold font-mono text-slate-400">{formatTime(timeLeft)}</span>
+            </div>
+          </div>
+
+          {/* Desktop/Camera View Wrapper: visible on desktop, hidden/1px on mobile */}
+          <div className="pointer-events-none transition-all duration-500 overflow-hidden absolute md:static left-0 top-0 w-[1px] h-[1px] opacity-[0.001] md:w-full md:h-full md:opacity-100">
+            <div className="w-full h-full pointer-events-auto">
+              <ProctoringCamera 
+                ref={videoRef} 
+                onViolation={handleCameraViolation} 
+                onCameraError={handleCameraErrorDuringExam}
+                onCameraReady={handleCameraReadyDuringExam}
+                onFaceStatus={setFaceStatus}
+              />
+            </div>
+            
+            {/* Desktop-only overlays */}
+            <div className="hidden md:block absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
+            <div className="hidden md:flex absolute bottom-3 left-3 flex-col gap-1">
+              <div className="flex items-center gap-1.5">
+                <div className={`w-1.5 h-1.5 rounded-full animate-pulse shadow-lg ${
+                  aiProctorStatus === 'scanning' ? 'bg-blue-400 shadow-blue-400/50' :
+                  aiProctorStatus === 'warning' ? 'bg-amber-400 shadow-amber-400/50' :
+                  aiProctorStatus === 'critical' ? 'bg-rose-500 shadow-rose-500/50' :
+                  aiProctorStatus === 'safe' ? 'bg-emerald-500 shadow-emerald-500/50' :
+                  'bg-emerald-500 shadow-emerald-500/50'
+                }`} />
+                <span className={`text-[8px] font-black uppercase tracking-widest ${
+                  aiProctorStatus === 'scanning' ? 'text-blue-400' :
+                  aiProctorStatus === 'warning' ? 'text-amber-400' :
+                  aiProctorStatus === 'critical' ? 'text-rose-400' :
+                  'text-on-surface'
+                }`}>
+                  {aiProctorStatus === 'scanning' ? 'AI Scan...' :
+                   aiProctorStatus === 'safe' ? 'AI: Aman ✓' :
+                   aiProctorStatus === 'warning' ? 'AI: Peringatan ⚠' :
+                   aiProctorStatus === 'critical' ? 'AI: Kritis ✕' :
+                   'Live AI'}
+                </span>
+              </div>
+            </div>
+            {/* AI scanning ring indicator */}
+            {aiProctorStatus === 'scanning' && (
+              <div className="hidden md:block absolute inset-0 rounded-3xl border-2 border-blue-400/40 animate-pulse pointer-events-none" />
+            )}
+            {aiProctorStatus === 'critical' && (
+              <div className="hidden md:block absolute inset-0 rounded-3xl border-2 border-rose-500/60 animate-pulse pointer-events-none" />
+            )}
+            <div className="hidden md:block absolute top-3 right-3 bg-surface/60 backdrop-blur-md px-2 py-1 rounded-lg border border-outline-variant">
+              <span className="text-[10px] font-black font-mono text-on-surface/90">{formatTime(timeLeft)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODALS & OVERLAYS ── */}
+      {activeWarning && step === 'EXAM' && (
+        <div className="fixed inset-0 z-[1000] bg-surface/90 backdrop-blur-xl flex justify-center items-center p-4 pt-safe">
+          <div className="bg-surface premium-shadow border border-outline-variant max-w-sm w-full rounded-[2.5rem] premium-shadow overflow-hidden animate-in zoom-in-95">
+            <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-8 flex flex-col items-center">
+              <div className="w-16 h-16 rounded-[1.5rem] bg-white/20 flex items-center justify-center border border-white/30 mb-4">
+                <AlertTriangle size={36} className="text-on-surface" />
+              </div>
+              <h2 className="text-xl font-black text-on-surface uppercase tracking-tight font-outfit">Sistem Peringatan</h2>
+            </div>
+            <div className="p-8 pt-safe text-center">
+              <div className="bg-rose-500/10 border border-rose-500/20 px-5 py-2 rounded-full text-xs font-black text-rose-400 mb-6 inline-block uppercase tracking-widest">
+                Pelanggaran {activeWarning.count}/{activeWarning.limit}
+              </div>
+              <p className="text-[12px] text-on-surface-variant font-bold mb-8 leading-relaxed uppercase tracking-wide">{activeWarning.message}</p>
+              <button 
+                onClick={() => setActiveWarning(null)}
+                className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all border border-outline-variant"
+              >
+                Saya Mengerti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAiBotWarning && step === 'EXAM' && (
+         <div className="fixed inset-0 z-[1001] flex items-center justify-center p-4 bg-surface/90 backdrop-blur-xl animate-in fade-in duration-300 text-center">
+            <div className={`bg-surface premium-shadow border-2 max-w-sm w-full rounded-[2.5rem] overflow-hidden premium-shadow animate-in zoom-in-95 ${overlayViolationCount >= 3 ? 'border-rose-500/50' : 'border-amber-500/50'}`}>
+               <div className={`p-10 flex flex-col items-center text-white ${overlayViolationCount >= 3 ? 'bg-rose-600/20' : 'bg-amber-600/20'}`}>
+                  <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center mb-6 border ${overlayViolationCount >= 3 ? 'bg-rose-500/20 border-rose-500/30' : 'bg-amber-500/20 border-amber-500/30'}`}>
+                    <Cpu size={36} className="animate-pulse" />
+                  </div>
+                  <h2 className="text-xl font-black mb-1 tracking-tight font-outfit uppercase">
+                    {overlayViolationCount >= 3 ? 'AI KRITIS' : 'Aktivitas Ilegal'}
+                  </h2>
+                  <div className="px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.2em] bg-surface-variant border border-outline-variant mt-2">
+                    Lacak {overlayViolationCount}/3
+                  </div>
+               </div>
+               <div className="p-8 text-center bg-surface premium-shadow">
+                  <p className="text-[11px] text-on-surface-variant font-bold leading-relaxed mb-6 uppercase tracking-widest">
+                    Sistem mendeteksi aplikasi pihak ketiga yang berjalan di latar belakang.
+                  </p>
+                  <div className="text-5xl font-black text-rose-500 font-outfit tracking-tighter">{aiCountdown}</div>
+               </div>
+            </div>
+         </div>
+      )}
+
+      {(isConnectionLocked || isSplitLocked) && step === 'EXAM' && (
+        <div className="fixed inset-0 z-[1002] bg-transparent flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
+           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#f43f5e10,transparent)]"></div>
+           <div className="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-[2.5rem] border border-rose-500/20 flex items-center justify-center mb-8 animate-bounce shadow-2xl shadow-rose-500/20">
+            {isConnectionLocked ? <MonitorOff size={48} /> : <Monitor size={48} />}
+          </div>
+          <h2 className="text-3xl font-black text-on-surface mb-3 tracking-tighter uppercase font-outfit">
+            {isConnectionLocked ? 'Koneksi Terputus' : 'Layar Terpisah'}
+          </h2>
+          <p className="text-on-surface-variant font-bold max-w-xs mb-12 leading-relaxed uppercase text-[11px] tracking-widest">
+            {isConnectionLocked 
+               ? 'Ujian ditangguhkan. Hubungkan kembali akses internet untuk melanjutkan sinkronisasi data.' 
+               : 'Aktivitas Split-Screen dilarang demi integritas pengawasan. Gunakan mode layar penuh.'}
+          </p>
+          {isConnectionLocked && (
+            <button 
+              onClick={syncWithServer} 
+              className="px-12 py-5 bg-primary text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all border border-outline-variant"
+            >
+              Pulihkan Sesi
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Global Style Tags */}
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.3); }
+        .privacy-mode { filter: blur(0px); transition: filter 0.3s; }
+        
+        @keyframes slideGrid {
+          0% { transform: rotate(-45deg) translateY(0); }
+          100% { transform: rotate(-45deg) translateY(-50px); }
+        }
+        .watermark-grid {
+          animation: slideGrid 15s linear infinite;
+        }
+        @media print {
+          body {
+            display: none !important;
+          }
+        }
+      `}</style>
+      {/* Camera Blocked Security Overlay */}
+      {!isCameraActive && step === 'EXAM' && (
+        <div className="fixed inset-0 z-[9999] bg-surface/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#f43f5e10,transparent)]"></div>
+           <div className="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center mb-8 border border-rose-500/20 animate-pulse shadow-2xl shadow-rose-500/20">
+              <CameraOff size={48} />
+           </div>
+           <h2 className="text-3xl font-black text-on-surface uppercase tracking-tight mb-4 font-outfit">Sensor Kamera Tidak Aktif</h2>
+           <p className="text-on-surface-variant max-w-sm mb-8 font-bold leading-relaxed text-xs uppercase tracking-wide">
+             Ujian ditangguhkan secara otomatis. Pengawasan visual (AI Proctoring) wajib aktif setiap saat demi integritas pengerjaan ujian.
+           </p>
+
+           <div className="bg-surface-variant border border-outline-variant max-w-sm w-full rounded-2xl p-5 mb-8 text-left space-y-3 text-on-surface/90">
+             <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Cara Mengaktifkan Kembali:</h4>
+             <div className="flex gap-2 items-start text-xs font-bold">
+               <span className="text-primary font-black">1.</span>
+               <p className="text-[11px] leading-relaxed">Ketuk ikon <span className="text-primary font-black">gembok / pengaturan situs</span> di sebelah kiri alamat URL website pada bar atas browser Chrome.</p>
+             </div>
+             <div className="flex gap-2 items-start text-xs font-bold">
+               <span className="text-primary font-black">2.</span>
+               <p className="text-[11px] leading-relaxed">Aktifkan kembali izin <span className="text-rose-400 font-black">Kamera</span> (Ubah dari "Blokir" menjadi "Izinkan").</p>
+             </div>
+             <div className="flex gap-2 items-start text-xs font-bold">
+               <span className="text-primary font-black">3.</span>
+               <p className="text-[11px] leading-relaxed">Ketuk tombol di bawah untuk memuat ulang halaman dan memulihkan sensor kamera.</p>
+             </div>
+           </div>
+           
+           <div className="flex flex-col gap-3 w-full max-w-xs">
+              <button 
+                onClick={() => window.location.reload()}
+                className="w-full py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 border border-outline-variant"
+              >
+                Muat Ulang & Aktifkan Kamera
+              </button>
+           </div>
+           
+           <div className="mt-12">
+              <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">GradeMaster Dynamic Security v2.0</p>
+           </div>
+        </div>
+      )}
+
+      {/* Offline Security Overlay */}
+      {(isOffline || isConnectionLocked) && step === 'EXAM' && (
+        <div className="fixed inset-0 z-[9999] bg-surface/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+           <div className="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center mb-8 border border-rose-500/20 animate-pulse">
+              <Wifi size={48} />
+           </div>
+           <h2 className="text-3xl font-black text-on-surface uppercase tracking-tight mb-4">Koneksi Terputus</h2>
+           <p className="text-on-surface-variant max-w-xs mb-8 font-bold leading-relaxed">
+             Sistem mengunci ujian untuk mencegah kecurangan. Konten disembunyikan sampai koneksi kembali stabil.
+           </p>
+           
+           <div className="flex flex-col gap-3 w-full max-w-xs">
+              <div className="p-4 bg-surface-variant rounded-2xl border border-outline-variant flex items-center gap-3">
+                 <RefreshCw size={20} className="text-primary animate-spin" />
+                 <div className="text-left">
+                    <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Status Sinkronisasi</p>
+                    <p className="text-xs font-black text-on-surface">{isSyncing ? "Menghubungkan..." : "Menunggu Sinyal..."}</p>
+                 </div>
+              </div>
+              
+              <button 
+                onClick={syncWithServer}
+                disabled={isSyncing}
+                className="w-full py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+              >
+                {isSyncing ? "Mencoba Re-koneksi..." : "Coba Hubungkan Sekarang"}
+              </button>
+           </div>
+           
+           <div className="mt-12">
+              <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">GradeMaster Dynamic Security v2.0</p>
+           </div>
+        </div>
+      )}
+    </div>
+  );
+}

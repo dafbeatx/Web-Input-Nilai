@@ -1,0 +1,1202 @@
+import { supabaseAdmin as supabase } from '@/lib/supabase/admin';
+import { assessClientRisk, assessServerRisk, mergeRiskAssessments } from './risk-engine.service';
+import { calculateEssayScore } from '../scoring';
+import { generateAttemptToken, verifyAttemptToken } from '../token';
+import { generateDynamicQuestions } from './question-generator.service';
+
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  NONE: ['INITIATED'],
+  INITIATED: ['ACTIVE', 'FAILED'],
+  ACTIVE: ['COMPLETED', 'CHEATED', 'TIMEOUT', 'AI_BOT_DETECTED'],
+  FAILED: ['INITIATED'],
+};
+
+function validateStateTransition(current: string | null, target: string): void {
+  const normalizedCurrent = current || 'NONE';
+  const allowed = VALID_TRANSITIONS[normalizedCurrent];
+  if (!allowed || !allowed.includes(target)) {
+    throw new Error(
+      `Transisi status tidak valid: ${normalizedCurrent} → ${target}. ` +
+      `Status yang diizinkan dari ${normalizedCurrent}: ${allowed?.join(', ') || 'tidak ada'}`
+    );
+  }
+}
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  context: string,
+  maxRetries = 3
+): Promise<T> {
+  let lastError: any = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : (typeof err === 'object' && err !== null) 
+          ? JSON.stringify(err) 
+          : String(err);
+      
+      console.error(`[Retry ${attempt}/${maxRetries}] ${context}: ${errorMessage}`);
+
+      if (attempt < maxRetries) {
+        const delay = 200 * Math.pow(2, attempt - 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  const finalMessage = lastError instanceof Error 
+    ? lastError.message 
+    : (typeof lastError === 'object' && lastError !== null)
+      ? JSON.stringify(lastError)
+      : String(lastError);
+
+  throw new Error(`${context} gagal setelah ${maxRetries} percobaan: ${finalMessage}`);
+}
+
+export async function submitRemedial(
+  sessionId: string,
+  studentId: string,
+  studentName: string,
+  status: string,
+  answers: string[],
+  note: string,
+  location: string = 'UNAVAILABLE',
+  elapsedTimeMs: number,
+  clientCheatingFlags: string[] = [],
+  photo?: string,
+  examMode?: string,
+  cameraStatus?: string,
+  riskLevel?: string,
+  isPenaltyApplied: boolean = false
+) {
+  const { data: student, error: fetchErr } = await supabase
+    .from('gm_students')
+    .select('id, name, final_score, original_score, remedial_status, remedial_attempts, mcq_answers, mcq_score, essay_score')
+    .eq('id', studentId)
+    .single();
+
+  if (fetchErr || !student) {
+    throw new Error('RESET_REQUIRED');
+  }
+
+  const { data: session, error: sessErr } = await supabase
+    .from('gm_sessions')
+    .select('id, scoring_config, kkm, remedial_timer, subject, class_name')
+    .eq('id', sessionId)
+    .single();
+
+  if (sessErr || !session) {
+    throw new Error(`Sesi tidak ditemukan (id: ${sessionId})`);
+  }
+
+  // ── INITIATED: Create new attempt (transactional) ──
+  if (status === 'INITIATED') {
+    if (student.remedial_attempts >= 2) {
+      throw new Error('Maksimal kesempatan remedial adalah 2 kali. Status ini sudah bersifat permanen dan tidak bisa mengulang lagi.');
+    }
+
+    if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'SUBMITTED', 'FAILED_EFFORT', 'TIME_UP'].includes(student.remedial_status)) {
+      console.log(`[Remedial] Idempotent FINALIZATION: student=${studentName}, status is already ${student.remedial_status}`);
+      const { data: lastAttempt } = await supabase
+        .from('gm_remedial_attempts')
+        .select('remedial_questions')
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      return {
+        ...student,
+        remedial_status: student.remedial_status,
+        newFinalScore: student.final_score,
+        subject: session.subject,
+        class_name: session.class_name,
+        remedialQuestions: lastAttempt?.remedial_questions || session.scoring_config?.remedialQuestions || [],
+      };
+    }
+
+    if (student.remedial_status === 'ACTIVE') {
+      const activeAttempt = await findActiveAttempt(sessionId, studentId, studentName);
+      console.log(`[Remedial] Idempotent ACTIVE (Recovery): student=${studentName}, reusing attempt=${activeAttempt.id}`);
+      return {
+        ...student,
+        remedial_status: 'ACTIVE',
+        remedial_attempts: student.remedial_attempts,
+        remedial_location: location,
+        remedial_photo: photo,
+        attempt_id: activeAttempt.id,
+        attempt_token: activeAttempt.attempt_token,
+        subject: session.subject,
+        class_name: session.class_name,
+        remedialQuestions: activeAttempt.remedial_questions || session.scoring_config?.remedialQuestions || [],
+      };
+    }
+
+    // Validate state transition (allow NONE, FAILED → INITIATED)
+    // If already INITIATED, we handle it as idempotency below
+    if (student.remedial_status === 'INITIATED') {
+      const { data: existingAttempt } = await supabase
+        .from('gm_remedial_attempts')
+        .select('id, attempt_token, started_at, remedial_questions')
+        .eq('student_id', studentId)
+        .eq('status', 'INITIATED')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+        
+      if (existingAttempt) {
+        console.log(`[Remedial] Idempotent INITIATED: student=${studentName}, reusing attempt=${existingAttempt.id}`);
+        return {
+          ...student,
+          remedial_status: 'INITIATED',
+          remedial_attempts: student.remedial_attempts,
+          remedial_location: location,
+          remedial_photo: photo,
+          attempt_id: existingAttempt.id,
+          attempt_token: existingAttempt.attempt_token,
+          subject: session.subject,
+          class_name: session.class_name,
+          remedialQuestions: existingAttempt.remedial_questions || session.scoring_config?.remedialQuestions || [],
+        };
+      }
+    }
+
+    if (student.remedial_status && !['NONE', 'FAILED'].includes(student.remedial_status)) {
+      validateStateTransition(student.remedial_status, 'INITIATED');
+    }
+
+    // Auto-Lock Deadline Validation
+    const deadline = session.scoring_config?.remedialDeadline;
+    if (deadline && new Date() > new Date(deadline)) {
+      // Auto-update student status to TIME_UP and lock score
+      const { error: lockError } = await supabase
+        .from('gm_students')
+        .update({ 
+          remedial_status: 'TIME_UP', 
+          final_score_locked: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', studentId);
+        
+      if (lockError) console.error(`Failed to lock student ${studentName}:`, lockError);
+      
+      throw new Error('DEADLINE_PASSED: Batas waktu untuk mengerjakan remedial sesi ini telah habis.');
+    }
+
+    // Dynamic AI Question Generator integration
+    let questions = session.scoring_config?.remedialQuestions || [];
+    let answerKeys = session.scoring_config?.remedialAnswerKeys || [];
+    
+    const isAiDynamic = !!session.scoring_config?.aiDynamicQuestions;
+    if (isAiDynamic && questions.length > 0) {
+      console.log(`[Remedial] AI Dynamic Questions is enabled. Generating unique questions for ${studentName}...`);
+      const generated = await generateDynamicQuestions(questions, answerKeys);
+      questions = generated.questions;
+      answerKeys = generated.answerKeys;
+    }
+
+    if (questions.length === 0) {
+      console.error(`[Remedial Error] ${studentName} (session: ${sessionId}) - Gagal INITIATED: Soal remedial kosong di Database.`);
+      throw new Error('INVALID_SESSION_DATA: Guru belum mengatur soal remedial untuk sesi ini.');
+    }
+
+    const attemptToken = generateAttemptToken(sessionId, studentId);
+    const attemptNumber = (student.remedial_attempts || 0) + 1;
+    const originalScore = (student.original_score === 0 || student.original_score == null)
+      ? student.final_score
+      : null;
+
+    // Use RPC for atomic insert + update
+    const attemptId = await withRetry(async () => {
+      const { data, error } = await supabase.rpc('start_remedial_attempt', {
+        p_session_id: sessionId,
+        p_student_id: studentId,
+        p_attempt_number: attemptNumber,
+        p_attempt_token: attemptToken,
+        p_location: location,
+        p_photo: photo || null,
+        p_original_score: originalScore,
+        p_remedial_questions: isAiDynamic ? questions : null,
+        p_remedial_answer_keys: isAiDynamic ? answerKeys : null,
+      });
+
+      if (error) throw new Error(`RPC start_remedial_attempt: ${error.message}`);
+      if (!data) throw new Error('RPC returned null attempt ID');
+      return data as string;
+    }, `Membuat attempt remedial untuk ${studentName} (session: ${sessionId})`);
+
+    console.log(`[Remedial] INITIATED: student=${studentName}, attemptId=${attemptId}, session=${sessionId}, questionCount=${questions.length}`);
+
+    return {
+      ...student,
+      remedial_status: 'INITIATED',
+      remedial_attempts: attemptNumber,
+      remedial_location: location,
+      remedial_photo: photo,
+      original_score: originalScore ?? student.original_score,
+      attempt_id: attemptId,
+      attempt_token: attemptToken,
+      subject: session.subject,
+      class_name: session.class_name,
+      remedialQuestions: questions,
+    };
+  }
+
+  // ── COMPLETED / CHEATED / TIMEOUT: Finalize attempt ──
+
+  // Find active attempt with auto-recovery
+  let attempt = await findActiveAttempt(sessionId, studentId, studentName);
+
+  const answerKeys: string[] = attempt.remedial_answer_keys || session.scoring_config?.remedialAnswerKeys || [];
+
+  // Mencegah Double Submit (Race Condition Protection)
+  if (['COMPLETED', 'CHEATED', 'TIME_UP', 'SUBMITTED', 'FAILED_EFFORT'].includes(attempt.status)) {
+    console.log(`[Remedial] Mencegah Double Submit untuk ${studentName} (Status: ${attempt.status})`);
+    return {
+      ...student,
+      remedial_status: attempt.status,
+      newFinalScore: student.final_score,
+      subject: session.subject,
+      class_name: session.class_name,
+      remedialQuestions: session.scoring_config?.remedialQuestions || [],
+    };
+  }
+
+  // Validasi Durasi di Backend (Mengabaikan data dari frontend)
+  let backendElapsedMs = elapsedTimeMs;
+  if (attempt.started_at) {
+    backendElapsedMs = Date.now() - new Date(attempt.started_at).getTime();
+  }
+
+  const attemptUpdate: Record<string, unknown> = {
+    status,
+    completed_at: new Date().toISOString(),
+  };
+
+  const studentUpdate: Record<string, unknown> = {
+    remedial_status: status,
+    exam_mode: examMode || 'STRICT',
+    camera_status: cameraStatus || 'ACTIVE',
+    risk_level: riskLevel || 'LOW',
+  };
+
+  let failedReason: string | null = null;
+  let rawScore: number | null = null;
+
+  if (status === 'COMPLETED' || status === 'CHEATED' || status === 'TIMEOUT' || status === 'FAILED') {
+    // Risk assessment
+    const clientRisk = assessClientRisk(clientCheatingFlags);
+
+    const { data: allStudents } = await supabase
+      .from('gm_students')
+      .select('id, name, remedial_answers')
+      .eq('session_id', sessionId);
+
+    const serverRisk = assessServerRisk(
+      answers,
+      (allStudents || []).map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        remedialAnswers: s.remedial_answers || [],
+      })),
+      studentId,
+      backendElapsedMs,
+      session.remedial_timer || 15
+    );
+
+    const combinedRisk = mergeRiskAssessments(clientRisk, serverRisk);
+    const systemFlagged = combinedRisk.shouldAutoFlag;
+    const explicitlyBlocked = status === 'CHEATED';
+
+    // Advanced Effort Validation (Anti-Exploit)
+    const minWords = 5;
+    const minUniqueWords = 3;
+    const garbagePhrases = ['tidak tahu', 'kosong', 'gak tahu', 'ndak tahu', 'null', 'undefined', 'asdf', 'qwerty'];
+    
+    const validAnswers = answers.filter(a => {
+      const text = (a || '').trim().toLowerCase();
+      if (text.length < 20) return false;
+      
+      const words = text.split(/\s+/).filter(w => w.length > 2);
+      const uniqueWords = new Set(words);
+      
+      // Check for garbage phrases
+      const isGarbage = garbagePhrases.some(p => text.includes(p));
+      if (isGarbage) return false;
+      
+      return words.length >= minWords && uniqueWords.size >= minUniqueWords;
+    });
+
+    const hasEnoughEffort = validAnswers.length >= (answers.length / 2);
+    const hasAnyValidAnswer = validAnswers.length >= 1;
+    const totalAnswersLength = answers.map(a => (a || '').trim()).join('').length;
+    const isTooGarbage = answers.some(a => {
+      const text = (a || '').trim().toLowerCase();
+      return ['tidak tahu', 'kosong', 'gak tahu', 'ndak tahu', 'null', 'undefined', 'asdf', 'qwerty'].some(p => text === p);
+    });
+
+    // Duration validation (Anti-Exploit: Too fast) - Validasi Backend Mutlak
+    const minDurationMs = 5 * 60 * 1000; // 5 minutes minimal
+    const isTooFast = backendElapsedMs < minDurationMs;
+    
+    // Timeout validation (Anti-Exploit: Melebihi waktu sangat lama)
+    const maxDurationMs = ((session.remedial_timer || 15) * 60 * 1000) + (2 * 60 * 1000); // Waktu ujian + toleransi 2 menit
+    const isTooLate = backendElapsedMs > maxDurationMs;
+
+    // Essay scoring (server-side only) - Use attempt-specific dynamic keys if available
+    const questions: string[] = attempt.remedial_questions || session.scoring_config?.remedialQuestions || [];
+    const essayResult = await calculateEssayScore(answers, answerKeys, questions);
+
+    // Update attempt
+    attemptUpdate.answers = answers;
+    attemptUpdate.note = note;
+    attemptUpdate.risk_score = (attempt.risk_score || 0) + combinedRisk.totalScore;
+    attemptUpdate.risk_level = combinedRisk.level;
+    
+    // Add FAST_COMPLETION flag if necessary
+    const finalFlags = [...combinedRisk.flags];
+    if (isTooFast && status === 'COMPLETED') {
+      finalFlags.push({ event: 'FAST_COMPLETION', severity: 'CRITICAL', points: 50, timestamp: Date.now() });
+    }
+    if (!hasEnoughEffort && status === 'COMPLETED') {
+      finalFlags.push({ event: 'LOW_EFFORT', severity: 'CRITICAL', points: 50, timestamp: Date.now() });
+    }
+    attemptUpdate.risk_flags = finalFlags;
+
+    attemptUpdate.essay_score_auto = essayResult.score;
+    attemptUpdate.essay_auto_details = essayResult.details;
+    attemptUpdate.essay_score_final = essayResult.score;
+
+    // Update student cache
+    studentUpdate.remedial_answers = answers;
+    studentUpdate.remedial_note = note;
+    studentUpdate.is_cheated = systemFlagged || explicitlyBlocked || (isTooFast && status === 'COMPLETED'); 
+
+    // Map finalFlags to human-readable Indonesian descriptions
+    const mappedFlags: string[] = [];
+    finalFlags.forEach((f, idx) => {
+      // If it's a client flag, try using the corresponding raw clientCheatingFlags string
+      if (idx < clientCheatingFlags.length) {
+        const rawFlag = clientCheatingFlags[idx];
+        if (rawFlag) {
+          const lowerFlag = rawFlag.toLowerCase();
+          // Skip system logs/health checks
+          if (lowerFlag.includes('health_check') || lowerFlag.includes('recovery') || lowerFlag.includes('server')) {
+            return;
+          }
+          mappedFlags.push(rawFlag);
+          return;
+        }
+      }
+
+      // Map server-side / other event codes
+      switch (f.event) {
+        case 'FAST_COMPLETION':
+          mappedFlags.push('Menyelesaikan ujian terlalu cepat (di bawah 5 menit)');
+          break;
+        case 'LOW_EFFORT':
+          mappedFlags.push('Jawaban esai terlalu pendek / terindikasi asal-asalan');
+          break;
+        case 'IDENTICAL_ESSAY':
+          mappedFlags.push('Deteksi jawaban esai identik dengan peserta lain (plagiarisme)');
+          break;
+        case 'HIGH_ESSAY_SIMILARITY':
+          mappedFlags.push('Kemiripan esai sangat tinggi dengan peserta lain');
+          break;
+        case 'NO_FACE':
+          mappedFlags.push('Wajah tidak terdeteksi oleh kamera');
+          break;
+        case 'MULTI_FACE':
+          mappedFlags.push('Terdeteksi lebih dari satu orang di kamera');
+          break;
+        case 'TAB_SWITCH':
+          mappedFlags.push('Meninggalkan halaman ujian / pindah tab');
+          break;
+        case 'BACK_PRESS':
+          mappedFlags.push('Mencoba menekan tombol kembali');
+          break;
+        case 'COPY_ATTEMPT':
+          mappedFlags.push('Mencoba menyalin teks (Copy)');
+          break;
+        case 'PASTE_ATTEMPT':
+          mappedFlags.push('Mencoba menempel teks (Paste)');
+          break;
+        case 'PRINT_ATTEMPT':
+          mappedFlags.push('Mencoba mencetak halaman');
+          break;
+        case 'OVERLAY_INDICATION':
+          mappedFlags.push('Indikasi menggunakan Layer/Overlay tambahan');
+          break;
+        case 'UNUSUAL_ACTIVITY':
+          mappedFlags.push('Aktivitas tidak biasa terdeteksi');
+          break;
+        case 'PIP_ACTIVE':
+          mappedFlags.push('Mode Picture-in-Picture aktif');
+          break;
+        case 'SYSTEM_EVENT':
+          // skip
+          break;
+        default:
+          if (f.event && f.event !== 'UNKNOWN') {
+            mappedFlags.push(f.event);
+          }
+          break;
+      }
+    });
+
+    const uniqueMappedFlags = Array.from(new Set(mappedFlags));
+
+    if (studentUpdate.is_cheated && uniqueMappedFlags.length === 0) {
+      uniqueMappedFlags.push('Terdeteksi indikasi kecurangan oleh sistem');
+    }
+
+    studentUpdate.cheating_flags = uniqueMappedFlags;
+    studentUpdate.essay_score_auto = essayResult.score;
+    studentUpdate.essay_score_final = essayResult.score;
+    studentUpdate.essay_auto_details = essayResult.details;
+
+    // Jika melebihi waktu maksimum, otomatis timeout/gagal
+    if (isTooLate && status !== 'CHEATED') {
+      throw new Error("Score calculation timed out");
+    } else if (explicitlyBlocked) {
+      // Manual/Automatic lockout triggered (e.g. 3 strikes)
+      attemptUpdate.status = 'CHEATED';
+      studentUpdate.remedial_status = 'CHEATED';
+      studentUpdate.remedial_score = 0;
+      studentUpdate.final_score = 0;
+      studentUpdate.final_score_locked = 0;
+      studentUpdate.essay_score_final = 0;
+      studentUpdate.teacher_reviewed = false;
+    } else if (status === 'COMPLETED') {
+      // Normal submission
+      
+      if (!hasEnoughEffort || isTooFast) {
+        // EXPLOIT PREVENTION: Garbage answers or too fast
+        studentUpdate.remedial_score = 0;
+        studentUpdate.final_score = 0;
+        studentUpdate.final_score_locked = 0;
+        studentUpdate.remedial_status = 'FAILED_EFFORT';
+        attemptUpdate.status = 'FAILED_EFFORT';
+        studentUpdate.teacher_reviewed = true;
+      } else {
+        // VALID SUBMISSION — Always accept, score capped at KKM ceiling
+        const rawScore = essayResult.score;
+        const penaltyAmount = isPenaltyApplied ? 15 : 0;
+        const kkmScore = session.kkm || 75;
+        
+        // Score = min(rawScore, KKM) - penalty. Never block submission based on KKM.
+        const finalScore = Math.max(0, Math.min(rawScore, kkmScore) - penaltyAmount);
+        console.log(`[Remedial] VALID submission for ${studentName}: rawScore=${rawScore}, KKM=${kkmScore}, penalty=${penaltyAmount}, finalScore=${finalScore}`);
+
+        studentUpdate.remedial_score = finalScore;
+        studentUpdate.final_score = finalScore;
+        studentUpdate.final_score_locked = finalScore;
+        studentUpdate.remedial_status = 'SUBMITTED';
+        studentUpdate.teacher_reviewed = true;
+        attemptUpdate.status = 'SUBMITTED';
+      }
+      
+      // Log penalty event if applied
+      if (isPenaltyApplied) {
+        studentUpdate.cheating_flags = [...(studentUpdate.cheating_flags as string[] || []), 'Sanksi Keterlambatan: Nilai Ujian Dikurangi 15 Poin'];
+      }
+    } else if (status === 'TIMEOUT' || status === 'FAILED') {
+      // Jika TIMEOUT, nilai tetap dihitung dari apa yang sudah dikerjakan
+      if (!hasAnyValidAnswer && (totalAnswersLength < 20 || isTooGarbage)) {
+        attemptUpdate.status = 'TIME_UP';
+        studentUpdate.remedial_status = 'TIME_UP';
+        studentUpdate.remedial_score = 0;
+        studentUpdate.final_score = 0;
+        studentUpdate.final_score_locked = 0;
+        studentUpdate.teacher_reviewed = true;
+      } else {
+        const rawScore = essayResult.score;
+        const penaltyAmount = isPenaltyApplied ? 15 : 0;
+        const kkmScore = session.kkm || 75;
+        const finalScore = Math.max(0, Math.min(rawScore, kkmScore) - penaltyAmount);
+
+        studentUpdate.remedial_score = finalScore;
+        studentUpdate.final_score = finalScore;
+        studentUpdate.final_score_locked = finalScore;
+        studentUpdate.remedial_status = 'TIME_UP';
+        studentUpdate.teacher_reviewed = true;
+        attemptUpdate.status = 'TIME_UP';
+      }
+    }
+
+    rawScore = essayResult.score;
+
+    if (status === 'COMPLETED' && (!hasEnoughEffort || isTooFast)) {
+      if (isTooFast && !hasEnoughEffort) {
+        failedReason = "Durasi pengerjaan terlalu cepat (di bawah 5 menit) dan sebagian besar jawaban tidak valid/asal-asalan.";
+      } else if (isTooFast) {
+        failedReason = "Durasi pengerjaan terlalu cepat (di bawah 5 menit). Minimal pengerjaan adalah 5 menit.";
+      } else {
+        failedReason = "Sebagian besar jawaban terdeteksi asal-asalan, terlalu pendek, atau tidak memenuhi kriteria kelayakan esai.";
+      }
+    } else if ((status === 'TIMEOUT' || status === 'FAILED') && !hasAnyValidAnswer && (totalAnswersLength < 20 || isTooGarbage)) {
+      failedReason = "Ujian remedial ditutup karena batas waktu habis tanpa ada jawaban esai yang cukup valid/memadai.";
+    }
+  }
+
+  // ── FINALIZATION: Transactional Update (Attempt + Student) ──
+  
+  const calculatedScore = studentUpdate.final_score as number | undefined;
+  const remedialScore = studentUpdate.remedial_score as number | undefined;
+  const originalScore = ((student.original_score !== null && student.original_score !== undefined) ? student.original_score : student.final_score) as number | undefined;
+
+  const finalScore =
+     calculatedScore ??
+     remedialScore ??
+     originalScore ??
+     0;
+
+  // Check if there are other students in this session who need remedial and haven't finished yet
+  const { data: siblingStudents } = await supabase
+    .from('gm_students')
+    .select('id, name, final_score, original_score, remedial_status')
+    .eq('session_id', sessionId)
+    .eq('is_deleted', false);
+
+  const kkmScore = session.kkm || 70;
+  const isCandidate = (s: any) => {
+    const orig = s.original_score !== null && s.original_score !== undefined ? Number(s.original_score) : 0;
+    const fin = s.final_score !== null && s.final_score !== undefined ? Number(s.final_score) : 0;
+    const baseScore = (orig > 0) ? orig : fin;
+    return baseScore < kkmScore;
+  };
+
+  const pendingRemedialSiblings = (siblingStudents || []).filter(s => {
+    if (s.id === studentId) return false;
+    if (!isCandidate(s)) return false;
+    const finishedStates = ['COMPLETED', 'CHEATED', 'TIMEOUT', 'FAILED_EFFORT', 'TIME_UP', 'SUBMITTED'];
+    return !finishedStates.includes(s.remedial_status || 'NONE');
+  });
+
+  const ownCheated = status === 'CHEATED' || studentUpdate.remedial_status === 'CHEATED' || studentUpdate.is_cheated === true;
+  const isHeldBack = pendingRemedialSiblings.length > 0 && !ownCheated;
+
+  if (isHeldBack) {
+    console.log(`[Remedial Holdback] Score for ${studentName} is held back because there are other pending remedial students.`);
+    // Keep final score as original/old score
+    const oldScore = student.original_score || student.final_score || 0;
+    studentUpdate.final_score = oldScore;
+    studentUpdate.final_score_locked = oldScore;
+    
+    // Add warning flag
+    let flags = studentUpdate.cheating_flags as string[] || [];
+    if (!flags.includes('Nilai remedial ditahan sementara menunggu teman sekelas selesai')) {
+      flags.push('Nilai remedial ditahan sementara menunggu teman sekelas selesai');
+    }
+    studentUpdate.cheating_flags = flags;
+  } else {
+    // Release this student's score
+    studentUpdate.final_score = finalScore;
+    studentUpdate.final_score_locked = finalScore;
+
+    // Remove warning flag from current student if present
+    let flags = studentUpdate.cheating_flags as string[] || [];
+    studentUpdate.cheating_flags = flags.filter((f: string) => !f.includes('Nilai remedial ditahan'));
+
+    // Release finished sibling students' scores
+    const finishedHeldBackSiblings = (siblingStudents || []).filter(s => {
+      if (s.id === studentId) return false;
+      const finishedStates = ['COMPLETED', 'CHEATED', 'TIMEOUT', 'FAILED_EFFORT', 'TIME_UP', 'SUBMITTED'];
+      return finishedStates.includes(s.remedial_status || 'NONE');
+    });
+
+    if (finishedHeldBackSiblings.length > 0) {
+      console.log(`[Remedial Release] Releasing scores for ${finishedHeldBackSiblings.length} finished siblings.`);
+      for (const sib of finishedHeldBackSiblings) {
+        const { data: sibData } = await supabase
+          .from('gm_students')
+          .select('remedial_score, essay_score_final, cheating_flags, original_score')
+          .eq('id', sib.id)
+          .single();
+
+        const sibReleaseScore = sibData?.remedial_score ?? sibData?.essay_score_final ?? sib.original_score ?? 0;
+        let sibFlags = sibData?.cheating_flags || [];
+        if (Array.isArray(sibFlags)) {
+          sibFlags = sibFlags.filter((f: string) => !f.includes('Nilai remedial ditahan'));
+        }
+
+        await supabase
+          .from('gm_students')
+          .update({
+            final_score: sibReleaseScore,
+            final_score_locked: sibReleaseScore,
+            cheating_flags: sibFlags
+          })
+          .eq('id', sib.id);
+      }
+    }
+  }
+
+  const result = await withRetry(async () => {
+    try {
+      const { data, error } = await supabase.rpc('finalize_remedial_attempt', {
+        p_attempt_id: attempt.id,
+        p_student_id: studentId,
+        p_attempt_data: attemptUpdate,
+        p_student_data: studentUpdate
+      });
+
+      if (error) throw error;
+      return data;
+    } catch (err: any) {
+      if (err.message && err.message.includes('column') && err.message.includes('does not exist')) {
+        console.warn(`[Safe Update Fallback] Menghapus kolom opsional yang belum dimigrasi di tabel gm_students.`);
+        
+        // Remove columns that might not exist in an older schema
+        const safeStudentUpdate = { ...studentUpdate };
+        delete safeStudentUpdate.exam_mode;
+        delete safeStudentUpdate.camera_status;
+        delete safeStudentUpdate.risk_level;
+
+        const { data, error } = await supabase.rpc('finalize_remedial_attempt', {
+          p_attempt_id: attempt.id,
+          p_student_id: studentId,
+          p_attempt_data: attemptUpdate,
+          p_student_data: safeStudentUpdate
+        });
+
+        if (error) throw error;
+        return data;
+      } else {
+        throw err;
+      }
+    }
+  }, `Finalisasi remedial (id: ${studentId}, student: ${studentName})`);
+
+  console.log(`[Remedial] FINALIZED: student=${studentName}, status=${status}, result=SUCCESS`);
+
+  return { 
+    ...student, 
+    ...studentUpdate,
+    newFinalScore: studentUpdate.final_score,
+    attempt_id: attempt.id,
+    attempt_token: (attempt as any).attempt_token || null,
+    subject: session.subject,
+    class_name: session.class_name,
+    remedialAnswerKeys: answerKeys,
+    isHeldBack,
+    remedialScore: remedialScore ?? finalScore,
+    pendingRemedialCount: pendingRemedialSiblings.length,
+    holdbackReason: isHeldBack ? 'Nilai remedial ditahan sementara menunggu teman sekelas selesai' : null,
+    rawScore: rawScore,
+    displayedScore: isHeldBack ? (remedialScore ?? finalScore) : studentUpdate.final_score,
+    scoringReason: status === 'CHEATED' ? 'CHEATED' : (status === 'TIMEOUT' ? 'TIMEOUT' : 'COMPLETED'),
+    failedReason,
+    penaltyApplied: isPenaltyApplied,
+  };
+}
+
+async function findActiveAttempt(
+  sessionId: string,
+  studentId: string,
+  studentName: string
+): Promise<{ 
+  id: string; 
+  attempt_token: string; 
+  risk_score: number; 
+  started_at: string | null; 
+  status: string; 
+  remedial_questions?: string[] | null; 
+  remedial_answer_keys?: string[] | null; 
+}> {
+  // 0. Check student status first - if null/NONE, we should NOT try to recover an old attempt
+  const { data: student } = await supabase
+    .from('gm_students')
+    .select('remedial_status')
+    .eq('id', studentId)
+    .single();
+
+  if (!student || !student.remedial_status || student.remedial_status === 'NONE') {
+    throw new Error('RESET_REQUIRED');
+  }
+
+  // 1. Try finding ACTIVE attempt
+  const { data: activeAttempt } = await supabase
+    .from('gm_remedial_attempts')
+    .select('id, attempt_token, risk_score, started_at, status, remedial_questions, remedial_answer_keys')
+    .eq('session_id', sessionId)
+    .eq('student_id', studentId)
+    .eq('status', 'ACTIVE')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (activeAttempt) {
+    console.log(`[Remedial] Active attempt found for ${studentName}: id=${activeAttempt.id}`);
+    return activeAttempt;
+  }
+
+  // 2. Auto-recovery: check for INITIATED attempt and auto-activate
+  console.warn(`[Remedial Recovery] No ACTIVE attempt found for ${studentName} (session: ${sessionId}). Checking INITIATED...`);
+
+  const { data: initiatedAttempt } = await supabase
+    .from('gm_remedial_attempts')
+    .select('id, attempt_token, risk_score, session_id, started_at, status, remedial_questions, remedial_answer_keys')
+    .eq('session_id', sessionId)
+    .eq('student_id', studentId)
+    .eq('status', 'INITIATED')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (initiatedAttempt) {
+    console.warn(`[Remedial Recovery] Found INITIATED attempt ${initiatedAttempt.id}. Auto-activating...`);
+
+    const now = new Date().toISOString();
+    await supabase
+      .from('gm_remedial_attempts')
+      .update({ status: 'ACTIVE', started_at: now })
+      .eq('id', initiatedAttempt.id);
+
+    await supabase
+      .from('gm_students')
+      .update({ remedial_status: 'ACTIVE' })
+      .eq('id', studentId);
+
+    initiatedAttempt.status = 'ACTIVE';
+    initiatedAttempt.started_at = now;
+    return initiatedAttempt;
+  }
+
+  // 3. Last resort: create recovery attempt to prevent data loss
+  console.error(`[Remedial Recovery] No attempt found at all for ${studentName} (session: ${sessionId}). Creating recovery attempt...`);
+
+  const recoveryToken = generateAttemptToken(sessionId, studentId);
+
+  const { data: recoveryAttempt, error: recoveryErr } = await supabase
+    .from('gm_remedial_attempts')
+    .insert({
+      session_id: sessionId,
+      student_id: studentId,
+      attempt_number: 1,
+      attempt_token: recoveryToken,
+      status: 'ACTIVE',
+      started_at: new Date().toISOString(),
+      location: 'RECOVERY_AUTO',
+    })
+    .select('id, attempt_token, risk_score, started_at, status, remedial_questions, remedial_answer_keys')
+    .single();
+
+  if (recoveryErr || !recoveryAttempt) {
+    throw new Error(
+      `Gagal membuat recovery attempt untuk ${studentName} (session: ${sessionId}): ${recoveryErr?.message || 'unknown'}`
+    );
+  }
+
+  await supabase
+    .from('gm_students')
+    .update({ remedial_status: 'ACTIVE' })
+    .eq('id', studentId);
+
+  console.warn(`[Remedial Recovery] Recovery attempt created: ${recoveryAttempt.id} for ${studentName}`);
+
+  return recoveryAttempt;
+}
+
+export async function reviewRemedial(
+  studentId: string,
+  essayScoreManual: number,
+  sessionKkm: number
+) {
+  const { data: student, error: fetchErr } = await supabase
+    .from('gm_students')
+    .select('is_cheated, essay_score_auto')
+    .eq('id', studentId)
+    .single();
+
+  if (fetchErr || !student) throw new Error(`Siswa tidak ditemukan (id: ${studentId})`);
+
+  if (student.is_cheated) {
+    throw new Error('Tidak bisa mengoreksi nilai siswa yang terdeteksi curang');
+  }
+
+  const { error } = await supabase
+    .from('gm_students')
+    .update({
+      essay_score_manual: essayScoreManual,
+      essay_score_final: essayScoreManual,
+      remedial_score: essayScoreManual,
+      teacher_reviewed: true,
+    })
+    .eq('id', studentId);
+
+  if (error) throw error;
+  return true;
+}
+
+export async function finalizeRemedial(
+  studentId: string,
+  sessionKkm: number
+) {
+  const { data: student, error: fetchErr } = await supabase
+    .from('gm_students')
+    .select('essay_score_final, remedial_score, is_cheated, teacher_reviewed, original_score, final_score, session_id, cheating_flags, name')
+    .eq('id', studentId)
+    .single();
+
+  if (fetchErr || !student) throw new Error(`Siswa tidak ditemukan (id: ${studentId})`);
+  if (student.is_cheated) throw new Error('Siswa curang, nilai sudah di 0');
+  if (!student.teacher_reviewed) throw new Error('Guru belum mengoreksi nilai remedial');
+
+  const calculatedScore = Math.min(
+    (student.essay_score_final !== null && student.essay_score_final !== undefined)
+      ? student.essay_score_final
+      : ((student.remedial_score !== null && student.remedial_score !== undefined) ? student.remedial_score : 0),
+    sessionKkm
+  );
+  const remedialScore = student.remedial_score;
+  const originalScore = (student.original_score !== null && student.original_score !== undefined) ? student.original_score : student.final_score;
+
+  const finalScore =
+     calculatedScore ??
+     remedialScore ??
+     originalScore ??
+     0;
+
+  console.log({
+     originalScore,
+     remedialScore,
+     calculatedScore,
+     finalScore
+  });
+
+  if (finalScore === null || finalScore === undefined) {
+     throw new Error("Final score missing");
+  }
+
+  // Check if there are other students in this session who need remedial and haven't finished yet
+  const { data: siblingStudents } = await supabase
+    .from('gm_students')
+    .select('id, name, final_score, original_score, remedial_status')
+    .eq('session_id', student.session_id)
+    .eq('is_deleted', false);
+
+  const isCandidate = (s: any) => {
+    const orig = s.original_score !== null && s.original_score !== undefined ? Number(s.original_score) : 0;
+    const fin = s.final_score !== null && s.final_score !== undefined ? Number(s.final_score) : 0;
+    const baseScore = (orig > 0) ? orig : fin;
+    return baseScore < sessionKkm;
+  };
+
+  const pendingRemedialSiblings = (siblingStudents || []).filter(s => {
+    if (s.id === studentId) return false;
+    if (!isCandidate(s)) return false;
+    const finishedStates = ['COMPLETED', 'CHEATED', 'TIMEOUT', 'FAILED_EFFORT', 'TIME_UP', 'SUBMITTED'];
+    return !finishedStates.includes(s.remedial_status || 'NONE');
+  });
+
+  const isHeldBack = pendingRemedialSiblings.length > 0 && !student.is_cheated;
+
+  let finalUpdateScore = finalScore;
+  let finalFlags = (student as any).cheating_flags || [];
+
+  if (isHeldBack) {
+    console.log(`[Remedial Holdback] Score for ${student.name} is held back because there are other pending remedial students.`);
+    // Keep final score as original score
+    finalUpdateScore = originalScore || 0;
+    
+    // Add warning flag
+    if (Array.isArray(finalFlags)) {
+      if (!finalFlags.includes('Nilai remedial ditahan sementara menunggu teman sekelas selesai')) {
+        finalFlags.push('Nilai remedial ditahan sementara menunggu teman sekelas selesai');
+      }
+    }
+  } else {
+    // Release finished sibling students' scores
+    const finishedHeldBackSiblings = (siblingStudents || []).filter(s => {
+      if (s.id === studentId) return false;
+      const finishedStates = ['COMPLETED', 'CHEATED', 'TIMEOUT', 'FAILED_EFFORT', 'TIME_UP', 'SUBMITTED'];
+      return finishedStates.includes(s.remedial_status || 'NONE');
+    });
+
+    if (Array.isArray(finalFlags)) {
+      finalFlags = finalFlags.filter((f: string) => !f.includes('Nilai remedial ditahan'));
+    }
+
+    if (finishedHeldBackSiblings.length > 0) {
+      console.log(`[Remedial Release] Releasing scores for ${finishedHeldBackSiblings.length} finished siblings.`);
+      for (const sib of finishedHeldBackSiblings) {
+        const { data: sibData } = await supabase
+          .from('gm_students')
+          .select('remedial_score, essay_score_final, cheating_flags, original_score')
+          .eq('id', sib.id)
+          .single();
+
+        const sibReleaseScore = sibData?.remedial_score ?? sibData?.essay_score_final ?? sib.original_score ?? 0;
+        let sibFlags = sibData?.cheating_flags || [];
+        if (Array.isArray(sibFlags)) {
+          sibFlags = sibFlags.filter((f: string) => !f.includes('Nilai remedial ditahan'));
+        }
+
+        await supabase
+          .from('gm_students')
+          .update({
+            final_score: sibReleaseScore,
+            final_score_locked: sibReleaseScore,
+            cheating_flags: sibFlags
+          })
+          .eq('id', sib.id);
+      }
+    }
+  }
+
+  const { error } = await supabase
+    .from('gm_students')
+    .update({
+      final_score: finalUpdateScore,
+      final_score_locked: finalUpdateScore,
+      remedial_status: 'COMPLETED',
+      cheating_flags: finalFlags,
+    })
+    .eq('id', studentId);
+
+  if (error) throw error;
+  return finalUpdateScore;
+}
+
+export async function resetRemedial(studentId: string) {
+  const { data: student, error: fetchErr } = await supabase
+    .from('gm_students')
+    .select('original_score, final_score, session_id, mcq_score, essay_score')
+    .eq('id', studentId)
+    .single();
+
+  if (fetchErr || !student) throw new Error(`Siswa tidak ditemukan (id: ${studentId})`);
+
+  const { data: session } = await supabase
+    .from('gm_sessions')
+    .select('scoring_config')
+    .eq('id', student.session_id)
+    .single();
+
+  const config = session?.scoring_config || {};
+  const pgWeight = (typeof config.pgWeight === 'number') ? config.pgWeight : 0.7;
+  const essayWeight = (typeof config.essayWeight === 'number') ? config.essayWeight : 0.3;
+
+  const recoveredUtsScore = Math.round(
+    (Number(student.mcq_score || 0) * pgWeight) +
+    (Number(student.essay_score || 0) * essayWeight)
+  );
+
+  const scoreToRestore = (student.original_score != null && Number(student.original_score) !== 0)
+    ? Number(student.original_score)
+    : recoveredUtsScore;
+
+  // Clean up attempt data
+  await supabase
+    .from('gm_remedial_attempts')
+    .delete()
+    .eq('student_id', studentId);
+
+  const { error } = await supabase
+    .from('gm_students')
+    .update({
+      remedial_status: null,
+      remedial_score: null,
+      remedial_answers: null,
+      remedial_note: null,
+      remedial_location: null,
+      remedial_photo: null,
+      remedial_attempts: 0,
+      is_cheated: false,
+      cheating_flags: null,
+      teacher_reviewed: false,
+      essay_score_auto: null,
+      essay_score_manual: null,
+      essay_score_final: null,
+      essay_auto_details: null,
+      final_score: scoreToRestore,
+      final_score_locked: null,
+    })
+    .eq('id', studentId);
+
+  if (error) throw error;
+  return true;
+}
+
+export async function getRemainingStudents(sessionId: string) {
+  const { data, error } = await supabase
+    .from('gm_students')
+    .select('id, name, final_score, remedial_status')
+    .eq('session_id', sessionId)
+    .is('remedial_status', null)
+    .order('name', { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function activateRemedialAttempt(attemptId: string, studentId: string, token: string) {
+  const { data: attempt, error: fetchErr } = await supabase
+    .from('gm_remedial_attempts')
+    .select('id, status, session_id')
+    .eq('id', attemptId)
+    .eq('student_id', studentId)
+    .single();
+
+  if (fetchErr || !attempt) {
+    throw new Error('RESET_REQUIRED');
+  }
+  
+  if (attempt.status === 'ACTIVE') return true;
+
+  if (attempt.status !== 'INITIATED') {
+    throw new Error(`Attempt sudah dalam status ${attempt.status}, tidak bisa diaktivasi (attempt: ${attemptId})`);
+  }
+
+  // Validate token
+  const { valid } = verifyAttemptToken(token, attempt.session_id, studentId);
+  if (!valid) {
+    throw new Error(`Token tidak valid atau kadaluarsa (attempt: ${attemptId}, student: ${studentId})`);
+  }
+
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('gm_remedial_attempts')
+      .update({ 
+        status: 'ACTIVE',
+        started_at: new Date().toISOString()
+      })
+      .eq('id', attemptId);
+    if (error) throw error;
+  }, `Mengaktivasi attempt (id: ${attemptId})`);
+
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('gm_students')
+      .update({ remedial_status: 'ACTIVE' })
+      .eq('id', studentId);
+    if (error) throw error;
+  }, `Update status siswa ke ACTIVE (id: ${studentId})`);
+
+  console.log(`[Remedial] ACTIVATED: attempt=${attemptId}, student=${studentId}`);
+
+  return true;
+}
+
+export async function markRemedialFailed(attemptId: string, studentId: string) {
+  const { data: attempt, error: fetchErr } = await supabase
+    .from('gm_remedial_attempts')
+    .select('id, status')
+    .eq('id', attemptId)
+    .eq('student_id', studentId)
+    .single();
+
+  if (fetchErr || !attempt) {
+    throw new Error('RESET_REQUIRED');
+  }
+  
+  if (attempt.status !== 'INITIATED') {
+    throw new Error(`Tidak bisa mengubah status ${attempt.status} menjadi FAILED (attempt: ${attemptId})`);
+  }
+
+  const { error } = await supabase
+    .from('gm_remedial_attempts')
+    .update({ 
+      status: 'FAILED',
+      completed_at: new Date().toISOString()
+    })
+    .eq('id', attemptId);
+
+  if (error) throw error;
+
+  const { data: student } = await supabase
+    .from('gm_students')
+    .select('remedial_attempts')
+    .eq('id', studentId)
+    .single();
+
+  const currentAttempts = Math.max(0, (student?.remedial_attempts || 1) - 1);
+
+  await supabase
+    .from('gm_students')
+    .update({ 
+      remedial_status: 'FAILED',
+      remedial_attempts: currentAttempts 
+    })
+    .eq('id', studentId);
+
+  console.log(`[Remedial] FAILED: attempt=${attemptId}, student=${studentId}`);
+
+  return true;
+}
+
+export async function extendRemedialTime(studentId: string, minutes: number) {
+  // 1. Fetch student (fallback if column doesn't exist)
+  let queryResult = await supabase
+    .from('gm_students')
+    .select('id, session_id, name, remedial_status, remedial_extended_time')
+    .eq('id', studentId)
+    .single();
+
+  if (queryResult.error && queryResult.error.message.includes('remedial_extended_time')) {
+    queryResult = await supabase
+      .from('gm_students')
+      .select('id, session_id, name, remedial_status')
+      .eq('id', studentId)
+      .single();
+  }
+
+  const { data: student, error: fetchErr } = queryResult;
+
+  if (fetchErr || !student) {
+    throw new Error('Siswa tidak ditemukan');
+  }
+
+  const currentExtended = (student as any).remedial_extended_time || 0;
+  const newExtended = currentExtended + minutes;
+
+  // 2. Update student status and extended time
+  const updatePayload: Record<string, any> = {
+    remedial_status: 'ACTIVE',
+    is_cheated: false,
+    teacher_reviewed: false,
+    final_score_locked: null,
+  };
+  
+  if (student && 'remedial_extended_time' in student) {
+    updatePayload.remedial_extended_time = newExtended;
+  }
+
+  const { error: studentErr } = await supabase
+    .from('gm_students')
+    .update(updatePayload)
+    .eq('id', studentId);
+
+  if (studentErr) throw studentErr;
+
+  // 3. Find latest attempt and set it to ACTIVE
+  const { data: latestAttempt } = await supabase
+    .from('gm_remedial_attempts')
+    .select('id')
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (latestAttempt) {
+    const { error: attemptErr } = await supabase
+      .from('gm_remedial_attempts')
+      .update({
+        status: 'ACTIVE',
+        completed_at: null,
+      })
+      .eq('id', latestAttempt.id);
+
+    if (attemptErr) throw attemptErr;
+  }
+
+  console.log(`[Remedial] Extended time for student=${student.name} (id: ${studentId}) by ${minutes} minutes. New total extended: ${newExtended}`);
+  return { newExtended };
+}
+

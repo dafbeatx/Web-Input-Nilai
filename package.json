@@ -1,0 +1,46 @@
+{
+  "name": "web-input-nilai",
+  "version": "1.0.0",
+  "description": "GradeMaster OS - Next.js Migration",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "prepare": "node scripts/install-hooks.js"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.39.7",
+    "@types/web-push": "^3.6.4",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.4.2",
+    "fast-xml-parser": "^4.3.2",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
+    "lucide-react": "latest",
+    "mammoth": "^1.12.0",
+    "next": "latest",
+    "pdf-parse": "^2.4.5",
+    "react": "latest",
+    "react-dom": "latest",
+    "recharts": "^3.8.0",
+    "sharp": "^0.34.5",
+    "string-similarity": "^4.0.4",
+    "telegraf": "^4.16.3",
+    "tesseract.js": "^7.0.0",
+    "web-push": "^3.6.7",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/string-similarity": "^4.0.2",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5"
+  }
+}

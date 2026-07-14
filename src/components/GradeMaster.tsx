@@ -1,0 +1,1612 @@
+"use client";
+
+import React, { useState, useEffect, useCallback } from "react";
+import { CheckCircle2, AlertCircle, BellRing } from "lucide-react";
+
+import {
+  SessionMeta,
+  GradedStudent,
+  ScoringConfig,
+  DEFAULT_SCORING_CONFIG,
+  ModalType,
+  ToastType,
+  Layer,
+} from "@/lib/grademaster/types";
+import { parseAnswerKey, parseEssayQuestions, formatEssayQuestions } from "@/lib/grademaster/parser";
+import { generateAnalytics, generateInsights } from '@/lib/grademaster/analytics';
+import { loadRemedialSession, clearRemedialSession } from '@/lib/grademaster/session';
+import { saveActiveLayer, getActiveLayer } from '@/lib/grademaster/navigation';
+import { saveAdminSession, getAdminSession, clearAdminSession } from '@/lib/grademaster/adminSession';
+
+import HomeLayer from "./grademaster/HomeLayer";
+import SetupLayer from "./grademaster/SetupLayer";
+import DashboardLayer from "./grademaster/DashboardLayer";
+import GradingLayer from "./grademaster/GradingLayer";
+import LoginLayer from "./grademaster/LoginLayer";
+import Modals from "./grademaster/Modals";
+import StudentRemedialLayer from "./grademaster/StudentRemedialLayer";
+import BehaviorLayer from "./grademaster/BehaviorLayer";
+import RemedialDashboardLayer from "./grademaster/RemedialDashboardLayer";
+import AttendanceLayer from "./grademaster/AttendanceLayer";
+import StudentLoginLayer from "./grademaster/StudentLoginLayer";
+import StudentProfileLayer from "./grademaster/StudentProfileLayer";
+import StudentClaimLayer from "./grademaster/StudentClaimLayer";
+import TeacherClaimLayer from "./grademaster/TeacherClaimLayer";
+import LessonManagementLayer from "./grademaster/LessonManagementLayer";
+import StudentLessonLayer from "./grademaster/StudentLessonLayer";
+import RemedialManagementLayer from "@/components/grademaster/RemedialManagementLayer";
+import DataCenterLayer from "@/components/grademaster/DataCenterLayer";
+import StudentAccountsLayer from "./grademaster/StudentAccountsLayer";
+import { useGradeMaster } from "@/context/GradeMasterContext";
+import { subscribeUser, isPushSupported, checkSubscriptionStatus } from "@/lib/grademaster/pushHelper";
+import { supabase } from "@/lib/supabase/client";
+
+const safeLocalStorage = {
+  getItem(key: string): string | null {
+    try {
+      return typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+    } catch (e) {
+      console.warn(`[SafeStorage] Failed to getItem ${key}:`, e);
+      return null;
+    }
+  },
+  setItem(key: string, value: string): void {
+    try {
+      if (typeof window !== 'undefined') localStorage.setItem(key, value);
+    } catch (e) {
+      console.warn(`[SafeStorage] Failed to setItem ${key}:`, e);
+    }
+  },
+  removeItem(key: string): void {
+    try {
+      if (typeof window !== 'undefined') localStorage.removeItem(key);
+    } catch (e) {
+      console.warn(`[SafeStorage] Failed to removeItem ${key}:`, e);
+    }
+  }
+};
+
+const ESSAY_COUNT = 5;
+
+
+export default function GradeMaster() {
+  const [sessions, setSessions] = useState<SessionMeta[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true);
+
+  // Session data
+  const [sessionId, setSessionId] = useState<string>("");
+  const [sessionName, setSessionName] = useState("");
+  const [sessionPassword, setSessionPassword] = useState("");
+  const [teacherName, setTeacherName] = useState("");
+  const [subject, setSubject] = useState("");
+  const [schoolLevel, setSchoolLevel] = useState("SMA");
+  const [keyInput, setKeyInput] = useState("");
+  const [answerKey, setAnswerKey] = useState<string[]>([]);
+  const [studentList, setStudentList] = useState<string[]>([]);
+  const [scoringConfig] = useState<ScoringConfig>(DEFAULT_SCORING_CONFIG);
+  const [examType, setExamType] = useState("UTS");
+  const [semester, setSemester] = useState("Ganjil");
+  const [kkm, setKkm] = useState<number>(70);
+  const [remedialEssayCount, setRemedialEssayCount] = useState<number>(5);
+  const [isOpeningRemedialFromProfile, setIsOpeningRemedialFromProfile] = useState(false);
+  const [remedialTimer, setRemedialTimer] = useState<number>(15);
+  const [remedialDeadline, setRemedialDeadline] = useState<string>("");
+  const [remedialQuestions, setRemedialQuestions] = useState<string[]>([]);
+  const [remedialQuestionsInput, setRemedialQuestionsInput] = useState("");
+  const [remedialAnswerKeys, setRemedialAnswerKeys] = useState<string[]>([]);
+  const [remedialAnswerKeysInput, setRemedialAnswerKeysInput] = useState("");
+
+  // Grading state
+  const [studentName, setStudentName] = useState("");
+  const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
+  const [essayScores, setEssayScores] = useState<number[]>(new Array(ESSAY_COUNT).fill(0));
+  const [gradedStudents, setGradedStudents] = useState<GradedStudent[]>([]);
+
+  // UI state from Context
+  const { 
+    layer, setLayer, 
+    isAdmin, setIsAdmin, 
+    adminUser, setAdminUser, 
+    isStudent, setIsStudent,
+    isParent, setIsParent,
+    studentData, setStudentData,
+    toast, setToast, 
+    modal, setModal, 
+    studentClass, setStudentClass,
+    academicYear, setAcademicYear,
+    isAuthLoading,
+    logout 
+  } = useGradeMaster();
+
+  const [isPublicView, setIsPublicView] = useState(false);
+  const [homeView, setHomeView] = useState<'ai' | 'traditional' | 'expanded'>('ai');
+  const [isSessionPublic, setIsSessionPublic] = useState(true);
+  const [isDemo, setIsDemo] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalError, setModalError] = useState("");
+  const [apiQuestionDifficulties, setApiQuestionDifficulties] = useState<any[]>([]);
+  const [showRemedialButton, setShowRemedialButton] = useState(false);
+  const [showPushPrompt, setShowPushPrompt] = useState(false);
+  const [pushStatus, setPushStatus] = useState<'GRANTED' | 'DENIED' | 'DEFAULT' | 'UNSUPPORTED'>('DEFAULT');
+
+  useEffect(() => {
+    const clsUpper = (studentClass || '').toUpperCase();
+    if (
+      clsUpper.includes('SMA') || 
+      clsUpper.includes('10') || 
+      clsUpper.includes('11') || 
+      clsUpper.includes('12') || 
+      clsUpper.includes('X') || 
+      clsUpper.includes('XI') || 
+      clsUpper.includes('XII')
+    ) {
+      setSchoolLevel("SMA");
+    } else if (
+      clsUpper.includes('SMP') || 
+      clsUpper.includes('7') || 
+      clsUpper.includes('8') || 
+      clsUpper.includes('9') || 
+      clsUpper.includes('VII') || 
+      clsUpper.includes('VIII') || 
+      clsUpper.includes('IX')
+    ) {
+      setSchoolLevel("SMP");
+    }
+  }, [studentClass]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const savedSessionId = safeLocalStorage.getItem("gm_sessionId");
+    const savedSessionName = safeLocalStorage.getItem("gm_sessionName");
+    const savedSessionPassword = safeLocalStorage.getItem("gm_sessionPassword");
+    const savedIsPublicView = safeLocalStorage.getItem("gm_isPublicView") === "true";
+
+    // Restore active remedial exam session
+    const remedialSession = loadRemedialSession();
+    const VALID_REMEDIAL_STEPS = ['RULES', 'INFO', 'GUIDE', 'EXAM', 'COMPLETED', 'CHEATED', 'TIMEOUT', 'SECOND_CHANCE'];
+    if (remedialSession && VALID_REMEDIAL_STEPS.includes(remedialSession.step)) {
+      if (remedialSession.studentName) setStudentName(remedialSession.studentName);
+      if (remedialSession.className) setStudentClass(remedialSession.className);
+      if (remedialSession.subject) setSubject(remedialSession.subject);
+      if (remedialSession.sessionId) setSessionId(remedialSession.sessionId);
+      if (remedialSession.examType) setExamType(remedialSession.examType);
+      if (remedialSession.academicYear) setAcademicYear(remedialSession.academicYear);
+      if (remedialSession.semester) setSemester(remedialSession.semester);
+      if (remedialSession.kkm) setKkm(remedialSession.kkm);
+      if (remedialSession.remedialQuestions) setRemedialQuestions(remedialSession.remedialQuestions);
+      if (remedialSession.remedialEssayCount) setRemedialEssayCount(remedialSession.remedialEssayCount);
+      if (remedialSession.remedialTimer) setRemedialTimer(remedialSession.remedialTimer);
+      
+      if (layer !== 'remedial') {
+        setLayer('remedial');
+      }
+    }
+
+    if (savedSessionName) {
+      setSessionName(savedSessionName);
+      if (savedSessionId) setSessionId(savedSessionId);
+      if (savedSessionPassword) setSessionPassword(savedSessionPassword);
+      setIsPublicView(savedIsPublicView);
+
+      // Auto-load session data if we have identifier
+      if (savedIsPublicView) {
+        handleLoadPublicSession(savedSessionName);
+      } else if (savedSessionPassword) {
+        // We use a small timeout to ensure state is settled
+        setTimeout(() => {
+          fetchSessionData(savedSessionName, savedSessionPassword)
+            .then(data => {
+              setSessionId(data.sessionId || "");
+              setAnswerKey(data.answerKey || []);
+              setTeacherName(data.teacher || "");
+              setSubject(data.subject || "");
+              setStudentClass(data.className || "");
+              setSchoolLevel(data.schoolLevel || "SMA");
+              setExamType(data.examType || "UTS");
+              setAcademicYear(data.academicYear || "2025/2026");
+              setSemester(data.semester || "Ganjil");
+              setKkm(data.kkm || 70);
+              setRemedialEssayCount(data.remedialEssayCount || 5);
+              setRemedialTimer(data.remedialTimer || 15);
+              setStudentList(data.studentList || []);
+              setGradedStudents(data.gradedStudents || []);
+              const questions = data.scoringConfig?.remedialQuestions || [];
+              setRemedialQuestions(questions);
+              setRemedialQuestionsInput(formatEssayQuestions(questions));
+              const ansKeys = data.scoringConfig?.remedialAnswerKeys || [];
+              setRemedialAnswerKeys(ansKeys);
+              setRemedialAnswerKeysInput(formatEssayQuestions(ansKeys));
+              setApiQuestionDifficulties(data.questionDifficulties || []);
+              setIsSessionPublic(data.isPublic);
+              setIsDemo(data.isDemo === true);
+              setShowRemedialButton(!!data.showRemedialButton);
+
+              const key = data.answerKey as string[];
+              if (Array.isArray(key)) {
+                setKeyInput(key.map((ans: string, idx: number) => `${idx + 1}.${ans}`).join(" "));
+              }
+            })
+            .catch(console.error);
+        }, 100);
+      }
+    }
+  }, []);
+
+  // Save state to localStorage (excluding layer which is handled by Context)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      safeLocalStorage.setItem("gm_sessionId", sessionId);
+      safeLocalStorage.setItem("gm_sessionName", sessionName);
+      safeLocalStorage.setItem("gm_sessionPassword", sessionPassword);
+      safeLocalStorage.setItem("gm_isPublicView", String(isPublicView));
+      safeLocalStorage.setItem("gm_studentName", studentName || "");
+      safeLocalStorage.setItem("gm_subject", subject || "");
+    }
+  }, [layer, sessionId, sessionName, sessionPassword, isPublicView, studentName, subject]);
+
+
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const [isUpdatingQuestions, setIsUpdatingQuestions] = useState(false);
+
+  const checkAdmin = async () => {
+    // If logged in as Parent, bypass backend session checks
+    if (safeLocalStorage.getItem('gm_isParent') === 'true') {
+      return;
+    }
+    try {
+      // Get the absolute latest Google OAuth session client-side
+      const { data: { session } } = await supabase.auth.getSession();
+      const email = session?.user?.email?.toLowerCase();
+
+      // Reset roles immediately to prevent state carrying over from previous logins
+      setIsAdmin(false);
+      setIsStudent(false);
+      setStudentData(null);
+      setAdminUser(null);
+
+      // If this is a student domain (@gmail.com), treat as student directly and skip admin check
+      if (email && email.endsWith('@gmail.com') && email !== 'dafbeatx@gmail.com') {
+        setIsAdmin(false);
+        setIsStudent(true);
+
+        const studentRes = await fetch(`/api/student/check?t=${Date.now()}`, { cache: 'no-store' });
+        const studentCheckData = await studentRes.json();
+
+        if (studentCheckData.authenticated) {
+          const resolvedStudent = { ...studentCheckData.student, isGoogleLinked: true };
+          setStudentData(resolvedStudent);
+          if (resolvedStudent.class_name) {
+            setStudentClass(resolvedStudent.class_name);
+          }
+          if (layer === 'student_login' || layer === 'student_claim' || layer === 'login') {
+            setLayer('student_profile');
+          }
+        } else {
+          // Unlinked Google student
+          setStudentData({
+            name: session?.user?.user_metadata?.full_name || email,
+            username: email,
+            photo_url: session?.user?.user_metadata?.avatar_url || '',
+            email: email,
+            id: email,
+            isGoogleLinked: false
+          });
+          if (layer !== 'student_claim' && (layer === 'home' || layer === 'student_login')) {
+            setLayer('student_claim');
+          }
+        }
+        await fetchSessions();
+        return;
+      }
+
+      // 1. Check for Student Session first (Authenticated school account)
+      const studentRes = await fetch(`/api/student/check?t=${Date.now()}`, { cache: 'no-store' });
+      const studentCheckData = await studentRes.json();
+
+      if (studentCheckData.authenticated) {
+        setIsAdmin(false);
+        setIsStudent(true);
+        const resolvedStudent = { ...studentCheckData.student, isGoogleLinked: true };
+        setStudentData(resolvedStudent);
+        if (resolvedStudent.class_name) {
+          setStudentClass(resolvedStudent.class_name);
+        }
+        // Navigate away from login page if session is already active
+        if (layer === 'student_login' || layer === 'student_claim' || layer === 'login') {
+          setLayer('student_profile');
+        }
+        // SYNC: Re-fetch sessions now that student is confirmed (mirrors admin pattern)
+        await fetchSessions();
+        return;
+      }
+
+      // 2. Fallback to Google Auth / Admin check
+      const res = await fetch(`/api/admin/check?t=${Date.now()}`, { cache: 'no-store' });
+      const data = await res.json();
+      
+      if (data.authenticated && data.role === 'admin') {
+        setIsAdmin(true);
+        setIsStudent(false); // Mutual exclusivity
+        if (data.displayName && data.subject) {
+          setAdminUser(data.displayName);
+          setTeacherName(data.displayName);
+          setSubject(data.subject);
+          
+          if (layer === 'student_login' || layer === 'login' || layer === 'student_claim' || layer === 'teacher_claim') {
+            setLayer('home');
+          }
+          // SYNC: Re-fetch sessions now that we are confirmed as admin
+          await fetchSessions();
+        } else {
+          // Admin exists but hasn't set up their profile yet
+          setAdminUser(data.username);
+          setLayer('teacher_claim');
+        }
+      } else if (data.authenticated && data.role === 'student') {
+        setIsAdmin(false);
+        setIsStudent(true);
+        setStudentData(data.student);
+        if (data.student?.class_name) {
+          setStudentClass(data.student.class_name);
+        }
+        if (layer === 'student_login' || layer === 'student_claim') {
+          setLayer('student_profile');
+        }
+        // SYNC: Re-fetch sessions for student role
+        await fetchSessions();
+      } else if (data.role === 'student_google') {
+        setIsAdmin(false);
+        setIsStudent(true);
+        
+        // Google session exists, but no linked student record found (authenticated: false above)
+        // Transition to claim layer unless already there
+        setStudentData({
+          name: data.username,
+          username: data.email,
+          photo_url: data.avatar_url,
+          email: data.email,
+          id: data.email,
+          isGoogleLinked: false
+        });
+
+        if (layer !== 'student_claim' && (layer === 'home' || layer === 'student_login')) {
+          setLayer('student_claim');
+        }
+      } else {
+        setIsAdmin(false);
+        setIsStudent(false);
+        setStudentData(null);
+      }
+    } catch (err) {
+      setIsAdmin(false);
+      setIsStudent(false);
+      setStudentData(null);
+    }
+  };
+
+  useEffect(() => {
+    fetchSessions();
+    if (!isAuthLoading) {
+      checkAdmin();
+    }
+  }, [isAuthLoading]);
+
+  useEffect(() => {
+    // Register Service Worker for PWA
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      const handleRegister = () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          .then((reg) => console.log('[PWA] Service Worker registered successfully:', reg.scope))
+          .catch((err) => console.error('[PWA] Service Worker registration failed:', err));
+      };
+      if (document.readyState === 'complete') {
+        handleRegister();
+      } else {
+        window.addEventListener('load', handleRegister);
+      }
+    }
+  }, []);
+
+  // Tele-log: Catch when user reaches dashboard/home/student_profile for the first time
+  useEffect(() => {
+    if (typeof window === "undefined" || isAuthLoading) return;
+    
+    const isPostLoginLayer = layer === 'dashboard' || layer === 'home' || layer === 'student_profile';
+    // Only consider the user logged in for tele-log purposes if they are admin or a fully linked student
+    const isUserLoggedIn = isAdmin || (isStudent && studentData && studentData.isGoogleLinked === true);
+    
+    if (isPostLoginLayer && isUserLoggedIn) {
+      const role = isAdmin ? 'Admin' : 'Student';
+      const name = isAdmin ? (adminUser || 'Admin') : (studentData?.name || 'Siswa');
+      const sessionKey = `gm_telelog_sent_${role}_${name}`;
+
+      if (!sessionStorage.getItem(sessionKey)) {
+        sessionStorage.setItem(sessionKey, 'true');
+
+        const sendLog = (location?: any) => {
+          fetch('/api/grademaster/tele-log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'LOGIN', name, role, location })
+          }).catch(() => {});
+        };
+
+        // Try getting location passively (only if already granted)
+        if (navigator.permissions && navigator.geolocation) {
+          navigator.permissions.query({ name: 'geolocation' }).then(result => {
+            if (result.state === 'granted') {
+              navigator.geolocation.getCurrentPosition(
+                (pos) => sendLog({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                () => sendLog(),
+                { timeout: 5000, maximumAge: 60000 }
+              );
+            } else {
+              sendLog();
+            }
+          }).catch(() => sendLog());
+        } else {
+          sendLog();
+        }
+      }
+    }
+  }, [layer, isAdmin, isStudent, adminUser, studentData, isAuthLoading]);
+
+  // Check and handle mandatory push notification permission for Google-authenticated students
+  const checkPushPermission = useCallback(async () => {
+    if (isStudent && studentData && studentData.id && studentData.isGoogleLinked !== false) {
+      const status = await checkSubscriptionStatus();
+      setPushStatus(status);
+      if (status !== 'GRANTED' && status !== 'UNSUPPORTED') {
+        setShowPushPrompt(true);
+      } else {
+        setShowPushPrompt(false);
+      }
+    } else {
+      setShowPushPrompt(false);
+    }
+  }, [isStudent, studentData]);
+
+  useEffect(() => {
+    // Short delay on mount/login to allow permission checks to run smoothly
+    const timer = setTimeout(checkPushPermission, 1500);
+    return () => clearTimeout(timer);
+  }, [isStudent, studentData, checkPushPermission]);
+
+  const handleActivatePush = async () => {
+    if (!studentData?.id) return;
+    setModalLoading(true);
+    const success = await subscribeUser(studentData.id);
+    
+    // Refresh permission status
+    const status = await checkSubscriptionStatus();
+    setPushStatus(status);
+    setModalLoading(false);
+    
+    if (success || status === 'GRANTED') {
+      setToast({ message: "Notifikasi berhasil diaktifkan!", type: "success" });
+      setShowPushPrompt(false);
+    } else {
+      if (status === 'DENIED') {
+        setToast({ message: "Izin notifikasi diblokir browser. Harap buka blokir lewat URL bar.", type: "error" });
+      } else {
+        setToast({ message: "Gagal mendaftarkan notifikasi. Silakan coba lagi.", type: "error" });
+      }
+    }
+  };
+
+  const penalizedStudents = React.useMemo(() => {
+    return gradedStudents.map(s => ({
+      ...s,
+      finalScore: s.finalScore
+    }));
+  }, [gradedStudents]);
+
+  const analytics = React.useMemo(() => {
+    const base = generateAnalytics(penalizedStudents, answerKey);
+    // Student View: Answer key is hidden, so re-merge and re-calculate insights using pre-calculated API data
+    if (answerKey.length === 0 && apiQuestionDifficulties.length > 0) {
+      // Re-calculate insights specifically using the apiDifficulties
+      const studentInsights = generateInsights(
+        penalizedStudents, 
+        apiQuestionDifficulties, 
+        base.standardDeviation, 
+        base.avgScore
+      );
+      return { 
+        ...base, 
+        questionDifficulties: apiQuestionDifficulties,
+        insights: studentInsights
+      };
+    }
+    return base;
+  }, [penalizedStudents, answerKey, apiQuestionDifficulties]);
+
+  // ── API calls ──
+
+  const fetchSessions = async () => {
+    setIsLoadingSessions(true);
+    try {
+      const res = await fetch("/api/grademaster");
+      const data = await res.json();
+      if (data.sessions) setSessions(data.sessions);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
+
+  const handleAdminLogout = async () => {
+    try {
+      await logout();
+      setToast({ message: "Logout berhasil", type: "success" });
+    } catch (err) {
+      setToast({ message: "Gagal logout", type: "error" });
+    }
+  };
+
+  const handleUpdateAdmin = async (username: string, pass: string, remedialPass?: string) => {
+    const res = await fetch('/api/admin/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        username, 
+        password: pass,
+        remedialPassword: remedialPass
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal mengubah profil admin');
+    
+    // Store remedial password locally if provided (as a fallback/gatekeeper)
+    if (remedialPass) {
+      safeLocalStorage.setItem('gm_remedial_password', remedialPass);
+    }
+    
+    setToast({ message: 'Profil admin berhasil diperbarui!', type: 'success' });
+    setAdminUser(username);
+  };
+
+  const handleSaveSession = async () => {
+    if (!sessionName.trim() || !sessionPassword.trim()) {
+      setModalError("Nama sesi dan password wajib diisi");
+      return;
+    }
+    setModalLoading(true);
+    setModalError("");
+    try {
+      const res = await fetch("/api/grademaster", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          sessionName: sessionName.trim(),
+          password: sessionPassword.trim(),
+          answerKey,
+          teacher: teacherName,
+          subject,
+          className: studentClass,
+          schoolLevel,
+          studentList,
+          scoringConfig: { ...scoringConfig, remedialQuestions, remedialAnswerKeys },
+          examType,
+          academicYear,
+          semester,
+          kkm,
+          remedialEssayCount,
+          remedialTimer,
+          isDemo,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      if (data.sessionId) setSessionId(data.sessionId);
+      setApiQuestionDifficulties([]); // Reset on new session since no students yet
+      
+      setToast({ message: data.message || "Sesi berhasil disimpan!", type: "success" });
+      closeModal();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal menyimpan";
+      setModalError(msg);
+      setModal('error');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleUpdateRemedialQuestions = async (newQuestions: string[], newKeys: string[], newTimer: number, newDeadline?: string) => {
+    if (!sessionId) {
+      setToast({ message: "Sesi belum dimuat. Silakan login ke sesi terlebih dahulu.", type: "error" });
+      return;
+    }
+    setIsUpdatingQuestions(true);
+    try {
+      const res = await fetch("/api/grademaster", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          sessionName: sessionName.trim(),
+          password: sessionPassword.trim(),
+          answerKey,
+          teacher: teacherName,
+          subject,
+          className: studentClass,
+          schoolLevel,
+          studentList,
+          scoringConfig: { ...scoringConfig, remedialQuestions: newQuestions, remedialAnswerKeys: newKeys, remedialDeadline: newDeadline },
+          examType,
+          academicYear,
+          kkm,
+          remedialEssayCount,
+          remedialTimer: newTimer,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setRemedialQuestions(newQuestions);
+      setRemedialAnswerKeys(newKeys);
+      setRemedialTimer(newTimer);
+      if (newDeadline !== undefined) setRemedialDeadline(newDeadline);
+      setToast({ message: "Konfigurasi remedial berhasil diperbarui!", type: "success" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal menyimpan";
+      setToast({ message: msg, type: "error" });
+    } finally {
+      setIsUpdatingQuestions(false);
+    }
+  };
+
+  const handleLoadSessionDirectly = async (name: string) => {
+    setIsUpdatingQuestions(true);
+    try {
+      const res = await fetch(`/api/grademaster?name=${encodeURIComponent(name)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setSessionId(data.sessionId || "");
+      setSessionName(data.sessionName);
+      setTeacherName(data.teacher || "");
+      setSubject(data.subject || "");
+      setStudentClass(data.className || "");
+      setSchoolLevel(data.schoolLevel || "SMA");
+      setExamType(data.examType || "UTS");
+      setAcademicYear(data.academicYear || "2025/2026");
+      setSemester(data.semester || "Ganjil");
+      setStudentList(data.studentList || []);
+      setGradedStudents(data.gradedStudents || []);
+      setKkm(data.kkm || 70);
+      setRemedialEssayCount(data.remedialEssayCount || 5);
+      setRemedialTimer(data.remedialTimer || 15);
+      const questions = data.scoringConfig?.remedialQuestions || [];
+      setRemedialQuestions(questions);
+      setRemedialQuestionsInput(formatEssayQuestions(questions));
+      const ansKeys = data.scoringConfig?.remedialAnswerKeys || [];
+      setRemedialAnswerKeys(ansKeys);
+      setRemedialAnswerKeysInput(formatEssayQuestions(ansKeys));
+      setApiQuestionDifficulties(data.questionDifficulties || []);
+      setIsSessionPublic(data.isPublic);
+      setIsDemo(data.isDemo === true);
+      setShowRemedialButton(!!data.showRemedialButton);
+      setIsPublicView(false); // Enable full operations for admin
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal memuat sesi";
+      setToast({ message: msg, type: "error" });
+    } finally {
+      setIsUpdatingQuestions(false);
+    }
+  };
+
+  const handleAdminDeleteSession = async (id: string, name: string) => {
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus sesi "${name}" beserta seluruh data nilai dan remedial siswa? Tindakan ini tidak dapat dibatalkan.`)) {
+      return;
+    }
+    setIsUpdatingQuestions(true);
+    try {
+      const res = await fetch("/api/grademaster", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: id,
+          sessionName: name,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setToast({ message: data.message || "Sesi berhasil dihapus!", type: "success" });
+      
+      // Clear current active session if it's the deleted one
+      if (sessionId === id) {
+        setSessionId("");
+        setSessionName("");
+        setGradedStudents([]);
+      }
+      
+      // Refresh sessions list
+      await fetchSessions();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal menghapus sesi";
+      setToast({ message: msg, type: "error" });
+    } finally {
+      setIsUpdatingQuestions(false);
+    }
+  };
+
+  const handleLoadPublicSession = async (name?: string) => {
+    const targetName = name || sessionName.trim();
+    if (!targetName) {
+      setModalError("Nama sesi wajib diisi");
+      return;
+    }
+    setModalLoading(true);
+    setModalError("");
+    try {
+      const res = await fetch(`/api/grademaster?name=${encodeURIComponent(targetName)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setSessionId(data.sessionId || "");
+      setSessionName(data.sessionName);
+      setTeacherName(data.teacher || "");
+      setSubject(data.subject || "");
+      setStudentClass(data.className || "");
+      setSchoolLevel(data.schoolLevel || "SMA");
+      setExamType(data.examType || "UTS");
+      setAcademicYear(data.academicYear || "2025/2026");
+      setSemester(data.semester || "Ganjil");
+      setStudentList(data.studentList || []);
+      setGradedStudents(data.gradedStudents || []);
+      setKkm(data.kkm || 70);
+      setRemedialEssayCount(data.remedialEssayCount || 5);
+      setRemedialTimer(data.remedialTimer || 15);
+      const questions = data.scoringConfig?.remedialQuestions || [];
+      setRemedialQuestions(questions);
+      setRemedialQuestionsInput(formatEssayQuestions(questions));
+      const ansKeys = data.scoringConfig?.remedialAnswerKeys || [];
+      setRemedialAnswerKeys(ansKeys);
+      setRemedialAnswerKeysInput(formatEssayQuestions(ansKeys));
+      setApiQuestionDifficulties(data.questionDifficulties || []);
+      setIsSessionPublic(data.isPublic);
+      setIsDemo(data.isDemo === true);
+      setShowRemedialButton(!!data.showRemedialButton);
+      setIsPublicView(true);
+      if (layer !== "remedial_dashboard") {
+        setLayer("dashboard");
+      }
+      closeModal();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal memuat sesi publik";
+      setToast({ message: msg, type: "error" });
+      setModalError(msg);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleStudentRemedialFromProfile = async (targetSessionName: string) => {
+    setIsOpeningRemedialFromProfile(true);
+    try {
+      const ts = Date.now();
+      const res = await fetch(`/api/grademaster?name=${encodeURIComponent(targetSessionName)}&t=${ts}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      // Clear any stale remedial session from a previous/different exam
+      // so the student always starts fresh at RULES for this new session.
+      const existingSession = loadRemedialSession();
+      if (!existingSession || existingSession.sessionId !== data.sessionId) {
+        clearRemedialSession();
+      }
+
+      setSessionId(data.sessionId || "");
+      setSessionName(data.sessionName);
+      setTeacherName(data.teacher || "");
+      setSubject(data.subject || "");
+      setStudentClass(studentData?.class_name || data.className || "");
+      setSchoolLevel(data.schoolLevel || "SMA");
+      setExamType(data.examType || "UTS");
+      setAcademicYear(studentData?.academic_year || data.academicYear || "2025/2026");
+      setSemester(data.semester || "Ganjil");
+      setStudentList(data.studentList || []);
+      setGradedStudents(data.gradedStudents || []);
+      setKkm(data.kkm || 70);
+      setRemedialEssayCount(data.remedialEssayCount || 5);
+      setRemedialTimer(data.remedialTimer || 15);
+      const questions = data.scoringConfig?.remedialQuestions || [];
+      setRemedialQuestions(questions);
+      setRemedialQuestionsInput(formatEssayQuestions(questions));
+      const ansKeys = data.scoringConfig?.remedialAnswerKeys || [];
+      setRemedialAnswerKeys(ansKeys);
+      setRemedialAnswerKeysInput(formatEssayQuestions(ansKeys));
+      setApiQuestionDifficulties(data.questionDifficulties || []);
+      setIsSessionPublic(data.isPublic);
+      setIsDemo(data.isDemo === true);
+      setIsPublicView(true);
+      setShowRemedialButton(!!data.showRemedialButton);
+
+      setStudentName(studentData?.name || "");
+      setLayer("remedial");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal memuat sesi remedial";
+      setToast({ message: msg, type: "error" });
+      throw err;
+    } finally {
+      setIsOpeningRemedialFromProfile(false);
+    }
+  };
+
+  const fetchSessionData = async (name: string, pass: string) => {
+    const params = new URLSearchParams({
+      name: name.trim(),
+      password: pass.trim(),
+    });
+    const res = await fetch(`/api/grademaster?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    return data;
+  };
+
+  const handleLoadSession = async () => {
+    if (!sessionName.trim() || !sessionPassword.trim()) {
+      setModalError("Nama sesi dan password wajib diisi");
+      return;
+    }
+    setModalLoading(true);
+    setModalError("");
+    try {
+      const data = await fetchSessionData(sessionName, sessionPassword);
+
+      setSessionId(data.sessionId || "");
+      setAnswerKey(data.answerKey || []);
+      setTeacherName(data.teacher || "");
+      setSubject(data.subject || "");
+      setStudentClass(data.className || "");
+      setSchoolLevel(data.schoolLevel || "SMA");
+      setExamType(data.examType || "UTS");
+      setAcademicYear(data.academicYear || "2025/2026");
+      setSemester(data.semester || "Ganjil");
+      setKkm(data.kkm || 70);
+      setRemedialEssayCount(data.remedialEssayCount || 5);
+      setRemedialTimer(data.remedialTimer || 15);
+      setStudentList(data.studentList || []);
+      setGradedStudents(data.gradedStudents || []);
+      const questions = data.scoringConfig?.remedialQuestions || [];
+      setRemedialQuestions(questions);
+      setRemedialQuestionsInput(formatEssayQuestions(questions));
+      const ansKeys = data.scoringConfig?.remedialAnswerKeys || [];
+      setRemedialAnswerKeys(ansKeys);
+      setRemedialAnswerKeysInput(formatEssayQuestions(ansKeys));
+      setApiQuestionDifficulties(data.questionDifficulties || []);
+      setIsSessionPublic(data.isPublic);
+      setIsPublicView(false); // Admin/Teacher view
+      setShowRemedialButton(!!data.showRemedialButton);
+      
+      // Reconstruct keyInput for display
+      const key = data.answerKey as string[];
+      if (Array.isArray(key)) {
+        setKeyInput(key.map((ans: string, idx: number) => `${idx + 1}.${ans}`).join(" "));
+      }
+
+      setToast({ message: `Sesi "${data.sessionName}" berhasil dimuat!`, type: "success" });
+      if (layer !== "remedial_dashboard") {
+        setLayer("dashboard");
+      }
+      closeModal();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal memuat";
+      setModalError(msg);
+      setModal('error');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+
+  const handleDeleteSession = async () => {
+    if (!sessionName.trim() || !sessionPassword.trim()) {
+      setModalError("Nama sesi dan password wajib diisi");
+      return;
+    }
+    setModalLoading(true);
+    setModalError("");
+    try {
+      const res = await fetch("/api/grademaster", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          sessionName: sessionName.trim(),
+          password: sessionPassword.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setToast({ message: data.message || "Sesi berhasil dihapus!", type: "success" });
+      closeModal();
+      fetchSessions();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal menghapus";
+      setModalError(msg);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleReSync = async () => {
+    if (!sessionId) return;
+    setIsUpdatingQuestions(true);
+    try {
+      const res = await fetch("/api/grademaster", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: 'resync',
+          sessionId,
+          sessionName: sessionName.trim(),
+          password: sessionPassword.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setToast({ message: data.message || "Berhasil sinkronisasi nilai siswa!", type: "success" });
+      
+      // Refresh session data to get updated student records
+      const refreshed = await fetchSessionData(sessionName, sessionPassword);
+      if (refreshed) {
+        setGradedStudents(refreshed.gradedStudents || []);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal sinkronisasi";
+      setToast({ message: msg, type: "error" });
+    } finally {
+      setIsUpdatingQuestions(false);
+    }
+  };
+
+  const handleRemedialInputChange = (input: string) => {
+    setRemedialQuestionsInput(input);
+    const parsed = parseEssayQuestions(input);
+    setRemedialQuestions(parsed);
+    setRemedialEssayCount(parsed.length);
+  };
+
+  const handleAnswerKeysInputChange = (input: string) => {
+    setRemedialAnswerKeysInput(input);
+    const parsed = parseEssayQuestions(input);
+    setRemedialAnswerKeys(parsed);
+  };
+
+  const refreshSessionData = async () => {
+    if (!sessionName) return;
+    try {
+      const data = await fetchSessionData(sessionName, sessionPassword);
+      if (data && data.gradedStudents) {
+        setGradedStudents(data.gradedStudents);
+      }
+    } catch (err) {
+      console.error("Auto-refresh session failed:", err);
+    }
+  };
+
+  const handleSaveStudent = async (student: GradedStudent) => {
+    setGradedStudents((prev) => [...prev, student]);
+
+    // Persist to DB if we have a session ID
+    if (sessionId) {
+      try {
+        const res = await fetch("/api/grademaster/students", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId,
+            name: student.name,
+            mcqAnswers: student.answers,
+            essayScores: student.essayScores,
+            mcqScore: student.mcqScore,
+            essayScore: student.essayScore,
+            finalScore: student.finalScore,
+            csi: student.csi,
+            lps: student.lps,
+            correct: student.correct,
+            wrong: student.wrong,
+            answerKey,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          console.error("Failed to persist student:", data.error);
+          setToast({ message: `Gagal menyimpan ke database: ${data.error}`, type: "error" });
+        }
+      } catch (err) {
+        console.error("Failed to persist student:", err);
+        setToast({ message: "Gagal menyimpan ke database. Periksa koneksi.", type: "error" });
+      }
+    }
+  };
+
+  // ── Helpers ──
+
+  const closeModal = () => {
+    setModal(null);
+    if (layer === "home") {
+      setSessionName("");
+      setSessionPassword("");
+    }
+    setModalError("");
+    setModalLoading(false);
+  };
+
+  const resetGrading = () => {
+    setUserAnswers({});
+    setEssayScores(new Array(ESSAY_COUNT).fill(0));
+    setStudentName("");
+  };
+
+  const handleSetupSubmit = async () => {
+    const parsed = parseAnswerKey(keyInput);
+    setAnswerKey(parsed);
+
+    setModalLoading(true);
+    try {
+      const res = await fetch("/api/grademaster", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionName: sessionName.trim(),
+          password: sessionPassword.trim(),
+          answerKey: parsed,
+          teacher: teacherName,
+          subject,
+          className: studentClass,
+          schoolLevel,
+          studentList,
+          scoringConfig,
+          examType,
+          academicYear,
+          semester,
+          kkm,
+          remedialEssayCount,
+          remedialTimer,
+          isDemo,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      const savedSessionId = data.sessionId;
+      if (savedSessionId) {
+        setSessionId(savedSessionId);
+        try {
+          const studentsRes = await fetch(`/api/grademaster/students?sessionId=${savedSessionId}`);
+          const studentsData = await studentsRes.json();
+          if (studentsRes.ok && studentsData.students) {
+            setGradedStudents(studentsData.students);
+          }
+        } catch (err) {
+          console.error("Failed to reload students:", err);
+        }
+      }
+      setToast({ message: "Sesi berhasil dibuat/disimpan", type: "success" });
+      setLayer("dashboard");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal menyimpan sesi";
+      setModalError(msg);
+      setModal('error');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // ── Render ──
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center animate-in fade-in duration-700">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative">
+            <div className="w-16 h-16 border-[3px] border-slate-100 border-t-[#0F172A] rounded-full animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <svg className="w-5 h-5 text-[#0F172A]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
+              </svg>
+            </div>
+          </div>
+          <div className="text-center">
+            <h2 className="text-sm font-black text-[#0F172A] uppercase tracking-[0.3em] mb-2 font-outfit">GradeMaster OS</h2>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Memuat Sesi...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const isHomeScrollLocked = layer === 'home' && homeView === 'ai';
+
+  return (
+    <div className={`relative flex flex-col ${isHomeScrollLocked || layer === 'lesson_management' ? 'h-dvh overflow-hidden' : 'min-h-[100dvh] pb-safe'} transition-colors duration-500`}>
+      <div className={`w-full ${isHomeScrollLocked || layer === 'lesson_management' ? 'h-full flex flex-col' : ''} font-outfit`}>
+        {layer === "home" && (
+        <HomeLayer
+          sessions={sessions}
+          isLoading={isLoadingSessions}
+          onCreateNew={() => {
+            if (isAdmin) {
+              setLayer("setup");
+              setSessionId("");
+              setSessionName("");
+              setSessionPassword("");
+              setKeyInput("");
+              setGradedStudents([]);
+              setIsSessionPublic(true);
+            } else {
+              setLayer("student_login");
+            }
+          }}
+          onSessionClick={(session: SessionMeta) => {
+            if (isAdmin) {
+              setSessionName(session.session_name);
+              setModal("load");
+            } else {
+              // Always allow loading public view for all sessions
+              handleLoadPublicSession(session.session_name);
+            }
+          }}
+          onDeleteSession={(id, name) => {
+            setSessionId(id);
+            setSessionName(name);
+            setModal("delete");
+          }}
+          onOpenAbout={() => setModal("about")}
+          isAdmin={isAdmin}
+          onLoginClick={() => setLayer("student_login")}
+          onLogout={handleAdminLogout}
+          onOpenSettings={() => setModal("adminSettings")}
+          userData={{
+            name: isAdmin ? adminUser : studentData?.name,
+            class_name: studentData?.class_name,
+            subject: isAdmin ? subject : undefined
+          }}
+          isStudent={isStudent}
+          onLayoutChange={setHomeView}
+        />
+        )}
+
+      {layer === "login" && (
+        <LoginLayer
+          onBack={() => setLayer("home")}
+          onSuccess={(user) => {
+            setIsAdmin(true);
+            setAdminUser(user);
+            saveAdminSession(user);
+            setLayer("setup");
+          }}
+          setToast={setToast}
+        />
+      )}
+
+      {layer === "teacher_claim" && (
+        <TeacherClaimLayer
+          googleUser={{
+            name: adminUser || '',
+            email: studentData?.email || '',
+            photo_url: studentData?.photo_url
+          }}
+          onSuccess={(displayName, sub) => {
+            setAdminUser(displayName);
+            setTeacherName(displayName);
+            setSubject(sub);
+            setLayer('home');
+          }}
+          onLogout={handleAdminLogout}
+          setToast={setToast}
+        />
+      )}
+
+      {layer === "setup" && (
+        <SetupLayer
+          sessionName={sessionName}
+          setSessionName={setSessionName}
+          sessionPassword={sessionPassword}
+          setSessionPassword={setSessionPassword}
+          teacherName={teacherName}
+          setTeacherName={setTeacherName}
+          subject={subject}
+          setSubject={setSubject}
+          studentClass={studentClass}
+          setStudentClass={setStudentClass}
+          schoolLevel={schoolLevel}
+          setSchoolLevel={setSchoolLevel}
+          keyInput={keyInput}
+          setKeyInput={setKeyInput}
+          studentList={studentList}
+          setStudentList={setStudentList}
+          examType={examType}
+          setExamType={setExamType}
+          academicYear={academicYear}
+          setAcademicYear={setAcademicYear}
+          semester={semester}
+          setSemester={setSemester}
+          kkm={kkm}
+          setKkm={setKkm}
+          remedialTimer={remedialTimer}
+          setRemedialTimer={setRemedialTimer}
+          isPublic={isSessionPublic}
+          setIsPublic={setIsSessionPublic}
+          isDemo={isDemo}
+          setIsDemo={setIsDemo}
+          onSubmit={handleSetupSubmit}
+          onBack={() => {
+            setLayer("home");
+            fetchSessions();
+          }}
+          isLoading={modalLoading}
+          setToast={setToast}
+        />
+      )}
+
+      {layer === "dashboard" && (
+        <DashboardLayer
+          teacherName={teacherName}
+          subject={subject}
+          studentClass={studentClass}
+          schoolLevel={schoolLevel}
+          gradedStudents={penalizedStudents}
+          analytics={analytics}
+          isPublicView={isPublicView}
+          sessionName={sessionName}
+          kkm={kkm}
+          remedialEssayCount={remedialEssayCount}
+          isDemo={isDemo}
+          sessionId={sessionId}
+          remedialDeadline={remedialDeadline}
+          academicYear={academicYear}
+          semester={semester}
+          isAdmin={isAdmin}
+          showRemedialButton={showRemedialButton}
+          isStudent={isStudent}
+          currentStudentName={isStudent ? (studentData?.name || '') : ''}
+          onGradeStudent={() => {
+            resetGrading();
+            setLayer("grading");
+          }}
+          onBack={() => {
+            setLayer(isPublicView ? "home" : "setup");
+            if (isPublicView) fetchSessions();
+          }}
+          onStudentRemedial={(name) => {
+            setStudentName(name);
+            setLayer("remedial");
+          }}
+          onOpenRemedialDashboard={() => setLayer("remedial_dashboard")}
+        />
+      )}
+
+      {layer === "grading" && (
+        <GradingLayer
+          sessionId={sessionId}
+          teacherName={teacherName}
+          subject={subject}
+          answerKey={answerKey}
+          studentName={studentName}
+          setStudentName={setStudentName}
+          studentClass={studentClass}
+          academicYear={academicYear}
+          schoolLevel={schoolLevel}
+          studentList={studentList}
+          userAnswers={userAnswers}
+          setUserAnswers={setUserAnswers}
+          essayScores={essayScores}
+          setEssayScores={setEssayScores}
+          scoringConfig={scoringConfig}
+          onSaveStudent={handleSaveStudent}
+          onBack={() => setLayer("dashboard")}
+          onReset={resetGrading}
+          setToast={setToast}
+          kkm={kkm}
+          gradedStudents={gradedStudents}
+        />
+      )}
+
+      {layer === "remedial" && (
+        <StudentRemedialLayer
+          studentName={studentName}
+          subject={subject}
+          remedialEssayCount={remedialEssayCount}
+          remedialTimer={remedialTimer}
+          remedialQuestions={remedialQuestions}
+          sessionId={sessionId}
+          className={studentClass}
+          academicYear={academicYear}
+          examType={examType}
+          semester={semester}
+          kkm={kkm}
+          onBack={() => {
+            refreshSessionData();
+            setLayer("dashboard");
+          }}
+          setToast={setToast}
+        />
+      )}
+
+      {layer === "behavior" && (
+        <BehaviorLayer 
+          onBack={() => setLayer("home")} 
+          setToast={setToast}
+          isAdmin={isAdmin}
+          activeClass={studentClass}
+          activeYear={academicYear}
+          gradedStudents={gradedStudents}
+        />
+      )}
+
+      {layer === "remedial_dashboard" && (
+        <RemedialDashboardLayer
+          gradedStudents={gradedStudents}
+          kkm={kkm}
+          examType={examType}
+          academicYear={academicYear}
+          studentClass={studentClass}
+          subject={subject}
+          schoolLevel={schoolLevel}
+          semester={semester}
+          scoringConfig={{ ...scoringConfig, remedialQuestions, remedialAnswerKeys, remedialDeadline }}
+          remedialQuestionsInput={remedialQuestionsInput}
+          onBack={() => setLayer("home")}
+          remedialAnswerKeysInput={remedialAnswerKeysInput}
+          onAnswerKeysInputChange={handleAnswerKeysInputChange}
+          onUpdateRemedial={handleUpdateRemedialQuestions}
+          onRemedialInputChange={handleRemedialInputChange}
+          isSaving={isUpdatingQuestions}
+          sessions={sessions}
+          activeSessionId={sessionId}
+          onSessionSelect={(session) => handleLoadSessionDirectly(session.session_name)}
+          onDeleteSession={handleAdminDeleteSession}
+          onClearActiveSession={() => {
+            setSessionId("");
+            setSessionName("");
+            setGradedStudents([]);
+          }}
+          onRefresh={refreshSessionData}
+        />
+      )}
+
+
+      {layer === "attendance" && (
+        <AttendanceLayer
+          onBack={() => setLayer("home")}
+          setToast={setToast}
+          isAdmin={isAdmin}
+          activeClass={studentClass}
+          activeYear={academicYear}
+        />
+      )}
+
+      {layer === "student_profile" && ((isStudent && studentData && studentData.isGoogleLinked) || isParent) && (
+        <StudentProfileLayer 
+          studentId={studentData.behavior_id || studentData.id}
+          studentName={studentData.name}
+          className={studentData.class_name}
+          academicYear={studentData.academic_year ?? academicYear}
+          initialPoints={studentData.total_points ?? 0}
+          avatarUrl={studentData.avatar_url}
+          canEditPhoto={!studentData.avatar_url}
+          isAdmin={false}
+          onBack={() => setLayer("home")}
+          setToast={setToast}
+          onLogout={handleAdminLogout}
+          onAvatarUpdate={(url) => setStudentData({ ...studentData, avatar_url: url })}
+          onStartRemedial={handleStudentRemedialFromProfile}
+          semester={semester}
+        />
+      )}
+
+      {layer === "student_lesson" && ((isStudent && studentData && studentData.isGoogleLinked) || isParent) && (
+        <StudentLessonLayer
+          onBack={() => setLayer(studentData?.isParentView ? "student_profile" : "home")}
+          setToast={setToast}
+          semester={semester}
+          isTab={false}
+          studentClassOverride={studentData?.class_name || studentClass}
+        />
+      )}
+
+      {layer === "lesson_management" && isAdmin && (
+        <LessonManagementLayer 
+          onBack={() => setLayer("home")} 
+          setToast={setToast}
+          activeClass={studentClass}
+          academicYear={academicYear}
+          schoolLevel={schoolLevel}
+          semester={semester}
+        />
+      )}
+
+      {layer === "remedial_management" && isAdmin && (
+        <RemedialManagementLayer 
+          academicYear={academicYear}
+          setToast={setToast}
+        />
+      )}
+
+      {layer === "data_center" && isAdmin && (
+        <DataCenterLayer
+          onBack={() => setLayer("home")}
+        />
+      )}
+
+      {layer === "student_accounts" && isAdmin && (
+        <StudentAccountsLayer
+          onBack={() => setLayer("home")}
+          setToast={setToast}
+          activeClass={studentClass}
+          activeYear={academicYear}
+          onPromoteSuccess={(newClass, newYear) => {
+            setStudentClass(newClass);
+          }}
+        />
+      )}
+
+      {layer === "student_login" && (
+        <StudentLoginLayer
+          setToast={setToast}
+          isLoggedIn={isStudent}
+          onLogout={() => {
+            logout();
+            setLayer("home");
+          }}
+          onSuccess={async (data) => {
+            // Don't force isStudent(true) here, let checkAdmin determine the role
+            await checkAdmin();
+          }}
+        />
+      )}
+
+      {layer === "student_claim" && studentData && (
+        <StudentClaimLayer
+          googleUser={{
+            name: studentData.name,
+            email: studentData.email,
+            photo_url: studentData.photo_url || studentData.avatar_url
+          }}
+          onSuccess={async (data) => {
+            // Set student state immediately and navigate directly.
+            // DO NOT call checkAdmin() here — it resets all state (setIsStudent(false), 
+            // setStudentData(null)) causing the component to unmount and loop back.
+            setIsStudent(true);
+            const linkedStudent = { ...data, isGoogleLinked: true };
+            setStudentData(linkedStudent);
+            if (data.class_name) setStudentClass(data.class_name);
+
+            // Navigate directly — we know the claim succeeded
+            setLayer('student_profile');
+
+            // Background refresh: re-fetch full student data (behavior_id, total_points, streak, etc.)
+            try {
+              const res = await fetch(`/api/student/check?t=${Date.now()}`, { cache: 'no-store' });
+              const checkData = await res.json();
+              if (checkData.authenticated && checkData.student) {
+                setStudentData({ ...checkData.student, isGoogleLinked: true });
+                if (checkData.student.class_name) {
+                  setStudentClass(checkData.student.class_name);
+                }
+              }
+            } catch (e) {
+              console.warn('[StudentClaim] Background refresh failed, using link-google data:', e);
+            }
+          }}
+          onLogout={() => {
+            logout();
+          }}
+          setToast={setToast}
+        />
+      )}
+
+      <Modals
+        modal={modal}
+        sessionName={sessionName}
+        setSessionName={setSessionName}
+        sessionPassword={sessionPassword}
+        setSessionPassword={setSessionPassword}
+        modalLoading={modalLoading}
+        modalError={modalError}
+        onSave={handleSaveSession}
+        onLoad={handleLoadSession}
+        onLoadPublic={handleLoadPublicSession}
+        onDelete={handleDeleteSession}
+        onClose={closeModal}
+        onUpdateAdmin={handleUpdateAdmin}
+      />
+
+      {/* Mandatory Push Notification Modal Overlay */}
+      {showPushPrompt && (
+        <div className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#1c1c1e] border border-white/10 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center flex flex-col items-center gap-6 animate-in fade-in zoom-in-95 duration-300">
+            {/* Bell Ringing Anim */}
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-indigo-500/20 blur-xl animate-pulse" />
+              <div className="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 relative z-10 animate-bounce">
+                <BellRing size={32} />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <h2 className="text-xl font-extrabold text-white tracking-tight">Aktifkan Notifikasi Remedial</h2>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                Untuk memastikan Anda tidak melewatkan info nilai terbaru, jadwal, dan batas waktu remedial, Anda wajib mengizinkan notifikasi push di HP/Browser Anda.
+              </p>
+            </div>
+
+            {pushStatus === 'DENIED' ? (
+              <div className="w-full flex flex-col gap-4">
+                <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 text-left flex flex-col gap-2">
+                  <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
+                    <AlertCircle size={16} />
+                    <span>Akses Notifikasi Diblokir</span>
+                  </div>
+                  <p className="text-xs text-rose-300/80 leading-relaxed">
+                    Sistem mendeteksi izin notifikasi diblokir oleh browser Anda. Harap ikuti langkah berikut:
+                  </p>
+                  <ol className="text-xs text-rose-300/80 list-decimal pl-4 flex flex-col gap-1 leading-normal">
+                    <li>Klik <strong>ikon gembok</strong> di sebelah kiri bilah URL browser Anda.</li>
+                    <li>Ubah izin <strong>Notifications</strong> menjadi <strong>Allow (Izinkan)</strong>.</li>
+                    <li>Setelah itu, klik tombol di bawah untuk memeriksa ulang izin.</li>
+                  </ol>
+                </div>
+
+                <button
+                  onClick={checkPushPermission}
+                  disabled={modalLoading}
+                  className="w-full py-3.5 rounded-2xl font-bold bg-white text-black hover:bg-gray-200 transition-colors shadow-lg active:scale-[0.98] disabled:opacity-50"
+                >
+                  {modalLoading ? "Memeriksa..." : "Saya Sudah Mengubah Izin"}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleActivatePush}
+                disabled={modalLoading}
+                className="w-full py-3.5 rounded-2xl font-bold bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {modalLoading ? (
+                  <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                ) : (
+                  "Aktifkan & Lanjutkan"
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none p-4 pt-safe">
+          <div
+            className={`pointer-events-auto px-6 py-4 md:px-6 md:py-3 rounded-2xl shadow-2xl text-base md:text-sm font-bold flex items-center gap-3 md:gap-2 animate-in fade-in zoom-in-95 duration-200 w-full max-w-[340px] md:max-w-md text-center justify-center ${
+              toast.type === "success"
+                ? "bg-emerald-600 text-white shadow-emerald-600/30"
+                : "bg-rose-600 text-white shadow-rose-600/30"
+            }`}
+          >
+            {toast.type === "success" ? (
+              <CheckCircle2 size={20} className="shrink-0 md:w-4 md:h-4" />
+            ) : (
+              <AlertCircle size={20} className="shrink-0 md:w-4 md:h-4" />
+            )}
+            <span className="truncate">{toast.message}</span>
+          </div>
+        </div>
+      )}
+      </div>
+    </div>
+  );
+}
