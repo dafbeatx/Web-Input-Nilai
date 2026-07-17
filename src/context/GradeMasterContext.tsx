@@ -345,6 +345,18 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
 
     const initAuth = async () => {
       try {
+        // 1. Subscribe to auth changes FIRST so we do not miss any initial SIGNED_IN events
+        // that trigger while the browser is loading/parsing cookies in the background.
+        try {
+          const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            await handleAuthStateChange(event, session);
+          });
+          activeSubscription = subscription;
+        } catch (subErr) {
+          console.error("[AuthInit] Failed to subscribe to auth changes:", subErr);
+        }
+
+        // 2. Query initial session
         let session: any = null;
         try {
           const res = await supabase.auth.getSession();
@@ -355,20 +367,13 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         
         if (isUnmounted) return;
         
-        await checkAuthAndRoute(session);
-        if (isUnmounted) return;
-
-        try {
-          const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            await handleAuthStateChange(event, session);
-          });
-          activeSubscription = subscription;
-        } catch (subErr) {
-          console.error("[AuthInit] Failed to subscribe to auth changes:", subErr);
+        // 3. Only run the initial check if onAuthStateChange hasn't already handled a valid session
+        if (!hasInitialLoadedRef.current) {
+          await checkAuthAndRoute(session);
         }
       } catch (err) {
         console.error("[AuthInit] Critical error in initAuth:", err);
-        if (!isUnmounted) {
+        if (!isUnmounted && !hasInitialLoadedRef.current) {
           await checkAuthAndRoute(null);
         }
       }

@@ -55,6 +55,7 @@ export default function StudentLoginLayer({
   const [showDropdown, setShowDropdown] = useState(false);
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
   const isStudentSelectedRef = React.useRef(false);
+  const redirectTimerRef = React.useRef<any>(null);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -159,6 +160,9 @@ export default function StudentLoginLayer({
     return () => {
       isMounted = false;
       subscription.unsubscribe();
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+      }
     };
   }, []);
 
@@ -170,8 +174,12 @@ export default function StudentLoginLayer({
       setUserName(session.user.user_metadata.full_name || session.user.email || '');
     }
 
+    if (redirectTimerRef.current) {
+      clearTimeout(redirectTimerRef.current);
+    }
+
     // Give user a moment to see the "Redirecting" state for a premium feel
-    setTimeout(() => {
+    redirectTimerRef.current = setTimeout(() => {
       onSuccess(null); // Trigger parent layer switch to student_claim/home
     }, 1800);
   };
