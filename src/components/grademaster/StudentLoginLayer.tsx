@@ -274,7 +274,7 @@ export default function StudentLoginLayer({
       </div>
 
       {/* Top Header */}
-      <header className="w-full h-20 sm:h-24 flex items-center justify-between px-8 sm:px-12 relative z-10 shrink-0">
+      <header className="w-full pt-safe pb-4 flex items-center justify-between px-8 sm:px-12 relative z-10 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-[#0F172A] rounded-xl flex items-center justify-center shadow-lg shadow-slate-200 transform hover:scale-105 transition-transform duration-300">
              <NeonGraduationCap size={18} />

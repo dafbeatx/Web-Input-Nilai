@@ -3258,9 +3258,9 @@ export default function StudentRemedialLayer({
       )}
       
       {/* ── TOP APP BAR (GradeMaster OS Header) ── */}
-      <header className="fixed top-0 w-full z-[80] bg-surface premium-shadow backdrop-blur-2xl border-b border-outline-variant px-6 py-4">
+      <header className="fixed top-0 w-full z-[80] bg-surface premium-shadow backdrop-blur-2xl border-b border-outline-variant px-6 pt-safe pb-4">
         <div className="flex justify-between items-center w-full max-w-7xl mx-auto">
-          <div className="flex items-center gap-4 pt-safe">
+          <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/10">
               <span className="text-primary font-black text-lg">
                 {studentName.charAt(0).toUpperCase()}
@@ -3274,7 +3274,7 @@ export default function StudentRemedialLayer({
           
           <div className="flex items-center gap-8">
             {/* Timer */}
-            <div className="flex items-center gap-4 sm:gap-6 pt-safe">
+            <div className="flex items-center gap-4 sm:gap-6">
               <div className="flex flex-col items-center">
                 <span className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest mb-1">Durasi Tersisa</span>
                 <span className={`text-xl font-black font-outfit tabular-nums tracking-tighter ${timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-on-surface'}`}>
@@ -3288,7 +3288,7 @@ export default function StudentRemedialLayer({
               </div>
             </div>
 
-            <div className="flex items-center gap-4 pt-safe">
+            <div className="flex items-center gap-4">
               <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-variant border border-outline-variant">
                 <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'}`}></div>
                 <span className={`text-[10px] font-black uppercase tracking-widest ${isOffline ? 'text-rose-400' : 'text-emerald-400'}`}>

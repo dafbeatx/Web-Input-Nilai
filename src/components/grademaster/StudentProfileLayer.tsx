@@ -1225,7 +1225,7 @@ export default function StudentProfileLayer({
         
         {/* Top AppBar */}
         {activeTab !== 'LESSON' && (
-          <header className="sticky top-0 w-full z-40 bg-white flex items-center justify-between px-4 h-14 border-b border-slate-100 shrink-0">
+          <header className="sticky top-0 w-full z-40 bg-white flex items-center justify-between px-4 pt-safe pb-2.5 border-b border-slate-100 shrink-0">
           {activeTab === 'HOME' ? (
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               {isAdmin && (
@@ -2425,7 +2425,7 @@ export default function StudentProfileLayer({
           )}
         </main>
         ) : (
-          <div className="flex-1 overflow-y-auto no-scrollbar">
+          <div className="flex-1 overflow-y-auto no-scrollbar pt-safe">
             <StudentLessonLayer
               onBack={() => setActiveTab('HOME')}
               setToast={setToast}

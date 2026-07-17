@@ -166,7 +166,7 @@ export default function StudentClaimLayer({
   return (
     <div className="min-h-screen bg-white flex flex-col font-inter animate-in fade-in duration-500">
       {/* Top Bar */}
-      <header className="w-full h-16 md:h-20 border-b border-slate-100 flex items-center justify-between px-6 md:px-12 sticky top-0 bg-white z-50">
+      <header className="w-full pt-safe pb-4 border-b border-slate-100 flex items-center justify-between px-6 md:px-12 sticky top-0 bg-white z-50">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-[#0F172A] text-white rounded-xl flex items-center justify-center shadow-lg shadow-slate-200">
             <NeonGraduationCap size={24} />
