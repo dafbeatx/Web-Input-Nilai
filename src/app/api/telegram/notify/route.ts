@@ -102,6 +102,12 @@ export async function POST(req: NextRequest) {
                `⏰ Waktu: ${timestamp}${deviceStr}\n\n` +
                `🚫 <i>Siswa otomatis didiskualifikasi karena menggunakan bantuan AI eksternal.</i>`;
         break;
+      case 'PARENT_LOGIN':
+        text = `👨‍👩‍👦 <b>LOGIN ORANG TUA DETECTED</b>${contextStr}\n\n` +
+               `👤 Siswa: <b>${fallback(studentName)}</b>\n` +
+               `🏫 Kelas: ${fallback(className)}\n` +
+               `⏰ Waktu: ${timestamp}${deviceStr}`;
+        break;
       case 'BUG_REPORT':
         text = `🐛 <b>LAPORAN BUG SISWA</b>${contextStr}\n\n` +
                `👤 Pengirim: <b>${fallback(studentName)}</b>\n` +

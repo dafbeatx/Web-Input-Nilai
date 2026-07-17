@@ -47,7 +47,7 @@ export default function StudentLoginLayer({
     }
   }, []);
 
-  const { setLayer, setIsParent, setStudentData, setStudentClass } = useGradeMaster();
+  const { setLayer, setIsParent, setStudentData, setStudentClass, academicYear } = useGradeMaster();
   const [isParentMode, setIsParentMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -106,6 +106,20 @@ export default function StudentLoginLayer({
       isGoogleLinked: false,
       isParentView: true 
     });
+
+    // Kirim Notifikasi ke Telegram
+    fetch('/api/telegram/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentName: s.student_name,
+        className: s.class_name || 'Tidak Diketahui',
+        event: 'PARENT_LOGIN',
+        deviceInfo: typeof window !== 'undefined' ? window.navigator.userAgent : 'Unknown Device',
+        academicYear: academicYear || '2025/2026'
+      })
+    }).catch(err => console.error('Gagal mengirim notifikasi login orang tua ke Telegram:', err));
+
     setToast({ message: `Masuk sebagai Orang Tua dari ${s.student_name}`, type: 'success' });
     setLayer('student_profile');
   };
