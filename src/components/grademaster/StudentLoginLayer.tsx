@@ -122,7 +122,7 @@ export default function StudentLoginLayer({
     }).catch(err => console.error('Gagal mengirim notifikasi login orang tua ke Telegram:', err));
 
     setToast({ message: `Masuk sebagai Orang Tua dari ${s.student_name}`, type: 'success' });
-    setLayer('student_profile');
+    setLayer('student_profile', true);
   };
 
 

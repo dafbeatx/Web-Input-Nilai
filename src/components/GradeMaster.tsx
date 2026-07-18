@@ -287,7 +287,7 @@ export default function GradeMaster() {
             setStudentClass(resolvedStudent.class_name);
           }
           if (layer === 'student_login' || layer === 'student_claim' || layer === 'login') {
-            setLayer('student_profile');
+            setLayer('student_profile', true);
           }
         } else {
           // Unlinked Google student
@@ -300,7 +300,7 @@ export default function GradeMaster() {
             isGoogleLinked: false
           });
           if (layer !== 'student_claim' && (layer === 'home' || layer === 'student_login')) {
-            setLayer('student_claim');
+            setLayer('student_claim', true);
           }
         }
         await fetchSessions();
@@ -321,7 +321,7 @@ export default function GradeMaster() {
         }
         // Navigate away from login page if session is already active
         if (layer === 'student_login' || layer === 'student_claim' || layer === 'login') {
-          setLayer('student_profile');
+          setLayer('student_profile', true);
         }
         // SYNC: Re-fetch sessions now that student is confirmed (mirrors admin pattern)
         await fetchSessions();
@@ -358,7 +358,7 @@ export default function GradeMaster() {
           setStudentClass(data.student.class_name);
         }
         if (layer === 'student_login' || layer === 'student_claim') {
-          setLayer('student_profile');
+          setLayer('student_profile', true);
         }
         // SYNC: Re-fetch sessions for student role
         await fetchSessions();
@@ -378,7 +378,7 @@ export default function GradeMaster() {
         });
 
         if (layer !== 'student_claim' && (layer === 'home' || layer === 'student_login')) {
-          setLayer('student_claim');
+          setLayer('student_claim', true);
         }
       } else {
         setIsAdmin(false);
@@ -1488,7 +1488,7 @@ export default function GradeMaster() {
             if (data.class_name) setStudentClass(data.class_name);
 
             // Navigate directly — we know the claim succeeded
-            setLayer('student_profile');
+            setLayer('student_profile', true);
 
             // Background refresh: re-fetch full student data (behavior_id, total_points, streak, etc.)
             try {

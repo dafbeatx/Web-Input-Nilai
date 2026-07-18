@@ -31,7 +31,7 @@ const safeLocalStorage = {
 
 interface GradeMasterContextType {
   layer: Layer;
-  setLayer: (layer: Layer) => void;
+  setLayer: (layer: Layer, bypassGuards?: boolean) => void;
   isAdmin: boolean;
   setIsAdmin: (isAdmin: boolean) => void;
   adminUser: string | null;
@@ -433,28 +433,30 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   }, [isParent, isStudent, studentData, studentClass, academicYear]);
 
   // Navigate and apply Auth guards dynamically
-  const navigate = (newLayer: Layer) => {
+  const navigate = (newLayer: Layer, bypassGuards: boolean = false) => {
     const adminOnlyLayers = ['setup', 'dashboard', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
     const protectedLayers = ['remedial', 'student_lesson', 'student_profile'];
     const authLayers = ['login', 'student_login'];
 
-    if (adminOnlyLayers.includes(newLayer) && !isAdmin) {
-      setLayer('student_login');
-      window.history.pushState({ layer: 'student_login' }, '', '#student_login');
-      return;
-    }
+    if (!bypassGuards) {
+      if (adminOnlyLayers.includes(newLayer) && !isAdmin) {
+        setLayer('student_login');
+        window.history.pushState({ layer: 'student_login' }, '', '#student_login');
+        return;
+      }
 
-    if (protectedLayers.includes(newLayer) && !isAdmin && !isStudent && !isParent) {
-      setLayer('student_login');
-      window.history.pushState({ layer: 'student_login' }, '', '#student_login');
-      return;
-    }
+      if (protectedLayers.includes(newLayer) && !isAdmin && !isStudent && !isParent) {
+        setLayer('student_login');
+        window.history.pushState({ layer: 'student_login' }, '', '#student_login');
+        return;
+      }
 
-    if (authLayers.includes(newLayer) && (isAdmin || isStudent || isParent)) {
-      const redirectTarget = isAdmin ? 'home' : 'student_profile';
-      setLayer(redirectTarget);
-      window.history.pushState({ layer: redirectTarget }, '', `#${redirectTarget}`);
-      return;
+      if (authLayers.includes(newLayer) && (isAdmin || isStudent || isParent)) {
+        const redirectTarget = isAdmin ? 'home' : 'student_profile';
+        setLayer(redirectTarget);
+        window.history.pushState({ layer: redirectTarget }, '', `#${redirectTarget}`);
+        return;
+      }
     }
 
     setLayer(newLayer);
