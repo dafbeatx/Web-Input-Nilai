@@ -256,7 +256,11 @@ export default function LessonManagementLayer({
           : type === 'quiz'
           ? "Baik, silakan tentukan tingkatan kelas kuis:"
           : "Bagus! Silakan pilih tingkatan kelas pelajaran ini:",
-        options: [
+        options: schoolLevel === 'SMA' ? [
+          { label: "Kelas 10", actionType: 'SELECT_CLASS', payload: 'Kelas 10' },
+          { label: "Kelas 11", actionType: 'SELECT_CLASS', payload: 'Kelas 11' },
+          { label: "Kelas 12", actionType: 'SELECT_CLASS', payload: 'Kelas 12' }
+        ] : [
           { label: "Kelas 7", actionType: 'SELECT_CLASS', payload: 'Kelas 7' },
           { label: "Kelas 8", actionType: 'SELECT_CLASS', payload: 'Kelas 8' },
           { label: "Kelas 9", actionType: 'SELECT_CLASS', payload: 'Kelas 9' }

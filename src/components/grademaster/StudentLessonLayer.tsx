@@ -290,15 +290,26 @@ export default function StudentLessonLayer({
       }
       setIsLoadingLessons(true);
       try {
-        const baseClass = activeClassName.startsWith('7') ? 'Kelas 7' 
-                        : activeClassName.startsWith('8') ? 'Kelas 8' 
-                        : activeClassName.startsWith('9') ? 'Kelas 9' 
-                        : activeClassName;
+        const classesToSearch = [activeClassName];
+        const cleaned = activeClassName.trim().toUpperCase().replace(/^KELAS\s+/i, '');
+        if (/^7\b|^7[A-Z-]/i.test(cleaned) || /^VII\b|^VII[A-Z-]/i.test(cleaned)) {
+          classesToSearch.push('Kelas 7', 'Kelas VII');
+        } else if (/^8\b|^8[A-Z-]/i.test(cleaned) || /^VIII\b|^VIII[A-Z-]/i.test(cleaned)) {
+          classesToSearch.push('Kelas 8', 'Kelas VIII');
+        } else if (/^9\b|^9[A-Z-]/i.test(cleaned) || /^IX\b|^IX[A-Z-]/i.test(cleaned)) {
+          classesToSearch.push('Kelas 9', 'Kelas IX');
+        } else if (/^10\b|^10[A-Z-]/i.test(cleaned) || /^X\b|^X[A-Z-]/i.test(cleaned)) {
+          classesToSearch.push('Kelas 10', 'Kelas X');
+        } else if (/^11\b|^11[A-Z-]/i.test(cleaned) || /^XI\b|^XI[A-Z-]/i.test(cleaned)) {
+          classesToSearch.push('Kelas 11', 'Kelas XI');
+        } else if (/^12\b|^12[A-Z-]/i.test(cleaned) || /^XII\b|^XII[A-Z-]/i.test(cleaned)) {
+          classesToSearch.push('Kelas 12', 'Kelas XII');
+        }
 
         const { data, error } = await supabase
           .from('daily_lessons')
           .select('*')
-          .in('class_name', [activeClassName, baseClass])
+          .in('class_name', classesToSearch)
           .eq('academic_year', academicYear)
           .eq('is_published', true)
           .order('date', { ascending: false });
