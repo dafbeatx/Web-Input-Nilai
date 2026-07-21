@@ -5,7 +5,7 @@ import {
   GraduationCap,
   Menu,
   X,
-  ClipboardList,
+  Home,
   Users,
   LogOut,
   ShieldCheck,
@@ -124,7 +124,7 @@ export default function Navbar() {
                   isActive('exam') ? 'bg-primary/10 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
                 }`}
             >
-                <ClipboardList size={18} /> Beranda
+                <Home size={18} /> Beranda
             </button>
             <button
                 onClick={() => onNavigate('behavior')}
@@ -358,8 +358,8 @@ export default function Navbar() {
                   : 'text-on-surface-variant/60 hover:text-on-surface-variant'
               }`}
             >
-              <ClipboardList size={20} strokeWidth={isActive('exam') ? 2.5 : 1.8} />
-              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('exam') ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>Beranda</span>
+              <Home size={20} strokeWidth={isActive('exam') ? 2.5 : 1.8} />
+              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('exam') ? 'opacity-100' : 'opacity-70'}`}>Beranda</span>
             </button>
             
             {/* Sikap */}
@@ -372,7 +372,7 @@ export default function Navbar() {
               }`}
             >
               <ShieldCheck size={20} strokeWidth={isActive('behavior') ? 2.5 : 1.8} />
-              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('behavior') ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>Sikap</span>
+              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('behavior') ? 'opacity-100' : 'opacity-70'}`}>Sikap</span>
             </button>
 
             {/* Kehadiran */}
@@ -385,7 +385,7 @@ export default function Navbar() {
               }`}
             >
               <Calendar size={20} strokeWidth={isActive('attendance') ? 2.5 : 1.8} />
-              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('attendance') ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>Absen</span>
+              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('attendance') ? 'opacity-100' : 'opacity-70'}`}>Absen</span>
             </button>
 
 
@@ -400,7 +400,7 @@ export default function Navbar() {
                 }`}
               >
                 <BookOpen size={20} strokeWidth={isActive('student_lesson') ? 2.5 : 1.8} />
-                <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('student_lesson') ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>Materi</span>
+                <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('student_lesson') ? 'opacity-100' : 'opacity-70'}`}>Materi</span>
               </button>
             )}
 
@@ -424,7 +424,7 @@ export default function Navbar() {
               ) : (
                 <Menu size={20} strokeWidth={1.8} />
               )}
-              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>
+              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isMobileMenuOpen ? 'opacity-100' : 'opacity-70'}`}>
                 {(!isAdmin && (isStudent || isParent) && studentData) ? 'Profil' : 'Menu'}
               </span>
             </button>
