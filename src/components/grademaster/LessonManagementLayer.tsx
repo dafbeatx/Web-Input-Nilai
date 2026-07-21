@@ -99,6 +99,17 @@ interface ChatMessage {
   fileUpload?: boolean;
 }
 
+const getWelcomeMessage = (): ChatMessage => ({
+  role: 'assistant',
+  content: `Halo Guru/Admin! Saya adalah **Asisten Kurikulum AI GradeMaster**. 🤖🎓\n\nSaya di sini untuk membantu Anda membuat materi pelajaran harian, kuis interaktif, atau merangkum naskah dokumen menggunakan mesin cerdas Groq Llama.\n\nSilakan pilih opsi kerja yang ingin Anda lakukan hari ini:`,
+  options: [
+    { label: "📘 Buat Pelajaran Harian", actionType: 'START_FLOW', payload: 'daily' },
+    { label: "📝 Manajemen Ulangan Harian", actionType: 'START_FLOW', payload: 'quiz' },
+    { label: "📂 NotebookLM (Upload PDF/DOCX)", actionType: 'START_FLOW', payload: 'notebook' },
+    { label: "🎓 Ujian Susulan UTS / UAS", actionType: 'START_FLOW', payload: 'susulan' }
+  ]
+});
+
 export default function LessonManagementLayer({
   onBack,
   setToast,
@@ -107,7 +118,7 @@ export default function LessonManagementLayer({
   semester = 'Ganjil'
 }: LessonManagementLayerProps) {
   // Conversational Flow States
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([getWelcomeMessage()]);
   const [inputValue, setInputValue] = useState('');
   const [isAiResponding, setIsAiResponding] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -199,29 +210,26 @@ export default function LessonManagementLayer({
       selectedYear: academicYear,
       susulanType: null
     };
-    setMessages([
-      {
-        role: 'assistant',
-        content: `Halo Guru/Admin! Saya adalah **Asisten Kurikulum AI GradeMaster**. 🤖🎓\n\nSaya di sini untuk membantu Anda membuat materi pelajaran harian, kuis interaktif, atau merangkum naskah dokumen menggunakan mesin cerdas Groq Llama.\n\nSilakan pilih opsi kerja yang ingin Anda lakukan hari ini:`,
-        options: [
-          { label: "📘 Buat Pelajaran Harian", actionType: 'START_FLOW', payload: 'daily' },
-          { label: "📝 Manajemen Ulangan Harian", actionType: 'START_FLOW', payload: 'quiz' },
-          { label: "📂 NotebookLM (Upload PDF/DOCX)", actionType: 'START_FLOW', payload: 'notebook' },
-          { label: "🎓 Ujian Susulan UTS / UAS", actionType: 'START_FLOW', payload: 'susulan' }
-        ]
-      }
-    ]);
+    setMessages([getWelcomeMessage()]);
   };
 
-  // Load history list on mount
+  // Load history list on mount (safely using active-flag clean-up pattern)
   useEffect(() => {
-    loadHistory();
-  }, []);
-
-  // Initialize Welcome Message
-  useEffect(() => {
-    resetChatToInit();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let active = true;
+    const fetchHistory = async () => {
+      try {
+        const data = await fetchAllLessons();
+        if (active) {
+          setHistoryLessons(data);
+        }
+      } catch (err) {
+        console.error("Gagal memuat riwayat pelajaran:", err);
+      }
+    };
+    fetchHistory();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleOptionClick = (actionType: string, payload: string | undefined, label: string) => {
