@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 
 interface GradeMasterMascotProps {
   state?: 'idle' | 'success' | 'sad' | 'streak';
@@ -92,9 +93,11 @@ export default function GradeMasterMascot({
       {/* Mascot Image Container with animated states */}
       <div className="relative shrink-0 select-none">
         <div className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden bg-white/80 border border-slate-100 flex items-center justify-center p-1.5 shadow-md transition-all duration-300 ${animationClass}`}>
-          <img 
+          <Image 
             src={mascotImages[state]} 
             alt="GradeMaster Mascot" 
+            width={112}
+            height={112}
             className="w-full h-full object-contain transform hover:scale-110 transition-transform duration-300"
           />
         </div>

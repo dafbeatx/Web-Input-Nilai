@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Loader2, Code, Languages, Globe2, Binary, Atom, Compass, BookOpen, FileText, Award, HelpCircle, Sparkles, Send, Bot, RotateCcw, Compass as CompassIcon, ArrowRight, UserCheck, CheckCircle2 } from 'lucide-react';
-import { SessionMeta } from '@/lib/grademaster/types';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Loader2, Code, Languages, Globe2, Binary, Atom, Compass, BookOpen, FileText, Award, HelpCircle, Sparkles, Send, RotateCcw, Compass as CompassIcon, ArrowRight } from 'lucide-react';
+import { SessionMeta, Layer } from '@/lib/grademaster/types';
 import { useGradeMaster } from '@/context/GradeMasterContext';
+import DOMPurify from 'isomorphic-dompurify';
 
 const GeminiLogo = ({ className = "w-8 h-8" }: { className?: string }) => (
   <svg viewBox="0 0 256 256" className={className} xmlns="http://www.w3.org/2000/svg">
@@ -71,23 +72,33 @@ export default function HomeLayer(props: HomeLayerProps) {
   const [behaviorSummary, setBehaviorSummary] = useState<Record<string, { count: number; avgPoints: number }>>({});
 
   // AI Chat states and context
-  const { setLayer, setStudentClass, studentClass, academicYear } = useGradeMaster();
-  const [messages, setMessages] = useState<any[]>([]);
+  const { setLayer, setStudentClass, studentClass } = useGradeMaster();
+
+  interface ChatMessage {
+    id: string;
+    role: string;
+    content: string;
+    actions?: { label: string; layer: Layer; description?: string }[];
+  }
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isAiResponding, setIsAiResponding] = useState(false);
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
-  const [activeMobileTab, setActiveMobileTab] = useState<'ai' | 'classes'>('ai');
   const [showTraditionalClasses, setShowTraditionalClasses] = useState(false);
   const [showPreferencePopup, setShowPreferencePopup] = useState(false);
 
   // Load layout preference on mount
   useEffect(() => {
     const pref = localStorage.getItem('gm_home_layout_pref');
-    if (!pref) {
-      setShowPreferencePopup(true);
-    } else {
-      setShowTraditionalClasses(pref === 'traditional');
-    }
+    const timer = setTimeout(() => {
+      if (!pref) {
+        setShowPreferencePopup(true);
+      } else {
+        setShowTraditionalClasses(pref === 'traditional');
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const savePreference = (choice: 'ai' | 'traditional') => {
@@ -116,11 +127,11 @@ export default function HomeLayer(props: HomeLayerProps) {
     }
   }, [messages, isAiResponding]);
 
-  const getInitialMessage = () => {
+  const getInitialMessage = useCallback(() => {
     const userLabel = userData.name || (isAdmin ? 'Guru GradeMaster' : 'Siswa');
-    let welcomeText = `Halo **${userLabel}**! Saya adalah **GradeMaster AI Navigator**. 🤖✨\n\nSaya di sini untuk membantu Anda mengoperasikan platform GradeMaster OS dengan asisten cerdas. Beritahu saya apa yang ingin Anda lakukan (contoh: *'absen kelas 7A'*, *'koreksi UTS Matematika'*, atau *'buka rekap sikap'*) dan saya akan mengarahkan Anda ke sana secara instan!`;
+    const welcomeText = `Halo **${userLabel}**! Saya adalah **GradeMaster AI Navigator**. 🤖✨\n\nSaya di sini untuk membantu Anda mengoperasikan platform GradeMaster OS dengan asisten cerdas. Beritahu saya apa yang ingin Anda lakukan (contoh: *'absen kelas 7A'*, *'koreksi UTS Matematika'*, atau *'buka rekap sikap'*) dan saya akan mengarahkan Anda ke sana secara instan!`;
 
-    let actions: { label: string; layer: any; description?: string }[] = [];
+    let actions: { label: string; layer: Layer; description?: string }[] = [];
 
     if (isAdmin) {
       actions = [
@@ -143,9 +154,9 @@ export default function HomeLayer(props: HomeLayerProps) {
       content: welcomeText,
       actions
     };
-  };
+  }, [isAdmin, userData.name]);
 
-  const getPresetChips = () => {
+  const getPresetChips = useCallback(() => {
     if (isAdmin) {
       return [
         "Lihat Daftar Kelas Tradisional",
@@ -159,12 +170,15 @@ export default function HomeLayer(props: HomeLayerProps) {
       "Bagaimana cara mengerjakan remedial?",
       "Tampilkan rapor nilai saya"
     ];
-  };
+  }, [isAdmin]);
 
   useEffect(() => {
-    setMessages([getInitialMessage()]);
-    setSuggestedQuestions(getPresetChips());
-  }, [isAdmin, userData.name]);
+    const timer = setTimeout(() => {
+      setMessages([getInitialMessage()]);
+      setSuggestedQuestions(getPresetChips());
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [getInitialMessage, getPresetChips]);
 
   // Smart class resolving
   const matchAndSetClass = (text: string) => {
@@ -173,7 +187,7 @@ export default function HomeLayer(props: HomeLayerProps) {
     const match = normalized.match(classRegex);
     if (match) {
       let levelStr = match[2];
-      let charStr = match[3];
+      const charStr = match[3];
       
       if (levelStr === 'VII') levelStr = '7';
       if (levelStr === 'VIII') levelStr = '8';
@@ -194,7 +208,7 @@ export default function HomeLayer(props: HomeLayerProps) {
     if (!text.trim() || isAiResponding) return;
 
     const userMsg = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       role: 'user',
       content: text
     };
@@ -209,7 +223,7 @@ export default function HomeLayer(props: HomeLayerProps) {
         setMessages(prev => [
           ...prev,
           {
-            id: Date.now().toString(),
+            id: crypto.randomUUID(),
             role: 'assistant',
             content: "Menampilkan daftar kelas tradisional sesuai permintaan Anda. Klik tombol **Kembali ke AI Assistant** di atas untuk berinteraksi dengan asisten cerdas kembali."
           }
@@ -249,7 +263,7 @@ export default function HomeLayer(props: HomeLayerProps) {
       if (!res.ok) throw new Error(data.error || 'Terjadi kesalahan pada server AI.');
 
       const assistantMsg = {
-        id: (Date.now() + 1).toString(),
+        id: crypto.randomUUID(),
         role: 'assistant',
         content: data.reply || 'Ada yang bisa saya bantu kembali?',
         actions: data.suggestedActions || []
@@ -263,11 +277,11 @@ export default function HomeLayer(props: HomeLayerProps) {
         setSuggestedQuestions(getPresetChips());
       }
 
-    } catch (err: any) {
+    } catch {
       setMessages(prev => [
         ...prev,
         {
-          id: (Date.now() + 1).toString(),
+          id: crypto.randomUUID(),
           role: 'assistant',
           content: `⚠️ Maaf, layanan asisten cerdas sedang tidak tersedia. Silakan gunakan menu navigasi atau coba sesaat lagi.`
         }
@@ -277,7 +291,7 @@ export default function HomeLayer(props: HomeLayerProps) {
     }
   };
 
-  const handleActionClick = (targetLayer: any, label: string) => {
+  const handleActionClick = (targetLayer: Layer) => {
     if (targetLayer === 'home') {
       setShowTraditionalClasses(true);
       setMessages(prev => [
@@ -337,7 +351,7 @@ export default function HomeLayer(props: HomeLayerProps) {
           <li 
             key={idx} 
             className="ml-4 list-disc text-xs sm:text-sm leading-relaxed py-0.5"
-            dangerouslySetInnerHTML={{ __html: formattedLine.replace(/^[-*]\s+/, '') }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine.replace(/^[-*]\s+/, '')) }}
           />
         );
       }
@@ -346,7 +360,7 @@ export default function HomeLayer(props: HomeLayerProps) {
         <p 
           key={idx} 
           className="text-xs sm:text-sm leading-relaxed mb-2"
-          dangerouslySetInnerHTML={{ __html: formattedLine }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine) }}
         />
       );
     });
@@ -379,7 +393,7 @@ export default function HomeLayer(props: HomeLayerProps) {
             const data = await res.json();
             const students = data.students || [];
             const avg = students.length > 0
-              ? Math.round(students.reduce((sum: number, s: any) => sum + (s.total_points || 0), 0) / students.length)
+              ? Math.round(students.reduce((sum: number, s: { total_points?: number }) => sum + (s.total_points || 0), 0) / students.length)
               : 0;
             summaryMap[`${g.className}__${g.academicYear}`] = { count: students.length, avgPoints: avg };
           } catch {
@@ -494,7 +508,7 @@ export default function HomeLayer(props: HomeLayerProps) {
             <p className="text-on-surface-variant text-base leading-relaxed">Daftar sesi evaluasi dan ujian yang aktif untuk kelas ini.</p>
           </div>
         ) : (
-          <div className="flex flex-col hidden md:flex">
+          <div className="hidden md:flex flex-col">
             <div className="flex items-start justify-between mb-3">
               <h1 className="text-4xl font-headline font-bold text-on-primary-fixed tracking-[-0.04em]">Dashboard Utama</h1>
               {isAdmin && (
@@ -780,10 +794,10 @@ export default function HomeLayer(props: HomeLayerProps) {
                           <div className="mt-4 pt-4 border-t border-white/5 space-y-2">
                             <span className="text-[9px] font-black text-violet-400 uppercase tracking-widest block mb-1">Kemudahan Akses Navigasi:</span>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {msg.actions.map((act: any) => (
+                              {msg.actions.map((act: { layer: Layer; label: string }) => (
                                   <button
                                     key={act.layer}
-                                    onClick={() => handleActionClick(act.layer, act.label)}
+                                    onClick={() => handleActionClick(act.layer)}
                                     className="p-3 bg-slate-950 hover:bg-violet-950/40 text-slate-100 hover:text-violet-300 text-left font-bold text-[10px] sm:text-xs uppercase tracking-wider rounded-xl transition-all duration-200 border border-white/5 hover:border-violet-500/30 flex items-center justify-between group shadow-sm hover:shadow-[0_0_12px_rgba(155,114,203,0.1)] active:scale-95"
                                   >
                                     <div className="flex items-center gap-2 min-w-0">
@@ -818,7 +832,7 @@ export default function HomeLayer(props: HomeLayerProps) {
 
             {/* Quick suggestions chips bar */}
             <div className="px-5 py-3 bg-slate-950/50 border-t border-white/5 flex flex-col gap-1.5 shrink-0">
-              <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest font-semibold">Saran pertanyaan / perintah:</span>
+              <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Saran pertanyaan / perintah:</span>
               <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                 {suggestedQuestions.map((q, idx) => (
                   <button

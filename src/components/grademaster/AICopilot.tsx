@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, X, Send, Bot, Loader2, Compass, MessageSquare, ArrowRight, UserCheck, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { X, Send, Loader2, Compass, ArrowRight, RotateCcw } from 'lucide-react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import { Layer } from '@/lib/grademaster/types';
+import DOMPurify from 'isomorphic-dompurify';
 
 interface Message {
   id: string;
@@ -71,16 +72,15 @@ export default function AICopilot() {
   useEffect(() => {
     if (layer === 'remedial_dashboard') {
       if (!hasShownBubble.current) {
-        setShowBubble(true);
         hasShownBubble.current = true;
-        const timer = setTimeout(() => {
-          setShowBubble(false);
-        }, 5000); // 5 seconds
-        return () => clearTimeout(timer);
+        const showTimer = setTimeout(() => setShowBubble(true), 0);
+        const hideTimer = setTimeout(() => setShowBubble(false), 5000);
+        return () => { clearTimeout(showTimer); clearTimeout(hideTimer); };
       }
     } else {
       hasShownBubble.current = false;
-      setShowBubble(false);
+      const timer = setTimeout(() => setShowBubble(false), 0);
+      return () => clearTimeout(timer);
     }
   }, [layer]);
 
@@ -99,10 +99,33 @@ export default function AICopilot() {
     return 'guest';
   };
 
+  // Preset chips list based on active user context
+  const getPresetChips = useCallback(() => {
+    if (isAdmin) {
+      return [
+        "Bagaimana cara menginput nilai kelas?",
+        "Tolong buka rekap presensi kehadiran",
+        "Di mana panel analisis sikap & kedisiplinan?",
+        "Saya ingin download berkas SPSS"
+      ];
+    }
+    if (isStudent) {
+      return [
+        "Bagaimana cara pengerjaan remedial?",
+        "Saya ingin melihat rekap rapor nilai saya",
+        "Di mana saya bisa mengganti password?"
+      ];
+    }
+    return [
+      "Bagaimana login sebagai Guru?",
+      "Bagaimana masuk ke akun siswa?"
+    ];
+  }, [isAdmin, isStudent]);
+
   // Generate role-specific welcome message
-  const getInitialMessage = (): Message => {
+  const getInitialMessage = useCallback((): Message => {
     const userLabel = getActiveUserLabel();
-    let welcomeText = `Halo **${userLabel}**! Saya adalah **GradeMaster Navigator**. 🤖✨\n\nSaya di sini untuk membantu Anda mengoperasikan platform ini dengan cepat. Beritahu saya apa yang ingin Anda lakukan, dan saya akan memberikan jalan pintas navigasi langsung ke halaman tujuan Anda!`;
+    const welcomeText = `Halo **${userLabel}**! Saya adalah **GradeMaster Navigator**. 🤖✨\n\nSaya di sini untuk membantu Anda mengoperasikan platform ini dengan cepat. Beritahu saya apa yang ingin Anda lakukan, dan saya akan memberikan jalan pintas navigasi langsung ke halaman tujuan Anda!`;
 
     let actions: { label: string; layer: Layer; description?: string }[] = [];
 
@@ -130,13 +153,17 @@ export default function AICopilot() {
       content: welcomeText,
       actions
     };
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, isStudent, isParent, adminUser, studentData]);
 
   // Initialize welcome message
   useEffect(() => {
-    setMessages([getInitialMessage()]);
-    setSuggestedQuestions(getPresetChips());
-  }, [isAdmin, isStudent, isParent, adminUser, studentData]);
+    const timer = setTimeout(() => {
+      setMessages([getInitialMessage()]);
+      setSuggestedQuestions(getPresetChips());
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [getInitialMessage, getPresetChips]);
 
   // Reset conversation to initial state
   const handleResetChat = () => {
@@ -189,7 +216,7 @@ export default function AICopilot() {
     if (!text.trim() || isLoading) return;
 
     const userMsg: Message = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       role: 'user',
       content: text
     };
@@ -227,7 +254,7 @@ export default function AICopilot() {
       if (!res.ok) throw new Error(data.error || 'Server error');
 
       const assistantMsg: Message = {
-        id: (Date.now() + 1).toString(),
+        id: crypto.randomUUID(),
         role: 'assistant',
         content: data.reply || 'Ada yang bisa saya bantu kembali?',
         actions: data.suggestedActions || []
@@ -247,11 +274,11 @@ export default function AICopilot() {
         setHasNewMessage(true);
       }
 
-    } catch (err: any) {
+    } catch {
       setMessages(prev => [
         ...prev,
         {
-          id: (Date.now() + 1).toString(),
+          id: crypto.randomUUID(),
           role: 'assistant',
           content: `⚠️ Maaf, layanan asisten cerdas sedang tidak tersedia. Silakan hubungi tim IT kami atau coba gunakan navigasi manual di aplikasi.`
         }
@@ -284,7 +311,7 @@ export default function AICopilot() {
           <li 
             key={idx} 
             className="ml-4 list-disc text-sm sm:text-xs leading-relaxed py-0.5"
-            dangerouslySetInnerHTML={{ __html: formattedLine.replace(/^[-*]\s+/, '') }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine.replace(/^[-*]\s+/, '')) }}
           />
         );
       }
@@ -293,34 +320,12 @@ export default function AICopilot() {
         <p 
           key={idx} 
           className="text-sm sm:text-xs leading-relaxed mb-2"
-          dangerouslySetInnerHTML={{ __html: formattedLine }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine) }}
         />
       );
     });
   };
 
-  // Preset chips list based on active user context
-  const getPresetChips = () => {
-    if (isAdmin) {
-      return [
-        "Bagaimana cara menginput nilai kelas?",
-        "Tolong buka rekap presensi kehadiran",
-        "Di mana panel analisis sikap & kedisiplinan?",
-        "Saya ingin download berkas SPSS"
-      ];
-    }
-    if (isStudent) {
-      return [
-        "Bagaimana cara pengerjaan remedial?",
-        "Saya ingin melihat rekap rapor nilai saya",
-        "Di mana saya bisa mengganti password?"
-      ];
-    }
-    return [
-      "Bagaimana login sebagai Guru?",
-      "Bagaimana masuk ke akun siswa?"
-    ];
-  };
 
   if (layer === 'lesson_management') return null;
 
