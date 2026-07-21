@@ -1390,7 +1390,7 @@ export default function GradeMaster() {
         />
       )}
 
-      {layer === "student_profile" && ((isStudent && studentData && studentData.isGoogleLinked) || isParent) && (
+      {layer === "student_profile" && studentData && ((isStudent && studentData.isGoogleLinked) || isParent) && (
         <StudentProfileLayer 
           studentId={studentData.behavior_id || studentData.id}
           studentName={studentData.name}
@@ -1409,7 +1409,7 @@ export default function GradeMaster() {
         />
       )}
 
-      {layer === "student_lesson" && ((isStudent && studentData && studentData.isGoogleLinked) || isParent) && (
+      {layer === "student_lesson" && studentData && ((isStudent && studentData.isGoogleLinked) || isParent) && (
         <StudentLessonLayer
           onBack={() => setLayer(studentData?.isParentView ? "student_profile" : "home")}
           setToast={setToast}

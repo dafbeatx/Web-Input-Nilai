@@ -151,18 +151,28 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
 
         if (savedParent) {
           console.log("[AuthInit] Parent mode detected via localStorage");
-          activeParent = true;
-          setIsParent(true);
-          setIsAdmin(false);
-          setIsStudent(false);
+          let parsedStudentData = null;
           if (savedStudentData) {
             try {
-              resolvedStudentData = JSON.parse(savedStudentData);
-              setStudentData(resolvedStudentData);
-              console.log("[AuthInit] Restored parent's student data:", resolvedStudentData.name);
+              parsedStudentData = JSON.parse(savedStudentData);
             } catch (e) {
               console.error("[AuthInit] Failed to parse saved student data:", e);
             }
+          }
+          if (parsedStudentData) {
+            activeParent = true;
+            setIsParent(true);
+            setIsAdmin(false);
+            setIsStudent(false);
+            resolvedStudentData = parsedStudentData;
+            setStudentData(resolvedStudentData);
+            console.log("[AuthInit] Restored parent's student data:", resolvedStudentData.name);
+          } else {
+            console.warn("[AuthInit] Parent mode detected but studentData is missing or invalid. Cleared parent session.");
+            safeLocalStorage.removeItem('gm_isParent');
+            safeLocalStorage.removeItem('gm_studentData');
+            activeParent = false;
+            setIsParent(false);
           }
         } else if (currentSession && currentSession.user && currentSession.user.email) {
           const email = currentSession.user.email.toLowerCase();
