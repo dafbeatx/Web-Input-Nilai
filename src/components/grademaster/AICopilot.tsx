@@ -367,12 +367,25 @@ export default function AICopilot() {
         </button>
       </div>
 
+      {/* Scrim backdrop for mobile view */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] sm:hidden transition-all duration-300"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
       {/* Floating Glassmorphic Chat Box */}
       {isOpen && (
-        <div className="fixed inset-0 sm:inset-auto sm:right-6 sm:bottom-40 z-[9999] w-full sm:w-[380px] h-[100dvh] sm:h-[520px] bg-[#121620] sm:bg-[#121620]/95 backdrop-blur-xl border-0 sm:border sm:border-white/10 rounded-none sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-0 sm:slide-in-from-bottom-8 fade-in duration-300 font-sans">
+        <div className="fixed inset-x-0 bottom-0 sm:inset-auto sm:right-6 sm:bottom-40 z-[9999] w-full sm:w-[380px] h-[80dvh] sm:h-[520px] bg-[#121620]/98 sm:bg-[#121620]/95 backdrop-blur-xl border-t border-white/10 sm:border sm:border-white/10 rounded-t-[2.5rem] sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-bottom-8 duration-300 font-sans">
           
+          {/* Drag Handle for Mobile Sheet */}
+          <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
+            <div className="w-12 h-1 bg-white/20 rounded-full" />
+          </div>
+
           {/* Header Panel */}
-          <div className="pt-[calc(1rem+env(safe-area-inset-top,0px))] pr-4 pb-4 pl-4 sm:p-4 bg-gradient-to-r from-violet-950/20 via-[#121620] to-[#121620] border-b border-white/5 flex items-center justify-between shrink-0">
+          <div className="pt-2 sm:pt-4 pr-4 pb-4 pl-4 bg-gradient-to-r from-violet-950/20 via-[#121620] to-[#121620] border-b border-white/5 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-violet-500/15 rounded-xl flex items-center justify-center border border-violet-500/25 shadow-[0_0_10px_rgba(155,114,203,0.2)]">
                 <GeminiLogo className="w-6 h-6 animate-pulse" />
