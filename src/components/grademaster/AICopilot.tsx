@@ -327,12 +327,12 @@ export default function AICopilot() {
   };
 
 
-  if (layer === 'lesson_management') return null;
+  if (layer === 'lesson_management' || layer === 'home') return null;
 
   return (
     <>
       {/* Floating Trigger Button */}
-      <div className="fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-[9999] flex flex-col items-end">
+      <div className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom))] right-4 sm:bottom-24 sm:right-6 z-[9999] flex flex-col items-end">
         {/* Chat Bubble */}
         {showBubble && (
           <div className="mb-3 mr-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold px-4 py-2.5 rounded-2xl rounded-br-none shadow-xl border border-white/10 animate-in fade-in slide-in-from-bottom-2 duration-300 whitespace-nowrap select-none relative">
