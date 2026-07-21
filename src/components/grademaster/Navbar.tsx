@@ -343,7 +343,7 @@ export default function Navbar() {
        ═══════════════════════════════════════════════════════════ */}
       <nav 
         id="mobile-bottom-nav" 
-        className={`md:hidden fixed bottom-0 left-0 right-0 z-[1001] transition-all duration-300 ${layer === 'home' ? 'hidden pointer-events-none' : ''}`}
+        className="md:hidden fixed bottom-0 left-0 right-0 z-[1001] transition-all duration-300"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* Floating container */}
