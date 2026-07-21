@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowLeft, 
   Sparkles, 
@@ -172,11 +172,6 @@ export default function LessonManagementLayer({
     }
   }, [messages, isAiResponding]);
 
-  // Load history list on mount
-  useEffect(() => {
-    loadHistory();
-  }, []);
-
   const loadHistory = async () => {
     try {
       const data = await fetchAllLessons();
@@ -186,40 +181,7 @@ export default function LessonManagementLayer({
     }
   };
 
-  // Initialize Welcome Message
-  useEffect(() => {
-    resetChatToInit();
-  }, [resetChatToInit]);
-
-  const handleOptionClick = (actionType: string, payload: string | undefined, label: string) => {
-    switch (actionType) {
-      case 'START_FLOW':
-        startFlow(payload, label);
-        break;
-      case 'SELECT_CLASS':
-        selectClass(payload);
-        break;
-      case 'SELECT_SUBJECT':
-        selectSubject(payload);
-        break;
-      case 'SELECT_YEAR':
-        selectYear(payload);
-        break;
-      case 'CUSTOM_YEAR':
-        startCustomYearInput();
-        break;
-      case 'SELECT_SUSULAN_TYPE':
-        selectSusulanType(payload);
-        break;
-      case 'RESET':
-        resetChatToInit();
-        break;
-      default:
-        break;
-    }
-  };
-
-  const resetChatToInit = useCallback(() => {
+  const resetChatToInit = () => {
     setFlowType(null);
     setSelectedClass('');
     setSelectedSubject('');
@@ -249,7 +211,47 @@ export default function LessonManagementLayer({
         ]
       }
     ]);
-  }, [academicYear]);
+  };
+
+  // Load history list on mount
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  // Initialize Welcome Message
+  useEffect(() => {
+    resetChatToInit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleOptionClick = (actionType: string, payload: string | undefined, label: string) => {
+    if (!payload && actionType !== 'RESET' && actionType !== 'CUSTOM_YEAR') return;
+    switch (actionType) {
+      case 'START_FLOW':
+        startFlow(payload as 'daily' | 'quiz' | 'notebook' | 'susulan', label);
+        break;
+      case 'SELECT_CLASS':
+        selectClass(payload as string);
+        break;
+      case 'SELECT_SUBJECT':
+        selectSubject(payload as string);
+        break;
+      case 'SELECT_YEAR':
+        selectYear(payload as string);
+        break;
+      case 'CUSTOM_YEAR':
+        startCustomYearInput();
+        break;
+      case 'SELECT_SUSULAN_TYPE':
+        selectSusulanType(payload as 'Susulan UTS' | 'Susulan UAS');
+        break;
+      case 'RESET':
+        resetChatToInit();
+        break;
+      default:
+        break;
+    }
+  };
 
   const startFlow = (type: 'daily' | 'quiz' | 'notebook' | 'susulan', label: string) => {
     setFlowType(type);
