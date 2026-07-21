@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   ArrowLeft, 
   Sparkles, 
@@ -77,17 +77,31 @@ interface LessonManagementLayerProps {
   semester?: string;
 }
 
+interface QuizQuestion {
+  question?: string;
+  text?: string;
+  options?: string[];
+  correctAnswer?: string;
+  answer?: string;
+  type?: 'mcq' | 'essay';
+}
+
+interface AiResultData {
+  preview: string;
+  chatPrompt: string;
+  questions: QuizQuestion[];
+}
+
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
-  options?: { label: string; action?: () => void; actionType?: string; payload?: any }[];
+  options?: { label: string; action?: () => void; actionType?: string; payload?: string }[];
   fileUpload?: boolean;
 }
 
 export default function LessonManagementLayer({
   onBack,
   setToast,
-  activeClass = '7B',
   academicYear = '2025/2026',
   schoolLevel = 'SMA',
   semester = 'Ganjil'
@@ -112,11 +126,7 @@ export default function LessonManagementLayer({
   const [awaitingCustomYear, setAwaitingCustomYear] = useState(false);
 
   // AI Generated Results (Pending Publish/Draft)
-  const [aiResult, setAiResult] = useState<{
-    preview: string;
-    chatPrompt: string;
-    questions: any[];
-  } | null>(null);
+  const [aiResult, setAiResult] = useState<AiResultData | null>(null);
 
   // Ref to store the latest states and avoid stale closures in saved state actions
   const chatStateRef = useRef({
@@ -124,7 +134,7 @@ export default function LessonManagementLayer({
     selectedClass: '',
     selectedSubject: '',
     extractedText: '',
-    aiResult: null as any,
+    aiResult: null as AiResultData | null,
     selectedYear: academicYear,
     susulanType: null as 'Susulan UTS' | 'Susulan UAS' | null
   });
@@ -179,9 +189,9 @@ export default function LessonManagementLayer({
   // Initialize Welcome Message
   useEffect(() => {
     resetChatToInit();
-  }, []);
+  }, [resetChatToInit]);
 
-  const handleOptionClick = (actionType: string, payload: any, label: string) => {
+  const handleOptionClick = (actionType: string, payload: string | undefined, label: string) => {
     switch (actionType) {
       case 'START_FLOW':
         startFlow(payload, label);
@@ -209,7 +219,7 @@ export default function LessonManagementLayer({
     }
   };
 
-  const resetChatToInit = () => {
+  const resetChatToInit = useCallback(() => {
     setFlowType(null);
     setSelectedClass('');
     setSelectedSubject('');
@@ -239,7 +249,7 @@ export default function LessonManagementLayer({
         ]
       }
     ]);
-  };
+  }, [academicYear]);
 
   const startFlow = (type: 'daily' | 'quiz' | 'notebook' | 'susulan', label: string) => {
     setFlowType(type);
@@ -429,11 +439,12 @@ export default function LessonManagementLayer({
           }
         ]);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
+      const errMsg = err instanceof Error ? err.message : "Terjadi kesalahan";
       setMessages(prev => [
         ...prev,
-        { role: 'assistant', content: `⚠️ Gagal memproses AI: ${err.message}` }
+        { role: 'assistant', content: `⚠️ Gagal memproses AI: ${errMsg}` }
       ]);
     } finally {
       setIsAiResponding(false);
@@ -487,11 +498,12 @@ export default function LessonManagementLayer({
           content: `✨ **Materi berbasis dokumen berhasil disusun oleh Groq AI!**\nSilakan cek rangkuman dan kuis di bawah ini.`
         }
       ]);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
+      const errMsg = err instanceof Error ? err.message : "Terjadi kesalahan";
       setMessages(prev => [
         ...prev,
-        { role: 'assistant', content: `⚠️ Gagal mengekstrak berkas: ${err.message}` }
+        { role: 'assistant', content: `⚠️ Gagal mengekstrak berkas: ${errMsg}` }
       ]);
     } finally {
       setIsUploading(false);
@@ -527,7 +539,7 @@ export default function LessonManagementLayer({
 
       // 2. Create Quizzes Row if AI returned questions
       if (newLesson && activeAiResult.questions && activeAiResult.questions.length > 0) {
-        const formattedQuestions = activeAiResult.questions.map((q: any) => ({
+        const formattedQuestions = activeAiResult.questions.map((q) => ({
           question: q.text || q.question || "",
           text: q.text || q.question || "",
           options: q.options || [],
@@ -580,8 +592,9 @@ export default function LessonManagementLayer({
       setAiResult(null);
       chatStateRef.current.aiResult = null;
       loadHistory();
-    } catch (err: any) {
-      setToast({ message: "Gagal menyimpan: " + err.message, type: 'error' });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Terjadi kesalahan";
+      setToast({ message: "Gagal menyimpan: " + errMsg, type: 'error' });
     } finally {
       setIsAiResponding(false);
     }
@@ -617,8 +630,9 @@ export default function LessonManagementLayer({
       setToast({ message: "Materi berhasil dihapus dari sistem", type: 'success' });
       setPreviewingLesson(null);
       loadHistory();
-    } catch (err: any) {
-      setToast({ message: "Gagal menghapus: " + err.message, type: 'error' });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Terjadi kesalahan";
+      setToast({ message: "Gagal menghapus: " + errMsg, type: 'error' });
     }
   };
 
@@ -677,7 +691,7 @@ export default function LessonManagementLayer({
       <main className="flex-1 flex overflow-hidden relative z-10">
         
         {/* LEFT COLUMN: HISTORY SIDEBAR */}
-        <section className="w-80 border-r border-white/10 bg-[#171717] flex flex-col shrink-0 hidden md:flex">
+        <section className="w-80 border-r border-white/10 bg-[#171717] shrink-0 hidden md:flex flex-col">
           <div className="p-4 border-b border-white/10 flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <h3 className="text-[10px] font-bold text-[#afafaf] uppercase tracking-widest pl-1">Riwayat Pelajaran</h3>
@@ -1004,7 +1018,7 @@ export default function LessonManagementLayer({
                           <span>Durasi: {quiz.duration_minutes} Menit</span>
                         </div>
                         <div className="space-y-2.5">
-                          {(quiz.questions || []).map((q: any, qIdx: number) => (
+                          {(quiz.questions as unknown as QuizQuestion[] || []).map((q, qIdx: number) => (
                             <div key={qIdx} className="bg-white/5 p-3 rounded-lg text-xs space-y-1">
                               <p className="font-bold text-white">{qIdx+1}. {q.text || q.question}</p>
                               {q.type === 'mcq' && q.options && (
