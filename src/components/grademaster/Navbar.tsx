@@ -12,22 +12,19 @@ import {
   CheckCircle2,
   Settings,
   LogIn,
-  RefreshCcw,
   Calendar,
   Loader2,
   User,
-  Activity,
   BookOpen,
-  ListChecks,
   Database
 } from 'lucide-react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import NeonGraduationCap from '@/components/grademaster/ui/NeonGraduationCap';
+import Image from 'next/image';
 
 export default function Navbar() {
   const pathname = usePathname();
-  const router = useRouter();
 
   const { 
     isAdmin, 
@@ -36,7 +33,6 @@ export default function Navbar() {
     isParent,
     studentData,
     setStudentData,
-    toast,
     setToast,
     layer, 
     setLayer: onNavigate, 
@@ -63,7 +59,6 @@ export default function Navbar() {
   if (isHidden) return null;
 
   const onOpenSettings = () => setModal("adminSettings");
-  const onLoginClick = () => onNavigate("login");
 
   const isActive = (target: string) => {
     if (target === 'exam') return ['home', 'setup', 'dashboard', 'grading'].includes(layer);
@@ -96,8 +91,9 @@ export default function Navbar() {
       setStudentData({ ...studentData, ...data.student, isGoogleLinked: true });
       setIsProfileDropdownOpen(false);
       onNavigate('dashboard');
-    } catch (err: any) {
-      setToast({ message: err.message, type: 'error' });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Terjadi kesalahan";
+      setToast({ message: errMsg, type: 'error' });
     } finally {
       setIsLinking(false);
     }
@@ -227,7 +223,7 @@ export default function Navbar() {
                     className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-surface-variant border border-transparent hover:border-outline-variant transition-all text-left"
                   >
                     {studentData?.photo_url ? (
-                      <img src={studentData.photo_url} alt="Profile" className="w-10 h-10 rounded-full shadow-md object-cover border border-outline-variant flex-shrink-0" />
+                      <Image src={studentData.photo_url} alt="Profile" width={40} height={40} className="w-10 h-10 rounded-full shadow-md object-cover border border-outline-variant flex-shrink-0" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold flex-shrink-0">
                         {studentData?.name?.[0] || 'U'}
@@ -296,9 +292,9 @@ export default function Navbar() {
            {!isAdmin && (isStudent || isParent) && studentData?.class_name ? (
              <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500 overflow-hidden">
                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-md flex-shrink-0">
-                 {studentData.photo_url ? (
-                   <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" />
-                 ) : (
+                  {studentData.photo_url ? (
+                    <Image src={studentData.photo_url} alt="Profile" width={40} height={40} className="w-full h-full object-cover" />
+                  ) : (
                    <div className="w-full h-full bg-[#0F172A] text-white flex items-center justify-center font-bold text-xs">
                      {studentData.name?.[0] || 'U'}
                    </div>
@@ -416,7 +412,7 @@ export default function Navbar() {
               {isMobileMenuOpen ? (
                 <X size={20} strokeWidth={2.5} />
               ) : (!isAdmin && (isStudent || isParent) && studentData?.photo_url) ? (
-                <img src={studentData.photo_url} alt="Profile" className="w-[20px] h-[20px] rounded-full object-cover border border-outline-variant shadow-sm" />
+                <Image src={studentData.photo_url} alt="Profile" width={20} height={20} className="w-[20px] h-[20px] rounded-full object-cover border border-outline-variant shadow-sm" />
               ) : (!isAdmin && (isStudent || isParent) && studentData?.name) ? (
                 <div className="w-[20px] h-[20px] rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[10px] border border-primary/20">
                   {studentData.name[0]}
@@ -546,7 +542,7 @@ export default function Navbar() {
                   <div className="bg-surface-container-low p-5 rounded-2xl border border-surface-container flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-surface-container-high shadow-sm flex-shrink-0">
                       {studentData?.photo_url ? (
-                        <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" />
+                        <Image src={studentData.photo_url} alt="Profile" width={48} height={48} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-primary-container text-white flex items-center justify-center font-bold text-sm">
                           {studentData?.name?.[0] || 'U'}
