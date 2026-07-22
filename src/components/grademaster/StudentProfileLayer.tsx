@@ -127,6 +127,8 @@ export default function StudentProfileLayer({
 
   // Dual behavior point system states and calculations
   const [inputBehaviorType, setInputBehaviorType] = useState<'BAD' | 'GOOD'>('BAD');
+  const [customReasonInput, setCustomReasonInput] = useState('');
+  const [customReasonPoints, setCustomReasonPoints] = useState(5);
 
   // Leaderboard states
   const [classLeaderboard, setClassLeaderboard] = useState<{
@@ -1356,7 +1358,132 @@ export default function StudentProfileLayer({
                 </div>
               </div>
 
-              {/* Banner Notifikasi Remedial / Sukses */}
+              {/* Form Input Poin Sikap Siswa (Khusus Admin/Guru) */}
+              {isAdmin && (
+                <div className="bg-white border-2 border-rose-500/20 rounded-[2rem] p-4.5 shadow-lg shadow-rose-500/5 space-y-3.5 text-left animate-in slide-in-from-top-2">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+                        <span className="material-symbols-outlined text-[18px]">edit_note</span>
+                      </div>
+                      <div>
+                        <h4 className="text-[12.5px] font-black text-slate-800 uppercase tracking-wide font-outfit">Catat Poin Kedisiplinan</h4>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Input poin untuk {studentName.split(' ')[0]}</p>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-100 text-indigo-700 text-[8.5px] font-black uppercase tracking-wider rounded-lg">Panel Guru</span>
+                  </div>
+
+                  {/* Tanggal & Tipe Switch */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[8.5px] font-black text-slate-400 uppercase tracking-wider block mb-1">Tanggal Kejadian</label>
+                      <input 
+                        type="date" 
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200/70 rounded-xl px-3 py-2 text-xs font-extrabold text-slate-800 outline-none focus:border-rose-500 focus:bg-white transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[8.5px] font-black text-slate-400 uppercase tracking-wider block mb-1">Jenis Sikap</label>
+                      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200/50">
+                        <button
+                          type="button"
+                          onClick={() => setInputBehaviorType('BAD')}
+                          className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                            inputBehaviorType === 'BAD'
+                              ? 'bg-rose-500 text-white shadow-sm'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          🔴 Pelanggaran
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setInputBehaviorType('GOOD')}
+                          className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                            inputBehaviorType === 'GOOD'
+                              ? 'bg-emerald-600 text-white shadow-sm'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          🟢 Kebaikan
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Preset Buttons Grid */}
+                  <div>
+                    <label className="text-[8.5px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">
+                      {inputBehaviorType === 'BAD' ? 'Pilihan Pelanggaran Standar' : 'Pilihan Kebaikan & Apresiasi'}
+                    </label>
+                    <div className="grid grid-cols-1 gap-1.5 max-h-[180px] overflow-y-auto pr-1 no-scrollbar">
+                      {inputBehaviorType === 'BAD' ? (
+                        localReasons.map(r => (
+                          <button 
+                            key={r.text} 
+                            disabled={isUpdatingPoints}
+                            onClick={() => handleAddBehavior(r.weight, r.text, false)} 
+                            className="p-2.5 bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-200 rounded-xl text-left transition-all active:scale-98 flex items-center justify-between group disabled:opacity-50 min-h-[42px]"
+                          >
+                            <span className="text-[11px] font-bold text-slate-700 truncate group-hover:text-rose-900 pr-2">{r.text}</span>
+                            <span className="text-[10px] font-black text-rose-600 bg-rose-100/60 px-2 py-0.5 rounded-lg shrink-0">+{r.weight} Pts</span>
+                          </button>
+                        ))
+                      ) : (
+                        goodBehaviorPresets.map(r => (
+                          <button 
+                            key={r.text} 
+                            disabled={isUpdatingPoints}
+                            onClick={() => handleAddBehavior(r.weight, r.text, true)} 
+                            className="p-2.5 bg-slate-50 hover:bg-emerald-50 border border-slate-100 hover:border-emerald-200 rounded-xl text-left transition-all active:scale-98 flex items-center justify-between group disabled:opacity-50 min-h-[42px]"
+                          >
+                            <span className="text-[11px] font-bold text-slate-700 truncate group-hover:text-emerald-900 pr-2">{r.text}</span>
+                            <span className="text-[10px] font-black text-emerald-600 bg-emerald-100/60 px-2 py-0.5 rounded-lg shrink-0">+{r.weight} Pts</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Custom Input Field */}
+                  <div className="pt-2 border-t border-slate-100">
+                    <label className="text-[8.5px] font-black text-slate-400 uppercase tracking-wider block mb-1">Input Alasan Khusus (Manual)</label>
+                    <div className="flex gap-1.5">
+                      <input 
+                        type="text" 
+                        placeholder="Tulis alasan khusus di sini..."
+                        value={customReasonInput}
+                        onChange={(e) => setCustomReasonInput(e.target.value)}
+                        className="flex-1 bg-slate-50 border border-slate-200/70 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-rose-500 focus:bg-white transition-all placeholder:text-slate-400 placeholder:font-normal"
+                      />
+                      <input 
+                        type="number" 
+                        min="1"
+                        max="100"
+                        value={customReasonPoints}
+                        onChange={(e) => setCustomReasonPoints(parseInt(e.target.value) || 1)}
+                        className="w-16 bg-slate-50 border border-slate-200/70 rounded-xl px-2 py-2 text-xs font-black text-rose-600 outline-none text-center focus:border-rose-500 focus:bg-white transition-all"
+                      />
+                      <button 
+                        type="button"
+                        disabled={isUpdatingPoints || !customReasonInput.trim()}
+                        onClick={() => {
+                          if (!customReasonInput.trim()) return;
+                          handleAddBehavior(customReasonPoints, customReasonInput.trim(), inputBehaviorType === 'GOOD');
+                          setCustomReasonInput('');
+                        }}
+                        className="px-3.5 py-2 bg-rose-500 hover:bg-rose-600 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shrink-0 shadow-md shadow-rose-500/10 min-h-[40px]"
+                      >
+                        {isUpdatingPoints ? <Loader2 size={14} className="animate-spin" /> : '+ Catat'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               {isLoadingSummary ? (
                 <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-start gap-3 animate-pulse">
                   <div className="w-8 h-8 rounded-xl bg-slate-200 shrink-0" />

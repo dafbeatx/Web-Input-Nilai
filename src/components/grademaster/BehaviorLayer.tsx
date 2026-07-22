@@ -428,16 +428,26 @@ export default function BehaviorLayer({
                     </div>
                   </div>
                   
-                  <div className="flex flex-row-reverse sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-4 pt-4 sm:pt-0 border-t border-surface-container sm:border-transparent">
+                  <div className="flex flex-row-reverse sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-3 pt-4 sm:pt-0 border-t border-surface-container sm:border-transparent">
                     <div className={"px-4 py-1.5 rounded-full text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.05em] whitespace-nowrap " + (hasViolations ? 'bg-[#FFF9E6] text-[#B45309]' : 'bg-[#E6F4EF] text-[#006C49]')}>
                        {hasViolations ? 'PERINGATAN' : 'BERSIH'}
                     </div>
-                    <button 
-                      onClick={() => setSelectedStudent(student)}
-                      className="text-[11px] sm:text-[12px] font-bold text-on-primary-fixed/60 hover:text-on-primary-fixed transition-colors flex items-center gap-1 group/link outline-none"
-                    >
-                       Riwayat Poin <span className="material-symbols-outlined text-[16px] group-hover/link:translate-x-1 transition-transform">arrow_forward</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {isAdmin && (
+                        <button 
+                          onClick={() => setSelectedStudent(student)}
+                          className="px-3.5 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-[11px] font-extrabold uppercase tracking-wider shadow-md shadow-rose-500/20 active:scale-95 transition-all flex items-center gap-1 shrink-0"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">edit_note</span> + Catat Poin
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => setSelectedStudent(student)}
+                        className="text-[11px] sm:text-[12px] font-bold text-on-primary-fixed/60 hover:text-on-primary-fixed transition-colors flex items-center gap-1 group/link outline-none"
+                      >
+                         Riwayat <span className="material-symbols-outlined text-[16px] group-hover/link:translate-x-1 transition-transform">arrow_forward</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
