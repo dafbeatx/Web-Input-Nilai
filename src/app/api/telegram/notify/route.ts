@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { studentName, className, subject, event, score, kkm, photo, message, deviceInfo, examMode, academicYear, examType } = body;
-    const fallback = (val: any) => val || '---';
+    const fallback = (val: string | number | null | undefined) => val || '---';
 
     let text = '';
     const timestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
       const buffer = Buffer.from(base64Data, 'base64');
       try {
         photoFile = new File([buffer], 'student_photo.jpg', { type: 'image/jpeg' });
-      } catch (e) {
+      } catch {
         photoFile = new Blob([buffer], { type: 'image/jpeg' });
       }
     }

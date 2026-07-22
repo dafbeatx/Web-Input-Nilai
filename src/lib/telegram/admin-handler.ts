@@ -721,8 +721,8 @@ async function renderStudentList(chatId: number, messageId: number | undefined, 
   const keyboard = buildPaginationKeyboard(items, page, 8, `nav:stu`, `nav:stupage:${category}:${compressUUID(sessionId)}`, `nav:sespage:${category}:1`);
   
   // Backpath injected into nav:stu
-  for(let row of keyboard) {
-    for(let btn of row) {
+  for (const row of keyboard) {
+    for (const btn of row) {
       if(btn.callback_data.startsWith('nav:stu:')) {
          btn.callback_data += `:${category}`; 
       }

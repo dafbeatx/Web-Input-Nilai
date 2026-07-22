@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
-  ArrowLeft, Users, Calendar, Search, Save, Loader2, CheckCircle2, 
-  XCircle, AlertCircle, Clock, BookOpen, ChevronLeft, ChevronRight,
-  MoreVertical, Check, Info, HeartPulse, LogOut, LayoutGrid, Menu
+  Users, Loader2, CheckCircle2, 
+  BookOpen, Info, HeartPulse, LayoutGrid
 } from 'lucide-react';
-import Image from 'next/image';
 import { ToastType } from '@/lib/grademaster/types';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 
@@ -32,13 +30,28 @@ interface AttendanceLayerProps {
   activeYear?: string;
 }
 
-// Status configuration
-const STATUS_CONFIG = [
-  { id: 'Hadir', label: 'H', icon: CheckCircle2, color: 'text-emerald-400', bgActive: 'bg-emerald-500/20 border-emerald-500/50 ring-1 ring-emerald-500/30', bgIdle: 'bg-surface-variant border-outline-variant', dotColor: 'bg-emerald-400' },
-  { id: 'Izin', label: 'I', icon: Info, color: 'text-sky-400', bgActive: 'bg-sky-500/20 border-sky-500/50 ring-1 ring-sky-500/30', bgIdle: 'bg-surface-variant border-outline-variant', dotColor: 'bg-sky-400' },
-  { id: 'Sakit', label: 'S', icon: HeartPulse, color: 'text-amber-400', bgActive: 'bg-amber-500/20 border-amber-500/50 ring-1 ring-amber-500/30', bgIdle: 'bg-surface-variant border-outline-variant', dotColor: 'bg-amber-400' },
-  { id: 'Alpa', label: 'A', icon: XCircle, color: 'text-rose-400', bgActive: 'bg-rose-500/20 border-rose-500/50 ring-1 ring-rose-500/30', bgIdle: 'bg-surface-variant border-outline-variant', dotColor: 'bg-rose-400' },
-] as const;
+// Format student name for mobile readability
+const formatStudentName = (name: string) => {
+  if (!name) return "";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return name;
+
+  let firstName = parts[0];
+  const lowerFirst = firstName.toLowerCase();
+  if (lowerFirst === 'muhammad' || lowerFirst === 'muhamad') {
+    firstName = "M.";
+  } else if (firstName.length > 10) {
+    firstName = firstName[0].toUpperCase() + ".";
+  }
+
+  if (parts.length === 2) {
+    return `${firstName} ${parts[1]}`;
+  }
+
+  const middleName = parts[1];
+  const rest = parts.slice(2).map(p => p[0].toUpperCase() + ".").join(" ");
+  return `${firstName} ${middleName} ${rest}`;
+};
 
 export default function AttendanceLayer({ 
   onBack, 
@@ -60,7 +73,7 @@ export default function AttendanceLayer({
   const [isLoading, setIsLoading] = useState(false);
   
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
-  const [isLoadingClasses, setIsLoadingClasses] = useState(false);
+  const [, setIsLoadingClasses] = useState(false);
 
   // Track which students are currently being saved
   const [savingStudents, setSavingStudents] = useState<Record<string, boolean>>({});
@@ -70,28 +83,7 @@ export default function AttendanceLayer({
 
   const subjects = ["Informatika", "Matematika", "IPA", "IPS", "Bahasa Indonesia", "Bahasa Inggris", "PAI", "PJOK", "Seni Budaya", "PKn"];
 
-  // Sync props to state when they change
-  useEffect(() => {
-    if (activeYear) {
-      setAcademicYear(activeYear);
-    }
-    if (activeClass) {
-      setClassName(activeClass);
-    }
-  }, [activeClass, activeYear]);
-
-  useEffect(() => {
-    fetchAvailableClasses();
-  }, [academicYear]);
-
-  // Automatic loading when filters change
-  useEffect(() => {
-    if (className && subject && selectedDate) {
-      loadAttendance(className, subject, selectedDate);
-    }
-  }, [className, subject, selectedDate]);
-
-  const fetchAvailableClasses = async () => {
+  const fetchAvailableClasses = useCallback(async () => {
     setIsLoadingClasses(true);
     try {
       const res = await fetch(`/api/grademaster/behaviors?year=${encodeURIComponent(academicYear)}`);
@@ -102,21 +94,19 @@ export default function AttendanceLayer({
     } finally {
       setIsLoadingClasses(false);
     }
-  };
+  }, [academicYear]);
 
-  const loadAttendance = async (targetClass: string, targetSubject: string, targetDate: string) => {
+  const loadAttendance = useCallback(async (targetClass: string, targetSubject: string, targetDate: string) => {
     if (!targetClass.trim() || !targetSubject.trim() || !targetDate.trim()) return;
     
     setIsLoading(true);
     try {
-      // 1. Load students first
       const resStudents = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(targetClass)}&year=${encodeURIComponent(academicYear)}`);
       const dataStudents = await resStudents.json();
       if (!resStudents.ok) throw new Error(dataStudents.error);
       
       setStudents(dataStudents.students || []);
       
-      // 2. Load attendance records
       const resAttendance = await fetch(`/api/grademaster/attendance?class=${encodeURIComponent(targetClass)}&year=${encodeURIComponent(academicYear)}&subject=${encodeURIComponent(targetSubject)}&date=${targetDate}`);
       const dataAttendance = await resAttendance.json();
       
@@ -128,12 +118,34 @@ export default function AttendanceLayer({
       
       setAttendanceMap(map);
       setIsLoaded(true);
-    } catch (err: any) {
-      setToast({ message: err.message || "Gagal mengambil data", type: "error" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal mengambil data";
+      setToast({ message: msg, type: "error" });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [academicYear, setToast]);
+
+  // Sync props to state when they change
+  useEffect(() => {
+    if (activeYear && activeYear !== academicYear) {
+      setAcademicYear(activeYear);
+    }
+    if (activeClass && activeClass !== className) {
+      setClassName(activeClass);
+    }
+  }, [activeClass, activeYear, academicYear, className]);
+
+  useEffect(() => {
+    fetchAvailableClasses();
+  }, [fetchAvailableClasses]);
+
+  // Automatic loading when filters change
+  useEffect(() => {
+    if (className && subject && selectedDate) {
+      loadAttendance(className, subject, selectedDate);
+    }
+  }, [className, subject, selectedDate, loadAttendance]);
 
   // Auto-save single student attendance
   const autoSaveStudent = useCallback(async (studentName: string, status: string) => {
@@ -232,31 +244,6 @@ export default function AttendanceLayer({
     });
   }, [students, attendanceMap, className, subject, academicYear, selectedDate, setToast]);
 
-  // Format student name for mobile readability
-  const formatStudentName = (name: string) => {
-    if (!name) return "";
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return name;
-
-    let firstName = parts[0];
-    const lowerFirst = firstName.toLowerCase();
-    // Specific rule for Muhamad/Muhammad
-    if (lowerFirst === 'muhammad' || lowerFirst === 'muhamad') {
-      firstName = "M.";
-    } else if (firstName.length > 10) {
-      firstName = firstName[0].toUpperCase() + ".";
-    }
-
-    if (parts.length === 2) {
-      return `${firstName} ${parts[1]}`;
-    }
-
-    // 3+ parts: [First] [Middle] [Rest...]
-    // Keep first (shortened if long), keep middle, abbreviate the rest
-    const middleName = parts[1];
-    const rest = parts.slice(2).map(p => p[0].toUpperCase() + ".").join(" ");
-    return `${firstName} ${middleName} ${rest}`;
-  };
 
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-800 antialiased font-outfit pb-24">

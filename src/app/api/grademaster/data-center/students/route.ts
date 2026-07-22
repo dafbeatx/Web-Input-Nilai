@@ -2,7 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getAdminSession } from '@/lib/grademaster/admin';
 
-export async function GET(req: NextRequest) {
+interface StudentData {
+  id: string;
+  name: string;
+  className: string;
+  academicYear: string;
+  scores: Array<{ subject: string; type: string; score: number; id: string }>;
+  behaviorPoints: number;
+  avatarUrl?: string | null;
+  behaviorLogs?: Array<{ reason: string; points: number; date: string }>;
+  isLinked: boolean;
+}
+
+export async function GET() {
   try {
     const adminSession = await getAdminSession();
     if (!adminSession) {
@@ -43,7 +55,7 @@ export async function GET(req: NextRequest) {
     if (logsError) throw logsError;
 
     // Group logs by student_id
-    const logsMap = new Map<string, any[]>();
+    const logsMap = new Map<string, Array<{ reason: string; points: number; date: string }>>();
     for (const log of (behaviorLogs || [])) {
       if (!logsMap.has(log.student_id)) {
         logsMap.set(log.student_id, []);
@@ -56,7 +68,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Aggregate
-    const studentsMap = new Map<string, any>();
+    const studentsMap = new Map<string, StudentData>();
 
     // Initialize with accounts
     for (const acc of (accounts || [])) {
@@ -96,7 +108,7 @@ export async function GET(req: NextRequest) {
         });
       } else {
         // Update behavior points and photo for existing account
-        const student = studentsMap.get(key);
+        const student = studentsMap.get(key)!;
         student.behaviorPoints = b.total_points || 0;
         if (b.avatar_url) {
           student.avatarUrl = b.avatar_url;
@@ -107,13 +119,13 @@ export async function GET(req: NextRequest) {
 
     // Add scores
     for (const score of (scores || [])) {
-      const session = score.gm_sessions as any;
+      const session = score.gm_sessions as unknown as { subject: string; exam_type: string } | null;
       if (!session) continue;
 
       const scoreNameLower = score.name.trim().toLowerCase();
       
       // Try to find matching student record in the map by exact name matching
-      let foundAcc: any = null;
+      let foundAcc: StudentData | null = null;
       for (const [k, v] of studentsMap.entries()) {
          const lastUnderscore = k.lastIndexOf('_');
          if (lastUnderscore !== -1) {
@@ -146,7 +158,7 @@ export async function GET(req: NextRequest) {
               isLinked: false
             });
          }
-         studentsMap.get(vKey).scores.push({
+         studentsMap.get(vKey)!.scores.push({
            subject: session.subject,
            type: session.exam_type,
            score: score.final_score,
@@ -160,9 +172,10 @@ export async function GET(req: NextRequest) {
       students: Array.from(studentsMap.values())
     });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Data Center Students error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -172,7 +185,7 @@ export async function DELETE(req: NextRequest) {
     if (!adminSession) return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
 
     const body = await req.json();
-    const { name, className, action } = body; // action = 'soft_delete' or 'hard_delete'
+    const { name, action } = body; // action = 'soft_delete' or 'hard_delete'
 
     if (!name) return NextResponse.json({ error: 'Nama wajib diisi' }, { status: 400 });
 
@@ -200,8 +213,9 @@ export async function DELETE(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, message: `Siswa ${name} berhasil dihapus.` });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -287,7 +301,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, message, added, skipped });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

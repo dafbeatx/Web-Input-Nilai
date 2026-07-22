@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse: NextResponse;
-  let code = request.nextUrl.searchParams.get('code');
+  const code = request.nextUrl.searchParams.get('code');
 
   if (code) {
     // If incoming request has a code, we prepare a redirect response

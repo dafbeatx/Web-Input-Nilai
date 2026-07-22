@@ -1,16 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Users, Search, PlusCircle, MinusCircle, AlertCircle, Save, Loader2, UserPlus, FileText, LayoutGrid, Trash2, Pencil, ShieldCheck, ThumbsUp, ThumbsDown, X, Clock, Calendar, ChevronRight, BarChart3, Activity, ListChecks, History, Download, DownloadCloud, Check } from 'lucide-react';
+import { Search, AlertCircle, Loader2, Trash2, X } from 'lucide-react';
 import { ToastType, GradedStudent } from '@/lib/grademaster/types';
-import { 
-  addBehaviorAction, 
-  updateBehaviorAction, 
-  deleteBehaviorAction, 
-  getBehaviorLogsAction 
-} from '@/lib/actions/behavior';
 import { supabase } from '@/lib/supabase/client';
 import { useGradeMaster } from '@/context/GradeMasterContext';
-import Image from 'next/image';
 import StudentProfileLayer from './StudentProfileLayer';
 
 interface BehaviorLog {
@@ -49,8 +42,7 @@ export default function BehaviorLayer({
   setToast, 
   isAdmin = false, 
   activeClass = '', 
-  activeYear = '2025/2026',
-  gradedStudents = []
+  activeYear = '2025/2026'
 }: BehaviorLayerProps) {
   const { setLayer, adminUser, studentData, setAcademicYear: setGlobalAcademicYear } = useGradeMaster();
   const [className, setClassName] = useState(activeClass || '');
@@ -58,7 +50,6 @@ export default function BehaviorLayer({
   const [students, setStudents] = useState<BehaviorStudent[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<'MANAGEMENT' | 'REPORT'>('REPORT');
   
   // Modal & History State
   const [selectedStudent, setSelectedStudent] = useState<BehaviorStudent | null>(null);
@@ -66,7 +57,7 @@ export default function BehaviorLayer({
   // Avatar Upload State (For list view)
   const [uploadingAvatarId, setUploadingAvatarId] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [targetedAvatarStudent, setTargetedAvatarStudent] = useState<string | null>(null);
+  const [, setTargetedAvatarStudent] = useState<string | null>(null);
 
   // Settings State
   const [isManagingReasons, setIsManagingReasons] = useState(false);
@@ -74,21 +65,83 @@ export default function BehaviorLayer({
   const [newReasonInput, setNewReasonInput] = useState('');
   const [newReasonWeight, setNewReasonWeight] = useState(10);
 
-  const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [newStudentName, setNewStudentName] = useState('');
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
-  const [isLoadingClasses, setIsLoadingClasses] = useState(false);
+  const [, setIsLoadingClasses] = useState(false);
+
+  const fetchBehaviorSettings = useCallback(async (year = academicYear) => {
+    try {
+      const res = await fetch(`/api/grademaster/behaviors/settings?year=${encodeURIComponent(year)}`);
+      const data = await res.json();
+      if (res.ok && data.settings && Array.isArray(data.settings.reasons)) {
+        setBehaviorReasons(data.settings.reasons);
+      } else {
+        setBehaviorReasons([]);
+      }
+    } catch (err) {
+      console.error("Failed to load behavior settings", err);
+      setBehaviorReasons([]);
+    }
+  }, [academicYear]);
+
+  const fetchAvailableClasses = useCallback(async (year = academicYear) => {
+    setIsLoadingClasses(true);
+    try {
+      const res = await fetch(`/api/grademaster/behaviors?year=${encodeURIComponent(year)}`);
+      const data = await res.json();
+      if (res.ok) {
+        const sortedClasses = (data.classes || []).sort((a: string, b: string) => 
+          a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+        );
+        setAvailableClasses(sortedClasses);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsLoadingClasses(false);
+    }
+  }, [academicYear]);
+
+  const loadClassDirectly = useCallback(async (targetClass: string, targetYear: string) => {
+    if (!targetClass.trim() || !targetYear.trim()) return;
+    setClassName(targetClass);
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(targetClass)}&year=${encodeURIComponent(targetYear)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setStudents(data.students || []);
+      setIsLoaded(true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal mengambil data";
+      setToast({ message: msg, type: "error" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [setToast]);
+
+  const fetchStudentsQuietly = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(className)}&year=${encodeURIComponent(academicYear)}`);
+      const data = await res.json();
+      if (res.ok) setStudents(data.students || []);
+    } catch {
+      // Silent fail
+    }
+  }, [className, academicYear]);
 
   useEffect(() => {
     const yearToUse = activeYear || '2025/2026';
-    setAcademicYear(yearToUse);
+    if (academicYear !== yearToUse) {
+      setAcademicYear(yearToUse);
+    }
     fetchBehaviorSettings(yearToUse);
     fetchAvailableClasses(yearToUse).then(() => {
       const initialClass = activeClass && activeClass !== "" ? activeClass : 'Semua Kelas';
       setClassName(initialClass);
       loadClassDirectly(initialClass, yearToUse);
     });
-  }, [activeClass, activeYear]);
+  }, [activeClass, activeYear, academicYear, fetchBehaviorSettings, fetchAvailableClasses, loadClassDirectly]);
 
   // Load history & summary when a student is selected
   useEffect(() => {
@@ -113,16 +166,13 @@ export default function BehaviorLayer({
           schema: 'public',
           table: 'gm_behavior_logs'
         },
-        async (payload: any) => {
-          // If a modal is open for the changed student, refresh their logs
-          const changedStudentId = (payload.new as any)?.student_id || (payload.old as any)?.student_id;
+        async (payload: { new?: { student_id?: string }; old?: { student_id?: string } }) => {
+          const changedStudentId = payload.new?.student_id || payload.old?.student_id;
           
           if (selectedStudent && selectedStudent.id === changedStudentId) {
-            // Log changes will be handled inside the StudentProfileLayer via its own subscriptions or props if needed
-            // For now, the parent only needs to refresh the student list to update points.
+            // Updated in StudentProfileLayer if needed
           }
           
-          // Always refresh students to update total points across cards
           fetchStudentsQuietly();
         }
       )
@@ -131,72 +181,7 @@ export default function BehaviorLayer({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isLoaded, selectedStudent, className, academicYear]);
-
-  const fetchBehaviorSettings = async (year = academicYear) => {
-    try {
-      const res = await fetch(`/api/grademaster/behaviors/settings?year=${encodeURIComponent(year)}`);
-      const data = await res.json();
-      if (res.ok && data.settings && Array.isArray(data.settings.reasons)) {
-        setBehaviorReasons(data.settings.reasons);
-      } else {
-        setBehaviorReasons([]);
-      }
-    } catch (err) {
-      console.error("Failed to load behavior settings", err);
-      setBehaviorReasons([]);
-    }
-  };
-
-
-
-  const fetchAvailableClasses = async (year = academicYear) => {
-    setIsLoadingClasses(true);
-    try {
-      const res = await fetch(`/api/grademaster/behaviors?year=${encodeURIComponent(year)}`);
-      const data = await res.json();
-      if (res.ok) {
-        const sortedClasses = (data.classes || []).sort((a: string, b: string) => 
-          a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
-        );
-        setAvailableClasses(sortedClasses);
-      }
-    } catch {
-      // ignore
-    } finally {
-      setIsLoadingClasses(false);
-    }
-  };
-
-  const loadClassDirectly = async (targetClass: string, targetYear: string) => {
-    if (!targetClass.trim() || !targetYear.trim()) return;
-    setClassName(targetClass);
-    setIsLoading(true);
-    try {
-      const res = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(targetClass)}&year=${encodeURIComponent(targetYear)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setStudents(data.students || []);
-      setIsLoaded(true);
-    } catch (err: any) {
-      setToast({ message: err.message || "Gagal mengambil data", type: "error" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchStudents = () => loadClassDirectly(className, academicYear);
-
-  // Silent refresh for real-time
-  const fetchStudentsQuietly = async () => {
-    try {
-      const res = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(className)}&year=${encodeURIComponent(academicYear)}`);
-      const data = await res.json();
-      if (res.ok) setStudents(data.students || []);
-    } catch (err) {
-      // Silent fail
-    }
-  };
+  }, [isLoaded, selectedStudent, fetchStudentsQuietly]);
 
   // --- CRUD ACTIONS ---
 
@@ -212,8 +197,9 @@ export default function BehaviorLayer({
       if (!res.ok) throw new Error("Gagal menyimpan pengaturan");
       setBehaviorReasons(updatedReasons);
       setToast({ message: "Kategori poin global berhasil diperbarui", type: "success" });
-    } catch (err: any) {
-      setToast({ message: err.message, type: "error" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal menyimpan pengaturan";
+      setToast({ message: msg, type: "error" });
     }
   };
 
@@ -221,7 +207,6 @@ export default function BehaviorLayer({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // 1. Validasi Ukuran (Max 20MB untuk foto resolusi tinggi modern)
     if (file.size > 20 * 1024 * 1024) {
       setToast({ message: "Ukuran foto terlalu besar (Maksimal 20MB)", type: "error" });
       return;
@@ -249,9 +234,10 @@ export default function BehaviorLayer({
       if (selectedStudent && selectedStudent.id === studentId) {
         setSelectedStudent(prev => prev ? { ...prev, avatar_url: data.avatar_url } : null);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Upload error:", err);
-      setToast({ message: err.message || "Gagal mengunggah. Coba gunakan format JPG/PNG.", type: "error" });
+      const msg = err instanceof Error ? err.message : "Gagal mengunggah. Coba gunakan format JPG/PNG.";
+      setToast({ message: msg, type: "error" });
     } finally {
       setUploadingAvatarId(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
