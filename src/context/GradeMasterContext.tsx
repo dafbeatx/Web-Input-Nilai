@@ -275,7 +275,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         const authLayers = ['login', 'student_login'];
 
         if (activeAdmin) {
-          if (authLayers.includes(initialLayer) || initialLayer === 'student_claim') {
+          safeLocalStorage.removeItem('gm_remedial_session');
+          if (authLayers.includes(initialLayer) || initialLayer === 'student_claim' || initialLayer === 'remedial') {
             initialLayer = 'home';
           }
         } else if (activeStudent) {
@@ -502,6 +503,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     safeLocalStorage.removeItem('gm_sessionPassword');
     safeLocalStorage.removeItem('gm_isPublicView');
     safeLocalStorage.removeItem('gm_studentClass');
+    safeLocalStorage.removeItem('gm_remedial_session');
     safeLocalStorage.setItem('gm_remember_me', 'false'); // Force disable remember me status on logout
 
     setLayer("student_login");

@@ -284,12 +284,15 @@ export default function GradeMaster() {
       if (data.authenticated && data.role === 'admin') {
         setIsAdmin(true);
         setIsStudent(false);
+        clearRemedialSession();
+        safeLocalStorage.removeItem('gm_remedial_session');
+
         if (data.displayName && data.subject) {
           setAdminUser(data.displayName);
           setTeacherName(data.displayName);
           setSubject(data.subject);
           
-          if (layer === 'student_login' || layer === 'login' || layer === 'student_claim' || layer === 'teacher_claim') {
+          if (layer === 'student_login' || layer === 'login' || layer === 'student_claim' || layer === 'teacher_claim' || layer === 'remedial') {
             setLayer('home');
           }
           await fetchSessions();
@@ -374,27 +377,32 @@ export default function GradeMaster() {
     const savedSessionPassword = safeLocalStorage.getItem("gm_sessionPassword");
     const savedIsPublicView = safeLocalStorage.getItem("gm_isPublicView") === "true";
 
-    // Restore active remedial exam session
+    // Restore active remedial exam session (students only, never for Admin)
     const remedialSession = loadRemedialSession();
     const VALID_REMEDIAL_STEPS = ['RULES', 'INFO', 'GUIDE', 'EXAM', 'COMPLETED', 'CHEATED', 'TIMEOUT', 'SECOND_CHANCE'];
     if (remedialSession && VALID_REMEDIAL_STEPS.includes(remedialSession.step)) {
-      Promise.resolve().then(() => {
-        if (remedialSession.studentName) setStudentName(remedialSession.studentName);
-        if (remedialSession.className) setStudentClass(remedialSession.className);
-        if (remedialSession.subject) setSubject(remedialSession.subject);
-        if (remedialSession.sessionId) setSessionId(remedialSession.sessionId);
-        if (remedialSession.examType) setExamType(remedialSession.examType);
-        if (remedialSession.academicYear) setAcademicYear(remedialSession.academicYear);
-        if (remedialSession.semester) setSemester(remedialSession.semester);
-        if (remedialSession.kkm) setKkm(remedialSession.kkm);
-        if (remedialSession.remedialQuestions) setRemedialQuestions(remedialSession.remedialQuestions);
-        if (remedialSession.remedialEssayCount) setRemedialEssayCount(remedialSession.remedialEssayCount);
-        if (remedialSession.remedialTimer) setRemedialTimer(remedialSession.remedialTimer);
-        
-        if (layer !== 'remedial') {
-          setLayer('remedial');
-        }
-      });
+      if (isAdmin) {
+        clearRemedialSession();
+        safeLocalStorage.removeItem('gm_remedial_session');
+      } else {
+        Promise.resolve().then(() => {
+          if (remedialSession.studentName) setStudentName(remedialSession.studentName);
+          if (remedialSession.className) setStudentClass(remedialSession.className);
+          if (remedialSession.subject) setSubject(remedialSession.subject);
+          if (remedialSession.sessionId) setSessionId(remedialSession.sessionId);
+          if (remedialSession.examType) setExamType(remedialSession.examType);
+          if (remedialSession.academicYear) setAcademicYear(remedialSession.academicYear);
+          if (remedialSession.semester) setSemester(remedialSession.semester);
+          if (remedialSession.kkm) setKkm(remedialSession.kkm);
+          if (remedialSession.remedialQuestions) setRemedialQuestions(remedialSession.remedialQuestions);
+          if (remedialSession.remedialEssayCount) setRemedialEssayCount(remedialSession.remedialEssayCount);
+          if (remedialSession.remedialTimer) setRemedialTimer(remedialSession.remedialTimer);
+          
+          if (layer !== 'remedial') {
+            setLayer('remedial');
+          }
+        });
+      }
     }
 
     if (savedSessionName) {
@@ -613,6 +621,8 @@ export default function GradeMaster() {
 
   const handleAdminLogout = async () => {
     try {
+      clearRemedialSession();
+      safeLocalStorage.removeItem('gm_remedial_session');
       await logout();
       setToast({ message: "Logout berhasil", type: "success" });
     } catch {
