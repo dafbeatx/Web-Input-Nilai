@@ -455,7 +455,7 @@ export default function GradeMaster() {
         }
       });
     }
-  }, [handleLoadPublicSession, layer, setAcademicYear, setLayer, setStudentClass]);
+  }, [handleLoadPublicSession, isAdmin, layer, setAcademicYear, setLayer, setStudentClass]);
 
   // Save state to localStorage (excluding layer which is handled by Context)
   useEffect(() => {
