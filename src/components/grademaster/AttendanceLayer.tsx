@@ -53,6 +53,18 @@ const formatStudentName = (name: string) => {
   return `${firstName} ${middleName} ${rest}`;
 };
 
+function debouncedAutoSave(
+  timersRef: React.RefObject<Record<string, NodeJS.Timeout>>,
+  studentName: string,
+  saveFn: () => void
+) {
+  if (!timersRef.current) return;
+  if (timersRef.current[studentName]) {
+    clearTimeout(timersRef.current[studentName]);
+  }
+  timersRef.current[studentName] = setTimeout(saveFn, 150);
+}
+
 export default function AttendanceLayer({ 
   onBack, 
   setToast, 
@@ -98,29 +110,33 @@ export default function AttendanceLayer({
 
   const loadAttendance = useCallback(async (targetClass: string, targetSubject: string, targetDate: string) => {
     if (!targetClass.trim() || !targetSubject.trim() || !targetDate.trim()) return;
-    
     setIsLoading(true);
     try {
-      const resStudents = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(targetClass)}&year=${encodeURIComponent(academicYear)}`);
-      const dataStudents = await resStudents.json();
-      if (!resStudents.ok) throw new Error(dataStudents.error);
-      
-      setStudents(dataStudents.students || []);
-      
-      const resAttendance = await fetch(`/api/grademaster/attendance?class=${encodeURIComponent(targetClass)}&year=${encodeURIComponent(academicYear)}&subject=${encodeURIComponent(targetSubject)}&date=${targetDate}`);
-      const dataAttendance = await resAttendance.json();
+      const params = new URLSearchParams({
+        class: targetClass.trim(),
+        subject: targetSubject.trim(),
+        date: targetDate.trim(),
+        year: academicYear
+      });
+
+      const res = await fetch(`/api/grademaster/attendance?${params.toString()}`);
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error);
+
+      if (data.students) setStudents(data.students);
       
       const map: Record<string, string> = {};
-      
-      dataAttendance.attendance?.forEach((rec: AttendanceRecord) => {
-        map[rec.student_name] = rec.status;
-      });
-      
+      if (data.records) {
+        data.records.forEach((r: AttendanceRecord) => {
+          map[r.student_name] = r.status;
+        });
+      }
       setAttendanceMap(map);
       setIsLoaded(true);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Gagal mengambil data";
-      setToast({ message: msg, type: "error" });
+      const msg = err instanceof Error ? err.message : 'Gagal memuat absensi';
+      setToast({ message: msg, type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -186,7 +202,8 @@ export default function AttendanceLayer({
       }
       
       // Subtle success — no toast per student, just visual feedback via the button state
-    } catch (_err: unknown) {
+    } catch (err: unknown) {
+      console.error('[autoSaveStudent] Error saving attendance:', err);
       setToast({ message: `Gagal menyimpan: ${studentName}`, type: "error" });
       // Revert on failure
       setAttendanceMap(prev => {
@@ -199,21 +216,15 @@ export default function AttendanceLayer({
     }
   }, [className, subject, academicYear, selectedDate, setToast]);
 
-  const handleStatusChange = (studentName: string, status: string) => {
+  const handleStatusChange = useCallback((studentName: string, status: string) => {
     // Optimistic update
     setAttendanceMap(prev => ({ ...prev, [studentName]: status }));
     
-    // Clear any pending save for this student
-    const timers = saveTimerRef.current;
-    if (timers[studentName]) {
-      clearTimeout(timers[studentName]);
-    }
-    
-    // Debounced auto-save (150ms to handle rapid taps)
-    timers[studentName] = setTimeout(() => {
+    // Debounced auto-save
+    debouncedAutoSave(saveTimerRef, studentName, () => {
       autoSaveStudent(studentName, status);
-    }, 150);
-  };
+    });
+  }, [autoSaveStudent]);
 
   const stats = {
     total: students.length,
