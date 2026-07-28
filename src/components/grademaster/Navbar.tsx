@@ -343,45 +343,45 @@ export default function Navbar() {
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* Floating container */}
-        <div className="mx-4 mb-2 bg-white/90 backdrop-blur-2xl rounded-2xl border border-surface-container-high/50 shadow-[0_-4px_30px_rgba(0,0,0,0.06)] px-2 py-1.5">
-          <div className="flex items-center justify-around">
+        <div className="mx-3 mb-3 bg-white/95 backdrop-blur-2xl rounded-3xl border border-surface-container-high/50 shadow-[0_-4px_30px_rgba(0,0,0,0.06)] px-2 py-2">
+          <div className="flex items-stretch justify-around gap-1">
             {/* Beranda */}
             <button 
               onClick={() => onNavigate('home')}
-              className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
+              className={`flex-1 flex flex-col items-center justify-center py-2 px-1.5 rounded-2xl transition-all duration-300 ${
                 isActive('exam') 
                   ? 'bg-primary-container/20 text-on-primary-fixed' 
                   : 'text-on-surface-variant/60 hover:text-on-surface-variant'
               }`}
             >
               <Home size={20} strokeWidth={isActive('exam') ? 2.5 : 1.8} />
-              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('exam') ? 'opacity-100' : 'opacity-70'}`}>Beranda</span>
+              <span className={`text-[9px] font-bold mt-1 tracking-wide transition-all ${isActive('exam') ? 'opacity-100' : 'opacity-80'}`}>Beranda</span>
             </button>
             
             {/* Sikap */}
             <button 
               onClick={() => onNavigate('behavior')}
-              className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
+              className={`flex-1 flex flex-col items-center justify-center py-2 px-1.5 rounded-2xl transition-all duration-300 ${
                 isActive('behavior') 
                   ? 'bg-primary-container/20 text-on-primary-fixed' 
                   : 'text-on-surface-variant/60 hover:text-on-surface-variant'
               }`}
             >
               <ShieldCheck size={20} strokeWidth={isActive('behavior') ? 2.5 : 1.8} />
-              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('behavior') ? 'opacity-100' : 'opacity-70'}`}>Sikap</span>
+              <span className={`text-[9px] font-bold mt-1 tracking-wide transition-all ${isActive('behavior') ? 'opacity-100' : 'opacity-80'}`}>Sikap</span>
             </button>
 
             {/* Kehadiran */}
             <button 
               onClick={() => onNavigate('attendance')}
-              className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
+              className={`flex-1 flex flex-col items-center justify-center py-2 px-1.5 rounded-2xl transition-all duration-300 ${
                 isActive('attendance') 
                   ? 'bg-primary-container/20 text-on-primary-fixed' 
                   : 'text-on-surface-variant/60 hover:text-on-surface-variant'
               }`}
             >
               <Calendar size={20} strokeWidth={isActive('attendance') ? 2.5 : 1.8} />
-              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('attendance') ? 'opacity-100' : 'opacity-70'}`}>Absen</span>
+              <span className={`text-[9px] font-bold mt-1 tracking-wide transition-all ${isActive('attendance') ? 'opacity-100' : 'opacity-80'}`}>Absen</span>
             </button>
 
 
@@ -389,21 +389,21 @@ export default function Navbar() {
             {(isStudent || isParent) && (
               <button 
                 onClick={() => onNavigate('student_lesson')}
-                className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
+                className={`flex-1 flex flex-col items-center justify-center py-2 px-1.5 rounded-2xl transition-all duration-300 ${
                   isActive('student_lesson') 
                     ? 'bg-primary-container/20 text-on-primary-fixed' 
                     : 'text-on-surface-variant/60 hover:text-on-surface-variant'
                 }`}
               >
                 <BookOpen size={20} strokeWidth={isActive('student_lesson') ? 2.5 : 1.8} />
-                <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('student_lesson') ? 'opacity-100' : 'opacity-70'}`}>Materi</span>
+                <span className={`text-[9px] font-bold mt-1 tracking-wide transition-all ${isActive('student_lesson') ? 'opacity-100' : 'opacity-80'}`}>Materi</span>
               </button>
             )}
 
             {/* More Menu / Profile */}
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
+              className={`flex-1 flex flex-col items-center justify-center py-2 px-1.5 rounded-2xl transition-all duration-300 ${
                 isMobileMenuOpen 
                   ? 'bg-surface-container text-on-surface' 
                   : 'text-on-surface-variant/60 hover:text-on-surface-variant'
@@ -420,7 +420,7 @@ export default function Navbar() {
               ) : (
                 <Menu size={20} strokeWidth={1.8} />
               )}
-              <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isMobileMenuOpen ? 'opacity-100' : 'opacity-70'}`}>
+              <span className={`text-[9px] font-bold mt-1 tracking-wide transition-all ${isMobileMenuOpen ? 'opacity-100' : 'opacity-80'}`}>
                 {(!isAdmin && (isStudent || isParent) && studentData) ? 'Profil' : 'Menu'}
               </span>
             </button>

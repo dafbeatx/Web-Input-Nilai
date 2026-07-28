@@ -233,7 +233,7 @@ export default function BehaviorLayer({
   return (
     <>
     
-    <div className="bg-surface-container-lowest text-on-surface antialiased min-h-screen pb-32">
+    <div className="bg-surface-container-lowest text-on-surface antialiased min-h-screen pb-36">
       {/* TopAppBar */}
       <header className="bg-white/80 backdrop-blur-lg fixed top-0 z-[60] w-full flex justify-between items-center px-6 py-4 shadow-[0_10px_40px_rgba(15,23,42,0.04)]">
         <div className="flex items-center gap-3">
@@ -256,7 +256,7 @@ export default function BehaviorLayer({
         </div>
       </header>
 
-      <main className="pt-24 max-w-7xl mx-auto px-6">
+      <main className="pt-24 max-w-7xl mx-auto px-4 sm:px-6">
         {/* Navigation Tabs */}
         <nav className="hidden md:flex items-center gap-8 mb-12 border-b border-surface-container overflow-x-auto no-scrollbar">
           <button onClick={onBack} className="pb-4 text-xs font-bold uppercase tracking-[0.05em] text-slate-400 hover:text-slate-600 transition-colors whitespace-nowrap">Beranda</button>
@@ -275,7 +275,7 @@ export default function BehaviorLayer({
         )}
 
         {/* Title Section */}
-        <div className="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+        <div className="mb-8 sm:mb-10 mobile-card-stack sm:bg-transparent sm:p-0 sm:shadow-none sm:border-0 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-5 sm:gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant/70">Tahun Ajaran:</span>
@@ -294,22 +294,22 @@ export default function BehaviorLayer({
                 <option value="2027/2028" className="text-on-surface">2027/2028</option>
               </select>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
               <button onClick={onBack} className="w-10 h-10 shrink-0 rounded-full border border-surface-container flex items-center justify-center hover:bg-surface-container transition-colors active:scale-95">
                 <span className="material-symbols-outlined text-on-surface shrink-0">arrow_back</span>
               </button>
-              <h1 className="text-3xl sm:text-4xl font-headline font-semibold tracking-[-0.04em] text-on-primary-fixed">Kedisiplinan</h1>
+              <h1 className="text-2xl sm:text-4xl font-headline font-semibold tracking-[-0.04em] text-on-primary-fixed">Kedisiplinan</h1>
             </div>
           </div>
           {isAdmin && (
-             <button onClick={() => setIsManagingReasons(true)} className="px-5 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/30 text-sm font-bold text-on-surface transition-all hover:bg-surface-container shadow-sm flex items-center gap-2 shrink-0 active:scale-95">
+             <button onClick={() => setIsManagingReasons(true)} className="w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-2xl sm:rounded-xl bg-surface-container-low border border-outline-variant/30 text-sm font-bold text-on-surface transition-all hover:bg-surface-container shadow-sm flex items-center justify-center gap-2 shrink-0 active:scale-95">
                <span className="material-symbols-outlined text-[18px] shrink-0">settings</span> Kelola Poin
              </button>
           )}
         </div>
 
         {/* Horizontal Filter Pills */}
-        <div className="mb-8 overflow-x-auto no-scrollbar flex items-center gap-3 py-2 -mx-6 px-6 sm:mx-0 sm:px-0">
+        <div className="mb-8 overflow-x-auto no-scrollbar flex items-center gap-3 py-2 -mx-4 px-4 sm:-mx-6 sm:px-6 md:mx-0 md:px-0">
           {['Semua Kelas', ...availableClasses].map((cls) => {
             const isActive = className === cls;
             return (
@@ -356,8 +356,8 @@ export default function BehaviorLayer({
             students.filter(s => s.student_name.toLowerCase().includes(newStudentName.toLowerCase())).map((student) => {
               const hasViolations = student.total_points > 0;
               return (
-                <div key={student.id} className="group bg-white rounded-[16px] p-6 sm:p-8 shadow-[0_10px_40px_rgba(15,23,42,0.04)] border border-transparent hover:border-surface-container transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                  <div className="flex items-center gap-5 w-full sm:w-auto">
+                <div key={student.id} className="group bg-white rounded-[24px] sm:rounded-[16px] p-5 sm:p-8 shadow-[0_10px_40px_rgba(15,23,42,0.04)] border border-transparent hover:border-surface-container transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 sm:gap-6">
+                  <div className="flex items-center gap-4 sm:gap-5 w-full sm:w-auto">
                     <div 
                       className={"w-14 h-14 shrink-0 rounded-full flex items-center justify-center text-white font-semibold text-lg tracking-wider relative overflow-hidden ring-4 ring-white shadow-sm " + (student.avatar_url ? 'bg-surface-container' : 'bg-on-primary-fixed') + (isAdmin ? ' cursor-pointer hover:opacity-80' : '')}
                       onClick={() => {
@@ -371,11 +371,11 @@ export default function BehaviorLayer({
                       )}
                     </div>
                     <div className="min-w-0 pr-4 flex-1">
-                      <h3 className="text-lg sm:text-xl font-headline font-bold tracking-tight text-on-primary-fixed mb-1 uppercase truncate w-full" title={formatStudentName(student.student_name)}>{formatStudentName(student.student_name)}</h3>
+                      <h3 className="text-base sm:text-xl font-headline font-bold tracking-tight text-on-primary-fixed mb-2 uppercase truncate w-full" title={formatStudentName(student.student_name)}>{formatStudentName(student.student_name)}</h3>
                       <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.05em] text-on-surface-variant whitespace-nowrap">KELAS {student.class_name}</span>
+                        <span className="px-2.5 py-1 rounded-full bg-surface-container text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.05em] text-on-surface-variant whitespace-nowrap">KELAS {student.class_name}</span>
                         <span className="w-1 h-1 rounded-full bg-surface-container shrink-0"></span>
-                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.05em] text-on-surface-variant whitespace-nowrap">Skor: {student.total_points}</span>
+                        <span className="px-2.5 py-1 rounded-full bg-surface-container text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.05em] text-on-surface-variant whitespace-nowrap">Skor: {student.total_points}</span>
                       </div>
                     </div>
                   </div>

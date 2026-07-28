@@ -1269,11 +1269,11 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
          </div>
        </header>
 
-      <main className="flex-1 pt-24 pb-32 px-4 sm:px-6 flex flex-col gap-6 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <main className="flex-1 pt-24 pb-32 px-4 sm:px-6 flex flex-col gap-7 sm:gap-6 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
         
         {/* Controls */}
-        <section className="flex flex-col md:flex-row justify-between gap-4">
-           <div className="relative flex-1 max-w-md">
+        <section className="flex flex-col md:flex-row justify-between gap-4 sm:gap-5">
+           <div className="relative flex-1 max-w-md w-full">
              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/50" />
              <input 
                 type="text"
@@ -1283,13 +1283,13 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
                 className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-2xl pl-12 pr-4 py-3 text-sm font-medium text-primary placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none"
              />
            </div>
-           <div className="flex gap-2">
+           <div className="grid grid-cols-1 sm:flex gap-3 sm:gap-2 w-full md:w-auto">
                {selectedClass !== 'Semua' && filteredStudents.length > 0 && (
                  <>
                    <button 
                      onClick={() => generateClassAcademicPdfReport(filteredStudents, selectedClass)}
                      disabled={isAnyActionActive}
-                     className="px-4 py-3 bg-emerald-500/10 text-emerald-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-2 border border-emerald-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                     className="px-4 py-3 bg-emerald-500/10 text-emerald-600 rounded-2xl sm:rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-2 border border-emerald-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                      title="Unduh seluruh Rapor Akademik kelas ini"
                    >
                       {isDownloadingClassAcademicPdf ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />} 
@@ -1303,7 +1303,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
                         className: selectedClass
                       })}
                       disabled={isAnyActionActive}
-                      className="px-4 py-3 bg-rose-500/10 text-rose-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all flex items-center gap-2 border border-rose-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-3 bg-rose-500/10 text-rose-600 rounded-2xl sm:rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center gap-2 border border-rose-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Unduh seluruh Laporan Pelanggaran kelas ini"
                     >
                        {isDownloadingClassBehaviorPdf ? <Loader2 size={16} className="animate-spin" /> : <AlertTriangle size={16} />} 
@@ -1317,14 +1317,14 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
                     setWizardStep(1);
                   }}
                   disabled={isAnyActionActive}
-                  className="px-4 py-3 bg-amber-500/10 text-amber-500 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all flex items-center gap-2 border border-amber-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-3 bg-amber-500/10 text-amber-500 rounded-2xl sm:rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all flex items-center justify-center gap-2 border border-amber-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                    {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Edit2 size={16} />} Import Excel
                 </button>
                <button 
                  onClick={() => setIsAddingStudent(true)}
                  disabled={isAnyActionActive}
-                 className="px-4 py-3 bg-primary text-surface-container-lowest rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                 className="px-4 py-3 bg-primary text-surface-container-lowest rounded-2xl sm:rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                >
                   {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} strokeWidth={3} />} Tambah Siswa
                </button>
@@ -1333,12 +1333,12 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
 
         {/* Class Filter Buttons */}
         {students.length > 0 && (
-          <section className="flex flex-wrap gap-2">
+          <section className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
             {uniqueClasses.map((cls) => (
               <button
                 key={cls}
                 onClick={() => setSelectedClass(cls)}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
+                className={`px-4 py-2.5 rounded-2xl sm:rounded-xl text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap shrink-0 ${
                   selectedClass === cls
                     ? 'bg-primary text-white shadow-md shadow-primary/20 scale-105'
                     : 'bg-surface-container text-on-surface-variant hover:bg-surface-variant hover:text-primary'
@@ -1363,7 +1363,61 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
                <p className="text-sm font-bold uppercase tracking-widest">Tidak ada data ditemukan</p>
              </div>
           ) : (
-             <div className="overflow-x-auto">
+             <>
+             <div className="md:hidden space-y-4 p-4">
+               {filteredStudents.map(s => (
+                 <article key={s.id} className="mobile-card-stack space-y-4">
+                   <div className="flex items-start gap-4">
+                     <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black shrink-0">
+                       {s.name[0]?.toUpperCase()}
+                     </div>
+                     <div className="min-w-0 flex-1">
+                       <p className="font-black text-primary text-base leading-tight">{s.name}</p>
+                       <div className="flex flex-wrap gap-2 mt-2">
+                         <span className="px-2.5 py-1 bg-surface-container text-on-surface-variant text-[10px] font-black rounded-full uppercase tracking-wider">{s.className}</span>
+                         {!s.isLinked && <span className="px-2.5 py-1 bg-amber-500/10 text-amber-600 text-[10px] font-black rounded-full flex items-center gap-1"><AlertCircle size={11} /> Belum Aktivasi</span>}
+                       </div>
+                     </div>
+                   </div>
+
+                   <div className="grid grid-cols-2 gap-3">
+                     <div className="rounded-2xl bg-surface-container-low p-3">
+                       <span className="text-[10px] text-on-surface-variant uppercase tracking-widest font-black block mb-1">Mapel</span>
+                       <span className="font-black text-primary flex items-center gap-1"><BookOpen size={14} className="text-tertiary" /> {s.scores.length}</span>
+                     </div>
+                     <div className="rounded-2xl bg-surface-container-low p-3">
+                       <span className="text-[10px] text-on-surface-variant uppercase tracking-widest font-black block mb-1">Poin Sikap</span>
+                       <span className={`font-black flex items-center gap-1 ${s.behaviorPoints < 0 ? 'text-error' : 'text-primary'}`}><ShieldCheck size={14} className={s.behaviorPoints < 0 ? 'text-error' : 'text-emerald-500'} /> {s.behaviorPoints}</span>
+                     </div>
+                   </div>
+
+                   <div className="grid grid-cols-3 gap-2 pt-1">
+                     <button
+                       onClick={() => generateAcademicPdfReport(s)}
+                       disabled={isAnyActionActive}
+                       className="h-11 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center gap-1.5 text-[10px] font-black uppercase disabled:opacity-50"
+                     >
+                       {downloadingAcademicId === s.id ? <Loader2 size={16} className="animate-spin" /> : <FileText size={15} />} Nilai
+                     </button>
+                     <button
+                       onClick={() => setSignatureModal({ isOpen: true, type: 'single', student: s })}
+                       disabled={isAnyActionActive}
+                       className="h-11 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center gap-1.5 text-[10px] font-black uppercase disabled:opacity-50"
+                     >
+                       {downloadingBehaviorId === s.id ? <Loader2 size={16} className="animate-spin" /> : <AlertTriangle size={15} />} Sikap
+                     </button>
+                     <button
+                       onClick={() => handleDeleteStudent(s.name, s.className)}
+                       disabled={isAnyActionActive}
+                       className="h-11 rounded-2xl bg-error/10 text-error flex items-center justify-center gap-1.5 text-[10px] font-black uppercase disabled:opacity-50"
+                     >
+                       <Trash2 size={15} /> Hapus
+                     </button>
+                   </div>
+                 </article>
+               ))}
+             </div>
+             <div className="hidden md:block overflow-x-auto">
                <table className="w-full text-left border-collapse">
                  <thead>
                    <tr className="bg-surface-container text-on-surface-variant text-[10px] font-black uppercase tracking-widest">
@@ -1439,6 +1493,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
                  </tbody>
                </table>
              </div>
+             </>
           )}
         </section>
       </main>
