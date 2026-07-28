@@ -145,15 +145,23 @@ export default function GradeMaster() {
   const fetchSessions = useCallback(async () => {
     setIsLoadingSessions(true);
     try {
-      const res = await fetch("/api/grademaster");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch("/api/grademaster", { signal: controller.signal });
+      clearTimeout(timeoutId);
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
       if (data.sessions) setSessions(data.sessions);
-    } catch {
-      // ignore
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal memuat daftar sesi";
+      console.error("[fetchSessions] Error loading sessions:", err);
+      setToast({ message: `Sesi: ${msg}`, type: "error" });
     } finally {
       setIsLoadingSessions(false);
     }
-  }, []);
+  }, [setToast]);
 
   const fetchSessionData = async (name: string, pass: string) => {
     const params = new URLSearchParams({
