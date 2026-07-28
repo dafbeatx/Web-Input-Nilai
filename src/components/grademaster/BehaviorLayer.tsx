@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, AlertCircle, Loader2, Trash2, X } from 'lucide-react';
 import { ToastType, GradedStudent, DEFAULT_VIOLATION_REASONS, isImageUrl } from '@/lib/grademaster/types';
@@ -130,14 +130,17 @@ export default function BehaviorLayer({
     }
   }, [className, academicYear]);
 
-  // Sync prop changes from container if activeYear changes externally
+  const prevActiveYearRef = useRef(activeYear);
+
+  // Sync prop changes from container if activeYear changes externally from parent
   useEffect(() => {
-    if (activeYear && activeYear !== academicYear) {
+    if (prevActiveYearRef.current !== activeYear) {
+      prevActiveYearRef.current = activeYear;
       queueMicrotask(() => {
         setAcademicYear(activeYear);
       });
     }
-  }, [activeYear, academicYear]);
+  }, [activeYear]);
 
   // Load available classes & students whenever academicYear changes
   useEffect(() => {

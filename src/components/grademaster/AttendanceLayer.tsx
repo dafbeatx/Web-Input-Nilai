@@ -126,19 +126,24 @@ export default function AttendanceLayer({
     }
   }, [academicYear, setToast]);
 
-  // Sync props to state when they change
+  const prevActiveYearRef = useRef(activeYear);
+  const prevActiveClassRef = useRef(activeClass);
+
+  // Sync props to state when parent props change from outside
   useEffect(() => {
-    if (activeYear && activeYear !== academicYear) {
+    if (prevActiveYearRef.current !== activeYear) {
+      prevActiveYearRef.current = activeYear;
       queueMicrotask(() => {
         setAcademicYear(activeYear);
       });
     }
-    if (activeClass && activeClass !== className) {
+    if (prevActiveClassRef.current !== activeClass) {
+      prevActiveClassRef.current = activeClass;
       queueMicrotask(() => {
         setClassName(activeClass);
       });
     }
-  }, [activeClass, activeYear, academicYear, className]);
+  }, [activeClass, activeYear]);
 
   useEffect(() => {
     queueMicrotask(() => {
