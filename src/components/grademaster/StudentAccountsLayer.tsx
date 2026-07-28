@@ -6,7 +6,7 @@ import {
   UserPlus, ShieldCheck, Camera, AlertCircle, CheckCircle2,
   KeyRound, Image as ImageIcon, TrendingUp
 } from 'lucide-react';
-import { ToastType, StudentAccount } from '@/lib/grademaster/types';
+import { ToastType, StudentAccount, isImageUrl } from '@/lib/grademaster/types';
 
 interface StudentAccountsLayerProps {
   onBack: () => void;
@@ -414,7 +414,7 @@ export default function StudentAccountsLayer({
                 {/* Photo / Avatar */}
                 <div className="relative group shrink-0">
                   <div className="w-12 h-12 rounded-xl overflow-hidden bg-surface-variant border border-outline-variant flex items-center justify-center">
-                    {account.profile_photo_url ? (
+                    {account.profile_photo_url && isImageUrl(account.profile_photo_url) ? (
                       <img
                         src={account.profile_photo_url}
                         alt={account.student_name}
@@ -422,7 +422,7 @@ export default function StudentAccountsLayer({
                         loading="lazy"
                       />
                     ) : (
-                      <span className="text-base font-black text-primary font-outfit">{(account.student_name || 'S').charAt(0)}</span>
+                      <span className="text-base font-black text-primary font-outfit">{account.profile_photo_url || (account.student_name || 'S').charAt(0)}</span>
                     )}
                   </div>
                   <label className="absolute inset-0 cursor-pointer opacity-0 group-hover:opacity-100 bg-black/60 rounded-xl flex items-center justify-center transition-opacity">

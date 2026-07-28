@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, AlertCircle, Loader2, Trash2, X } from 'lucide-react';
-import { ToastType, GradedStudent, DEFAULT_VIOLATION_REASONS } from '@/lib/grademaster/types';
+import { ToastType, GradedStudent, DEFAULT_VIOLATION_REASONS, isImageUrl } from '@/lib/grademaster/types';
 import { supabase } from '@/lib/supabase/client';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import StudentProfileLayer from './StudentProfileLayer';
@@ -306,7 +306,7 @@ export default function BehaviorLayer({
              {isAdmin ? (
                 adminUser?.[0] || 'A'
              ) : (
-                studentData?.photo_url ? <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" /> : (studentData?.name?.[0] || 'S')
+                studentData?.photo_url && isImageUrl(studentData.photo_url) ? <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" /> : (studentData?.photo_url || studentData?.name?.[0] || 'S')
              )}
           </div>
         </div>
@@ -423,9 +423,11 @@ export default function BehaviorLayer({
                         }
                       }}
                     >
-                      {student.avatar_url ? (
-                         <img src={student.avatar_url} alt={student.student_name} className="w-full h-full object-cover" />
-                      ) : student.student_name.slice(0, 2).toUpperCase()}
+                      {isImageUrl(student.avatar_url) ? (
+                         <img src={student.avatar_url!} alt={student.student_name} className="w-full h-full object-cover" />
+                      ) : (
+                         <span className="text-xl">{student.avatar_url || student.student_name.slice(0, 2).toUpperCase()}</span>
+                      )}
                       {uploadingAvatarId === student.id && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm"><Loader2 size={16} className="animate-spin text-white" /></div>
                       )}

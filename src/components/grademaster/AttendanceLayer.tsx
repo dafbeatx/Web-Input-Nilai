@@ -3,7 +3,7 @@ import {
   Users, Loader2, CheckCircle2, 
   BookOpen, Info, HeartPulse, LayoutGrid
 } from 'lucide-react';
-import { ToastType } from '@/lib/grademaster/types';
+import { ToastType, isImageUrl } from '@/lib/grademaster/types';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 
 interface AttendanceRecord {
@@ -263,7 +263,7 @@ export default function AttendanceLayer({
              {isAdmin ? (
                 adminUser?.[0] || 'A'
              ) : (
-                studentData?.photo_url ? <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" /> : (studentData?.name?.[0] || 'S')
+                studentData?.photo_url && isImageUrl(studentData.photo_url) ? <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" /> : (studentData?.photo_url || studentData?.name?.[0] || 'S')
              )}
           </div>
         </div>
@@ -444,9 +444,11 @@ export default function AttendanceLayer({
                 <div key={s.id} className="group bg-white rounded-xl p-3 md:p-5 border border-slate-100 hover:border-slate-200 transition-all flex flex-row items-center justify-between gap-3 md:gap-6 shadow-sm">
                   <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
                     <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-full flex items-center justify-center text-white font-semibold text-sm md:text-lg tracking-wider relative overflow-hidden bg-slate-900 border border-slate-100 shadow-sm">
-                      {s.avatar_url ? (
-                         <img src={s.avatar_url} alt={s.student_name} className="w-full h-full object-cover" />
-                      ) : s.student_name.slice(0, 2).toUpperCase()}
+                      {isImageUrl(s.avatar_url) ? (
+                         <img src={s.avatar_url!} alt={s.student_name} className="w-full h-full object-cover" />
+                      ) : (
+                         <span className="text-xl">{s.avatar_url || s.student_name.slice(0, 2).toUpperCase()}</span>
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm md:text-base font-bold text-slate-900 leading-tight truncate w-full" title={formatStudentName(s.student_name)}>

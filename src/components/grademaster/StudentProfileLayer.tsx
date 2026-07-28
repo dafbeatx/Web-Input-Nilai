@@ -1017,7 +1017,8 @@ export default function StudentProfileLayer({
 
   const isEmojiAvatar = (url: string | null | undefined) => {
     if (!url) return false;
-    return url.length <= 4 && !url.startsWith('http') && !url.startsWith('/') && !url.startsWith('data:');
+    const trimmed = url.trim();
+    return !trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.startsWith('/') && !trimmed.startsWith('data:') && !trimmed.startsWith('blob:');
   };
 
   const getGradientForEmoji = (emoji: string | null | undefined) => {

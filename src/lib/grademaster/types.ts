@@ -45,6 +45,21 @@ export interface StudentResult {
   lps: number;
 }
 
+export function isImageUrl(url?: string | null): boolean {
+  if (!url) return false;
+  const trimmed = url.trim();
+  return trimmed.startsWith('http://') || 
+         trimmed.startsWith('https://') || 
+         trimmed.startsWith('/') || 
+         trimmed.startsWith('data:') || 
+         trimmed.startsWith('blob:');
+}
+
+export function isEmojiAvatar(url?: string | null): boolean {
+  if (!url) return false;
+  return !isImageUrl(url);
+}
+
 export interface GradedStudent {
   id: string;
   name: string;

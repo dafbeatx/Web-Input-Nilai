@@ -4,7 +4,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { 
   Clock, RotateCcw, X, Save, User
 } from 'lucide-react';
-import { GradedStudent, ScoringConfig, SessionMeta } from '@/lib/grademaster/types';
+import { GradedStudent, ScoringConfig, SessionMeta, isImageUrl } from '@/lib/grademaster/types';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 
 interface RemedialDashboardLayerProps {
@@ -642,7 +642,7 @@ export default function RemedialDashboardLayer({
                           <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden border ${
                             student.remedialStatus === 'CHEATED' ? 'border-error/30' : 'border-outline-variant/20'
                           }`}>
-                             {student.remedialPhoto ? (
+                             {student.remedialPhoto && isImageUrl(student.remedialPhoto) ? (
                                <img src={student.remedialPhoto} alt={student.name} className="w-full h-full object-cover" />
                              ) : (
                                <User size={20} className="text-on-surface-variant/40" />

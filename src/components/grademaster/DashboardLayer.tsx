@@ -9,7 +9,7 @@ import {
   ClipboardList, ShieldCheck, DownloadCloud, FileText, Filter, ChevronRight,
   FileSpreadsheet, FileDown
 } from 'lucide-react';
-import { GradedStudent, AnalyticsResult } from '@/lib/grademaster/types';
+import { GradedStudent, AnalyticsResult, isImageUrl } from '@/lib/grademaster/types';
 import { exportToPDF, exportToExcel, exportToDOCX } from '@/lib/grademaster/reportExport';
 import { getCsiLabel, getLpsLabel } from '@/lib/grademaster/scoring';
 import { 
@@ -480,10 +480,10 @@ export default function DashboardLayer({
                   <div key={s.id} className="bg-surface-container-high p-4 rounded-[1.5rem] flex items-center justify-between group border border-outline-variant hover:border-outline-variant transition-all">
                     <div className="flex items-center gap-4 min-w-0 flex-1">
                       <div className="w-12 h-12 rounded-2xl overflow-hidden bg-surface-container-highest flex items-center justify-center text-primary font-bold border border-outline-variant">
-                        {behavior?.avatar_url ? (
-                          <img src={behavior.avatar_url} alt={s.name} className="w-full h-full object-cover" />
+                        {isImageUrl(behavior?.avatar_url) ? (
+                          <img src={behavior!.avatar_url!} alt={s.name} className="w-full h-full object-cover" />
                         ) : (
-                          <span className="text-lg opacity-40">{s.name.slice(0, 2).toUpperCase()}</span>
+                          <span className="text-lg font-bold">{behavior?.avatar_url || s.name.slice(0, 2).toUpperCase()}</span>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
