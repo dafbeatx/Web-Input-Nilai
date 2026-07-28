@@ -130,17 +130,11 @@ export default function BehaviorLayer({
     }
   }, [className, academicYear]);
 
-  const prevActiveYearRef = useRef(activeYear);
-
-  // Sync prop changes from container if activeYear changes externally from parent
-  useEffect(() => {
-    if (prevActiveYearRef.current !== activeYear) {
-      prevActiveYearRef.current = activeYear;
-      queueMicrotask(() => {
-        setAcademicYear(activeYear);
-      });
-    }
-  }, [activeYear]);
+  const [prevActiveYear, setPrevActiveYear] = useState(activeYear);
+  if (prevActiveYear !== activeYear) {
+    setPrevActiveYear(activeYear);
+    setAcademicYear(activeYear);
+  }
 
   // Load available classes & students whenever academicYear changes
   useEffect(() => {
