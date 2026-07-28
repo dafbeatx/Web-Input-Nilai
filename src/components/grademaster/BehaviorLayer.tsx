@@ -130,20 +130,24 @@ export default function BehaviorLayer({
     }
   }, [className, academicYear]);
 
+  // Sync prop changes from container if activeYear changes externally
   useEffect(() => {
-    const yearToUse = activeYear || '2025/2026';
-    if (academicYear !== yearToUse) {
+    if (activeYear && activeYear !== academicYear) {
       queueMicrotask(() => {
-        setAcademicYear(yearToUse);
+        setAcademicYear(activeYear);
       });
     }
-    fetchBehaviorSettings(yearToUse);
-    fetchAvailableClasses(yearToUse).then(() => {
+  }, [activeYear]);
+
+  // Load available classes & students whenever academicYear changes
+  useEffect(() => {
+    fetchBehaviorSettings(academicYear);
+    fetchAvailableClasses(academicYear).then(() => {
       const initialClass = activeClass && activeClass !== "" ? activeClass : 'Semua Kelas';
       setClassName(initialClass);
-      loadClassDirectly(initialClass, yearToUse);
+      loadClassDirectly(initialClass, academicYear);
     });
-  }, [activeClass, activeYear, academicYear, fetchBehaviorSettings, fetchAvailableClasses, loadClassDirectly]);
+  }, [activeClass, academicYear, fetchBehaviorSettings, fetchAvailableClasses, loadClassDirectly]);
 
   // Load history & summary when a student is selected
   useEffect(() => {
@@ -331,7 +335,11 @@ export default function BehaviorLayer({
               <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant/70">Tahun Ajaran:</span>
               <select
                 value={academicYear}
-                onChange={(e) => setGlobalAcademicYear(e.target.value)}
+                onChange={(e) => {
+                  const newYr = e.target.value;
+                  setAcademicYear(newYr);
+                  setGlobalAcademicYear(newYr);
+                }}
                 className="bg-transparent text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#0061FF] hover:text-[#0052d4] cursor-pointer outline-none border-b border-dashed border-[#0061FF]/40 focus:border-[#0061FF] transition-all"
               >
                 <option value="2024/2025" className="text-on-surface">2024/2025</option>

@@ -13,16 +13,23 @@ export async function GET(req: NextRequest) {
 
     if (!className) {
       const year = academicYear || "2025/2026";
-      const { data, error } = await supabase
+      const { data: bData } = await supabase
         .from('gm_behaviors')
         .select('class_name')
         .eq('academic_year', year);
 
-      if (error) {
-        console.error('[GET Behaviors - Classes] DB Error:', error);
-        throw error;
-      }
-      const classes = Array.from(new Set((data as { class_name: string }[])?.map(d => d.class_name) || []));
+      const { data: accData } = await supabase
+        .from('gm_student_accounts')
+        .select('class_name')
+        .eq('academic_year', year);
+
+      const classesSet = new Set<string>();
+      (bData || []).forEach((d: { class_name: string }) => d.class_name && classesSet.add(d.class_name));
+      (accData || []).forEach((d: { class_name: string }) => d.class_name && classesSet.add(d.class_name));
+
+      const classes = Array.from(classesSet).sort((a, b) =>
+        a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+      );
       return NextResponse.json({ classes });
     }
 
@@ -30,24 +37,64 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Tahun ajaran wajib diisi' }, { status: 400 });
     }
 
-    let query = supabase
+    // 1. Fetch existing behavior records
+    let bQuery = supabase
       .from('gm_behaviors')
       .select('*')
       .eq('academic_year', academicYear)
       .order('student_name', { ascending: true });
 
     if (className !== 'Semua Kelas') {
-        query = query.eq('class_name', className);
+      bQuery = bQuery.eq('class_name', className);
     }
 
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('[GET Behaviors - Students] DB Error:', error);
-      throw error;
+    const { data: behaviorData, error: bErr } = await bQuery;
+    if (bErr) {
+      console.error('[GET Behaviors - Students] DB Error:', bErr);
+      throw bErr;
     }
 
-    return NextResponse.json({ students: data || [] });
+    // 2. Fetch master student accounts to ensure any new accounts are synchronized
+    let accQuery = supabase
+      .from('gm_student_accounts')
+      .select('student_name, class_name, academic_year')
+      .eq('academic_year', academicYear);
+
+    if (className !== 'Semua Kelas') {
+      accQuery = accQuery.eq('class_name', className);
+    }
+
+    const { data: accountData } = await accQuery;
+
+    // 3. Find accounts missing from gm_behaviors and auto-create them
+    const existingKeys = new Set((behaviorData || []).map((b: any) => `${b.student_name.trim().toLowerCase()}_${b.class_name}`));
+    const missingPayload: any[] = [];
+
+    for (const acc of (accountData || [])) {
+      const key = `${acc.student_name.trim().toLowerCase()}_${acc.class_name}`;
+      if (!existingKeys.has(key)) {
+        missingPayload.push({
+          student_name: acc.student_name,
+          class_name: acc.class_name,
+          academic_year: acc.academic_year || academicYear,
+          total_points: 0,
+          behavior_logs: []
+        });
+        existingKeys.add(key);
+      }
+    }
+
+    if (missingPayload.length > 0) {
+      await supabase
+        .from('gm_behaviors')
+        .upsert(missingPayload, { onConflict: 'student_name,class_name,academic_year', ignoreDuplicates: true });
+
+      // Re-fetch updated behaviors list
+      const { data: updatedBehaviorData } = await bQuery;
+      return NextResponse.json({ students: updatedBehaviorData || behaviorData || [] });
+    }
+
+    return NextResponse.json({ students: behaviorData || [] });
   } catch (err: any) {
     console.error('Fetch behaviors global error:', err);
     return NextResponse.json({ error: err.message || 'Gagal memuat data perilaku' }, { status: 500 });

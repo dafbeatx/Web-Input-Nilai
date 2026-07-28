@@ -223,6 +223,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Gagal menyimpan akun: ${insertError.message}` }, { status: 500 });
     }
 
+    // Step 5: Auto-create behavior records in gm_behaviors
+    if (inserted && inserted.length > 0) {
+      const behaviorPayload = inserted.map((acc: any) => ({
+        student_name: acc.student_name,
+        class_name: acc.class_name,
+        academic_year: acc.academic_year || academicYear,
+        total_points: 0,
+        behavior_logs: []
+      }));
+      await supabase
+        .from('gm_behaviors')
+        .upsert(behaviorPayload, { onConflict: 'student_name,class_name,academic_year', ignoreDuplicates: true });
+    }
+
     return NextResponse.json({
       message: `${inserted?.length || 0} akun siswa berhasil dibuat untuk ${className}`,
       created: inserted?.length || 0,
