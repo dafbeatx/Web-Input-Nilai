@@ -99,18 +99,24 @@ export default function RemedialDashboardLayer({
   // Auto-open editor once the selected session is loaded
   React.useEffect(() => {
     if (activeSessionId && openEditorOnLoad) {
-      setIsEditing(true);
-      setOpenEditorOnLoad(false);
+      queueMicrotask(() => {
+        setIsEditing(true);
+        setOpenEditorOnLoad(false);
+      });
     }
   }, [activeSessionId, openEditorOnLoad]);
 
   // Sync local config values when active session is updated
   React.useEffect(() => {
-    setLocalTimer(remedialTimer);
+    queueMicrotask(() => {
+      setLocalTimer(remedialTimer);
+    });
   }, [remedialTimer]);
 
   React.useEffect(() => {
-    setLocalDeadline(scoringConfig.remedialDeadline || "");
+    queueMicrotask(() => {
+      setLocalDeadline(scoringConfig.remedialDeadline || "");
+    });
   }, [scoringConfig.remedialDeadline]);
 
   const [aiForensicResult, setAiForensicResult] = useState<Record<string, any>>({});
@@ -997,9 +1003,9 @@ export default function RemedialDashboardLayer({
                                        </div>
                                      )}
                                   </div>
-                                  <p className="text-[11px] font-bold text-on-surface-variant/60 leading-relaxed mb-3">"{scoringConfig.remedialQuestions?.[idx]}"</p>
+                                  <p className="text-[11px] font-bold text-on-surface-variant/60 leading-relaxed mb-3">&quot;{scoringConfig.remedialQuestions?.[idx]}&quot;</p>
                                   <div className="bg-surface-container-high/40 p-3 rounded-2xl text-[11px] font-medium text-primary italic leading-relaxed border-l-2 border-tertiary/40">
-                                     "{ans || 'Kosong'}"
+                                     &quot;{ans || 'Kosong'}&quot;
                                   </div>
                                </div>
                              );

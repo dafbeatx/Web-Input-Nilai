@@ -811,7 +811,9 @@ export default function StudentProfileLayer({
         setLocalReasons(behaviorReasons);
       });
     } else {
-      fetchBehaviorSettings();
+      queueMicrotask(() => {
+        fetchBehaviorSettings();
+      });
     }
   }, [behaviorReasons, activeYear, fetchBehaviorSettings]);
 

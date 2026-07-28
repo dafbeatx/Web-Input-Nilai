@@ -39,7 +39,9 @@ export default function StudentAccountsLayer({
   const [hasBehaviors, setHasBehaviors] = useState(false);
 
   useEffect(() => {
-    setSelectedYear(activeYear);
+    queueMicrotask(() => {
+      setSelectedYear(activeYear);
+    });
   }, [activeYear]);
 
   const getNextAcademicYear = (current: string) => {
@@ -161,13 +163,15 @@ export default function StudentAccountsLayer({
     }
   }, [selectedClass, selectedYear, setToast]);
 
-  useEffect(() => { fetchClasses(); }, [fetchClasses]);
-  useEffect(() => { fetchAccounts(); }, [fetchAccounts]);
-  useEffect(() => { fetchBehaviorCount(); }, [fetchBehaviorCount]);
+  useEffect(() => { queueMicrotask(() => fetchClasses()); }, [fetchClasses]);
+  useEffect(() => { queueMicrotask(() => fetchAccounts()); }, [fetchAccounts]);
+  useEffect(() => { queueMicrotask(() => fetchBehaviorCount()); }, [fetchBehaviorCount]);
   
   useEffect(() => {
     if (activeClass) {
-      setSelectedClass(activeClass);
+      queueMicrotask(() => {
+        setSelectedClass(activeClass);
+      });
     }
   }, [activeClass]);
 
@@ -471,7 +475,7 @@ export default function StudentAccountsLayer({
           <div className="py-20 text-center bg-surface border border-dashed border-outline-variant rounded-2xl">
             <Users size={48} className="mx-auto text-on-surface-variant/40 mb-4 stroke-1" />
             <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider">Belum ada akun untuk kelas ini</p>
-            <p className="text-xs text-on-surface-variant/60 mt-1">Klik tombol **"Generate"** di atas untuk membuat akun otomatis secara instan.</p>
+            <p className="text-xs text-on-surface-variant/60 mt-1">Klik tombol &quot;Generate&quot; di atas untuk membuat akun otomatis secara instan.</p>
           </div>
         ) : (
           <div className="py-20 text-center bg-surface border border-dashed border-outline-variant rounded-2xl">
@@ -489,7 +493,7 @@ export default function StudentAccountsLayer({
           <div>
             <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wider">Password Masih Tersimpan</h4>
             <p className="text-xs text-amber-700/80 mt-1 leading-relaxed">
-              Segera ekspor ke Excel lalu klik **"Hapus Password"** untuk keamanan. Password plain hanya bersifat sementara sebelum akun diklaim siswa.
+              Segera ekspor ke Excel lalu klik &quot;Hapus Password&quot; untuk keamanan. Password plain hanya bersifat sementara sebelum akun diklaim siswa.
             </p>
           </div>
         </div>

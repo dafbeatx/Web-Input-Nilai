@@ -98,7 +98,10 @@ export default function DashboardLayer({
     const cached = sessionStorage.getItem(`gm_ai_insights_${sessionId}`);
     if (cached) {
       try {
-        setAiInsights(JSON.parse(cached));
+        const parsed = JSON.parse(cached);
+        queueMicrotask(() => {
+          setAiInsights(parsed);
+        });
       } catch {
         sessionStorage.removeItem(`gm_ai_insights_${sessionId}`);
       }
@@ -818,7 +821,7 @@ export default function DashboardLayer({
                           <span className="material-symbols-outlined text-4xl text-on-surface-variant/30 mb-4">analytics</span>
                           <h5 className="text-xs font-black text-primary uppercase tracking-wider">Belum Ada Analisis AI</h5>
                           <p className="text-[10px] text-on-surface-variant/60 font-bold uppercase tracking-widest mt-1 max-w-xs leading-relaxed">
-                             Ketuk tombol "Mulai Analisis AI" di atas untuk men-generasi laporan rekomendasi pembelajaran otomatis.
+                             Ketuk tombol &quot;Mulai Analisis AI&quot; di atas untuk men-generasi laporan rekomendasi pembelajaran otomatis.
                           </p>
                        </div>
                      )}

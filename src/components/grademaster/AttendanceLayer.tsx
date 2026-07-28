@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Users, Loader2, CheckCircle2, 
-  BookOpen, Info, HeartPulse, LayoutGrid
+  BookOpen, LayoutGrid
 } from 'lucide-react';
 import { ToastType, isImageUrl } from '@/lib/grademaster/types';
 import { useGradeMaster } from '@/context/GradeMasterContext';
@@ -129,21 +129,29 @@ export default function AttendanceLayer({
   // Sync props to state when they change
   useEffect(() => {
     if (activeYear && activeYear !== academicYear) {
-      setAcademicYear(activeYear);
+      queueMicrotask(() => {
+        setAcademicYear(activeYear);
+      });
     }
     if (activeClass && activeClass !== className) {
-      setClassName(activeClass);
+      queueMicrotask(() => {
+        setClassName(activeClass);
+      });
     }
   }, [activeClass, activeYear, academicYear, className]);
 
   useEffect(() => {
-    fetchAvailableClasses();
+    queueMicrotask(() => {
+      fetchAvailableClasses();
+    });
   }, [fetchAvailableClasses]);
 
   // Automatic loading when filters change
   useEffect(() => {
     if (className && subject && selectedDate) {
-      loadAttendance(className, subject, selectedDate);
+      queueMicrotask(() => {
+        loadAttendance(className, subject, selectedDate);
+      });
     }
   }, [className, subject, selectedDate, loadAttendance]);
 
@@ -173,7 +181,7 @@ export default function AttendanceLayer({
       }
       
       // Subtle success — no toast per student, just visual feedback via the button state
-    } catch (err: any) {
+    } catch (err: unknown) {
       setToast({ message: `Gagal menyimpan: ${studentName}`, type: "error" });
       // Revert on failure
       setAttendanceMap(prev => {
