@@ -185,7 +185,7 @@ export interface AuditLog {
   action_type: string;
   entity_type: string;
   entity_id?: string;
-  payload: any;
+  payload: unknown;
   ip_address?: string;
   created_at: string;
 }
@@ -197,7 +197,7 @@ export interface ExamsLog {
   event_type: string;
   severity: string;
   description?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   created_at: string;
 }
 
@@ -221,7 +221,7 @@ export interface Quiz {
   title: string;
   quiz_type: 'DAILY' | 'ASTS' | 'ASAJ';
   duration_minutes: number;
-  questions: any[];
+  questions: unknown[];
   created_at: string;
 }
 

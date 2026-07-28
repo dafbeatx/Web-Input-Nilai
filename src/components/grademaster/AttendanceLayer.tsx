@@ -181,7 +181,7 @@ export default function AttendanceLayer({
       }
       
       // Subtle success — no toast per student, just visual feedback via the button state
-    } catch (err: unknown) {
+    } catch (_err: unknown) {
       setToast({ message: `Gagal menyimpan: ${studentName}`, type: "error" });
       // Revert on failure
       setAttendanceMap(prev => {
@@ -194,20 +194,21 @@ export default function AttendanceLayer({
     }
   }, [className, subject, academicYear, selectedDate, setToast]);
 
-  const handleStatusChange = useCallback((studentName: string, status: string) => {
+  const handleStatusChange = (studentName: string, status: string) => {
     // Optimistic update
     setAttendanceMap(prev => ({ ...prev, [studentName]: status }));
     
     // Clear any pending save for this student
-    if (saveTimerRef.current[studentName]) {
-      clearTimeout(saveTimerRef.current[studentName]);
+    const timers = saveTimerRef.current;
+    if (timers[studentName]) {
+      clearTimeout(timers[studentName]);
     }
     
     // Debounced auto-save (150ms to handle rapid taps)
-    saveTimerRef.current[studentName] = setTimeout(() => {
+    timers[studentName] = setTimeout(() => {
       autoSaveStudent(studentName, status);
     }, 150);
-  }, [autoSaveStudent]);
+  };
 
   const stats = {
     total: students.length,
