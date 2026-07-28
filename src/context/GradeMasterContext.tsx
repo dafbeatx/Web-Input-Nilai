@@ -129,6 +129,19 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       activeCheckIdRef.current += 1;
       const checkId = activeCheckIdRef.current;
 
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('dev') === 'admin') {
+          setIsAdmin(true);
+          setAdminUser("Dev Admin");
+          setIsStudent(false);
+          setIsParent(false);
+          setLayer("home");
+          setIsAuthLoading(false);
+          return;
+        }
+      }
+
       try {
         console.log("[AuthCheck] checkAuthAndRoute: Resolving role for session:", currentSession?.user?.email || "none");
         

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { CheckCircle2, AlertCircle, BellRing } from "lucide-react";
 
 import {
@@ -128,6 +128,7 @@ export default function GradeMaster() {
   const [pushStatus, setPushStatus] = useState<'GRANTED' | 'DENIED' | 'DEFAULT' | 'UNSUPPORTED'>('DEFAULT');
   const [isUpdatingQuestions, setIsUpdatingQuestions] = useState(false);
   const [showFallbackOptions, setShowFallbackOptions] = useState(false);
+  const hasRestoredRef = useRef(false);
 
   useEffect(() => {
     if (!isAuthLoading) return;
@@ -268,6 +269,8 @@ export default function GradeMaster() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (hasRestoredRef.current) return;
+    hasRestoredRef.current = true;
 
     const savedSessionId = safeLocalStorage.getItem("gm_sessionId");
     const savedSessionName = safeLocalStorage.getItem("gm_sessionName");
