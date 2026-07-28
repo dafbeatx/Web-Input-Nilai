@@ -137,15 +137,17 @@ export default function BehaviorLayer({
         setAcademicYear(activeYear);
       });
     }
-  }, [activeYear]);
+  }, [activeYear, academicYear]);
 
   // Load available classes & students whenever academicYear changes
   useEffect(() => {
-    fetchBehaviorSettings(academicYear);
-    fetchAvailableClasses(academicYear).then(() => {
-      const initialClass = activeClass && activeClass !== "" ? activeClass : 'Semua Kelas';
-      setClassName(initialClass);
-      loadClassDirectly(initialClass, academicYear);
+    queueMicrotask(() => {
+      fetchBehaviorSettings(academicYear);
+      fetchAvailableClasses(academicYear).then(() => {
+        const initialClass = activeClass && activeClass !== "" ? activeClass : 'Semua Kelas';
+        setClassName(initialClass);
+        loadClassDirectly(initialClass, academicYear);
+      });
     });
   }, [activeClass, academicYear, fetchBehaviorSettings, fetchAvailableClasses, loadClassDirectly]);
 

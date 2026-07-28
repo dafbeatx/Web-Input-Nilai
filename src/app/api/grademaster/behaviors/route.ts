@@ -95,9 +95,10 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ students: behaviorData || [] });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Fetch behaviors global error:', err);
-    return NextResponse.json({ error: err.message || 'Gagal memuat data perilaku' }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Gagal memuat data perilaku';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -129,7 +130,7 @@ export async function POST(req: NextRequest) {
       behavior_logs: []
     }));
 
-    const { data: finalInsert, error: upsertError } = await supabase
+    const { error: upsertError } = await supabase
       .from('gm_behaviors')
       .upsert(insertPayload, { onConflict: 'student_name, class_name, academic_year', ignoreDuplicates: true })
       .select();
@@ -160,9 +161,10 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ students: currentStudents });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Create behaviors failure:', err);
-    return NextResponse.json({ error: err.message || 'Gagal menginisialisasi siswa' }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Gagal menginisialisasi siswa';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -221,9 +223,10 @@ export async function DELETE(req: NextRequest) {
     });
 
     return NextResponse.json({ message: 'Siswa berhasil dihapus' });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Delete behaviors failure:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -270,8 +273,9 @@ export async function PATCH(req: NextRequest) {
       throw error;
     }
     return NextResponse.json({ message: `Kelas berhasil diubah dari ${oldClassName} ke ${newClassName}` });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Patch behaviors failure:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

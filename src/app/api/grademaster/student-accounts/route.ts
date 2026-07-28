@@ -189,7 +189,7 @@ export async function POST(req: NextRequest) {
     const accountRows: any[] = [];
 
     for (const student of newStudents) {
-      let baseUsername = generateUsername(student.student_name, student.class_name);
+      const baseUsername = generateUsername(student.student_name, student.class_name);
       let username = baseUsername;
       let counter = 1;
 
