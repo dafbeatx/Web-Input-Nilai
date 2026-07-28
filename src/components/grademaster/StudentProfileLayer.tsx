@@ -807,7 +807,9 @@ export default function StudentProfileLayer({
 
   useEffect(() => {
     if (behaviorReasons && behaviorReasons.length > 0) {
-      setLocalReasons(behaviorReasons);
+      queueMicrotask(() => {
+        setLocalReasons(behaviorReasons);
+      });
     } else {
       fetchBehaviorSettings();
     }
@@ -830,13 +832,15 @@ export default function StudentProfileLayer({
 
   useEffect(() => {
     if (activeClass && activeYear) {
-      fetchStudentSummary(activeClass, activeYear);
-      fetchStudentLogs();
-      fetchAttendanceLogs();
-      fetchLoginLogs();
-      fetchActiveSessions();
-      // fetchClassLeaderboard();
-      fetchBehaviorSettings();
+      queueMicrotask(() => {
+        fetchStudentSummary(activeClass, activeYear);
+        fetchStudentLogs();
+        fetchAttendanceLogs();
+        fetchLoginLogs();
+        fetchActiveSessions();
+        // fetchClassLeaderboard();
+        fetchBehaviorSettings();
+      });
     }
   }, [studentId, studentName, activeClass, activeYear, isAdmin, fetchStudentSummary, fetchStudentLogs, fetchAttendanceLogs, fetchLoginLogs, fetchActiveSessions, fetchBehaviorSettings]);
 
