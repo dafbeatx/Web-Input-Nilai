@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, AlertCircle, Loader2, Trash2, X } from 'lucide-react';
 import { ToastType, GradedStudent, DEFAULT_VIOLATION_REASONS, isImageUrl } from '@/lib/grademaster/types';
@@ -54,11 +54,6 @@ export default function BehaviorLayer({
   // Modal & History State
   const [selectedStudent, setSelectedStudent] = useState<BehaviorStudent | null>(null);
   
-  // Avatar Upload State (For list view)
-  const [uploadingAvatarId, setUploadingAvatarId] = useState<string | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [, setTargetedAvatarStudent] = useState<string | null>(null);
-
   // Settings State
   const [isManagingReasons, setIsManagingReasons] = useState(false);
   const [behaviorReasons, setBehaviorReasons] = useState<{ text: string, weight: number }[]>([]);
@@ -208,55 +203,7 @@ export default function BehaviorLayer({
     }
   };
 
-  const handleAvatarUpload = async (studentId: string, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
 
-    if (file.size > 20 * 1024 * 1024) {
-      setToast({ message: "Ukuran foto terlalu besar (Maksimal 20MB)", type: "error" });
-      return;
-    }
-
-    setUploadingAvatarId(studentId);
-    setToast({ message: "Sedang memproses & mengoptimalkan gambar...", type: "success" });
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('studentId', studentId);
-
-      const res = await fetch('/api/grademaster/behaviors/avatar', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal mengunggah foto");
-
-      setToast({ message: "Foto profil berhasil diperbarui!", type: "success" });
-      setStudents(prev => prev.map(s => s.id === studentId ? { ...s, avatar_url: data.avatar_url } : s));
-      
-      if (selectedStudent && selectedStudent.id === studentId) {
-        setSelectedStudent(prev => prev ? { ...prev, avatar_url: data.avatar_url } : null);
-      }
-    } catch (err: unknown) {
-      console.error("Upload error:", err);
-      const msg = err instanceof Error ? err.message : "Gagal mengunggah. Coba gunakan format JPG/PNG.";
-      setToast({ message: msg, type: "error" });
-    } finally {
-      setUploadingAvatarId(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('id-ID', { 
-      day: 'numeric', 
-      month: 'short', 
-      year: 'numeric'
-    });
-  };
 
   const formatStudentName = (name: string) => {
     if (!name) return "";
@@ -414,19 +361,13 @@ export default function BehaviorLayer({
                     <div 
                       className={"w-14 h-14 shrink-0 rounded-full flex items-center justify-center text-white font-semibold text-lg tracking-wider relative overflow-hidden ring-4 ring-white shadow-sm " + (student.avatar_url ? 'bg-surface-container' : 'bg-on-primary-fixed') + (isAdmin ? ' cursor-pointer hover:opacity-80' : '')}
                       onClick={() => {
-                        if (isAdmin) {
-                           setTargetedAvatarStudent(student.id);
-                           fileInputRef.current?.click();
-                        }
+                        setSelectedStudent(student);
                       }}
                     >
                       {isImageUrl(student.avatar_url) ? (
                          <img src={student.avatar_url!} alt={student.student_name} className="w-full h-full object-cover" />
                       ) : (
                          <span className="text-xl">{student.avatar_url || student.student_name.slice(0, 2).toUpperCase()}</span>
-                      )}
-                      {uploadingAvatarId === student.id && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm"><Loader2 size={16} className="animate-spin text-white" /></div>
                       )}
                     </div>
                     <div className="min-w-0 pr-4 flex-1">
