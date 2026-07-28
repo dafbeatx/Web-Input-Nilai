@@ -2,6 +2,26 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { Layer, ToastType, ModalType } from '@/lib/grademaster/types';
 import { supabase } from '@/lib/supabase/client';
+import { type Session } from '@supabase/supabase-js';
+
+interface StudentData {
+  name?: string;
+  username?: string;
+  photo_url?: string;
+  avatar_url?: string;
+  email?: string;
+  id?: string;
+  class_name?: string;
+  isGoogleLinked?: boolean;
+  behavior_id?: string;
+  student_id?: string;
+  total_points?: number;
+  streak?: number;
+  study_streak?: number;
+  last_active_date?: string;
+  academic_year?: string;
+  [key: string]: unknown;
+}
 
 const safeLocalStorage = {
   getItem(key: string): string | null {
@@ -40,8 +60,8 @@ interface GradeMasterContextType {
   setIsStudent: (isStudent: boolean) => void;
   isParent: boolean;
   setIsParent: (isParent: boolean) => void;
-  studentData: any | null;
-  setStudentData: (data: any | null) => void;
+  studentData: StudentData | null;
+  setStudentData: (data: StudentData | null) => void;
   toast: ToastType | null;
   setToast: (toast: ToastType | null) => void;
   modal: ModalType;
@@ -51,6 +71,8 @@ interface GradeMasterContextType {
   academicYear: string;
   setAcademicYear: (year: string) => void;
   isAuthLoading: boolean;
+  refetchAuth: () => Promise<void>;
+  skipAuthLoading: () => void;
   logout: () => void;
 }
 
@@ -62,7 +84,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   const [adminUser, setAdminUser] = useState<string | null>(null);
   const [isStudent, setIsStudent] = useState(false);
   const [isParent, setIsParent] = useState(false);
-  const [studentData, setStudentData] = useState<any | null>(null);
+  const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [toast, setToast] = useState<ToastType | null>(null);
   const [modal, setModal] = useState<ModalType>(null);
   const [studentClass, setStudentClass] = useState("");
@@ -97,10 +119,12 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     const savedClass = safeLocalStorage.getItem('gm_studentClass');
     const savedYear = safeLocalStorage.getItem('gm_academicYear') || "2025/2026";
 
-    if (savedClass) setStudentClass(savedClass);
-    setAcademicYear(savedYear);
+    queueMicrotask(() => {
+      if (savedClass) setStudentClass(savedClass);
+      setAcademicYear(savedYear);
+    });
 
-    const checkAuthAndRoute = async (currentSession: any) => {
+    const checkAuthAndRoute = async (currentSession: Session | null) => {
       activeCheckIdRef.current += 1;
       const checkId = activeCheckIdRef.current;
 
@@ -127,17 +151,20 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         let activeAdmin = false;
         let activeStudent = false;
         let activeParent = false;
-        let resolvedStudentData: any = null;
+        let resolvedStudentData: StudentData | null = null;
         let activeAdminUser: string | null = null;
 
-        // Helper for retrying fetches with cache bypassing
+        // Helper for retrying fetches with cache bypassing and signal timeout
         const fetchWithRetry = async (url: string, retries = 3, delay = 350): Promise<Response> => {
           for (let i = 0; i < retries; i++) {
             try {
               const urlObj = new URL(url, window.location.origin);
               urlObj.searchParams.set('t', Date.now().toString());
               console.log(`[AuthInit Fetch] ${urlObj.toString()} (attempt ${i + 1}/${retries})...`);
-              const res = await fetch(urlObj.toString(), { cache: 'no-store' });
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 3500);
+              const res = await fetch(urlObj.toString(), { cache: 'no-store', signal: controller.signal });
+              clearTimeout(timeoutId);
               if (res.ok) return res;
             } catch (e) {
               console.warn(`[AuthInit Fetch] ${url} failed on attempt ${i + 1}:`, e);
@@ -146,15 +173,24 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
           }
           const finalUrlObj = new URL(url, window.location.origin);
           finalUrlObj.searchParams.set('t', Date.now().toString());
-          return fetch(finalUrlObj.toString(), { cache: 'no-store' });
+          const finalController = new AbortController();
+          const finalTimeoutId = setTimeout(() => finalController.abort(), 3500);
+          try {
+            const res = await fetch(finalUrlObj.toString(), { cache: 'no-store', signal: finalController.signal });
+            clearTimeout(finalTimeoutId);
+            return res;
+          } catch (e) {
+            clearTimeout(finalTimeoutId);
+            throw e;
+          }
         };
 
         if (savedParent) {
           console.log("[AuthInit] Parent mode detected via localStorage");
-          let parsedStudentData = null;
+          let parsedStudentData: StudentData | null = null;
           if (savedStudentData) {
             try {
-              parsedStudentData = JSON.parse(savedStudentData);
+              parsedStudentData = JSON.parse(savedStudentData) as StudentData;
             } catch (e) {
               console.error("[AuthInit] Failed to parse saved student data:", e);
             }
@@ -217,15 +253,15 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
             if (studentData.authenticated && studentData.role === 'student') {
               resolvedStudentData = { ...studentData.student, isGoogleLinked: true };
               setStudentData(resolvedStudentData);
-              if (resolvedStudentData.class_name) {
+              if (resolvedStudentData && resolvedStudentData.class_name) {
                 setStudentClass(resolvedStudentData.class_name);
               }
             } else {
               // Unlinked Google student
               resolvedStudentData = {
-                name: currentSession.user.user_metadata?.full_name || email,
+                name: String(currentSession.user.user_metadata?.full_name || email),
                 username: email,
-                photo_url: currentSession.user.user_metadata?.avatar_url || '',
+                photo_url: String(currentSession.user.user_metadata?.avatar_url || ''),
                 email: email,
                 id: email,
                 isGoogleLinked: false
@@ -250,10 +286,10 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
             setIsParent(false);
             resolvedStudentData = { ...studentCheckData.student, isGoogleLinked: true };
             setStudentData(resolvedStudentData);
-            if (resolvedStudentData.class_name) {
+            if (resolvedStudentData && resolvedStudentData.class_name) {
               setStudentClass(resolvedStudentData.class_name);
             }
-            console.log("[AuthInit] Legacy student token found:", resolvedStudentData.name);
+            console.log("[AuthInit] Legacy student token found:", resolvedStudentData?.name);
           } else {
             // No session anywhere, clear all roles
             setIsAdmin(false);
@@ -326,7 +362,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const handleAuthStateChange = async (event: string, session: any) => {
+    const handleAuthStateChange = async (event: string, session: Session | null) => {
       console.log(`[Global Auth Change] Event: ${event}, Session: ${!!session}`);
       const currentEmail = session?.user?.email || null;
 
@@ -368,7 +404,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         }
 
         // 2. Query initial session
-        let session: any = null;
+        let session: Session | null = null;
         try {
           const res = await supabase.auth.getSession();
           session = res.data?.session || null;
@@ -389,6 +425,20 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         }
       }
     };
+
+    // Safety timeout guard: Guarantee isAuthLoading resolves within 6 seconds
+    const safetyTimeout = setTimeout(() => {
+      if (!isUnmounted && !hasInitialLoadedRef.current) {
+        console.warn("[AuthInit] Global auth check timed out after 6s. Forcing fallback to unauthenticated state.");
+        hasInitialLoadedRef.current = true;
+        setIsAdmin(false);
+        setAdminUser(null);
+        setIsStudent(false);
+        setIsParent(false);
+        setStudentData(null);
+        setIsAuthLoading(false);
+      }
+    }, 6000);
 
     initAuth();
 
@@ -420,6 +470,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     window.addEventListener('popstate', handlePopState);
     return () => {
       isUnmounted = true;
+      clearTimeout(safetyTimeout);
       if (activeSubscription) {
         activeSubscription.unsubscribe();
       }
@@ -510,6 +561,20 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     window.history.pushState({ layer: 'student_login' }, '', '#student_login');
   };
 
+  const refetchAuth = async () => {
+    setIsAuthLoading(true);
+    hasInitialLoadedRef.current = false;
+    lastUserEmailRef.current = null;
+    // Reload the page to trigger a fresh auth initialization cycle
+    window.location.reload();
+  };
+
+  const skipAuthLoading = () => {
+    console.warn("[AuthInit] User manually bypassed auth loading screen.");
+    hasInitialLoadedRef.current = true;
+    setIsAuthLoading(false);
+  };
+
   return (
     <GradeMasterContext.Provider value={{
       layer, setLayer: navigate,
@@ -523,6 +588,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       studentClass, setStudentClass,
       academicYear, setAcademicYear,
       isAuthLoading,
+      refetchAuth,
+      skipAuthLoading,
       logout
     }}>
       {children}

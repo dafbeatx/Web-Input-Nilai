@@ -112,6 +112,8 @@ export default function GradeMaster() {
     studentClass, setStudentClass,
     academicYear, setAcademicYear,
     isAuthLoading,
+    refetchAuth,
+    skipAuthLoading,
     logout 
   } = useGradeMaster();
 
@@ -126,6 +128,18 @@ export default function GradeMaster() {
   const [showPushPrompt, setShowPushPrompt] = useState(false);
   const [pushStatus, setPushStatus] = useState<'GRANTED' | 'DENIED' | 'DEFAULT' | 'UNSUPPORTED'>('DEFAULT');
   const [isUpdatingQuestions, setIsUpdatingQuestions] = useState(false);
+  const [showFallbackOptions, setShowFallbackOptions] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthLoading) return;
+    const timer = setTimeout(() => {
+      setShowFallbackOptions(true);
+    }, 3500);
+    return () => {
+      clearTimeout(timer);
+      setShowFallbackOptions(false);
+    };
+  }, [isAuthLoading]);
 
   // --- API / Helper Calls (Declared prior to useEffect usage) ---
 
@@ -476,15 +490,11 @@ export default function GradeMaster() {
     return () => clearTimeout(timer);
   }, [toast, setToast]);
 
-  // auto checkAdmin is handled via top-level definition
   useEffect(() => {
-    Promise.resolve().then(() => {
+    queueMicrotask(() => {
       fetchSessions();
-      if (!isAuthLoading) {
-        checkAdmin();
-      }
     });
-  }, [isAuthLoading, fetchSessions, checkAdmin]);
+  }, [fetchSessions]);
 
   useEffect(() => {
     // Register Service Worker for PWA
@@ -1118,8 +1128,8 @@ export default function GradeMaster() {
 
   if (isAuthLoading) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center animate-in fade-in duration-700">
-        <div className="flex flex-col items-center gap-6">
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center animate-in fade-in duration-700 p-4">
+        <div className="flex flex-col items-center gap-6 max-w-sm text-center">
           <div className="relative">
             <div className="w-16 h-16 border-[3px] border-slate-100 border-t-[#0F172A] rounded-full animate-spin" />
             <div className="absolute inset-0 flex items-center justify-center">
@@ -1133,6 +1143,28 @@ export default function GradeMaster() {
             <h2 className="text-sm font-black text-[#0F172A] uppercase tracking-[0.3em] mb-2 font-outfit">GradeMaster OS</h2>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Memuat Sesi...</p>
           </div>
+
+          {showFallbackOptions && (
+            <div className="flex flex-col items-center gap-3 mt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                Memuat sesi membutuhkan waktu lebih lama dari biasanya...
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
+                <button
+                  onClick={() => refetchAuth()}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl transition-all active:scale-95 cursor-pointer"
+                >
+                  Coba Lagi
+                </button>
+                <button
+                  onClick={() => skipAuthLoading()}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition-all active:scale-95 shadow-sm cursor-pointer"
+                >
+                  Lanjutkan tanpa Sesi
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1180,7 +1212,7 @@ export default function GradeMaster() {
           onLogout={handleAdminLogout}
           onOpenSettings={() => setModal("adminSettings")}
           userData={{
-            name: isAdmin ? adminUser : studentData?.name,
+            name: isAdmin ? (adminUser ?? undefined) : studentData?.name,
             class_name: studentData?.class_name,
             subject: isAdmin ? subject : undefined
           }}
@@ -1401,9 +1433,9 @@ export default function GradeMaster() {
 
       {layer === "student_profile" && studentData && ((isStudent && studentData.isGoogleLinked) || isParent) && (
         <StudentProfileLayer 
-          studentId={studentData.behavior_id || studentData.id}
-          studentName={studentData.name}
-          className={studentData.class_name}
+          studentId={studentData.behavior_id || studentData.id || ''}
+          studentName={studentData.name || ''}
+          className={studentData.class_name || ''}
           academicYear={studentData.academic_year ?? academicYear}
           initialPoints={studentData.total_points ?? 0}
           avatarUrl={studentData.avatar_url}
@@ -1483,8 +1515,8 @@ export default function GradeMaster() {
       {layer === "student_claim" && studentData && (
         <StudentClaimLayer
           googleUser={{
-            name: studentData.name,
-            email: studentData.email,
+            name: studentData.name || '',
+            email: studentData.email || '',
             photo_url: studentData.photo_url || studentData.avatar_url
           }}
           onSuccess={async (data) => {
