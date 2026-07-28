@@ -66,9 +66,15 @@ export async function GET(req: NextRequest) {
 
     const { data: accountData } = await accQuery;
 
-    // 3. Find accounts missing from gm_behaviors and auto-create them
-    const existingKeys = new Set((behaviorData || []).map((b: any) => `${b.student_name.trim().toLowerCase()}_${b.class_name}`));
-    const missingPayload: any[] = [];
+    interface BehaviorItem {
+      student_name: string;
+      class_name: string;
+      academic_year?: string;
+      total_points?: number;
+      behavior_logs?: unknown[];
+    }
+    const existingKeys = new Set(((behaviorData as BehaviorItem[]) || []).map((b) => `${b.student_name.trim().toLowerCase()}_${b.class_name}`));
+    const missingPayload: BehaviorItem[] = [];
 
     for (const acc of (accountData || [])) {
       const key = `${acc.student_name.trim().toLowerCase()}_${acc.class_name}`;

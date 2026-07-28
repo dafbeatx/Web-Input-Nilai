@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Gagal memuat daftar kelas' }, { status: 500 });
       }
 
-      const classes = Array.from(new Set(data?.map((d: any) => d.class_name) || []));
+      const classes = Array.from(new Set(((data as { class_name: string }[]) || []).map((d) => d.class_name)));
       return NextResponse.json({ classes });
     }
 
@@ -119,9 +119,10 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ accounts: data || [] });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Fetch student accounts critical error:', err);
-    return NextResponse.json({ error: err.message || 'Gagal memuat akun siswa' }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Gagal memuat akun siswa';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -173,8 +174,8 @@ export async function POST(req: NextRequest) {
       console.error('[POST Student Accounts] Error checking existing accounts:', existingError);
     }
 
-    const existingNames = new Set((existingAccounts || []).map((a: any) => a.student_name));
-    const newStudents = behaviorStudents.filter((s: any) => !existingNames.has(s.student_name));
+    const existingNames = new Set(((existingAccounts as { student_name: string }[]) || []).map((a) => a.student_name));
+    const newStudents = ((behaviorStudents as { student_name: string; class_name: string }[]) || []).filter((s) => !existingNames.has(s.student_name));
 
     if (newStudents.length === 0) {
       return NextResponse.json({ message: 'Semua siswa di kelas ini sudah memiliki akun', created: 0 });
@@ -185,8 +186,16 @@ export async function POST(req: NextRequest) {
       .from('gm_student_accounts')
       .select('username');
 
-    const usedUsernames = new Set((allUsernames || []).map((a: any) => a.username));
-    const accountRows: any[] = [];
+    const usedUsernames = new Set(((allUsernames as { username: string }[]) || []).map((a) => a.username));
+    interface AccountRow {
+      student_name: string;
+      class_name: string;
+      academic_year: string;
+      username: string;
+      password_hash: string;
+      password_plain: string;
+    }
+    const accountRows: AccountRow[] = [];
 
     for (const student of newStudents) {
       const baseUsername = generateUsername(student.student_name, student.class_name);
@@ -225,7 +234,7 @@ export async function POST(req: NextRequest) {
 
     // Step 5: Auto-create behavior records in gm_behaviors
     if (inserted && inserted.length > 0) {
-      const behaviorPayload = inserted.map((acc: any) => ({
+      const behaviorPayload = (inserted as { student_name: string; class_name: string; academic_year?: string }[]).map((acc) => ({
         student_name: acc.student_name,
         class_name: acc.class_name,
         academic_year: acc.academic_year || academicYear,
@@ -241,9 +250,10 @@ export async function POST(req: NextRequest) {
       message: `${inserted?.length || 0} akun siswa berhasil dibuat untuk ${className}`,
       created: inserted?.length || 0,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Create student accounts critical error:', err);
-    return NextResponse.json({ error: err.message || 'Gagal membuat akun siswa' }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Gagal membuat akun siswa';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -273,8 +283,9 @@ export async function DELETE(req: NextRequest) {
     }
 
     return NextResponse.json({ message: 'Akun siswa berhasil dihapus' });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Delete student account critical error:', err);
-    return NextResponse.json({ error: err.message || 'Gagal menghapus akun siswa' }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Gagal menghapus akun siswa';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
