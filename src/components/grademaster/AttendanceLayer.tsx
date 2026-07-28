@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Users, Loader2, CheckCircle2, 
   BookOpen, LayoutGrid
@@ -53,16 +53,13 @@ const formatStudentName = (name: string) => {
   return `${firstName} ${middleName} ${rest}`;
 };
 
-function debouncedAutoSave(
-  timersRef: React.RefObject<Record<string, NodeJS.Timeout>>,
-  studentName: string,
-  saveFn: () => void
-) {
-  if (!timersRef.current) return;
-  if (timersRef.current[studentName]) {
-    clearTimeout(timersRef.current[studentName]);
+const saveTimersMap: Record<string, NodeJS.Timeout> = {};
+
+function debouncedAutoSave(studentName: string, saveFn: () => void) {
+  if (saveTimersMap[studentName]) {
+    clearTimeout(saveTimersMap[studentName]);
   }
-  timersRef.current[studentName] = setTimeout(saveFn, 150);
+  saveTimersMap[studentName] = setTimeout(saveFn, 150);
 }
 
 export default function AttendanceLayer({ 
@@ -89,9 +86,6 @@ export default function AttendanceLayer({
 
   // Track which students are currently being saved
   const [savingStudents, setSavingStudents] = useState<Record<string, boolean>>({});
-
-  // Debounce ref for auto-save
-  const saveTimerRef = useRef<Record<string, NodeJS.Timeout>>({});
 
   const subjects = ["Informatika", "Matematika", "IPA", "IPS", "Bahasa Indonesia", "Bahasa Inggris", "PAI", "PJOK", "Seni Budaya", "PKn"];
 
@@ -213,7 +207,7 @@ export default function AttendanceLayer({
     setAttendanceMap(prev => ({ ...prev, [studentName]: status }));
     
     // Debounced auto-save
-    debouncedAutoSave(saveTimerRef, studentName, () => {
+    debouncedAutoSave(studentName, () => {
       autoSaveStudent(studentName, status);
     });
   }, [autoSaveStudent]);
