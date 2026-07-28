@@ -36,7 +36,6 @@ import DataCenterLayer from "@/components/grademaster/DataCenterLayer";
 import StudentAccountsLayer from "./grademaster/StudentAccountsLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 import { subscribeUser, checkSubscriptionStatus } from "@/lib/grademaster/pushHelper";
-import { supabase } from "@/lib/supabase/client";
 
 const safeLocalStorage = {
   getItem(key: string): string | null {
@@ -227,130 +226,6 @@ export default function GradeMaster() {
       setModalLoading(false);
     }
   }, [sessionName, layer, setAcademicYear, setLayer, setStudentClass, setToast, closeModal]);
-
-  const checkAdmin = useCallback(async () => {
-    if (safeLocalStorage.getItem('gm_isParent') === 'true') {
-      return;
-    }
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const email = session?.user?.email?.toLowerCase();
-
-      setIsAdmin(false);
-      setIsStudent(false);
-      setStudentData(null);
-      setAdminUser(null);
-
-      if (email && email.endsWith('@gmail.com') && email !== 'dafbeatx@gmail.com') {
-        setIsAdmin(false);
-        setIsStudent(true);
-
-        const studentRes = await fetch(`/api/student/check?t=${Date.now()}`, { cache: 'no-store' });
-        const studentCheckData = await studentRes.json();
-
-        if (studentCheckData.authenticated) {
-          const resolvedStudent = { ...studentCheckData.student, isGoogleLinked: true };
-          setStudentData(resolvedStudent);
-          if (resolvedStudent.class_name) {
-            setStudentClass(resolvedStudent.class_name);
-          }
-          if (layer === 'student_login' || layer === 'student_claim' || layer === 'login') {
-            setLayer('student_profile', true);
-          }
-        } else {
-          setStudentData({
-            name: session?.user?.user_metadata?.full_name || email,
-            username: email,
-            photo_url: session?.user?.user_metadata?.avatar_url || '',
-            email: email,
-            id: email,
-            isGoogleLinked: false
-          });
-          if (layer !== 'student_claim' && (layer === 'home' || layer === 'student_login')) {
-            setLayer('student_claim', true);
-          }
-        }
-        await fetchSessions();
-        return;
-      }
-
-      const studentRes = await fetch(`/api/student/check?t=${Date.now()}`, { cache: 'no-store' });
-      const studentCheckData = await studentRes.json();
-
-      if (studentCheckData.authenticated) {
-        setIsAdmin(false);
-        setIsStudent(true);
-        const resolvedStudent = { ...studentCheckData.student, isGoogleLinked: true };
-        setStudentData(resolvedStudent);
-        if (resolvedStudent.class_name) {
-          setStudentClass(resolvedStudent.class_name);
-        }
-        if (layer === 'student_login' || layer === 'student_claim' || layer === 'login') {
-          setLayer('student_profile', true);
-        }
-        await fetchSessions();
-        return;
-      }
-
-      const res = await fetch(`/api/admin/check?t=${Date.now()}`, { cache: 'no-store' });
-      const data = await res.json();
-      
-      if (data.authenticated && data.role === 'admin') {
-        setIsAdmin(true);
-        setIsStudent(false);
-        clearRemedialSession();
-        safeLocalStorage.removeItem('gm_remedial_session');
-
-        if (data.displayName && data.subject) {
-          setAdminUser(data.displayName);
-          setTeacherName(data.displayName);
-          setSubject(data.subject);
-          
-          if (layer === 'student_login' || layer === 'login' || layer === 'student_claim' || layer === 'teacher_claim' || layer === 'remedial') {
-            setLayer('home');
-          }
-          await fetchSessions();
-        } else {
-          setAdminUser(data.username);
-          setLayer('teacher_claim');
-        }
-      } else if (data.authenticated && data.role === 'student') {
-        setIsAdmin(false);
-        setIsStudent(true);
-        setStudentData(data.student);
-        if (data.student?.class_name) {
-          setStudentClass(data.student.class_name);
-        }
-        if (layer === 'student_login' || layer === 'student_claim') {
-          setLayer('student_profile', true);
-        }
-        await fetchSessions();
-      } else if (data.role === 'student_google') {
-        setIsAdmin(false);
-        setIsStudent(true);
-        setStudentData({
-          name: data.username,
-          username: data.email,
-          photo_url: data.avatar_url,
-          email: data.email,
-          id: data.email,
-          isGoogleLinked: false
-        });
-
-        if (layer !== 'student_claim' && (layer === 'home' || layer === 'student_login')) {
-          setLayer('student_claim', true);
-        }
-      } else {
-        setIsAdmin(false);
-        setIsStudent(false);
-        setStudentData(null);
-      }
-    } catch {
-      setIsAdmin(false);
-      setIsStudent(false);
-      setStudentData(null);
-    }
-  }, [fetchSessions, layer, setAdminUser, setIsAdmin, setIsStudent, setLayer, setStudentClass, setStudentData]);
 
   useEffect(() => {
     const clsUpper = (studentClass || '').toUpperCase();
@@ -1506,8 +1381,7 @@ export default function GradeMaster() {
             setLayer("home");
           }}
           onSuccess={async () => {
-            // Don't force isStudent(true) here, let checkAdmin determine the role
-            await checkAdmin();
+            await refetchAuth();
           }}
         />
       )}

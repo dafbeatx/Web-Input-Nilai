@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { 
   ArrowLeft, PlusCircle, MinusCircle, Loader2, FileText, 
   Trash2, Pencil, ShieldCheck, ThumbsUp, X, Calendar, 
@@ -13,7 +13,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, 
   ResponsiveContainer, CartesianGrid 
 } from 'recharts';
-import { ToastType } from '@/lib/grademaster/types';
+import { ToastType, DEFAULT_VIOLATION_REASONS } from '@/lib/grademaster/types';
 import { 
   addBehaviorAction, 
   updateBehaviorAction, 
@@ -693,19 +693,139 @@ export default function StudentProfileLayer({
     : '—';
   const badgesCount = badges.length;
   const docsCount = studentSummary?.documents?.length || 0;
-  const pendingCount = academicHistory.filter((g: any) => !g.isPassing).length;  useEffect(() => {
-    setLocalReasons(behaviorReasons);
-  }, [behaviorReasons]);
+  const pendingCount = academicHistory.filter((g: any) => !g.isPassing).length;
+  const fetchBehaviorSettings = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/grademaster/behaviors/settings?year=${encodeURIComponent(activeYear)}`);
+      const data = await res.json();
+      if (res.ok && data.settings && Array.isArray(data.settings.reasons) && data.settings.reasons.length > 0) {
+        setLocalReasons(data.settings.reasons);
+      } else {
+        setLocalReasons(DEFAULT_VIOLATION_REASONS);
+      }
+    } catch (err) {
+      console.error("Failed to load behavior settings", err);
+      setLocalReasons(DEFAULT_VIOLATION_REASONS);
+    }
+  }, [activeYear]);
+
+  const fetchStudentSummary = useCallback(async (overrideClass?: string, overrideYear?: string) => {
+    setIsLoadingSummary(true);
+    try {
+      const cls = overrideClass || className;
+      const yr = overrideYear || academicYear;
+      const res = await fetch(`/api/grademaster/students/summary?name=${encodeURIComponent(studentName)}&year=${encodeURIComponent(yr)}&class=${encodeURIComponent(cls)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setStudentSummary(data);
+        if (data.total_points !== undefined) {
+          setTotalPoints(data.total_points);
+        }
+        if (data.resolvedClass) {
+          setActiveClass(data.resolvedClass);
+        }
+        if (data.resolvedYear) {
+          setActiveYear(data.resolvedYear);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch student summary", err);
+    } finally {
+      setIsLoadingSummary(false);
+    }
+  }, [className, academicYear, studentName]);
+
+  const fetchStudentLogs = useCallback(async () => {
+    setIsLoadingLogs(true);
+    try {
+      const result = await getBehaviorLogsAction(studentId);
+      if (result.success) {
+        setStudentLogs(result.logs || []);
+      } else {
+        console.error("Server action error:", result.error);
+      }
+    } catch (err) {
+      console.error("Failed to fetch student logs", err);
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  }, [studentId]);
+
+  const fetchAttendanceLogs = useCallback(async () => {
+    if (!studentName) return;
+    setIsLoadingAttendance(true);
+    try {
+      const res = await fetch(`/api/grademaster/students/attendance-logs?name=${encodeURIComponent(studentName)}&year=${encodeURIComponent(activeYear)}&class=${encodeURIComponent(activeClass)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.logs) {
+          setAttendanceLogs(data.logs);
+        }
+      }
+    } catch (err) {
+      console.error("Gagal mengambil logs kehadiran:", err);
+    } finally {
+      setIsLoadingAttendance(false);
+    }
+  }, [studentName, activeYear, activeClass]);
+
+  const fetchLoginLogs = useCallback(async () => {
+    if (!studentName || !activeClass) return;
+    setIsLoadingLoginLogs(true);
+    try {
+      const res = await fetch(`/api/grademaster/students/login-logs?name=${encodeURIComponent(studentName || '')}&class=${encodeURIComponent(activeClass || '')}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.logs) {
+          setLoginLogs(data.logs);
+        }
+      }
+    } catch (err) {
+      console.error("Gagal mengambil logs login:", err);
+    } finally {
+      setIsLoadingLoginLogs(false);
+    }
+  }, [studentName, activeClass]);
+
+  const fetchActiveSessions = useCallback(async () => {
+    if (!studentId) return;
+    setIsLoadingSessions(true);
+    try {
+      const res = await fetch('/api/grademaster/students/sessions');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.sessions) {
+          setActiveSessions(data.sessions);
+        }
+      }
+    } catch (err) {
+      console.error("Gagal mengambil sesi aktif:", err);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  }, [studentId]);
 
   useEffect(() => {
-    setIsMounted(true);
+    if (behaviorReasons && behaviorReasons.length > 0) {
+      setLocalReasons(behaviorReasons);
+    } else {
+      fetchBehaviorSettings();
+    }
+  }, [behaviorReasons, activeYear, fetchBehaviorSettings]);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      setIsMounted(true);
+    });
   }, []);
 
   useEffect(() => {
-    setActiveClass(className);
-    setActiveYear(academicYear);
-    setTotalPoints(initialPoints);
-    setCurrentAvatarUrl(avatarUrl);
+    queueMicrotask(() => {
+      setActiveClass(className);
+      setActiveYear(academicYear);
+      setTotalPoints(initialPoints);
+      setCurrentAvatarUrl(avatarUrl);
+    });
   }, [studentId, studentName, initialPoints, avatarUrl, className, academicYear]);
 
   useEffect(() => {
@@ -716,23 +836,9 @@ export default function StudentProfileLayer({
       fetchLoginLogs();
       fetchActiveSessions();
       // fetchClassLeaderboard();
-      if (isAdmin) {
-        fetchBehaviorSettings();
-      }
+      fetchBehaviorSettings();
     }
-  }, [studentId, studentName, activeClass, activeYear, isAdmin]);
-
-  const fetchBehaviorSettings = async () => {
-    try {
-      const res = await fetch(`/api/grademaster/behaviors/settings?year=${encodeURIComponent(activeYear)}`);
-      const data = await res.json();
-      if (res.ok && data.settings && Array.isArray(data.settings.reasons)) {
-        setLocalReasons(data.settings.reasons);
-      }
-    } catch (err) {
-      console.error("Failed to load behavior settings", err);
-    }
-  };
+  }, [studentId, studentName, activeClass, activeYear, isAdmin, fetchStudentSummary, fetchStudentLogs, fetchAttendanceLogs, fetchLoginLogs, fetchActiveSessions, fetchBehaviorSettings]);
 
   const fetchClassLeaderboard = async () => {
     if (!activeClass) return;
@@ -870,62 +976,12 @@ export default function StudentProfileLayer({
 
   // Sync avatar url prop changes (e.g. from studentData shift)
   useEffect(() => {
-    setCurrentAvatarUrl(avatarUrl);
+    queueMicrotask(() => {
+      setCurrentAvatarUrl(avatarUrl);
+    });
   }, [avatarUrl]);
 
-  const fetchAttendanceLogs = async () => {
-    if (!studentName) return;
-    setIsLoadingAttendance(true);
-    try {
-      const res = await fetch(`/api/grademaster/students/attendance-logs?name=${encodeURIComponent(studentName)}&year=${encodeURIComponent(activeYear)}&class=${encodeURIComponent(activeClass)}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.logs) {
-          setAttendanceLogs(data.logs);
-        }
-      }
-    } catch (err) {
-      console.error("Gagal mengambil logs kehadiran:", err);
-    } finally {
-      setIsLoadingAttendance(false);
-    }
-  };
 
-  const fetchLoginLogs = async () => {
-    if (!studentName || !activeClass) return;
-    setIsLoadingLoginLogs(true);
-    try {
-      const res = await fetch(`/api/grademaster/students/login-logs?name=${encodeURIComponent(studentName || '')}&class=${encodeURIComponent(activeClass || '')}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.logs) {
-          setLoginLogs(data.logs);
-        }
-      }
-    } catch (err) {
-      console.error("Gagal mengambil logs login:", err);
-    } finally {
-      setIsLoadingLoginLogs(false);
-    }
-  };
-
-  const fetchActiveSessions = async () => {
-    if (!studentId) return;
-    setIsLoadingSessions(true);
-    try {
-      const res = await fetch('/api/grademaster/students/sessions');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.sessions) {
-          setActiveSessions(data.sessions);
-        }
-      }
-    } catch (err) {
-      console.error("Gagal mengambil sesi aktif:", err);
-    } finally {
-      setIsLoadingSessions(false);
-    }
-  };
 
   const handleEndOtherSessions = async (type: 'all_other' | 'specific', sessionId?: string) => {
     setIsEndingSessions(true);
@@ -1020,47 +1076,7 @@ export default function StudentProfileLayer({
     return `${browser} (${os})`;
   };
 
-  const fetchStudentSummary = async (overrideClass?: string, overrideYear?: string) => {
-    setIsLoadingSummary(true);
-    try {
-      const cls = overrideClass || className;
-      const yr = overrideYear || academicYear;
-      const res = await fetch(`/api/grademaster/students/summary?name=${encodeURIComponent(studentName)}&year=${encodeURIComponent(yr)}&class=${encodeURIComponent(cls)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setStudentSummary(data);
-        if (data.total_points !== undefined) {
-          setTotalPoints(data.total_points);
-        }
-        if (data.resolvedClass) {
-          setActiveClass(data.resolvedClass);
-        }
-        if (data.resolvedYear) {
-          setActiveYear(data.resolvedYear);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch student summary", err);
-    } finally {
-      setIsLoadingSummary(false);
-    }
-  };
 
-  const fetchStudentLogs = async () => {
-    setIsLoadingLogs(true);
-    try {
-      const result = await getBehaviorLogsAction(studentId);
-      if (result.success) {
-        setStudentLogs(result.logs || []);
-      } else {
-        console.error("Server action error:", result.error);
-      }
-    } catch (err) {
-      console.error("Failed to fetch student logs", err);
-    } finally {
-      setIsLoadingLogs(false);
-    }
-  };
 
   const handleSendBugReport = async () => {
     if (!bugDescription.trim() || isSendingBug) return;

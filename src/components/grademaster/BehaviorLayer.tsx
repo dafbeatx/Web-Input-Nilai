@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, AlertCircle, Loader2, Trash2, X } from 'lucide-react';
-import { ToastType, GradedStudent } from '@/lib/grademaster/types';
+import { ToastType, GradedStudent, DEFAULT_VIOLATION_REASONS } from '@/lib/grademaster/types';
 import { supabase } from '@/lib/supabase/client';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import StudentProfileLayer from './StudentProfileLayer';
@@ -73,14 +73,14 @@ export default function BehaviorLayer({
     try {
       const res = await fetch(`/api/grademaster/behaviors/settings?year=${encodeURIComponent(year)}`);
       const data = await res.json();
-      if (res.ok && data.settings && Array.isArray(data.settings.reasons)) {
+      if (res.ok && data.settings && Array.isArray(data.settings.reasons) && data.settings.reasons.length > 0) {
         setBehaviorReasons(data.settings.reasons);
       } else {
-        setBehaviorReasons([]);
+        setBehaviorReasons(DEFAULT_VIOLATION_REASONS);
       }
     } catch (err) {
       console.error("Failed to load behavior settings", err);
-      setBehaviorReasons([]);
+      setBehaviorReasons(DEFAULT_VIOLATION_REASONS);
     }
   }, [academicYear]);
 
@@ -133,7 +133,9 @@ export default function BehaviorLayer({
   useEffect(() => {
     const yearToUse = activeYear || '2025/2026';
     if (academicYear !== yearToUse) {
-      setAcademicYear(yearToUse);
+      queueMicrotask(() => {
+        setAcademicYear(yearToUse);
+      });
     }
     fetchBehaviorSettings(yearToUse);
     fetchAvailableClasses(yearToUse).then(() => {

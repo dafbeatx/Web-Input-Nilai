@@ -94,6 +94,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   const lastUserEmailRef = useRef<string | null>(null);
   const hasInitialLoadedRef = useRef(false);
   const activeCheckIdRef = useRef(0);
+  const checkAuthAndRouteRef = useRef<((session: Session | null) => Promise<void>) | null>(null);
 
   // Ref to track roles for the popstate handler to avoid stale closures
   const authStateRef = useRef({ isAdmin, isStudent, isParent });
@@ -154,15 +155,15 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         let resolvedStudentData: StudentData | null = null;
         let activeAdminUser: string | null = null;
 
-        // Helper for retrying fetches with cache bypassing and signal timeout
-        const fetchWithRetry = async (url: string, retries = 3, delay = 350): Promise<Response> => {
+        // Helper for retrying fetches with cache bypassing and signal timeout (fast fail for auth bootstrap)
+        const fetchWithRetry = async (url: string, retries = 1, delay = 250): Promise<Response> => {
           for (let i = 0; i < retries; i++) {
             try {
               const urlObj = new URL(url, window.location.origin);
               urlObj.searchParams.set('t', Date.now().toString());
-              console.log(`[AuthInit Fetch] ${urlObj.toString()} (attempt ${i + 1}/${retries})...`);
+              console.log(`[AuthInit Fetch] ${urlObj.toString()} (attempt ${i + 1}/${retries + 1})...`);
               const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 3500);
+              const timeoutId = setTimeout(() => controller.abort(), 2500);
               const res = await fetch(urlObj.toString(), { cache: 'no-store', signal: controller.signal });
               clearTimeout(timeoutId);
               if (res.ok) return res;
@@ -174,7 +175,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
           const finalUrlObj = new URL(url, window.location.origin);
           finalUrlObj.searchParams.set('t', Date.now().toString());
           const finalController = new AbortController();
-          const finalTimeoutId = setTimeout(() => finalController.abort(), 3500);
+          const finalTimeoutId = setTimeout(() => finalController.abort(), 2500);
           try {
             const res = await fetch(finalUrlObj.toString(), { cache: 'no-store', signal: finalController.signal });
             clearTimeout(finalTimeoutId);
@@ -361,6 +362,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         }
       }
     };
+    checkAuthAndRouteRef.current = checkAuthAndRoute;
 
     const handleAuthStateChange = async (event: string, session: Session | null) => {
       console.log(`[Global Auth Change] Event: ${event}, Session: ${!!session}`);
@@ -385,7 +387,11 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
           return;
         }
         
-        setIsAuthLoading(true);
+        // Only set isAuthLoading to true if initial bootstrap hasn't finished yet.
+        // Post-mount background auth events (token refresh, user update) execute silently.
+        if (!hasInitialLoadedRef.current) {
+          setIsAuthLoading(true);
+        }
         await checkAuthAndRoute(session);
       }
     };
@@ -395,18 +401,24 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         // 1. Subscribe to auth changes FIRST so we do not miss any initial SIGNED_IN events
         // that trigger while the browser is loading/parsing cookies in the background.
         try {
-          const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            await handleAuthStateChange(event, session);
+          const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            handleAuthStateChange(event, session).catch(err => {
+              console.error("[AuthInit] Error in auth state change handler:", err);
+            });
           });
           activeSubscription = subscription;
         } catch (subErr) {
           console.error("[AuthInit] Failed to subscribe to auth changes:", subErr);
         }
 
-        // 2. Query initial session
+        // 2. Query initial session with 2.5s timeout guard to prevent SDK hangs
         let session: Session | null = null;
         try {
-          const res = await supabase.auth.getSession();
+          const sessionPromise = supabase.auth.getSession();
+          const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) =>
+            setTimeout(() => resolve({ data: { session: null } }), 2500)
+          );
+          const res = await Promise.race([sessionPromise, timeoutPromise]);
           session = res.data?.session || null;
         } catch (err) {
           console.error("[AuthInit] supabase.auth.getSession() failed:", err);
@@ -426,10 +438,10 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Safety timeout guard: Guarantee isAuthLoading resolves within 6 seconds
+    // Safety timeout guard: Guarantee isAuthLoading resolves within 4.5 seconds
     const safetyTimeout = setTimeout(() => {
       if (!isUnmounted && !hasInitialLoadedRef.current) {
-        console.warn("[AuthInit] Global auth check timed out after 6s. Forcing fallback to unauthenticated state.");
+        console.warn("[AuthInit] Global auth check timed out after 4.5s. Forcing fallback to unauthenticated state.");
         hasInitialLoadedRef.current = true;
         setIsAdmin(false);
         setAdminUser(null);
@@ -438,7 +450,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         setStudentData(null);
         setIsAuthLoading(false);
       }
-    }, 6000);
+    }, 4500);
 
     initAuth();
 
@@ -562,11 +574,17 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   };
 
   const refetchAuth = async () => {
-    setIsAuthLoading(true);
-    hasInitialLoadedRef.current = false;
-    lastUserEmailRef.current = null;
-    // Reload the page to trigger a fresh auth initialization cycle
-    window.location.reload();
+    try {
+      hasInitialLoadedRef.current = false;
+      lastUserEmailRef.current = null;
+      const res = await supabase.auth.getSession();
+      const session = res.data?.session || null;
+      if (checkAuthAndRouteRef.current) {
+        await checkAuthAndRouteRef.current(session);
+      }
+    } catch (e) {
+      console.error("[RefetchAuth] Failed to refetch session:", e);
+    }
   };
 
   const skipAuthLoading = () => {

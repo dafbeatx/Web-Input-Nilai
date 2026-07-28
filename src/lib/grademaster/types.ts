@@ -16,6 +16,23 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   essayCount: 5,
 };
 
+export interface BehaviorReason {
+  text: string;
+  weight: number;
+}
+
+export const DEFAULT_VIOLATION_REASONS: BehaviorReason[] = [
+  { text: "Terlambat Masuk Sekolah / Kelas", weight: 5 },
+  { text: "Tidak Mengerjakan Tugas / PR", weight: 5 },
+  { text: "Bermain HP / Gadget saat Pelajaran", weight: 10 },
+  { text: "Mengganggu Ketertiban & Suasana Kelas", weight: 10 },
+  { text: "Atribut Seragam Tidak Lengkap / Rapi", weight: 5 },
+  { text: "Meninggalkan Kelas Tanpa Izin", weight: 15 },
+  { text: "Tidak Mengikuti Upacara / Kegiatan Sekolah", weight: 15 },
+  { text: "Merusak Fasilitas / Inventaris Sekolah", weight: 25 },
+  { text: "Tindakan Indisipliner / Melawan Guru", weight: 30 },
+];
+
 export interface StudentResult {
   correct: number;
   wrong: number;
