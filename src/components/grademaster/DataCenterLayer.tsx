@@ -1268,7 +1268,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
              <Database size={18} /> Pusat Data Terpadu
            </h1>
          </div>
-         <div className="flex flex-row flex-nowrap items-center gap-1.5 p-1 bg-surface-container rounded-2xl border border-outline-variant/20 shadow-sm shrink-0">
+         <div className="flex flex-row flex-nowrap items-center gap-1.5 p-1 bg-surface-container rounded-2xl border border-outline-variant/20 shadow-sm shrink-0 overflow-x-auto no-scrollbar max-w-[150px] min-[360px]:max-w-[180px] min-[400px]:max-w-[220px] sm:max-w-none">
            {['2024/2025', '2025/2026', '2026/2027', '2027/2028'].map((year) => (
              <button
                key={year}
