@@ -62,6 +62,7 @@ export default function BehaviorLayer({
   const [newReasonType, setNewReasonType] = useState<'BAD' | 'GOOD'>('BAD');
 
   const [newStudentName, setNewStudentName] = useState('');
+  const [onlyShowRecordPoints, setOnlyShowRecordPoints] = useState(false);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [, setIsLoadingClasses] = useState(false);
 
@@ -370,6 +371,7 @@ export default function BehaviorLayer({
                     <div 
                       className={"w-14 h-14 shrink-0 rounded-full flex items-center justify-center text-white font-semibold text-lg tracking-wider relative overflow-hidden ring-4 ring-white shadow-sm " + (student.avatar_url ? 'bg-surface-container' : 'bg-on-primary-fixed') + (isAdmin ? ' cursor-pointer hover:opacity-80' : '')}
                       onClick={() => {
+                        setOnlyShowRecordPoints(false);
                         setSelectedStudent(student);
                       }}
                     >
@@ -396,14 +398,20 @@ export default function BehaviorLayer({
                     <div className="flex items-center gap-2">
                       {isAdmin && (
                         <button 
-                          onClick={() => setSelectedStudent(student)}
+                          onClick={() => {
+                            setOnlyShowRecordPoints(true);
+                            setSelectedStudent(student);
+                          }}
                           className="px-3.5 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-[11px] font-extrabold uppercase tracking-wider shadow-md shadow-rose-500/20 active:scale-95 transition-all flex items-center gap-1 shrink-0"
                         >
                           <span className="material-symbols-outlined text-[14px]">edit_note</span> + Catat Poin
                         </button>
                       )}
                       <button 
-                        onClick={() => setSelectedStudent(student)}
+                        onClick={() => {
+                          setOnlyShowRecordPoints(false);
+                          setSelectedStudent(student);
+                        }}
                         className="text-[11px] sm:text-[12px] font-bold text-on-primary-fixed/60 hover:text-on-primary-fixed transition-colors flex items-center gap-1 group/link outline-none"
                       >
                          Riwayat <span className="material-symbols-outlined text-[16px] group-hover/link:translate-x-1 transition-transform">arrow_forward</span>
@@ -448,6 +456,7 @@ export default function BehaviorLayer({
         behaviorReasons={behaviorReasons}
         setToast={setToast}
         onBack={() => setSelectedStudent(null)}
+        onlyShowRecordPoints={onlyShowRecordPoints}
         onAvatarUpdate={(url) => setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, avatar_url: url } : s))}
         onPointsUpdate={(pts) => setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, total_points: pts } : s))}
       />

@@ -54,6 +54,7 @@ interface StudentProfileLayerProps {
   onStartRemedial?: (sessionName: string) => Promise<void> | void;
   behaviorReasons?: { text: string; weight: number }[];
   semester?: string;
+  onlyShowRecordPoints?: boolean;
 }
 
 const CHART_MARGIN = { left: -20, right: 10, top: 10, bottom: 5 };
@@ -85,7 +86,8 @@ export default function StudentProfileLayer({
   onLogout,
   onStartRemedial,
   behaviorReasons = [],
-  semester = 'Ganjil'
+  semester = 'Ganjil',
+  onlyShowRecordPoints = false
 }: StudentProfileLayerProps) {
   const { isParent } = useGradeMaster();
   const [totalPoints, setTotalPoints] = useState(initialPoints);
@@ -1242,6 +1244,148 @@ export default function StudentProfileLayer({
     const d = new Date(dateStr);
     return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
   };
+
+  if (onlyShowRecordPoints) {
+    return (
+      <div className="fixed inset-0 bg-slate-150/40 backdrop-blur-sm flex justify-center items-center z-[1000] font-sans antialiased text-slate-800 selection:bg-indigo-500/10 p-4">
+        <div className="w-full max-w-md bg-white border border-slate-200 rounded-[3rem] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+          {/* Header */}
+          <div className="p-6 border-b border-slate-100 shrink-0 flex items-start justify-between bg-slate-50/50">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={onBack}
+                className="w-10 h-10 flex items-center justify-center rounded-xl bg-white hover:bg-slate-100 transition-all text-slate-600 active:scale-95 border border-slate-200 shrink-0 shadow-sm"
+              >
+                <ArrowLeft size={16} />
+              </button>
+              <div>
+                <h2 className="text-slate-850 font-black text-sm uppercase tracking-wider font-outfit">Catat Poin Kedisiplinan</h2>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Siswa: {studentName} ({className})</p>
+              </div>
+            </div>
+            <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-100 text-indigo-750 text-[9px] font-extrabold uppercase tracking-wider rounded-lg">Panel Guru</span>
+          </div>
+
+          <div className="p-6 overflow-y-auto custom-scrollbar space-y-5 text-left flex-1">
+            {/* Tanggal & Tipe Switch */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Tanggal Kejadian</label>
+                <input 
+                  type="date" 
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200/70 rounded-xl px-3.5 py-2.5 text-xs font-extrabold text-slate-800 outline-none focus:border-rose-500 focus:bg-white transition-all shadow-sm"
+                />
+              </div>
+
+              <div>
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Jenis Sikap</label>
+                <div className="flex gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200/50">
+                  <button
+                    type="button"
+                    onClick={() => setInputBehaviorType('BAD')}
+                    className={`flex-1 py-2 text-[9.5px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                      inputBehaviorType === 'BAD'
+                        ? 'bg-rose-500 text-white shadow-sm'
+                        : 'text-slate-500 hover:text-slate-850'
+                    }`}
+                  >
+                    🔴 Pelanggaran
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputBehaviorType('GOOD')}
+                    className={`flex-1 py-2 text-[9.5px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                      inputBehaviorType === 'GOOD'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-500 hover:text-slate-850'
+                    }`}
+                  >
+                    🟢 Kebaikan
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Preset Buttons Grid */}
+            <div>
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">
+                {inputBehaviorType === 'BAD' ? 'Pilihan Pelanggaran Standar' : 'Pilihan Kebaikan & Apresiasi'}
+              </label>
+              <div className="grid grid-cols-1 gap-2 max-h-[220px] overflow-y-auto pr-1 no-scrollbar">
+                {inputBehaviorType === 'BAD' ? (
+                  localReasons.filter(r => !r.isGood).map(r => (
+                    <button 
+                      key={r.text} 
+                      disabled={isUpdatingPoints}
+                      onClick={() => handleAddBehavior(r.weight, r.text, false)} 
+                      className="p-3 bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-200 rounded-xl text-left transition-all active:scale-98 flex items-center justify-between group disabled:opacity-50 min-h-[46px] shadow-sm"
+                    >
+                      <span className="text-[11px] font-bold text-slate-700 truncate group-hover:text-rose-900 pr-2">{r.text}</span>
+                      <span className="text-[10px] font-black text-rose-600 bg-rose-100/60 px-2.5 py-0.5 rounded-lg shrink-0">+{r.weight} Pts</span>
+                    </button>
+                  ))
+                ) : (
+                  localReasons.filter(r => r.isGood).map(r => (
+                    <button 
+                      key={r.text} 
+                      disabled={isUpdatingPoints}
+                      onClick={() => handleAddBehavior(r.weight, r.text, true)} 
+                      className="p-3 bg-slate-50 hover:bg-emerald-50 border border-slate-100 hover:border-emerald-200 rounded-xl text-left transition-all active:scale-98 flex items-center justify-between group disabled:opacity-50 min-h-[46px] shadow-sm"
+                    >
+                      <span className="text-[11px] font-bold text-slate-700 truncate group-hover:text-emerald-900 pr-2">{r.text}</span>
+                      <span className="text-[10px] font-black text-emerald-600 bg-emerald-100/60 px-2.5 py-0.5 rounded-lg shrink-0">+{r.weight} Pts</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Custom Input Field */}
+            <div className="pt-4 border-t border-slate-100">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1.5">Input Alasan Khusus (Manual)</label>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder={inputBehaviorType === 'BAD' ? "Tulis pelanggaran khusus..." : "Tulis kebaikan khusus..."}
+                  value={customReasonInput}
+                  onChange={(e) => setCustomReasonInput(e.target.value)}
+                  className="flex-1 bg-slate-50 border border-slate-200/70 rounded-xl px-4 py-3 text-xs font-bold text-slate-800 outline-none focus:border-rose-500 focus:bg-white transition-all placeholder:text-slate-400 placeholder:font-semibold shadow-sm"
+                />
+                
+                <div className="w-16 bg-slate-50 border border-slate-200/70 rounded-xl flex items-center px-1.5 focus-within:border-rose-500 focus-within:bg-white transition-all shadow-sm">
+                  <input 
+                    type="number" 
+                    min="1"
+                    max="100"
+                    value={customReasonPoints}
+                    onChange={(e) => setCustomReasonPoints(parseInt(e.target.value) || 0)}
+                    className="w-full bg-transparent text-center text-xs font-extrabold text-slate-800 outline-none"
+                  />
+                </div>
+
+                <button 
+                  disabled={isUpdatingPoints}
+                  onClick={() => {
+                    if (!customReasonInput.trim()) return;
+                    handleAddBehavior(customReasonPoints, customReasonInput.trim(), inputBehaviorType === 'GOOD');
+                  }}
+                  className={`px-5 rounded-xl text-white text-[10.5px] font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 shrink-0 ${
+                    inputBehaviorType === 'BAD' 
+                      ? 'bg-rose-550 hover:bg-rose-600 shadow-md shadow-rose-500/10' 
+                      : 'bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-500/10'
+                  }`}
+                >
+                  + Catat
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-slate-100/50 flex justify-center z-[1000] font-sans antialiased text-slate-800 selection:bg-indigo-500/10">
