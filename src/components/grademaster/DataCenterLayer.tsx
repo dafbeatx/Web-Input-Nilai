@@ -1253,7 +1253,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           s.className.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesClass = selectedClass === 'Semua' || s.className === selectedClass;
-    const matchesYear = s.academicYear === academicYear;
+const matchesYear = s.academicYear === academicYear;
     return matchesSearch && matchesClass && matchesYear;
   });
 
@@ -1268,25 +1268,33 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
              <Database size={18} /> Pusat Data Terpadu
            </h1>
          </div>
-         <div className="flex flex-row flex-nowrap items-center gap-1.5 py-1 px-1.5 h-10 bg-surface-container rounded-2xl border border-outline-variant/20 shadow-sm shrink-0 overflow-x-auto no-scrollbar max-w-[150px] min-[360px]:max-w-[180px] min-[400px]:max-w-[220px] sm:max-w-none">
-           {['2024/2025', '2025/2026', '2026/2027', '2027/2028'].map((year) => (
-             <button
-               key={year}
-               onClick={() => setGlobalAcademicYear(year)}
-               className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 active:scale-95 whitespace-nowrap ${
-                 academicYear === year
-                   ? 'bg-[#0061FF] text-white shadow-md shadow-blue-500/15'
-                   : 'text-on-surface-variant/70 hover:text-on-surface hover:bg-surface-variant/50'
-               }`}
-             >
-               {year}
-             </button>
-           ))}
-         </div>
        </header>
 
       <main className="flex-1 pt-24 pb-32 px-4 sm:px-6 flex flex-col gap-6 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
         
+        {/* Academic Year Selector Panel */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-100 rounded-[2.5rem] p-5 shadow-sm text-left">
+          <div>
+            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Pilih Tahun Ajaran Aktif</h2>
+            <p className="text-[10px] font-semibold text-slate-450 mt-2 leading-none">Menampilkan data siswa, nilai akademik, dan catatan kedisiplinan pada tahun ajaran terpilih.</p>
+          </div>
+          <div className="flex flex-row flex-nowrap items-center gap-1.5 p-1 bg-slate-50 rounded-2xl border border-slate-200/50 shadow-inner overflow-x-auto no-scrollbar max-w-full sm:max-w-none">
+            {['2024/2025', '2025/2026', '2026/2027', '2027/2028'].map((year) => (
+              <button
+                key={year}
+                onClick={() => setGlobalAcademicYear(year)}
+                className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 active:scale-95 whitespace-nowrap ${
+                  academicYear === year
+                    ? 'bg-[#0061FF] text-white shadow-md shadow-blue-500/15'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/40'
+                }`}
+              >
+                {year}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Controls */}
         <section className="flex flex-col md:flex-row justify-between gap-4">
            <div className="relative flex-1 max-w-md">
