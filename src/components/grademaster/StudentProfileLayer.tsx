@@ -13,7 +13,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, 
   ResponsiveContainer, CartesianGrid 
 } from 'recharts';
-import { ToastType, DEFAULT_VIOLATION_REASONS } from '@/lib/grademaster/types';
+import { ToastType, DEFAULT_VIOLATION_REASONS, DEFAULT_GOOD_REASONS } from '@/lib/grademaster/types';
 import { 
   addBehaviorAction, 
   updateBehaviorAction, 
@@ -121,7 +121,7 @@ export default function StudentProfileLayer({
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [localReasons, setLocalReasons] = useState<{ text: string, weight: number }[]>(behaviorReasons);
+  const [localReasons, setLocalReasons] = useState<{ text: string, weight: number, isGood?: boolean }[]>(behaviorReasons);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
 
@@ -150,15 +150,6 @@ export default function StudentProfileLayer({
   const [showBehaviorLeaderboard, setShowBehaviorLeaderboard] = useState(false);
   const [behaviorLeaderboardTab, setBehaviorLeaderboardTab] = useState<'GOOD' | 'BAD'>('GOOD');
 
-
-  const goodBehaviorPresets = useMemo(() => [
-    { text: "Aktif Berdiskusi & Tanya Jawab", weight: 5 },
-    { text: "Membantu Teman / Tutor Sebaya", weight: 5 },
-    { text: "Menjaga Kebersihan Kelas (Piket)", weight: 5 },
-    { text: "Jujur & Menjunjung Integritas", weight: 10 },
-    { text: "Pencapaian Prestasi Sekolah", weight: 15 },
-    { text: "Sopan Santun & Ramah pada Guru", weight: 5 },
-  ], []);
 
   const totalDemerits = useMemo(() => {
     return studentLogs
@@ -701,11 +692,19 @@ export default function StudentProfileLayer({
       if (res.ok && data.settings && Array.isArray(data.settings.reasons) && data.settings.reasons.length > 0) {
         setLocalReasons(data.settings.reasons);
       } else {
-        setLocalReasons(DEFAULT_VIOLATION_REASONS);
+        const combinedDefaults = [
+          ...DEFAULT_VIOLATION_REASONS.map(r => ({ ...r, isGood: false })),
+          ...DEFAULT_GOOD_REASONS
+        ];
+        setLocalReasons(combinedDefaults);
       }
     } catch (err) {
       console.error("Failed to load behavior settings", err);
-      setLocalReasons(DEFAULT_VIOLATION_REASONS);
+      const combinedDefaults = [
+        ...DEFAULT_VIOLATION_REASONS.map(r => ({ ...r, isGood: false })),
+        ...DEFAULT_GOOD_REASONS
+      ];
+      setLocalReasons(combinedDefaults);
     }
   }, [activeYear]);
 
@@ -1445,7 +1444,7 @@ export default function StudentProfileLayer({
                     </label>
                     <div className="grid grid-cols-1 gap-1.5 max-h-[180px] overflow-y-auto pr-1 no-scrollbar">
                       {inputBehaviorType === 'BAD' ? (
-                        localReasons.map(r => (
+                        localReasons.filter(r => !r.isGood).map(r => (
                           <button 
                             key={r.text} 
                             disabled={isUpdatingPoints}
@@ -1457,7 +1456,7 @@ export default function StudentProfileLayer({
                           </button>
                         ))
                       ) : (
-                        goodBehaviorPresets.map(r => (
+                        localReasons.filter(r => r.isGood).map(r => (
                           <button 
                             key={r.text} 
                             disabled={isUpdatingPoints}
@@ -2428,7 +2427,7 @@ export default function StudentProfileLayer({
                       </label>
                       <div className="grid grid-cols-1 gap-1.5 max-h-[160px] overflow-y-auto pr-1 no-scrollbar">
                         {inputBehaviorType === 'BAD' ? (
-                          localReasons.map(r => (
+                          localReasons.filter(r => !r.isGood).map(r => (
                             <button 
                               key={r.text} 
                               disabled={isUpdatingPoints}
@@ -2440,7 +2439,7 @@ export default function StudentProfileLayer({
                             </button>
                           ))
                         ) : (
-                          goodBehaviorPresets.map(r => (
+                          localReasons.filter(r => r.isGood).map(r => (
                             <button 
                               key={r.text} 
                               disabled={isUpdatingPoints}

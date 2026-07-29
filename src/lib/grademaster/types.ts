@@ -19,18 +19,28 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
 export interface BehaviorReason {
   text: string;
   weight: number;
+  isGood?: boolean;
 }
 
 export const DEFAULT_VIOLATION_REASONS: BehaviorReason[] = [
-  { text: "Terlambat Masuk Sekolah / Kelas", weight: 5 },
-  { text: "Tidak Mengerjakan Tugas / PR", weight: 5 },
-  { text: "Bermain HP / Gadget saat Pelajaran", weight: 10 },
-  { text: "Mengganggu Ketertiban & Suasana Kelas", weight: 10 },
-  { text: "Atribut Seragam Tidak Lengkap / Rapi", weight: 5 },
-  { text: "Meninggalkan Kelas Tanpa Izin", weight: 15 },
-  { text: "Tidak Mengikuti Upacara / Kegiatan Sekolah", weight: 15 },
-  { text: "Merusak Fasilitas / Inventaris Sekolah", weight: 25 },
-  { text: "Tindakan Indisipliner / Melawan Guru", weight: 30 },
+  { text: "Terlambat Masuk Sekolah / Kelas", weight: 5, isGood: false },
+  { text: "Tidak Mengerjakan Tugas / PR", weight: 5, isGood: false },
+  { text: "Bermain HP / Gadget saat Pelajaran", weight: 10, isGood: false },
+  { text: "Mengganggu Ketertiban & Suasana Kelas", weight: 10, isGood: false },
+  { text: "Atribut Seragam Tidak Lengkap / Rapi", weight: 5, isGood: false },
+  { text: "Meninggalkan Kelas Tanpa Izin", weight: 15, isGood: false },
+  { text: "Tidak Mengikuti Upacara / Kegiatan Sekolah", weight: 15, isGood: false },
+  { text: "Merusak Fasilitas / Inventaris Sekolah", weight: 25, isGood: false },
+  { text: "Tindakan Indisipliner / Melawan Guru", weight: 30, isGood: false },
+];
+
+export const DEFAULT_GOOD_REASONS: BehaviorReason[] = [
+  { text: "Aktif Berdiskusi & Tanya Jawab", weight: 5, isGood: true },
+  { text: "Membantu Teman / Tutor Sebaya", weight: 5, isGood: true },
+  { text: "Menjaga Kebersihan Kelas (Piket)", weight: 5, isGood: true },
+  { text: "Jujur & Menjunjung Integritas", weight: 10, isGood: true },
+  { text: "Pencapaian Prestasi Sekolah", weight: 15, isGood: true },
+  { text: "Sopan Santun & Ramah pada Guru", weight: 5, isGood: true },
 ];
 
 export interface StudentResult {

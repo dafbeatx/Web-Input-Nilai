@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, AlertCircle, Loader2, Trash2, X } from 'lucide-react';
-import { ToastType, GradedStudent, DEFAULT_VIOLATION_REASONS, isImageUrl } from '@/lib/grademaster/types';
+import { ToastType, GradedStudent, DEFAULT_VIOLATION_REASONS, DEFAULT_GOOD_REASONS, isImageUrl } from '@/lib/grademaster/types';
 import { supabase } from '@/lib/supabase/client';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import StudentProfileLayer from './StudentProfileLayer';
@@ -56,9 +56,10 @@ export default function BehaviorLayer({
   
   // Settings State
   const [isManagingReasons, setIsManagingReasons] = useState(false);
-  const [behaviorReasons, setBehaviorReasons] = useState<{ text: string, weight: number }[]>([]);
+  const [behaviorReasons, setBehaviorReasons] = useState<{ text: string, weight: number, isGood?: boolean }[]>([]);
   const [newReasonInput, setNewReasonInput] = useState('');
   const [newReasonWeight, setNewReasonWeight] = useState(10);
+  const [newReasonType, setNewReasonType] = useState<'BAD' | 'GOOD'>('BAD');
 
   const [newStudentName, setNewStudentName] = useState('');
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
@@ -71,11 +72,19 @@ export default function BehaviorLayer({
       if (res.ok && data.settings && Array.isArray(data.settings.reasons) && data.settings.reasons.length > 0) {
         setBehaviorReasons(data.settings.reasons);
       } else {
-        setBehaviorReasons(DEFAULT_VIOLATION_REASONS);
+        const combinedDefaults = [
+          ...DEFAULT_VIOLATION_REASONS.map(r => ({ ...r, isGood: false })),
+          ...DEFAULT_GOOD_REASONS
+        ];
+        setBehaviorReasons(combinedDefaults);
       }
     } catch (err) {
       console.error("Failed to load behavior settings", err);
-      setBehaviorReasons(DEFAULT_VIOLATION_REASONS);
+      const combinedDefaults = [
+        ...DEFAULT_VIOLATION_REASONS.map(r => ({ ...r, isGood: false })),
+        ...DEFAULT_GOOD_REASONS
+      ];
+      setBehaviorReasons(combinedDefaults);
     }
   }, [academicYear]);
 
@@ -459,24 +468,50 @@ export default function BehaviorLayer({
               </div>
               
               <div className="p-6 md:p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1">
+                {/* Type Selection */}
+                <div className="flex gap-2 p-1 bg-slate-800 rounded-xl border border-outline-variant max-w-xs">
+                  <button
+                    type="button"
+                    onClick={() => setNewReasonType('BAD')}
+                    className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                      newReasonType === 'BAD'
+                        ? 'bg-rose-500 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    🔴 Pelanggaran
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewReasonType('GOOD')}
+                    className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                      newReasonType === 'GOOD'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    🟢 Kebaikan
+                  </button>
+                </div>
+
                 <div className="flex flex-col md:flex-row gap-3">
                     <div className="flex flex-1 gap-2 border border-outline-variant rounded-xl bg-surface/80 shadow-sm overflow-hidden focus-within:border-primary transition-all">
                       <input 
                         type="text" 
-                        placeholder="Kategori pelanggaran baru..." 
+                        placeholder={newReasonType === 'BAD' ? "Kategori pelanggaran baru..." : "Kategori kebaikan baru..."}
                         value={newReasonInput}
                         onChange={(e) => setNewReasonInput(e.target.value)}
                         className="flex-1 bg-transparent px-5 py-3 text-sm font-bold text-on-surface outline-none placeholder:text-on-surface-variant"
                       />
                       <div className="flex items-center bg-surface-variant border-l border-outline-variant px-3">
-                        <span className="text-[10px] font-black text-rose-500 mr-2 uppercase">+ Poin</span>
+                        <span className={`text-[10px] font-black mr-2 uppercase ${newReasonType === 'BAD' ? 'text-rose-500' : 'text-emerald-500'}`}>+ Poin</span>
                         <input 
                           type="number" 
                           min="1"
                           max="100"
                           value={newReasonWeight}
                           onChange={(e) => setNewReasonWeight(parseInt(e.target.value) || 0)}
-                          className="w-16 bg-transparent text-sm font-bold text-rose-400 outline-none placeholder:text-on-surface-variant"
+                          className={`w-16 bg-transparent text-sm font-bold outline-none placeholder:text-on-surface-variant ${newReasonType === 'BAD' ? 'text-rose-400' : 'text-emerald-400'}`}
                         />
                       </div>
                     </div>
@@ -486,7 +521,7 @@ export default function BehaviorLayer({
                           setToast({ message: "Alasan wajib diisi & poin harus > 0", type: "error" });
                           return;
                         }
-                        const updated = [...behaviorReasons, { text: newReasonInput.trim(), weight: newReasonWeight }];
+                        const updated = [...behaviorReasons, { text: newReasonInput.trim(), weight: newReasonWeight, isGood: newReasonType === 'GOOD' }];
                         saveBehaviorSettings(updated);
                         setNewReasonInput('');
                         setNewReasonWeight(10);
@@ -498,29 +533,63 @@ export default function BehaviorLayer({
                 </div>
 
                 <div className="grid grid-cols-1 gap-8">
+                    {/* Pelanggaran List */}
                     <div className="space-y-4">
                       <h4 className="text-xs font-black text-rose-400 uppercase tracking-widest flex items-center gap-2 pb-2 border-b border-outline-variant">
                         <AlertCircle size={14} /> Master Pelanggaran (Demerit Lists)
                       </h4>
                       <div className="space-y-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {behaviorReasons.map((r, i) => (
-                            <div key={i} className="flex items-center justify-between p-3.5 bg-surface-variant rounded-xl border border-outline-variant group hover:border-rose-500/30 transition-colors shadow-sm">
-                              <div className="flex items-center gap-3">
-                                <span className="text-[11px] font-bold text-on-surface-variant">{r.text}</span>
-                                <span className="text-[9px] font-black text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md">+{r.weight} Pts</span>
+                          {behaviorReasons.filter(r => !r.isGood).map((r) => {
+                            const originalIdx = behaviorReasons.findIndex(x => x.text === r.text && x.weight === r.weight && !x.isGood);
+                            return (
+                              <div key={r.text} className="flex items-center justify-between p-3.5 bg-surface-variant rounded-xl border border-outline-variant group hover:border-rose-500/30 transition-colors shadow-sm">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-[11px] font-bold text-on-surface-variant">{r.text}</span>
+                                  <span className="text-[9px] font-black text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md">+{r.weight} Pts</span>
+                                </div>
+                                <button 
+                                  onClick={() => {
+                                    const updated = behaviorReasons.filter((_, idx) => idx !== originalIdx);
+                                    saveBehaviorSettings(updated);
+                                  }}
+                                  className="text-slate-600 hover:text-rose-500 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 p-1"
+                                  title="Hapus kriteria ini"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
                               </div>
-                              <button 
-                                onClick={() => {
-                                  const updated = behaviorReasons.filter((_, idx) => idx !== i);
-                                  saveBehaviorSettings(updated);
-                                }}
-                                className="text-slate-600 hover:text-rose-500 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 p-1"
-                                title="Hapus kriteria ini"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          ))}
+                            );
+                          })}
+                      </div>
+                    </div>
+
+                    {/* Kebaikan List */}
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2 pb-2 border-b border-outline-variant">
+                        <AlertCircle size={14} /> Master Kebaikan (Merit Lists)
+                      </h4>
+                      <div className="space-y-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {behaviorReasons.filter(r => r.isGood).map((r) => {
+                            const originalIdx = behaviorReasons.findIndex(x => x.text === r.text && x.weight === r.weight && x.isGood);
+                            return (
+                              <div key={r.text} className="flex items-center justify-between p-3.5 bg-surface-variant rounded-xl border border-outline-variant group hover:border-emerald-500/30 transition-colors shadow-sm">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-[11px] font-bold text-on-surface-variant">{r.text}</span>
+                                  <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">+{r.weight} Pts</span>
+                                </div>
+                                <button 
+                                  onClick={() => {
+                                    const updated = behaviorReasons.filter((_, idx) => idx !== originalIdx);
+                                    saveBehaviorSettings(updated);
+                                  }}
+                                  className="text-slate-600 hover:text-emerald-500 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 p-1"
+                                  title="Hapus kriteria ini"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            );
+                          })}
                       </div>
                     </div>
                 </div>
