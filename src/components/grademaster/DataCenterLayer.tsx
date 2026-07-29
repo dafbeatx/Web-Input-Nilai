@@ -329,7 +329,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       const sheet = workbookData.sheets.find(s => s.name === mapping.sheetName);
       if (!sheet) return;
 
-      const classStudents = students.filter(s => s.className === mapping.dbClassName);
+      const classStudents = students.filter(s => s.className === mapping.dbClassName && s.academicYear === academicYear);
 
       for (let i = mapping.headerRow + 1; i < sheet.rows.length; i++) {
         const row = sheet.rows[i];
@@ -1234,13 +1234,15 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     }
   };
 
-  const uniqueClasses = ['Semua', ...Array.from(new Set(students.map(s => s.className))).sort()];
+  const studentsInYear = students.filter(s => s.academicYear === academicYear);
+  const uniqueClasses = ['Semua', ...Array.from(new Set(studentsInYear.map(s => s.className))).sort()];
 
   const filteredStudents = students.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           s.className.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesClass = selectedClass === 'Semua' || s.className === selectedClass;
-    return matchesSearch && matchesClass;
+    const matchesYear = s.academicYear === academicYear;
+    return matchesSearch && matchesClass && matchesYear;
   });
 
   return (
@@ -1254,18 +1256,20 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
              <Database size={18} /> Pusat Data Terpadu
            </h1>
          </div>
-         <div className="flex items-center gap-2">
-           <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant/70">Tahun Ajaran:</span>
-           <select
-             value={academicYear}
-             onChange={(e) => setGlobalAcademicYear(e.target.value)}
-             className="bg-transparent text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#0061FF] hover:text-[#0052d4] cursor-pointer outline-none border-b border-dashed border-[#0061FF]/40 focus:border-[#0061FF] transition-all"
-           >
-             <option value="2024/2025" className="text-on-surface">2024/2025</option>
-             <option value="2025/2026" className="text-on-surface">2025/2026</option>
-             <option value="2026/2027" className="text-on-surface">2026/2027</option>
-             <option value="2027/2028" className="text-on-surface">2027/2028</option>
-           </select>
+         <div className="flex items-center gap-1.5 p-1 bg-surface-container rounded-2xl border border-outline-variant/20 shadow-sm shrink-0">
+           {['2024/2025', '2025/2026', '2026/2027', '2027/2028'].map((year) => (
+             <button
+               key={year}
+               onClick={() => setGlobalAcademicYear(year)}
+               className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 active:scale-95 ${
+                 academicYear === year
+                   ? 'bg-[#0061FF] text-white shadow-md shadow-blue-500/15'
+                   : 'text-on-surface-variant/70 hover:text-on-surface hover:bg-surface-variant/50'
+               }`}
+             >
+               {year}
+             </button>
+           ))}
          </div>
        </header>
 
@@ -1786,7 +1790,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
                             return matchSearch && matchStatus;
                           })
                           .map((record, rIdx) => {
-                            const classDbStudents = students.filter(s => s.className === record.className);
+                            const classDbStudents = students.filter(s => s.className === record.className && s.academicYear === academicYear);
                             return (
                               <tr key={record.id} className="border-b border-outline-variant/5 hover:bg-surface-container/30 transition-colors text-xs text-on-surface-variant">
                                 <td className="p-3 font-semibold text-primary">{record.excelName}</td>
