@@ -204,7 +204,24 @@ export async function POST(req: NextRequest) {
       if (!name && !password) {
         let query = supabaseAdmin
           .from('gm_sessions')
-          .select('id, session_name, teacher, subject, class_name, school_level, exam_type, academic_year, updated_at, kkm, remedial_essay_count, remedial_timer, is_public, is_demo, scoring_config')
+          .select(`
+            id, 
+            session_name, 
+            teacher, 
+            subject, 
+            class_name, 
+            school_level, 
+            exam_type, 
+            academic_year, 
+            updated_at, 
+            kkm, 
+            remedial_essay_count, 
+            remedial_timer, 
+            is_public, 
+            is_demo, 
+            scoring_config,
+            gm_students(count)
+          `)
           .order('updated_at', { ascending: false });
 
         // Hide demo sessions from non-admin users (students see real sessions only)
@@ -216,27 +233,19 @@ export async function POST(req: NextRequest) {
   
         if (error) throw error;
 
-      // Attach student count per session with fail-safe
-      const sessionsWithCounts = await Promise.all(
-        (data || []).map(async (s) => {
-          try {
-            const { count } = await supabase
-              .from('gm_students')
-              .select('*', { count: 'exact', head: true })
-              .eq('session_id', s.id);
-            
-            let parsedConfig = s.scoring_config;
-            if (typeof parsedConfig === 'string') {
-              try { parsedConfig = JSON.parse(parsedConfig); } catch (e) {}
-            }
-            
-            return { ...s, student_count: count || 0, scoring_config: parsedConfig };
-          } catch (err) {
-            console.error(`Error fetching student count for session ${s.id}:`, err);
-            return { ...s, student_count: 0 };
-          }
-        })
-      );
+      // Map the query result to include student_count and clean up gm_students field
+      const sessionsWithCounts = (data || []).map((s: any) => {
+        const studentCount = (s.gm_students && s.gm_students[0]) ? (s.gm_students[0].count || 0) : 0;
+        
+        let parsedConfig = s.scoring_config;
+        if (typeof parsedConfig === 'string') {
+          try { parsedConfig = JSON.parse(parsedConfig); } catch (e) {}
+        }
+        
+        const sessionItem = { ...s, student_count: studentCount, scoring_config: parsedConfig };
+        delete (sessionItem as any).gm_students;
+        return sessionItem;
+      });
 
       return NextResponse.json({ sessions: sessionsWithCounts });
     }

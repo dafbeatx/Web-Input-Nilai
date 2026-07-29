@@ -147,7 +147,7 @@ export default function GradeMaster() {
     setIsLoadingSessions(true);
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
       const res = await fetch("/api/grademaster", { signal: controller.signal });
       clearTimeout(timeoutId);
       const data = await res.json();
@@ -156,9 +156,14 @@ export default function GradeMaster() {
       }
       if (data.sessions) setSessions(data.sessions);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Gagal memuat daftar sesi";
-      console.error("[fetchSessions] Error loading sessions:", err);
-      setToast({ message: `Sesi: ${msg}`, type: "error" });
+      if (err instanceof Error && err.name === "AbortError") {
+        console.error("[fetchSessions] Request timed out after 15s");
+        setToast({ message: "Sesi: Koneksi lambat/terputus, silakan coba lagi.", type: "error" });
+      } else {
+        const msg = err instanceof Error ? err.message : "Gagal memuat daftar sesi";
+        console.error("[fetchSessions] Error loading sessions:", err);
+        setToast({ message: `Sesi: ${msg}`, type: "error" });
+      }
     } finally {
       setIsLoadingSessions(false);
     }

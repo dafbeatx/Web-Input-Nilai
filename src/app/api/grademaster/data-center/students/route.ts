@@ -1,6 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getAdminSession } from '@/lib/grademaster/admin';
+import { hashPassword } from '@/lib/grademaster/security';
+
+function generateUsername(name: string, className: string): string {
+  const cleanName = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '.');
+
+  const classSuffix = className
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+
+  return `${cleanName}.${classSuffix}`;
+}
+
+function generatePassword(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let password = '';
+  for (let i = 0; i < 8; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
 
 interface StudentData {
   id: string;
@@ -242,10 +266,20 @@ export async function POST(req: NextRequest) {
     let skipped = 0;
     const skippedNames: string[] = [];
 
+    // Fetch all existing usernames to avoid collisions
+    const { data: allAccounts } = await supabase
+      .from('gm_student_accounts')
+      .select('username');
+    const usedUsernames = new Set(((allAccounts as { username: string }[]) || []).map((a) => a.username));
+
     for (const studentName of nameList) {
-      // Check existing
+      // Check existing with academic_year
       const { data: existing } = await supabase.from('gm_student_accounts')
-        .select('id').eq('student_name', studentName).eq('class_name', className).single();
+        .select('id')
+        .eq('student_name', studentName)
+        .eq('class_name', className)
+        .eq('academic_year', year)
+        .maybeSingle();
 
       if (existing) {
         skipped++;
@@ -266,22 +300,36 @@ export async function POST(req: NextRequest) {
       const behaviorLogs = prevBehavior?.behavior_logs ?? [];
       const avatarUrl = prevBehavior?.avatar_url ?? null;
 
+      // Handle username collision
+      const baseUsername = generateUsername(studentName, className);
+      let username = baseUsername;
+      let counter = 1;
+      while (usedUsernames.has(username)) {
+        username = `${baseUsername}${counter}`;
+        counter++;
+      }
+      usedUsernames.add(username);
+
+      const plainPassword = generatePassword();
+      const hashedPassword = await hashPassword(plainPassword);
+
       // Create the student account record
       const { error: insertError } = await supabase.from('gm_student_accounts').insert({
         student_name: studentName,
         class_name: className,
         academic_year: year,
-        username: studentName.toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 1000)
+        username,
+        password_plain: plainPassword,
+        password_hash: hashedPassword
       });
 
       if (insertError) {
-        skipped++;
-        skippedNames.push(studentName);
-        continue;
+        console.error('[POST Data Center Students] Insert account error:', insertError);
+        throw insertError;
       }
 
       // Upsert the behavior record in gm_behaviors to link behavior data
-      await supabase
+      const { error: upsertError } = await supabase
         .from('gm_behaviors')
         .upsert({
           student_name: studentName,
@@ -291,6 +339,11 @@ export async function POST(req: NextRequest) {
           behavior_logs: behaviorLogs,
           avatar_url: avatarUrl
         }, { onConflict: 'student_name,class_name,academic_year' });
+
+      if (upsertError) {
+        console.error('[POST Data Center Students] Upsert behavior error:', upsertError);
+        throw upsertError;
+      }
 
       added++;
     }
