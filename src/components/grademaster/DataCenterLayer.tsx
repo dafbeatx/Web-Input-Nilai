@@ -1268,12 +1268,12 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
              <Database size={18} /> Pusat Data Terpadu
            </h1>
          </div>
-         <div className="flex items-center gap-1.5 p-1 bg-surface-container rounded-2xl border border-outline-variant/20 shadow-sm shrink-0">
+         <div className="flex flex-row flex-nowrap items-center gap-1.5 p-1 bg-surface-container rounded-2xl border border-outline-variant/20 shadow-sm shrink-0">
            {['2024/2025', '2025/2026', '2026/2027', '2027/2028'].map((year) => (
              <button
                key={year}
                onClick={() => setGlobalAcademicYear(year)}
-               className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 active:scale-95 ${
+               className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 active:scale-95 whitespace-nowrap ${
                  academicYear === year
                    ? 'bg-[#0061FF] text-white shadow-md shadow-blue-500/15'
                    : 'text-on-surface-variant/70 hover:text-on-surface hover:bg-surface-variant/50'
