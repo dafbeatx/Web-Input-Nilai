@@ -260,7 +260,8 @@ export default function BehaviorLayer({
              {isAdmin ? (
                 adminUser?.[0] || 'A'
              ) : (
-                studentData?.photo_url && isImageUrl(studentData.photo_url) ? <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" /> : (studentData?.photo_url || studentData?.name?.[0] || 'S')
+                 // eslint-disable-next-line @next/next/no-img-element
+                 studentData?.photo_url && isImageUrl(studentData.photo_url) ? <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" /> : (studentData?.photo_url || studentData?.name?.[0] || 'S')
              )}
           </div>
         </div>
@@ -376,6 +377,7 @@ export default function BehaviorLayer({
                       }}
                     >
                       {isImageUrl(student.avatar_url) ? (
+                         // eslint-disable-next-line @next/next/no-img-element
                          <img src={student.avatar_url!} alt={student.student_name} className="w-full h-full object-cover" />
                       ) : (
                          <span className="text-xl">{student.avatar_url || student.student_name.slice(0, 2).toUpperCase()}</span>

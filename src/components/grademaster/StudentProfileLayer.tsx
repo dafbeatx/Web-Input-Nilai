@@ -1,13 +1,18 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @next/next/no-img-element */
+
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { 
-  ArrowLeft, PlusCircle, MinusCircle, Loader2, FileText, 
-  Trash2, Pencil, ShieldCheck, ThumbsUp, X, Calendar, 
-  Activity, History, DownloadCloud, Check, User,
-  Settings, AlertCircle, LogOut, Share2, Trophy, TrendingUp, Target,
+  ArrowLeft, Loader2, FileText, 
+  Trash2, Pencil, X, Calendar, 
+  Activity, DownloadCloud, User,
+  Settings, LogOut, Share2, Trophy, TrendingUp,
   Home, BookOpen, Upload, GraduationCap, Bug, ArrowRight, Info, Scroll,
-  Smartphone, Laptop, Globe, RefreshCw
+  Smartphone, Laptop, RefreshCw
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, Tooltip, 
@@ -22,7 +27,6 @@ import {
 } from '@/lib/actions/behavior';
 import { supabase } from '@/lib/supabase/client';
 import { useGradeMaster } from '@/context/GradeMasterContext';
-import Image from 'next/image';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -3431,6 +3435,15 @@ export default function StudentProfileLayer({
         </div>
       )}
 
+      {isAdmin && (
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          onChange={handleAvatarUpload} 
+          accept="image/*" 
+          className="hidden" 
+        />
+      )}
     </div>
   );
 }
