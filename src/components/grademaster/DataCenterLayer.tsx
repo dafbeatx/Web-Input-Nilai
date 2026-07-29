@@ -6,7 +6,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import { Loader2, Search, Plus, Trash2, Download, Database, BookOpen, AlertCircle, Edit2, ShieldCheck, CheckCircle2, AlertTriangle, FileText, Check, ChevronRight, Info, Upload } from 'lucide-react';
 import jsPDF from 'jspdf';
@@ -151,7 +151,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     setSignaturePreview(null);
   };
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
       setIsLoading(true);
       const res = await fetch('/api/grademaster/data-center/students');
@@ -163,13 +163,13 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [setToast]);
 
   useEffect(() => {
     queueMicrotask(() => {
       fetchStudents();
     });
-  }, []);
+  }, [fetchStudents]);
 
   useEffect(() => {
     queueMicrotask(() => {
