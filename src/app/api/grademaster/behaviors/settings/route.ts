@@ -4,7 +4,7 @@ import { checkRateLimit } from '@/lib/grademaster/security';
 
 export async function GET(req: NextRequest) {
   try {
-      const supabase = await createClient();
+    const supabase = await createClient();
     const { searchParams } = new URL(req.url);
     const academicYear = searchParams.get('year') || '2025/2026';
 
@@ -16,7 +16,23 @@ export async function GET(req: NextRequest) {
       .maybeSingle();
 
     if (error) throw error;
-    return NextResponse.json({ settings: data || null });
+
+    let settings = data;
+    if (!settings) {
+      // Fallback: load the most recently configured academic year settings
+      const { data: fallbackData } = await supabase
+        .from('gm_behavior_settings')
+        .select('reasons')
+        .eq('class_name', 'GLOBAL')
+        .order('academic_year', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (fallbackData) {
+        settings = fallbackData;
+      }
+    }
+
+    return NextResponse.json({ settings: settings || null });
   } catch (err: any) {
     console.error('Fetch global behavior settings error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
