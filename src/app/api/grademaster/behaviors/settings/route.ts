@@ -33,9 +33,10 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ settings: settings || null });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Fetch global behavior settings error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -64,8 +65,9 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error;
     return NextResponse.json({ message: 'Pengaturan perilaku global berhasil disimpan', data });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Save global behavior settings error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
