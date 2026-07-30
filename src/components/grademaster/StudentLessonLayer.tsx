@@ -1,29 +1,41 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   ArrowLeft, 
   BookOpen, 
   Sparkles, 
   Calendar, 
-  ChevronRight, 
   CheckCircle2, 
   FileText, 
-  MessageSquare, 
   Bot,
   Send,
   Loader2,
   HelpCircle,
   Award,
   AlertCircle,
-  Lightbulb,
-  Brain
+  Lightbulb
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import { DailyLesson, Quiz, ToastType } from '@/lib/grademaster/types';
 import GradeMasterMascot from './ui/GradeMasterMascot';
 import { addBehaviorAction } from '@/lib/actions/behavior';
+
+interface SimplifiedSlide {
+  title: string;
+  content: string;
+  analogy?: string;
+}
+
+interface QuizQuestion {
+  type?: 'mcq' | 'essay';
+  text?: string;
+  question?: string;
+  options?: string[];
+  answer?: string;
+  correctAnswer?: string;
+}
 
 interface StudentLessonLayerProps {
   onBack: () => void;
@@ -56,7 +68,17 @@ function fireConfetti() {
   if (!ctx) return;
   
   const colors = ['#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#ef4444'];
-  const confetti: any[] = [];
+  interface ConfettiItem {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    color: string;
+    r: number;
+    rotation: number;
+    rotationSpeed: number;
+  }
+  const confetti: ConfettiItem[] = [];
   
   for (let i = 0; i < 150; i++) {
     confetti.push({
@@ -102,7 +124,7 @@ function fireConfetti() {
     } else {
       try {
         document.body.removeChild(canvas);
-      } catch (e) {}
+      } catch {}
     }
   }
   
@@ -131,7 +153,11 @@ export default function StudentLessonLayer({
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
-  const [quizScoreRecord, setQuizScoreRecord] = useState<any | null>(null);
+  interface QuizScoreRecord {
+    score: number;
+    completed_at: string;
+  }
+  const [quizScoreRecord, setQuizScoreRecord] = useState<QuizScoreRecord | null>(null);
   const [showQuizResults, setShowQuizResults] = useState(false);
   const [isBlockedFromSusulan, setIsBlockedFromSusulan] = useState(false);
 
@@ -142,7 +168,7 @@ export default function StudentLessonLayer({
 
   // Simplified AI Mode State
   const [learningMode, setLearningMode] = useState<'santai' | 'standar'>('santai');
-  const [simplifiedSlides, setSimplifiedSlides] = useState<any[]>([]);
+  const [simplifiedSlides, setSimplifiedSlides] = useState<SimplifiedSlide[]>([]);
   const [isLoadingSimplify, setIsLoadingSimplify] = useState(false);
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
 
@@ -162,14 +188,18 @@ export default function StudentLessonLayer({
 
   useEffect(() => {
     if (studentData?.study_streak !== undefined) {
-      setStreakCount(studentData.study_streak || 0);
+      queueMicrotask(() => {
+        setStreakCount(studentData.study_streak || 0);
+      });
     }
   }, [studentData?.study_streak]);
 
   useEffect(() => {
     if (studentData?.last_active_date) {
       const todayStr = getLocalDateString();
-      setHasStreakUpdatedToday(studentData.last_active_date === todayStr);
+      queueMicrotask(() => {
+        setHasStreakUpdatedToday(studentData.last_active_date === todayStr);
+      });
     }
   }, [studentData?.last_active_date]);
 
@@ -209,8 +239,10 @@ export default function StudentLessonLayer({
   // Coordinator Effect for Mascot dialog bubble and expressions
   useEffect(() => {
     if (!selectedLesson) {
-      setMascotState('idle');
-      setMascotMessage('Halo! Yuk kita mulai belajar materi hari ini. Pilih salah satu materi di kiri ya!');
+      queueMicrotask(() => {
+        setMascotState('idle');
+        setMascotMessage('Halo! Yuk kita mulai belajar materi hari ini. Pilih salah satu materi di kiri ya!');
+      });
       return;
     }
 
@@ -259,7 +291,7 @@ export default function StudentLessonLayer({
     }
   }, [activeTab, selectedLesson, learningMode, simplifiedSlides.length, currentSlideIdx, showQuizResults, quizScoreRecord, isBlockedFromSusulan]);
 
-  const fetchSimplifiedContent = async (subject: string, content: string) => {
+  const fetchSimplifiedContent = useCallback(async (subject: string, content: string) => {
     if (!content) return;
     setIsLoadingSimplify(true);
     try {
@@ -272,14 +304,14 @@ export default function StudentLessonLayer({
       if (!res.ok) throw new Error(data.error || 'Gagal menyederhanakan materi');
       setSimplifiedSlides(data.slides || []);
       setCurrentSlideIdx(0);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       setToast({ message: "Gagal memuat mode santai, beralih ke mode standar", type: 'error' });
       setLearningMode('standar');
     } finally {
       setIsLoadingSimplify(false);
     }
-  };
+  }, [setToast]);
 
   // Load published lessons on mount
   useEffect(() => {
@@ -321,7 +353,7 @@ export default function StudentLessonLayer({
         } else {
           setSelectedLesson(null);
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("Failed to load lessons:", err);
         setToast({ message: "Gagal memuat daftar pelajaran", type: 'error' });
       } finally {
@@ -330,7 +362,7 @@ export default function StudentLessonLayer({
     };
 
     fetchLessons();
-  }, [activeClassName, academicYear]);
+  }, [activeClassName, academicYear, setToast]);
 
   // Load quizzes and scores when selected lesson changes
   useEffect(() => {
@@ -409,7 +441,7 @@ export default function StudentLessonLayer({
             }
           }
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("Failed to load quizzes/scores:", err);
       } finally {
         setIsLoadingQuizzes(false);
@@ -419,27 +451,31 @@ export default function StudentLessonLayer({
     fetchQuizzesAndScores();
 
     // Reset Chat messages for the new lesson
-    setChatMessages([
-      { 
-        role: 'assistant', 
-        content: `Halo! Saya asisten AI GradeMaster OS. Saya siap membantumu mempelajari materi **${selectedLesson?.subject || 'pelajaran'}** hari ini. Ada konsep yang belum kamu pahami dari rangkuman materi?` 
-      }
-    ]);
+    queueMicrotask(() => {
+      setChatMessages([
+        { 
+          role: 'assistant', 
+          content: `Halo! Saya asisten AI GradeMaster OS. Saya siap membantumu mempelajari materi **${selectedLesson?.subject || 'pelajaran'}** hari ini. Ada konsep yang belum kamu pahami dari rangkuman materi?` 
+        }
+      ]);
 
-    // Reset and trigger simplify if needed
-    setSimplifiedSlides([]);
-    setCurrentSlideIdx(0);
-    if (selectedLesson && learningMode === 'santai') {
-      fetchSimplifiedContent(selectedLesson.subject, selectedLesson.content || selectedLesson.ai_reading_preview || "");
-    }
-  }, [selectedLesson]);
+      // Reset and trigger simplify if needed
+      setSimplifiedSlides([]);
+      setCurrentSlideIdx(0);
+      if (selectedLesson && learningMode === 'santai') {
+        fetchSimplifiedContent(selectedLesson.subject, selectedLesson.content || selectedLesson.ai_reading_preview || "");
+      }
+    });
+  }, [selectedLesson, activeClassName, academicYear, semester, studentData, learningMode, fetchSimplifiedContent]);
 
   // Trigger auto-simplification when mode is switched to 'santai' and we have no cached slides
   useEffect(() => {
     if (learningMode === 'santai' && selectedLesson && simplifiedSlides.length === 0 && !isLoadingSimplify) {
-      fetchSimplifiedContent(selectedLesson.subject, selectedLesson.content || selectedLesson.ai_reading_preview || "");
+      queueMicrotask(() => {
+        fetchSimplifiedContent(selectedLesson.subject, selectedLesson.content || selectedLesson.ai_reading_preview || "");
+      });
     }
-  }, [learningMode, selectedLesson]);
+  }, [learningMode, selectedLesson, simplifiedSlides.length, isLoadingSimplify, fetchSimplifiedContent]);
 
   // Send message to Copilot AI
   const suggestedLessonQuestions = [
@@ -480,7 +516,7 @@ export default function StudentLessonLayer({
       if (!res.ok) throw new Error(data.error || 'Gagal terhubung ke AI');
 
       setChatMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
-    } catch (err: any) {
+    } catch (err) {
       console.error("AI response error:", err);
       setChatMessages(prev => [
         ...prev, 
@@ -525,7 +561,7 @@ export default function StudentLessonLayer({
       if (!res.ok) throw new Error(data.error || 'Gagal terhubung ke AI');
 
       setChatMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
-    } catch (err: any) {
+    } catch (err) {
       console.error("AI response error:", err);
       setChatMessages(prev => [
         ...prev, 
@@ -540,11 +576,11 @@ export default function StudentLessonLayer({
   const handleSubmitQuiz = async () => {
     if (!selectedQuiz || !selectedLesson) return;
 
-    const questionsList = selectedQuiz.questions || [];
+    const questionsList = (selectedQuiz.questions || []) as QuizQuestion[];
     if (questionsList.length === 0) return;
 
     // Ensure all MCQs are answered
-    const unansweredMCQ = questionsList.some((q: any, idx: number) => {
+    const unansweredMCQ = questionsList.some((q, idx) => {
       return (q.type === 'mcq' || !q.type) && !userAnswers[idx];
     });
 
@@ -559,7 +595,7 @@ export default function StudentLessonLayer({
       let correctCount = 0;
       let mcqCount = 0;
 
-      questionsList.forEach((q: any, idx: number) => {
+      questionsList.forEach((q, idx) => {
         if (q.type === 'mcq' || !q.type) {
           mcqCount++;
           const correctAns = (q.answer || q.correctAnswer || '').trim().toUpperCase();
@@ -636,9 +672,10 @@ export default function StudentLessonLayer({
       setQuizScoreRecord(data);
       setShowQuizResults(true);
       setToast({ message: `Kuis berhasil dikirim! Nilaimu: ${finalScore}/100`, type: 'success' });
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to submit quiz:", err);
-      setToast({ message: err.message || "Gagal menyimpan hasil kuis", type: 'error' });
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setToast({ message: errMsg || "Gagal menyimpan hasil kuis", type: 'error' });
     } finally {
       setIsSubmittingQuiz(false);
     }
@@ -1088,7 +1125,7 @@ export default function StudentLessonLayer({
                             /* ACTIVE QUIZ QUESTION RUNNER */
                             <div className="space-y-6 flex-1 flex flex-col justify-between">
                               <div className="space-y-6 max-h-[350px] overflow-y-auto pr-1 no-scrollbar flex-1">
-                                {(selectedQuiz.questions || []).map((q: any, qIdx: number) => {
+                                {(selectedQuiz.questions as QuizQuestion[]).map((q, qIdx) => {
                                   const isMcq = q.type === 'mcq' || !q.type;
                                   return (
                                     <div key={qIdx} className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">

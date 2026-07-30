@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { 
-  User, 
   Search, 
-  MapPin, 
   ArrowRight, 
   LogOut, 
   Loader2, 
   CheckCircle2, 
   GraduationCap 
 } from 'lucide-react';
-import { ToastType } from '@/lib/grademaster/types';
+import { ToastType, StudentAccount } from '@/lib/grademaster/types';
 import NeonGraduationCap from '@/components/grademaster/ui/NeonGraduationCap';
 import { supabase } from '@/lib/supabase/client';
 
@@ -19,7 +18,7 @@ interface StudentClaimLayerProps {
     email: string;
     photo_url?: string;
   };
-  onSuccess: (studentData: any) => void;
+  onSuccess: (studentData: StudentAccount) => void;
   onLogout: () => void;
   setToast: (t: ToastType) => void;
 }
@@ -153,8 +152,9 @@ export default function StudentClaimLayer({
 
       setToast({ message: 'Profil berhasil dikaitkan!', type: 'success' });
       onSuccess(data.student);
-    } catch (err: any) {
-      setToast({ message: err.message || 'Gagal mengaitkan profil', type: 'error' });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setToast({ message: errMsg || 'Gagal mengaitkan profil', type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -189,7 +189,7 @@ export default function StudentClaimLayer({
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Masuk sebagai</p>
           <div className="flex items-center gap-4 bg-slate-50 pl-2 pr-6 py-2 rounded-full border border-slate-100 shadow-sm transition-all hover:shadow-md">
             {googleUser.photo_url ? (
-              <img src={googleUser.photo_url} alt="Profile" className="w-12 h-12 rounded-full border-2 border-white shadow-sm" />
+              <Image src={googleUser.photo_url} alt="Profile" width={48} height={48} className="w-12 h-12 rounded-full border-2 border-white shadow-sm" unoptimized />
             ) : (
               <div className="w-12 h-12 rounded-full bg-[#0F172A] text-white flex items-center justify-center font-bold">
                 {googleUser.name[0]}

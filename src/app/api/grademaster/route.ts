@@ -6,7 +6,7 @@ import { hashPassword, verifyPassword, validateSessionInput, checkRateLimit } fr
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { getStudentSession } from '@/lib/grademaster/studentAuth';
 import { generateQuestionDifficulties } from '@/lib/grademaster/analytics';
-import { GradedStudent } from '@/lib/grademaster/types';
+import { GradedStudent, ScoringConfig } from '@/lib/grademaster/types';
 import { calculateStudentResult } from '@/lib/grademaster/scoring';
 
 export async function POST(req: NextRequest) {
@@ -73,7 +73,12 @@ export async function POST(req: NextRequest) {
       if (stuError || !students) return NextResponse.json({ error: 'Students not found' }, { status: 404 });
       
       // 3. Re-calculate and update each student
-      const updates = students.map((s: any) => {
+      interface DBStudentMapItem {
+        id: string;
+        mcq_answers: Record<number, string>;
+        essay_scores: number[];
+      }
+      const updates = (students as unknown as DBStudentMapItem[]).map((s) => {
         const result = calculateStudentResult(
           session.answer_key, 
           s.mcq_answers, 
@@ -131,7 +136,7 @@ export async function POST(req: NextRequest) {
           remedial_essay_count: remedialEssayCount || undefined,
           remedial_timer: remedialTimer || undefined,
           is_public: body.isPublic === undefined ? undefined : body.isPublic,
-          is_demo: body.isDemo === undefined ? undefined : body.isDemo,
+          is_demo: isDemo === undefined ? undefined : isDemo,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
@@ -173,7 +178,7 @@ export async function POST(req: NextRequest) {
         remedial_essay_count: remedialEssayCount || 5,
         remedial_timer: remedialTimer || 15,
         is_public: body.isPublic === true,
-        is_demo: body.isDemo === true,
+        is_demo: isDemo === true,
       })
       .select('id')
       .single();
@@ -193,9 +198,7 @@ export async function POST(req: NextRequest) {
 
   export async function GET(req: NextRequest) {
     try {
-      const supabase = await createClient();
       const adminSession = await getAdminSession();
-      const studentSession = await getStudentSession();
       const { searchParams } = new URL(req.url);
       const name = searchParams.get('name');
       const password = searchParams.get('password');
@@ -234,16 +237,17 @@ export async function POST(req: NextRequest) {
         if (error) throw error;
 
       // Map the query result to include student_count and clean up gm_students field
-      const sessionsWithCounts = (data || []).map((s: any) => {
-        const studentCount = (s.gm_students && s.gm_students[0]) ? (s.gm_students[0].count || 0) : 0;
+      const sessionsWithCounts = (data || []).map((s: Record<string, unknown>) => {
+        const gmStudents = s.gm_students as { count: number }[] | undefined;
+        const studentCount = (gmStudents && gmStudents[0]) ? (gmStudents[0].count || 0) : 0;
         
         let parsedConfig = s.scoring_config;
         if (typeof parsedConfig === 'string') {
-          try { parsedConfig = JSON.parse(parsedConfig); } catch (e) {}
+          try { parsedConfig = JSON.parse(parsedConfig); } catch {}
         }
         
         const sessionItem = { ...s, student_count: studentCount, scoring_config: parsedConfig };
-        delete (sessionItem as any).gm_students;
+        delete (sessionItem as { gm_students?: unknown }).gm_students;
         return sessionItem;
       });
 
@@ -300,7 +304,37 @@ export async function POST(req: NextRequest) {
 
     const config = session.scoring_config || { pgWeight: 0.7, essayWeight: 0.3 };
 
-    const gradedStudents: GradedStudent[] = (students || []).map((s: any) => {
+    interface DBStudentRow {
+      id: string;
+      name: string;
+      mcq_answers: Record<number, string>;
+      essay_scores: number[];
+      correct: number;
+      wrong: number;
+      mcq_score: number;
+      essay_score: number;
+      final_score: number;
+      csi: number;
+      lps: number;
+      remedial_status?: 'NONE' | 'INITIATED' | 'ACTIVE' | 'FAILED' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT' | 'REMEDIAL' | 'SUBMITTED' | 'TIME_UP' | 'FAILED_EFFORT' | 'IN_PROGRESS';
+      remedial_location?: string;
+      remedial_photo?: string;
+      remedial_answers?: string[];
+      remedial_note?: string;
+      original_score?: number | null;
+      remedial_score?: number | null;
+      final_score_locked?: number | null;
+      is_cheated?: boolean;
+      teacher_reviewed?: boolean;
+      cheating_flags?: string[];
+      remedial_attempts?: number;
+      essay_score_auto?: number | null;
+      essay_score_manual?: number | null;
+      essay_score_final?: number | null;
+      essay_auto_details?: { similarity: number; score: number }[];
+    }
+
+    const gradedStudents: GradedStudent[] = (students as unknown as DBStudentRow[] || []).map((s) => {
       let finalScore = Number(s.final_score);
       const mcqScore = Number(s.mcq_score);
       const essayScore = Number(s.essay_score);
@@ -311,34 +345,34 @@ export async function POST(req: NextRequest) {
       }
 
       return {
-      id: s.id,
-      name: s.name,
-      answers: isReadOnly ? {} : s.mcq_answers,
-      essayScores: isReadOnly ? [] : s.essay_scores,
-      correct: s.correct,
-      wrong: s.wrong,
-      mcqScore,
-      essayScore,
-      finalScore,
-      percentage: finalScore,
-      csi: s.csi,
-      lps: s.lps,
-      remedialStatus: s.remedial_status,
-      remedialLocation: isReadOnly ? undefined : s.remedial_location,
-      remedialPhoto: isReadOnly ? undefined : s.remedial_photo,
-      remedialAnswers: isReadOnly ? undefined : s.remedial_answers,
-      remedialNote: isReadOnly ? undefined : s.remedial_note,
-      originalScore: (s.original_score !== null && s.original_score !== undefined) ? Number(s.original_score) : undefined,
-      remedialScore: (s.remedial_score !== null && s.remedial_score !== undefined) ? Number(s.remedial_score) : undefined,
-      finalScoreLocked: (s.final_score_locked !== null && s.final_score_locked !== undefined) ? Number(s.final_score_locked) : undefined,
-      isCheated: isReadOnly ? undefined : s.is_cheated,
-      teacherReviewed: isReadOnly ? undefined : s.teacher_reviewed,
-      cheatingFlags: isReadOnly ? undefined : s.cheating_flags,
-      remedialAttempts: s.remedial_attempts,
-      essayScoreAuto: (s.essay_score_auto !== null && s.essay_score_auto !== undefined) ? Number(s.essay_score_auto) : undefined,
-      essayScoreManual: (s.essay_score_manual !== null && s.essay_score_manual !== undefined) ? Number(s.essay_score_manual) : undefined,
-      essayScoreFinal: (s.essay_score_final !== null && s.essay_score_final !== undefined) ? Number(s.essay_score_final) : undefined,
-      essayAutoDetails: isReadOnly ? undefined : s.essay_auto_details,
+        id: s.id,
+        name: s.name,
+        answers: isReadOnly ? {} : s.mcq_answers,
+        essayScores: isReadOnly ? [] : s.essay_scores,
+        correct: s.correct,
+        wrong: s.wrong,
+        mcqScore,
+        essayScore,
+        finalScore,
+        percentage: finalScore,
+        csi: s.csi,
+        lps: s.lps,
+        remedialStatus: s.remedial_status,
+        remedialLocation: isReadOnly ? undefined : s.remedial_location,
+        remedialPhoto: isReadOnly ? undefined : s.remedial_photo,
+        remedialAnswers: isReadOnly ? undefined : s.remedial_answers,
+        remedialNote: isReadOnly ? undefined : s.remedial_note,
+        originalScore: (s.original_score !== null && s.original_score !== undefined) ? Number(s.original_score) : undefined,
+        remedialScore: (s.remedial_score !== null && s.remedial_score !== undefined) ? Number(s.remedial_score) : undefined,
+        finalScoreLocked: (s.final_score_locked !== null && s.final_score_locked !== undefined) ? Number(s.final_score_locked) : undefined,
+        isCheated: isReadOnly ? undefined : s.is_cheated,
+        teacherReviewed: isReadOnly ? undefined : s.teacher_reviewed,
+        cheatingFlags: isReadOnly ? undefined : s.cheating_flags,
+        remedialAttempts: s.remedial_attempts,
+        essayScoreAuto: (s.essay_score_auto !== null && s.essay_score_auto !== undefined) ? Number(s.essay_score_auto) : undefined,
+        essayScoreManual: (s.essay_score_manual !== null && s.essay_score_manual !== undefined) ? Number(s.essay_score_manual) : undefined,
+        essayScoreFinal: (s.essay_score_final !== null && s.essay_score_final !== undefined) ? Number(s.essay_score_final) : undefined,
+        essayAutoDetails: isReadOnly ? undefined : s.essay_auto_details,
       };
     });
 
@@ -348,7 +382,7 @@ export async function POST(req: NextRequest) {
     // Menampilkan tombol remedial jika guru sudah mengatur soal remedial
     let parsedConfig = session.scoring_config;
     if (typeof parsedConfig === 'string') {
-      try { parsedConfig = JSON.parse(parsedConfig); } catch(e) {}
+      try { parsedConfig = JSON.parse(parsedConfig); } catch {}
     }
     const hasQuestions = Array.isArray(parsedConfig?.remedialQuestions) && parsedConfig.remedialQuestions.length > 0;
     const showRemedialButton = hasQuestions;

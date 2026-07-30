@@ -1,11 +1,29 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import Image from 'next/image';
 import { 
   Clock, RotateCcw, X, Save, User
 } from 'lucide-react';
 import { GradedStudent, ScoringConfig, SessionMeta, isImageUrl } from '@/lib/grademaster/types';
 import { useGradeMaster } from '@/context/GradeMasterContext';
+
+interface ForensicEvent {
+  time: string;
+  action: string;
+  risk_points: number;
+  description: string;
+}
+
+interface AIForensicRecord {
+  risk_level?: string;
+  risk_score?: number;
+  ai_verdict?: string;
+  threat_vector_summary?: string;
+  forensic_timeline?: ForensicEvent[];
+  is_ai_analysis?: boolean;
+  mitigation_actions?: string[];
+}
 
 interface RemedialDashboardLayerProps {
   gradedStudents: GradedStudent[];
@@ -37,11 +55,9 @@ export default function RemedialDashboardLayer({
   gradedStudents,
   kkm,
   scoringConfig,
-  examType = "UTS",
   academicYear = "2025/2026",
   studentClass,
   subject = "Matematika",
-  schoolLevel = "SMA",
   semester = "Ganjil",
   onBack,
   onUpdateRemedial,
@@ -119,7 +135,7 @@ export default function RemedialDashboardLayer({
     });
   }, [scoringConfig.remedialDeadline]);
 
-  const [aiForensicResult, setAiForensicResult] = useState<Record<string, any>>({});
+  const [aiForensicResult, setAiForensicResult] = useState<Record<string, AIForensicRecord>>({});
   const [forensicConsoleLogs, setForensicConsoleLogs] = useState<string[]>([]);
 
   const runAiForensic = async (studentId: string) => {
@@ -161,7 +177,7 @@ export default function RemedialDashboardLayer({
         }));
         setLoadingSecurityAnalysis(null);
       }, 5000);
-    } catch (err) {
+    } catch {
       setTimeout(() => {
         setForensicConsoleLogs(prev => [...prev, "[ERROR] Kegagalan audit forensik keamanan."]);
         setLoadingSecurityAnalysis(null);
@@ -192,7 +208,7 @@ export default function RemedialDashboardLayer({
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
-    }).catch(err => {
+    }).catch(() => {
       alert('Gagal menyalin teks. Browser Anda mungkin tidak mendukung fitur Clipboard.');
     });
   };
@@ -290,7 +306,7 @@ export default function RemedialDashboardLayer({
       });
       if (!res.ok) throw new Error('Gagal mereset');
       setDeletedIds(prev => [...prev, id]);
-    } catch (err) {
+    } catch {
       alert('Gagal mereset data remedial. Silakan coba lagi.');
     } finally {
       setResettingStudentId(null);
@@ -320,8 +336,9 @@ export default function RemedialDashboardLayer({
       }
       alert(`Berhasil menambahkan ${minutes} menit untuk "${name}".`);
       if (onRefresh) onRefresh();
-    } catch (err: any) {
-      alert(err.message || 'Gagal menambahkan waktu. Silakan coba lagi.');
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      alert(errMsg || 'Gagal menambahkan waktu. Silakan coba lagi.');
     } finally {
       setExtendingTimeStudentId(null);
     }
@@ -349,8 +366,9 @@ export default function RemedialDashboardLayer({
       if (!res.ok) throw new Error(data.error || 'Gagal menyimpan evaluasi');
       alert(`Berhasil: ${data.message}`);
       window.location.reload(); 
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      alert(errMsg);
     } finally {
       setIsSubmitting(false);
       setReviewingStudentId(null);
@@ -649,7 +667,7 @@ export default function RemedialDashboardLayer({
                             student.remedialStatus === 'CHEATED' ? 'border-error/30' : 'border-outline-variant/20'
                           }`}>
                              {student.remedialPhoto && isImageUrl(student.remedialPhoto) ? (
-                               <img src={student.remedialPhoto} alt={student.name} className="w-full h-full object-cover" />
+                               <Image src={student.remedialPhoto} alt={student.name} width={44} height={44} className="w-full h-full object-cover" unoptimized />
                              ) : (
                                <User size={20} className="text-on-surface-variant/40" />
                              )}
@@ -867,16 +885,16 @@ export default function RemedialDashboardLayer({
                               <div className="bg-surface-container-low/50 p-4 rounded-2xl border border-white/[0.02]">
                                 <h6 className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/50 mb-2 leading-none">Deskripsi Modus Operandi</h6>
                                 <p className="text-[10px] font-bold text-on-surface-variant/80 leading-relaxed">
-                                  {aiForensicResult[student.id].threat_vector_summary}
+                                  {aiForensicResult[student.id]?.threat_vector_summary}
                                 </p>
                               </div>
 
                               {/* Chronological Timeline */}
-                              {aiForensicResult[student.id].forensic_timeline?.length > 0 && (
+                              {((aiForensicResult[student.id]?.forensic_timeline?.length ?? 0) > 0) && (
                                 <div className="space-y-3">
                                   <h6 className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/50 mb-1.5 leading-none">Timeline Anomali Forensik</h6>
                                   <div className="border-l border-white/[0.05] pl-3 ml-1.5 space-y-3 relative">
-                                    {aiForensicResult[student.id].forensic_timeline.map((evt: any, eidx: number) => (
+                                    {(aiForensicResult[student.id]?.forensic_timeline || []).map((evt, eidx) => (
                                       <div key={eidx} className="relative flex flex-col gap-0.5">
                                         {/* Pin indicator */}
                                         <div className={`absolute -left-[16.5px] top-1 w-2.5 h-2.5 rounded-full border-2 border-surface-container-lowest ${
@@ -903,13 +921,13 @@ export default function RemedialDashboardLayer({
                               )}
 
                               {/* Mitigation Actions */}
-                              {aiForensicResult[student.id].mitigation_actions?.length > 0 && (
+                              {((aiForensicResult[student.id]?.mitigation_actions?.length ?? 0) > 0) && (
                                 <div className="p-4 bg-tertiary/5 border border-tertiary/10 rounded-2xl">
                                   <h6 className="text-[8px] font-black uppercase tracking-widest text-tertiary mb-2 leading-none flex items-center gap-1">
                                     <span className="material-symbols-outlined text-[10px]">shield</span> Rekomendasi Keamanan Guru
                                   </h6>
                                   <ul className="space-y-1.5">
-                                    {aiForensicResult[student.id].mitigation_actions.map((act: string, aidx: number) => (
+                                    {(aiForensicResult[student.id]?.mitigation_actions || []).map((act, aidx) => (
                                       <li key={aidx} className="text-[9px] font-bold text-on-surface-variant/70 flex items-start gap-1.5">
                                         <span className="text-tertiary shrink-0 mt-0.5">•</span>
                                         <span>{act}</span>

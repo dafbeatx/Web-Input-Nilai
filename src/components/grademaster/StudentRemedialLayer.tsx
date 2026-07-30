@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ToastType } from '@/lib/grademaster/types';
-import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, CameraOff, Clock, CheckCircle2, MapPin, User, Star, ShieldCheck, ArrowRight, Cpu, MonitorOff, Play, Monitor, Activity, AppWindow, Wifi, Video, CloudLightning, Info, FileText, CircleHelp, Settings, LayoutTemplate, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, CameraOff, Clock, CheckCircle2, User, Star, ShieldCheck, ArrowRight, Cpu, MonitorOff, Play, Monitor, Activity, AppWindow, Wifi, RefreshCw } from 'lucide-react';
 import ProctoringCamera from './ProctoringCamera';
 import { saveRemedialSession, loadRemedialSession, clearRemedialSession } from '@/lib/grademaster/session';
 import { assessClientRisk } from '@/lib/grademaster/services/risk-engine.service';
@@ -193,7 +193,22 @@ const getDeviceInfo = () => {
 
 const getNetworkInfo = () => {
   if (typeof navigator === 'undefined') return 'unknown';
-  const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+  interface NavigatorWithConnection extends Navigator {
+    connection?: {
+      effectiveType?: string;
+      downlink?: number;
+    };
+    mozConnection?: {
+      effectiveType?: string;
+      downlink?: number;
+    };
+    webkitConnection?: {
+      effectiveType?: string;
+      downlink?: number;
+    };
+  }
+  const nav = navigator as NavigatorWithConnection;
+  const conn = nav.connection || nav.mozConnection || nav.webkitConnection;
   if (!conn) return 'unknown';
   return `${conn.effectiveType || 'unknown'} (${conn.downlink || '?'}Mbps)`;
 };
@@ -214,7 +229,7 @@ export default function StudentRemedialLayer({
   setToast,
 }: StudentRemedialLayerProps) {
   const [step, setStep] = useState<RemedialStep>('RULES');
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [isTimeoutTriggered, setIsTimeoutTriggered] = useState(false);
   const [answers, setAnswers] = useState<string[]>(() => {
     const len = (remedialQuestions && remedialQuestions.length > 0) ? remedialQuestions.length : remedialEssayCount;
     return new Array(len).fill("");
@@ -232,10 +247,7 @@ export default function StudentRemedialLayer({
   const [currentStudentId, setCurrentStudentId] = useState<string | null>(null);
   
   // Points & Time Extension State
-  const [pointsBal, setPointsBal] = useState<{total: number, usedToday: number} | null>(null);
-  const [showTimeUpModal, setShowTimeUpModal] = useState(false);
-  const [extendLoading, setExtendLoading] = useState(false);
-  const [pointsToSpend, setPointsToSpend] = useState<number>(3);
+  const showTimeUpModal = false;
   const hasActivatedRef = useRef(false);
   const [cameraRetryCount, setCameraRetryCount] = useState(0);
   const [cameraErrorDetail, setCameraErrorDetail] = useState<string | null>(null);
@@ -245,7 +257,6 @@ export default function StudentRemedialLayer({
   const [faceStatus, setFaceStatus] = useState<'calibrating' | 'detected' | 'not_detected'>('calibrating');
   const MAX_CAMERA_RETRIES = 5;
   
-  const [warningCount, setWarningCount] = useState(0);
   const [tabWarningCount, setTabWarningCount] = useState(0);
   const [clientCheatingFlags, setClientCheatingFlags] = useState<string[]>([]);
   const [serverCheatingFlags, setServerCheatingFlags] = useState<string[]>([]);
@@ -257,12 +268,10 @@ export default function StudentRemedialLayer({
   const isDeploymentReloadRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [backPressCount, setBackPressCount] = useState(0);
+  const backPressCountRef = useRef(0);
   const [secondChanceUsed, setSecondChanceUsed] = useState(false);
   const [secondChanceReason, setSecondChanceReason] = useState('');
   const [isOffline, setIsOffline] = useState(false);
-  const [networkWarningCount, setNetworkWarningCount] = useState(0);
-  const MAX_NETWORK_WARNINGS = 3;
   const [activeWarning, setActiveWarning] = useState<{
     type: 'TAB' | 'NETWORK' | 'CAMERA';
     count: number;
@@ -272,7 +281,6 @@ export default function StudentRemedialLayer({
   const [isTabHidden, setIsTabHidden] = useState(false);
   const [isPermanentlyBlocked, setIsPermanentlyBlocked] = useState(false);
   const [remainingStudents, setRemainingStudents] = useState<{name: string}[]>([]);
-  const [sessionCreatedAt, setSessionCreatedAt] = useState<string | null>(null);
   const [finalScore, setFinalScore] = useState<number | null>(null);
   const [essayAutoDetails, setEssayAutoDetails] = useState<{ similarity: number; score: number }[]>([]);
   const [remedialAnswerKeys, setRemedialAnswerKeys] = useState<string[]>([]);
@@ -281,9 +289,6 @@ export default function StudentRemedialLayer({
   const [isHeldBack, setIsHeldBack] = useState<boolean>(false);
   const [remedialScore, setRemedialScore] = useState<number | null>(null);
   const [pendingRemedialCount, setPendingRemedialCount] = useState<number>(0);
-  const [holdbackReason, setHoldbackReason] = useState<string | null>(null);
-  const [rawScore, setRawScore] = useState<number | null>(null);
-  const [displayedScore, setDisplayedScore] = useState<number | null>(null);
   const [failedReason, setFailedReason] = useState<string | null>(null);
 
   // Refs to prevent stale closures in timeout useEffect
@@ -300,7 +305,10 @@ export default function StudentRemedialLayer({
 
   const hasSubmittedRef = useRef(false);
   const hasSentStartNotifRef = useRef(false);
-  const wakeLockRef = useRef<any>(null); // Screen Wake Lock
+  interface WakeLockSentinel {
+    release(): Promise<void>;
+  }
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null); // Screen Wake Lock
   const lastPhotoHashRef = useRef<string>(''); // Dedup: track last sent photo hash
   const consecutiveDupCountRef = useRef<number>(0); // Track how many dupes skipped in a row
 
@@ -312,55 +320,57 @@ export default function StudentRemedialLayer({
   const pipRef = useRef<HTMLDivElement>(null);
   const [pipPos, setPipPos] = useState<{x: number, y: number} | null>(null);
   const isDraggingRef = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
   const dragOffsetRef = useRef({x: 0, y: 0});
   const dragStartPosRef = useRef({x: 0, y: 0});
   const wasDraggedRef = useRef(false);
   
   // Face Education Popup State
-  const [showFaceEducation, setShowFaceEducation] = useState(false);
   const lastEducationShownRef = useRef(0);
   
-  const [showFiveMinWarning, setShowFiveMinWarning] = useState(false);
-  const hasShownFiveMinWarningRef = useRef(false);
   const [isPenaltyApplied, setIsPenaltyApplied] = useState(false);
   
   // AI Bot & Screen Overlay Detection
   const [showAiBotWarning, setShowAiBotWarning] = useState(false);
   const [aiCountdown, setAiCountdown] = useState(10);
-  const aiDetectionRef = useRef<NodeJS.Timeout | null>(null);
-  const [overlayViolationCount, setOverlayViolationCount] = useState(0);
+  const [overlayViolationCount] = useState(0);
   
   // Monitoring & Lock States
   const [isConnectionLocked, setIsConnectionLocked] = useState(false);
-  const [consecutiveHeartbeatFailures, setConsecutiveHeartbeatFailures] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+  const consecutiveHeartbeatFailuresRef = useRef(0);
+  const cameraViolationCountRef = useRef(0);
 
   // Split Screen Detection
-  const [splitScreenViolationCount, setSplitScreenViolationCount] = useState(0);
-  const [isSplitLocked, setIsSplitLocked] = useState(false);
   const [isScreenshotFlash, setIsScreenshotFlash] = useState(false);
 
   // AI Proctoring Analyzer State
   const [aiProctorStatus, setAiProctorStatus] = useState<'idle' | 'scanning' | 'safe' | 'warning' | 'critical'>('idle');
-  const [aiProctorFindings, setAiProctorFindings] = useState<string[]>([]);
   const aiProctorIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const offlineBufferKey = `gm_log_buffer_${attemptId}`;
 
-  const getLogBuffer = (): any[] => {
+  interface TelemetryEvent {
+    eventType: string;
+    severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    riskPoints: number;
+    metadata: Record<string, unknown>;
+  }
+
+  const getLogBuffer = useCallback((): TelemetryEvent[] => {
     if (typeof window === 'undefined') return [];
     try {
       const saved = localStorage.getItem(offlineBufferKey);
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
-  };
+  }, [offlineBufferKey]);
 
-  const saveLogBuffer = (logs: any[]) => {
+  const saveLogBuffer = useCallback((logs: TelemetryEvent[]) => {
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(offlineBufferKey, JSON.stringify(logs.slice(-100))); // Cap at 100
     } catch (e) { console.error('Failed to save log buffer', e); }
-  };
+  }, [offlineBufferKey]);
 
   const capturePhoto = useCallback((): string | undefined => {
     if (!videoRef.current) return undefined;
@@ -462,7 +472,7 @@ export default function StudentRemedialLayer({
     } catch (err) {
       console.warn('[Monitoring] Flush failed, will retry later.', err);
     }
-  }, [attemptId, offlineBufferKey]);
+  }, [attemptId, offlineBufferKey, getLogBuffer]);
 
   const syncWithServer = useCallback(async () => {
     if (!attemptId || step !== 'EXAM') return;
@@ -480,13 +490,12 @@ export default function StudentRemedialLayer({
       });
       if (res.ok) {
         setIsConnectionLocked(false);
-        setConsecutiveHeartbeatFailures(0);
         setToast({ message: "Koneksi pulih. Sinkronisasi sukses.", type: "success" });
         flushOfflineLogs();
       } else {
         setToast({ message: "Sinkronisasi gagal. Pastikan internet stabil.", type: "error" });
       }
-    } catch (err) {
+    } catch {
       setToast({ message: "Gagal terhubung ke server. Periksa koneksi Anda.", type: "error" });
     } finally {
       setIsSyncing(false);
@@ -504,8 +513,11 @@ export default function StudentRemedialLayer({
   }, [syncWithServer]);
 
   const handleViolation = useCallback((type: string, message: string, severity: 'LOW' | 'MEDIUM' | 'HIGH') => {
-    if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
-    setWarningCount(prev => prev + 1);
+    if (hasTriggeredCheatingRef.current || isSubmitting) return;
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      console.log('[Dev] Skipping violation:', type, message);
+      return;
+    }
     if (type === 'TAB_SWITCH') {
       setTabWarningCount(prev => {
         const newCount = prev + 1;
@@ -541,7 +553,6 @@ export default function StudentRemedialLayer({
       });
     }
     if (type === 'SPLIT_SCREEN') {
-      setSplitScreenViolationCount(prev => prev + 1);
       setTimeout(() => {
         setToast({ message: "Layar Terbagi (Split Screen) Terdeteksi!", type: "error" });
       }, 0);
@@ -549,20 +560,19 @@ export default function StudentRemedialLayer({
     
     // Update DB with violation
     sendTelegramNotify("SECURITY_VIOLATION", undefined, `${type}: ${message} (Severity: ${severity})`);
-  }, [sessionId, studentName, sendTelegramNotify, setToast]);
+  }, [sessionId, studentName, sendTelegramNotify, setToast, isSubmitting]);
 
-  const handleExit = () => {
+  const handleExit = useCallback(() => {
     clearRemedialSession();
     onBack();
-  };
+  }, [onBack]);
 
 
 
 
 
-  const isPhotoDuplicate = (base64: string): boolean => {
+  const isPhotoDuplicate = (): boolean => {
     try {
-      const img = new Image();
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = 320;
       tempCanvas.height = 240;
@@ -588,9 +598,8 @@ export default function StudentRemedialLayer({
   const [agreedRules, setAgreedRules] = useState(false);
     // ── ADVANCED MONITORING (Pulse & Surveillance) ──
   const heartbeatTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const isOnlineRef = useRef<boolean>(true);
 
-  const trackEvent = useCallback(async (type: string, severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL', points: number, metadata: Record<string, any> = {}) => {
+  const trackEvent = useCallback(async (type: string, severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL', points: number, metadata: Record<string, unknown> = {}) => {
     const event = {
       eventType: type,
       severity,
@@ -616,11 +625,11 @@ export default function StudentRemedialLayer({
         body: JSON.stringify({ attemptId, events: [event] })
       });
       if (!res.ok) throw new Error('Network response not ok');
-    } catch (err) {
+    } catch {
       const buffer = getLogBuffer();
       saveLogBuffer([...buffer, event]);
     }
-  }, [attemptId]);
+  }, [attemptId, getLogBuffer, saveLogBuffer]);
 
   const sendHeartbeat = useCallback(async () => {
     if (!attemptId || step !== 'EXAM') return;
@@ -637,20 +646,17 @@ export default function StudentRemedialLayer({
       });
       
       if (res.ok) {
-        setConsecutiveHeartbeatFailures(0);
+        consecutiveHeartbeatFailuresRef.current = 0;
         flushOfflineLogs();
       } else {
         throw new Error('Heartbeat non-ok response');
       }
-    } catch (err) {
+    } catch {
       console.warn('[Pulse] Heartbeat failed');
-      setConsecutiveHeartbeatFailures(prev => {
-        const newFailCount = prev + 1;
-        if (newFailCount >= 3) {
-          setIsConnectionLocked(true);
-        }
-        return newFailCount;
-      });
+      consecutiveHeartbeatFailuresRef.current++;
+      if (consecutiveHeartbeatFailuresRef.current >= 3) {
+        setIsConnectionLocked(true);
+      }
     }
   }, [attemptId, step, flushOfflineLogs]);
   const sendActivityLog = useCallback(async (message: string, photo?: string, eventTypeOverride?: string) => {
@@ -697,20 +703,282 @@ export default function StudentRemedialLayer({
     onViolation: handleViolation
   });
 
+  const evaluateAnswerValidity = useCallback((ans: string) => {
+    const text = (ans || '').trim().toLowerCase();
+    
+    // 1. Min 20 characters
+    const lengthOk = text.length >= 20;
+    
+    // 2. Garbage phrases
+    const garbagePhrases = ['tidak tahu', 'kosong', 'gak tahu', 'ndak tahu', 'null', 'undefined', 'asdf', 'qwerty'];
+    const hasGarbage = garbagePhrases.some(phrase => text.includes(phrase));
+    
+    // 3. Repetitive characters
+    const hasRepetitiveChars = /(.)\1{9,}/.test(text);
+    
+    // 4. Repetitive words
+    const words = text.split(/\s+/);
+    const uniqueWords = new Set(words);
+    const hasRepetitiveWords = words.length > 5 && (uniqueWords.size / words.length) < 0.4;
+    
+    // 5. Min words (for backend effort logic alignment)
+    const filteredWords = text.split(/\s+/).filter(w => w.length > 2);
+    const uniqueFilteredWords = new Set(filteredWords);
+    const minWordsOk = filteredWords.length >= 5;
+    const minUniqueWordsOk = uniqueFilteredWords.size >= 3;
+    
+    const isValid = lengthOk && !hasGarbage && !hasRepetitiveChars && !hasRepetitiveWords && minWordsOk && minUniqueWordsOk;
+    
+    return {
+      lengthOk,
+      hasGarbage,
+      hasRepetitiveChars,
+      hasRepetitiveWords,
+      minWordsOk,
+      minUniqueWordsOk,
+      isValid
+    };
+  }, []);
+
+  const validateSubmission = useCallback(() => {
+    const invalidIndices = answers.map((a, i) => {
+      const evaluation = evaluateAnswerValidity(a);
+      return evaluation.isValid ? -1 : i;
+    }).filter(index => index !== -1);
+    
+    if (invalidIndices.length > 0) {
+      setInvalidQuestionIndices(invalidIndices);
+      const questionNumbers = invalidIndices.map(i => i + 1).join(', ');
+      setToast({ 
+        message: `⚠️ JAWABAN TIDAK VALID: Soal nomor ${questionNumbers} belum diisi dengan jawaban yang memadai atau terdeteksi asal-asalan.`, 
+        type: "error"
+      });
+      // Auto-scroll to first invalid question
+      const firstInvalidEl = document.getElementById(`question-card-${invalidIndices[0]}`);
+      if (firstInvalidEl) {
+        firstInvalidEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return false;
+    }
+    setInvalidQuestionIndices([]);
+    return true;
+  }, [answers, evaluateAnswerValidity, setToast]);
+
+  const handleStatusUpdate = useCallback(async (status: 'COMPLETED' | 'CHEATED' | 'TIMEOUT', explicitReason?: string) => {
+    // For manual completion, we require validation
+    if (status === 'COMPLETED' && !validateSubmission()) {
+      return;
+    }
+
+    if (hasSubmittedRef.current) return;
+    hasSubmittedRef.current = true;
+  
+    setIsSubmitting(true);
+    if (status === 'COMPLETED') {
+      setSubmissionLabel("Mengirim jawaban...");
+    } else if (status === 'TIMEOUT') {
+      setSubmissionLabel("Menyimpan jawaban saat waktu habis...");
+    } else {
+      setSubmissionLabel("Memproses...");
+    }
+
+    const allFlags = explicitReason 
+      ? (clientCheatingFlags.includes(explicitReason) ? clientCheatingFlags : [...clientCheatingFlags, explicitReason])
+      : clientCheatingFlags;
+
+    const payload = { 
+      sessionId, 
+      studentName, 
+      status, 
+      location: currentLocation,
+      answers: (status === 'COMPLETED' || status === 'TIMEOUT') ? (() => {
+        const totalQ = shuffledQuestions.length > 0 ? shuffledQuestions.length : remedialEssayCount;
+        const mappedAnswers = new Array(totalQ).fill("");
+        shuffledQuestions.forEach((sq, i) => {
+          if (sq.originalIndex < totalQ) {
+            mappedAnswers[sq.originalIndex] = answersRef.current[i] || "";
+          }
+        });
+        return mappedAnswers;
+      })() : undefined,
+      note: status === 'COMPLETED' ? noteRef.current : undefined,
+      clientCheatingFlags: allFlags.length > 0 ? allFlags : undefined,
+      examMode,
+      cameraStatus,
+      riskLevel: allFlags.length > 0 ? 'HIGH' : (examMode === 'LIMITED' ? 'MEDIUM' : 'LOW'),
+      cheatingReason: explicitReason,
+      isPenaltyApplied
+    };
+
+    const MAX_SUBMIT_RETRIES = 3;
+    let lastError = '';
+
+    for (let attempt = 1; attempt <= MAX_SUBMIT_RETRIES; attempt++) {
+      if (attempt > 1) {
+        setSubmissionLabel(`Mencoba ulang pengiriman (${attempt}/${MAX_SUBMIT_RETRIES})...`);
+      }
+      try {
+        const res = await fetch('/api/grademaster/students/remedial', {
+          method: 'POST',
+          cache: 'no-store' as RequestCache,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          
+          if (errorData.error === 'RESET_REQUIRED') {
+            setToast({ message: "Sesi anda telah direset oleh proktor. Data lokal dihapus.", type: "error" });
+            setTimeout(() => {
+              clearRemedialSession();
+              window.location.reload();
+            }, 3000);
+            return;
+          }
+
+          const errMsg = errorData.error || "Terjadi kesalahan saat mengirim jawaban.";
+          
+          if (errorData.error?.includes('sudah pernah dilakukan') || errorData.error?.includes('permanen') || res.status === 403) {
+            clearRemedialSession();
+            setStep('CHEATED');
+            setToast({ message: errMsg, type: "error" });
+            setIsSubmitting(false);
+            setSubmissionLabel("");
+            return;
+          }
+
+          lastError = errMsg;
+          if (attempt < MAX_SUBMIT_RETRIES) {
+            const delay = 500 * Math.pow(2, attempt - 1);
+            setToast({ message: `Gagal mengirim (${attempt}/${MAX_SUBMIT_RETRIES}). Mencoba ulang...`, type: "error" });
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+        } else {
+          const data = await res.json();
+          
+          clearRemedialSession();
+          if (typeof window !== 'undefined') {
+            const backupKey = `gm_remedial_backup_${sessionId}_${studentName.toLowerCase().trim()}`;
+            localStorage.removeItem(backupKey);
+          }
+          
+          const finalStatus = data.status || status;
+          if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
+          
+          setIsHeldBack(!!data.isHeldBack);
+          setRemedialScore(data.remedialScore ?? null);
+          setPendingRemedialCount(data.pendingRemedialCount || 0);
+          setFailedReason(data.failedReason || null);
+
+          if (finalStatus === 'FAILED_EFFORT') {
+            setToast({ message: "Sesi selesai: Jawaban dibatalkan karena terdeteksi tidak valid atau terlalu cepat.", type: "error" });
+            setFinalScore(0);
+          } else if (['COMPLETED', 'SUBMITTED', 'REMEDIAL'].includes(finalStatus)) {
+            const fScore = data.newFinalScore ?? data.final_score ?? 0;
+            setFinalScore(fScore);
+
+            if (data.isHeldBack) {
+              setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Nilai ditahan sementara.", type: "success" });
+            } else if (fScore < (kkm || 70)) {
+              setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Nilai Anda belum mencapai KKM.", type: "error" });
+            } else {
+              setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Selamat, Anda LULUS KKM!", type: "success" });
+            }
+
+            if (data.essayDetails) setEssayAutoDetails(data.essayDetails);
+            if (data.remedialAnswerKeys) setRemedialAnswerKeys(data.remedialAnswerKeys);
+
+            sendTelegramNotify('FINISH', undefined, undefined, fScore);
+            
+            fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`, { cache: 'no-store' })
+              .then(r => r.json())
+              .then(d => {
+                setRemainingStudents(d.students || []);
+              });
+          } else if (finalStatus === 'CHEATED' || finalStatus === 'AI_BOT_DETECTED') {
+            const photo = capturePhoto();
+            const cheatedReason = explicitReason || allFlags.join(', ') || 'Pelanggaran proctoring terdeteksi oleh sistem';
+            const eventType = finalStatus === 'AI_BOT_DETECTED' ? 'AI_BOT_DETECTED' : 'CHEATED';
+            
+            compressImage(photo || "").then(compressed => {
+              sendTelegramNotify(eventType, compressed || photo || undefined, cheatedReason);
+            });
+            // Pastikan UI langsung merender 0
+            setFinalScore(0);
+          } else if (finalStatus === 'TIMEOUT' || finalStatus === 'TIME_UP') {
+            const fScore = data.newFinalScore ?? data.final_score ?? 0;
+            setFinalScore(fScore);
+          }
+          setStep(finalStatus === 'REMEDIAL' ? 'SUBMITTED' : (finalStatus as RemedialStep));
+          setIsSubmitting(false);
+          setSubmissionLabel("");
+          setIsSubmissionBackupSaved(false);
+          return;
+        }
+      } catch {
+        lastError = "Kesalahan jaringan";
+        if (attempt < MAX_SUBMIT_RETRIES) {
+          const delay = 500 * Math.pow(2, attempt - 1);
+          setToast({ message: `Koneksi gagal (${attempt}/${MAX_SUBMIT_RETRIES}). Mencoba ulang...`, type: "error" });
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+      }
+    }
+
+    // All retries failed — save to localStorage as safety net
+    try {
+      localStorage.setItem('gm_failed_submission', JSON.stringify({ ...payload, failedAt: Date.now() }));
+      setIsSubmissionBackupSaved(true);
+    } catch { /* localStorage might be full */ }
+
+    setToast({ message: `Gagal mengirim jawaban setelah ${MAX_SUBMIT_RETRIES} percobaan: ${lastError}. Data tersimpan lokal, hubungi guru.`, type: "error" });
+    sendTelegramNotify('ERROR', undefined, `Submit gagal ${MAX_SUBMIT_RETRIES}x: ${lastError}`);
+    setIsSubmitting(false);
+    setSubmissionLabel("");
+    hasSubmittedRef.current = false; // ALLOW RETRY
+  }, [
+    validateSubmission,
+    clientCheatingFlags,
+    sessionId,
+    studentName,
+    currentLocation,
+    shuffledQuestions,
+    remedialEssayCount,
+    examMode,
+    cameraStatus,
+    isPenaltyApplied,
+    setToast,
+    setStep,
+    setIsSubmitting,
+    setIsSubmissionBackupSaved,
+    setServerCheatingFlags,
+    setIsHeldBack,
+    setRemedialScore,
+    setPendingRemedialCount,
+    setFailedReason,
+    setFinalScore,
+    setEssayAutoDetails,
+    setRemedialAnswerKeys,
+    sendTelegramNotify,
+    setRemainingStudents,
+    capturePhoto,
+    kkm
+  ]);
+
   // Permission states
   const [cameraOk, setCameraOk] = useState(false);
-  const [locationOk, setLocationOk] = useState(false);
+  const [, setLocationOk] = useState(false);
   const [checkingPerms, setCheckingPerms] = useState(false);
-
-  // Camera dimensions
-  const CAM_W = 160;
-  const CAM_H = 112; // Adjusted to match h-28 for standardizing with tailwind classes (will mostly be handled by CSS now)
 
   const MAX_TAB_WARNINGS = 3;
 
   // Navigation lock during exam
   useEffect(() => {
     if (step !== 'EXAM') return;
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) return;
 
     const handleBeforeUnload2 = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -720,31 +988,29 @@ export default function StudentRemedialLayer({
     window.history.pushState(null, '', window.location.href);
     const handlePopState = () => {
       window.history.pushState(null, '', window.location.href);
-      setBackPressCount(prev => {
-        const next = prev + 1;
-        const reason = `Mencoba menekan tombol kembali ${next} kali`;
-        sendActivityLog(`Mencoba menekan tombol Kembali (Back Button) - Percobaan ke-${next}`);
-        if (next >= 5) {
-          setClientCheatingFlags(f => [...f, reason]);
-          if (secondChanceUsed) {
-            hasTriggeredCheatingRef.current = true;
-            setToast({ message: 'Batas percobaan navigasi terlampaui. Ujian dihentikan.', type: 'error' });
-            handleStatusUpdate('CHEATED', reason);
-          } else {
-            setSecondChanceReason(reason);
-            setStep('SECOND_CHANCE');
-            sendTelegramNotify('SECOND_CHANCE', capturePhoto() || undefined, reason);
-          }
-        } else if (next >= 3) {
-          setToast({ message: `⚠️ PERINGATAN: Jika mengetuk kembali lagi, sistem akan menandakan anda curang! (${next}/5)`, type: 'error' });
+      backPressCountRef.current++;
+      const next = backPressCountRef.current;
+      const reason = `Mencoba menekan tombol kembali ${next} kali`;
+      sendActivityLog(`Mencoba menekan tombol Kembali (Back Button) - Percobaan ke-${next}`);
+      if (next >= 5) {
+        setClientCheatingFlags(f => [...f, reason]);
+        if (secondChanceUsed) {
+          hasTriggeredCheatingRef.current = true;
+          setToast({ message: 'Batas percobaan navigasi terlampaui. Ujian dihentikan.', type: 'error' });
+          handleStatusUpdate('CHEATED', reason);
         } else {
-          setToast({ message: '⛔ Anda tidak diperbolehkan keluar saat ujian berlangsung!', type: 'error' });
+          setSecondChanceReason(reason);
+          setStep('SECOND_CHANCE');
+          sendTelegramNotify('SECOND_CHANCE', capturePhoto() || undefined, reason);
         }
-        return next;
-      });
+      } else if (next >= 3) {
+        setToast({ message: `⚠️ PERINGATAN: Jika mengetuk kembali lagi, sistem akan menandakan anda curang! (${next}/5)`, type: 'error' });
+      } else {
+        setToast({ message: '⛔ Anda tidak diperbolehkan keluar saat ujian berlangsung!', type: 'error' });
+      }
     };
 
-    const handlePrint = (e: any) => {
+    const handlePrint = (e: Event) => {
       e.preventDefault();
       setToast({ message: 'Aksi Cetak/Print tidak diizinkan!', type: 'error' });
       sendActivityLog("Mencoba mencetak halaman/soal (Print/PDF Attempt)");
@@ -756,7 +1022,7 @@ export default function StudentRemedialLayer({
 
     // Error Logging: Detect if user closes the tab during exam (Abandoned)
     const handleAbandoned = () => {
-      if (!isRefreshingRef.current && !isSubmittingRef.current && !isDeploymentReloadRef.current) {
+      if (!isRefreshingRef.current && !isSubmitting && !isDeploymentReloadRef.current) {
         const payload = JSON.stringify({
           studentName, className, subject, event: 'ACTIVITY', message: 'Siswa menutup browser / Hard Close', deviceInfo: getDeviceInfo()
         });
@@ -771,10 +1037,15 @@ export default function StudentRemedialLayer({
       window.removeEventListener('unload', handleAbandoned);
       window.removeEventListener('beforeprint', handlePrint);
     };
-  }, [step]);
+  }, [step, capturePhoto, className, handleStatusUpdate, secondChanceUsed, sendActivityLog, sendTelegramNotify, setToast, studentName, subject, isSubmitting]);
 
-  const getCameraErrorMessage = (err: any): string => {
-    const name = err?.name || '';
+  const getCameraErrorMessage = (err: unknown): string => {
+    let name = '';
+    if (err instanceof Error) {
+      name = err.name;
+    } else if (err && typeof err === 'object' && 'name' in err) {
+      name = String((err as Record<string, unknown>).name);
+    }
     if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
       return 'Izin Kamera Diblokir! Cara cepat mengaktifkannya:\n\n1. Ketuk ikon gembok kecil / pengaturan di sebelah kiri alamat URL website pada bar atas browser Chrome.\n2. Ketuk "Setelan Situs" (Site Settings) atau "Reset Izin" (Reset permissions) yang langsung muncul.\n3. Ubah izin Kamera menjadi "Izinkan" atau pilih "Hapus & Setel Ulang" (Clear & Reset).\n4. Muat ulang (refresh) halaman ini, lalu ketuk tombol "Aktifkan" kembali.';
     }
@@ -887,12 +1158,18 @@ export default function StudentRemedialLayer({
 
     const requestWakeLock = async () => {
       try {
-        if ('wakeLock' in navigator && (navigator as any).wakeLock) {
-          wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+        const nav = navigator as unknown as {
+          wakeLock?: {
+            request(type: 'screen'): Promise<WakeLockSentinel>;
+          };
+        };
+        if (nav.wakeLock) {
+          wakeLockRef.current = await nav.wakeLock.request('screen');
           console.log('Screen Wake Lock is active');
         }
-      } catch (err: any) {
-        console.warn(`Wake Lock error: ${err.name}, ${err.message}`);
+      } catch (err) {
+        const errMsg = err instanceof Error ? `${err.name}, ${err.message}` : String(err);
+        console.warn(`Wake Lock error: ${errMsg}`);
       }
     };
 
@@ -953,12 +1230,7 @@ export default function StudentRemedialLayer({
         if (res.ok) {
           localStorage.setItem(cacheKey, Date.now().toString());
           if (isReturning) {
-            const data = await res.json();
             // Notify returning visitor as requested "beritahu orangnya"
-            // setToast({ 
-            //   message: `Sistem mendeteksi kehadiran Anda kembali. Pengawasan proctoring tetap aktif. (IP: ${data.ip})`, 
-            //   type: 'success' 
-            // });
           }
         }
       } catch (err) {
@@ -967,14 +1239,16 @@ export default function StudentRemedialLayer({
     };
 
     trackVisit();
-  }, []);
+  }, [className, sessionId, studentName, subject]);
 
   // Restore session on mount (localStorage)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const failedRaw = localStorage.getItem('gm_failed_submission');
       if (failedRaw) {
-        setIsSubmissionBackupSaved(true);
+        queueMicrotask(() => {
+          setIsSubmissionBackupSaved(true);
+        });
       }
     }
     const saved = loadRemedialSession();
@@ -985,7 +1259,9 @@ export default function StudentRemedialLayer({
       if (saved.sessionId && sessionId && saved.sessionId !== sessionId) {
         console.warn(`[Remedial] Stale session detected: saved=${saved.sessionId}, current=${sessionId}. Clearing.`);
         clearRemedialSession();
-        setStep('RULES');
+        queueMicrotask(() => {
+          setStep('RULES');
+        });
         return;
       }
 
@@ -999,24 +1275,29 @@ export default function StudentRemedialLayer({
         const expectedLen = (saved.remedialQuestions && saved.remedialQuestions.length > 0)
           ? saved.remedialQuestions.length
           : ((remedialQuestions && remedialQuestions.length > 0) ? remedialQuestions.length : remedialEssayCount);
-        setAnswers(saved.answers && saved.answers.length === expectedLen ? saved.answers : new Array(expectedLen).fill(""));
-        setNote(saved.note || '');
-        setCurrentLocation(saved.location || '');
+        
+        queueMicrotask(() => {
+          setAnswers(saved.answers && saved.answers.length === expectedLen ? saved.answers : new Array(expectedLen).fill(""));
+          setNote(saved.note || '');
+          setCurrentLocation(saved.location || '');
+          if (saved.attemptId) setAttemptId(saved.attemptId);
+          if (saved.attemptToken) setAttemptToken(saved.attemptToken);
+          if (saved.studentId) setCurrentStudentId(saved.studentId);
+          if (saved.examMode) {
+            setExamMode(saved.examMode);
+            setCameraStatus(saved.cameraStatus || 'ACTIVE');
+          }
+          if (saved.isPenaltyApplied) {
+            setIsPenaltyApplied(true);
+          }
+          if (questionsAvailable) {
+            // Questions confirmed — safe to restore step
+            setStep(saved.step as RemedialStep);
+          }
+        });
         startedAtRef.current = saved.startedAt;
-        if (saved.attemptId) setAttemptId(saved.attemptId);
-        if (saved.attemptToken) setAttemptToken(saved.attemptToken);
-        if (saved.studentId) setCurrentStudentId(saved.studentId);
-        if (saved.examMode) {
-          setExamMode(saved.examMode);
-          setCameraStatus(saved.cameraStatus || 'ACTIVE');
-        }
-        if (saved.isPenaltyApplied) {
-          setIsPenaltyApplied(true);
-        }
 
         if (questionsAvailable) {
-          // Questions confirmed — safe to restore step
-          setStep(saved.step as RemedialStep);
           console.log(hasPropsQuestions ? "Questions from props" : "Recovering questions from local session...");
         } else {
           // No questions in props or localStorage — fetch from server before setting EXAM
@@ -1034,9 +1315,6 @@ export default function StudentRemedialLayer({
                     setIsHeldBack(!!data.isHeldBack);
                     setRemedialScore(data.remedialScore ?? null);
                     setPendingRemedialCount(data.pendingRemedialCount || 0);
-                    setHoldbackReason(data.holdbackReason || null);
-                    setRawScore(data.rawScore ?? null);
-                    setDisplayedScore(data.displayedScore ?? null);
                     setFailedReason(data.failedReason || null);
                     
                     return;
@@ -1098,15 +1376,19 @@ export default function StudentRemedialLayer({
         const elapsedSeconds = Math.floor((Date.now() - saved.startedAt) / 1000);
         let remaining = baseTimer + (saved.extendedTime || 0) - elapsedSeconds;
         if (remaining < 0) remaining = 0;
-        setTimeLeft(remaining);
+        queueMicrotask(() => {
+          setTimeLeft(remaining);
+        });
 
         // setToast({ message: "Melanjutkan sesi remedial sebelumnya...", type: "success" });
         saveRemedialSession({ ...saved, refreshCount: (saved.refreshCount || 0) + 1 });
       } else if (['COMPLETED', 'CHEATED', 'TIMEOUT', 'TIME_UP', 'SUBMITTED', 'FAILED_EFFORT'].includes(saved.step)) {
-        setStep(saved.step as RemedialStep);
+        queueMicrotask(() => {
+          setStep(saved.step as RemedialStep);
+        });
       }
     }
-  }, [sessionId, studentName, remedialEssayCount, remedialTimer]);
+  }, [sessionId, studentName, remedialEssayCount, remedialTimer, handleExit, remedialQuestions, setToast]);
 
   // Check server status (Database) - Persist terminal state across devices/hard-clears + poll every 10s
   useEffect(() => {
@@ -1173,9 +1455,6 @@ export default function StudentRemedialLayer({
              setIsHeldBack(!!data.isHeldBack);
              setRemedialScore(data.remedialScore ?? null);
              setPendingRemedialCount(data.pendingRemedialCount || 0);
-             setHoldbackReason(data.holdbackReason || null);
-             setRawScore(data.rawScore ?? null);
-             setDisplayedScore(data.displayedScore ?? null);
              setFailedReason(data.failedReason || null);
              
              if (['COMPLETED', 'SUBMITTED', 'FAILED_EFFORT', 'TIME_UP'].includes(data.status)) {
@@ -1192,7 +1471,6 @@ export default function StudentRemedialLayer({
                  .then(r => r.json())
                  .then(d => {
                    setRemainingStudents(d.students || []);
-                   setSessionCreatedAt(d.sessionCreatedAt);
                  });
              }
            }
@@ -1208,28 +1486,12 @@ export default function StudentRemedialLayer({
       } catch (err) {
         console.error('Failed to fetch server-side status:', err);
       }
-      
-      // Fetch behavior points for time extension
-      try {
-        const pRes = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(className)}&year=${encodeURIComponent(academicYear)}`);
-        if (pRes.ok) {
-          const pData = await pRes.json();
-          const pRecord = pData.students?.find((s: any) => s.student_name === studentName);
-          if (pRecord) {
-            const currentDate = new Date().toISOString().split('T')[0];
-            const usedToday = pRecord.points_date === currentDate ? (pRecord.points_used_today || 0) : 0;
-            setPointsBal({ total: pRecord.total_points, usedToday });
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch points status:', err);
-      }
     };
 
     checkServerStatus();
     const intervalId = setInterval(checkServerStatus, 10000);
     return () => clearInterval(intervalId);
-  }, [sessionId, studentName, step, remedialTimer, className, academicYear]);
+  }, [sessionId, studentName, step, remedialTimer, className, academicYear, setToast]);
 
   // Mark refresh vs tab-leave
   useEffect(() => {
@@ -1302,9 +1564,6 @@ export default function StudentRemedialLayer({
     };
   }, [answers, note, step, sessionId, studentName, className, subject, currentLocation, shuffledQuestions, currentStudentId, examMode, cameraStatus, remedialQuestions, remedialTimer, semester, remedialEssayCount]);
 
-  const isSubmittingRef = useRef(isSubmitting);
-  useEffect(() => { isSubmittingRef.current = isSubmitting; });
-
   // ── AI Proctoring Analyzer — Periodic Snapshot Analysis (30s) ──
   useEffect(() => {
     if (step !== 'EXAM' || !attemptId) {
@@ -1334,7 +1593,7 @@ export default function StudentRemedialLayer({
     };
 
     async function runAiProctorScan() {
-      if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
+      if (hasTriggeredCheatingRef.current || isSubmitting) return;
 
       const snap = capturePhoto();
       if (!snap) return;
@@ -1362,7 +1621,7 @@ export default function StudentRemedialLayer({
         }
 
         setAiProctorStatus(analysis.threat_level);
-        setAiProctorFindings(analysis.findings || []);
+
 
         let violationDetected = false;
 
@@ -1422,7 +1681,7 @@ export default function StudentRemedialLayer({
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, attemptId]);
+  }, [step, attemptId, isSubmitting]);
 
   // ── Session Health Monitoring ──
   const healthCheckAttemptedRef = useRef(false);
@@ -1520,7 +1779,7 @@ export default function StudentRemedialLayer({
       };
       attemptRecovery();
     }
-  }, [step, shuffledQuestions.length]);
+  }, [step, shuffledQuestions.length, handleExit, isSubmitting, sendTelegramNotify, sessionId, setToast, studentName]);
 
   const handleCameraErrorDuringExam = useCallback((errorMsg: string) => {
     console.warn('Camera error during exam:', errorMsg);
@@ -1534,7 +1793,7 @@ export default function StudentRemedialLayer({
   }, []);
 
   const handleCameraViolation = useCallback((type: string) => {
-    if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
+    if (hasTriggeredCheatingRef.current || isSubmitting) return;
 
     let flagMessage = "";
     if (type === 'NO_FACE') flagMessage = "Wajah tidak terdeteksi";
@@ -1545,97 +1804,94 @@ export default function StudentRemedialLayer({
     else if (type === 'EARPIECE_DETECTED') flagMessage = "Terdeteksi menggunakan earpiece/headphone";
     else if (type === 'EXTRA_SCREEN_DETECTED') flagMessage = "Terdeteksi layar/perangkat tambahan";
 
-    setWarningCount(prev => {
-      const newCount = prev + 1;
-      const reason = `${flagMessage} (${newCount} kali)`;
+    cameraViolationCountRef.current++;
+    const newCount = cameraViolationCountRef.current;
+    const reason = `${flagMessage} (${newCount} kali)`;
 
-      setTimeout(() => {
-        setClientCheatingFlags(oldFlags => {
-          if (!oldFlags.includes(flagMessage)) {
-             return [...oldFlags, flagMessage];
-          }
-          return oldFlags;
-        });
+    setTimeout(() => {
+      setClientCheatingFlags(oldFlags => {
+        if (!oldFlags.includes(flagMessage)) {
+           return [...oldFlags, flagMessage];
+        }
+        return oldFlags;
+      });
 
-        if (newCount >= 10) {
-          setClientCheatingFlags(f => f.includes(reason) ? f : [...f, reason]);
-          if (secondChanceUsed) {
-            if (!hasTriggeredCheatingRef.current) {
-              hasTriggeredCheatingRef.current = true;
-              setToast({ message: "Batas pelanggaran terlampaui. Ujian dihentikan.", type: "error" });
-              handleStatusUpdate('CHEATED', reason);
-            }
-          } else {
-            if (!hasTriggeredSecondChanceRef.current) {
-              hasTriggeredSecondChanceRef.current = true;
-              setSecondChanceReason(reason);
-              setStep('SECOND_CHANCE');
-              sendTelegramNotify('SECOND_CHANCE', capturePhoto() || undefined, reason);
-            }
+      if (newCount >= 10) {
+        setClientCheatingFlags(f => f.includes(reason) ? f : [...f, reason]);
+        if (secondChanceUsed) {
+          if (!hasTriggeredCheatingRef.current) {
+            hasTriggeredCheatingRef.current = true;
+            setToast({ message: "Batas pelanggaran terlampaui. Ujian dihentikan.", type: "error" });
+            handleStatusUpdate('CHEATED', reason);
           }
         } else {
-          // Handle specific detections
-          if (type === 'PHONE_DETECTED') {
-              const snap = capturePhoto();
-              sendTelegramNotify('PHONE_DETECTED', snap || undefined);
-              setActiveWarning({
-                  type: 'CAMERA',
-                  count: newCount,
-                  limit: 10,
-                  message: "⚠️ HP TERDETEKSI! Sistem AI mendeteksi adanya ponsel di depan kamera. Penggunaan HP dilarang keras selama ujian! Aktivitas ini telah dilaporkan ke Admin Telegram."
-              });
-          } else if (type === 'BOOK_DETECTED') {
-              const snap = capturePhoto();
-              sendTelegramNotify('BOOK_DETECTED', snap || undefined, "Terdeteksi membuka buku/catatan");
-              setActiveWarning({
-                  type: 'CAMERA',
-                  count: newCount,
-                  limit: 10,
-                  message: "⚠️ BUKU/CATATAN TERDETEKSI! Sistem AI mendeteksi buku, kertas contekan, atau catatan di dekat Anda. Harap singkirkan benda tersebut segera!"
-              });
-          } else if (type === 'EARPIECE_DETECTED') {
-              const snap = capturePhoto();
-              sendTelegramNotify('EARPIECE_DETECTED', snap || undefined, "Terdeteksi menggunakan earpiece/headphone");
-              setActiveWarning({
-                  type: 'CAMERA',
-                  count: newCount,
-                  limit: 10,
-                  message: "⚠️ EARPHONE TERDETEKSI! Penggunaan headset, earphone, atau earpiece dilarang selama ujian demi mencegah komunikasi eksternal."
-              });
-          } else if (type === 'EXTRA_SCREEN_DETECTED') {
-              const snap = capturePhoto();
-              sendTelegramNotify('EXTRA_SCREEN_DETECTED', snap || undefined, "Terdeteksi layar/perangkat tambahan");
-              setActiveWarning({
-                  type: 'CAMERA',
-                  count: newCount,
-                  limit: 10,
-                  message: "⚠️ PERANGKAT TAMBAHAN TERDETEKSI! Sistem AI mendeteksi adanya monitor, tablet, atau layar tambahan di sekitar Anda."
-              });
-          } else if ((type === 'NO_FACE' || type === 'MULTIPLE_FACES') && Date.now() - lastEducationShownRef.current > 15000) {
-            setActiveWarning({
-              type: 'CAMERA',
-              count: newCount,
-              limit: 10,
-              message: type === 'NO_FACE' 
-                ? "⚠️ WAJAH TIDAK TERDETEKSI! Pastikan wajah Anda selalu menatap layar selama ujian berlangsung. Menjauh dari layar dianggap indikasi pelanggaran."
-                : "⚠️ MULTI-FACE DETECTED! Sistem mendeteksi lebih dari satu wajah. Ujian harus dikerjakan secara mandiri!"
-            });
-            lastEducationShownRef.current = Date.now();
-          } else if (type === 'FACE_UNALIGNED' && Date.now() - lastEducationShownRef.current > 15000) {
-            setActiveWarning({
-              type: 'CAMERA',
-              count: newCount,
-              limit: 10,
-              message: "⚠️ POSISI WAJAH TIDAK SEJAJAR! Sistem mendeteksi wajah Anda terlalu sering menoleh ke samping atau berpaling dari layar."
-            });
-            lastEducationShownRef.current = Date.now();
+          if (!hasTriggeredSecondChanceRef.current) {
+            hasTriggeredSecondChanceRef.current = true;
+            setSecondChanceReason(reason);
+            setStep('SECOND_CHANCE');
+            sendTelegramNotify('SECOND_CHANCE', capturePhoto() || undefined, reason);
           }
         }
-      }, 0);
-
-      return newCount;
-    });
-  }, [secondChanceUsed, capturePhoto]);
+      } else {
+        // Handle specific detections
+        if (type === 'PHONE_DETECTED') {
+            const snap = capturePhoto();
+            sendTelegramNotify('PHONE_DETECTED', snap || undefined);
+            setActiveWarning({
+                type: 'CAMERA',
+                count: newCount,
+                limit: 10,
+                message: "⚠️ HP TERDETEKSI! Sistem AI mendeteksi adanya ponsel di depan kamera. Penggunaan HP dilarang keras selama ujian! Aktivitas ini telah dilaporkan ke Admin Telegram."
+            });
+        } else if (type === 'BOOK_DETECTED') {
+            const snap = capturePhoto();
+            sendTelegramNotify('BOOK_DETECTED', snap || undefined, "Terdeteksi membuka buku/catatan");
+            setActiveWarning({
+                type: 'CAMERA',
+                count: newCount,
+                limit: 10,
+                message: "⚠️ BUKU/CATATAN TERDETEKSI! Sistem AI mendeteksi buku, kertas contekan, atau catatan di dekat Anda. Harap singkirkan benda tersebut segera!"
+            });
+        } else if (type === 'EARPIECE_DETECTED') {
+            const snap = capturePhoto();
+            sendTelegramNotify('EARPIECE_DETECTED', snap || undefined, "Terdeteksi menggunakan earpiece/headphone");
+            setActiveWarning({
+                type: 'CAMERA',
+                count: newCount,
+                limit: 10,
+                message: "⚠️ EARPHONE TERDETEKSI! Penggunaan headset, earphone, atau earpiece dilarang selama ujian demi mencegah komunikasi eksternal."
+            });
+        } else if (type === 'EXTRA_SCREEN_DETECTED') {
+            const snap = capturePhoto();
+            sendTelegramNotify('EXTRA_SCREEN_DETECTED', snap || undefined, "Terdeteksi layar/perangkat tambahan");
+            setActiveWarning({
+                type: 'CAMERA',
+                count: newCount,
+                limit: 10,
+                message: "⚠️ PERANGKAT TAMBAHAN TERDETEKSI! Sistem AI mendeteksi adanya monitor, tablet, atau layar tambahan di sekitar Anda."
+            });
+        } else if ((type === 'NO_FACE' || type === 'MULTIPLE_FACES') && Date.now() - lastEducationShownRef.current > 15000) {
+          setActiveWarning({
+            type: 'CAMERA',
+            count: newCount,
+            limit: 10,
+            message: type === 'NO_FACE' 
+              ? "⚠️ WAJAH TIDAK TERDETEKSI! Pastikan wajah Anda selalu menatap layar selama ujian berlangsung. Menjauh dari layar dianggap indikasi pelanggaran."
+              : "⚠️ MULTI-FACE DETECTED! Sistem mendeteksi lebih dari satu wajah. Ujian harus dikerjakan secara mandiri!"
+          });
+          lastEducationShownRef.current = Date.now();
+        } else if (type === 'FACE_UNALIGNED' && Date.now() - lastEducationShownRef.current > 15000) {
+          setActiveWarning({
+            type: 'CAMERA',
+            count: newCount,
+            limit: 10,
+            message: "⚠️ POSISI WAJAH TIDAK SEJAJAR! Sistem mendeteksi wajah Anda terlalu sering menoleh ke samping atau berpaling dari layar."
+          });
+          lastEducationShownRef.current = Date.now();
+        }
+      }
+    }, 0);
+  }, [secondChanceUsed, capturePhoto, handleStatusUpdate, sendTelegramNotify, setToast, isSubmitting]);
 
   // Shuffle logic
   useEffect(() => {
@@ -1667,7 +1923,9 @@ export default function StudentRemedialLayer({
 
     if (sourceQuestions && sourceQuestions.length > 0) {
       const mapped = indices.map(idx => ({ text: sourceQuestions[idx] || '', originalIndex: idx }));
-      setShuffledQuestions(mapped);
+      queueMicrotask(() => {
+        setShuffledQuestions(mapped);
+      });
     }
   }, [remedialQuestions, sessionId]);
 
@@ -1706,7 +1964,7 @@ export default function StudentRemedialLayer({
             hasActivatedRef.current = false;
             return;
           }
-        } catch (e: any) {
+        } catch (e) {
           console.error('[Remedial] Activation network error:', e);
           // Network error during activation — don't crash-loop, just let the exam continue
           // The exam can still work locally and sync on submission
@@ -1715,7 +1973,7 @@ export default function StudentRemedialLayer({
       };
       activate();
     }
-  }, [step, attemptId, attemptToken, currentStudentId]);
+  }, [step, attemptId, attemptToken, currentStudentId, setToast]);
 
 
 
@@ -1736,14 +1994,7 @@ export default function StudentRemedialLayer({
     });
   };
 
-  const getLocationErrorMessage = (err: any): string => {
-    const code = err?.code;
-    if (code === 1) return 'Akses Lokasi ditolak. Buka Pengaturan Browser → Izin Situs → Lokasi → Izinkan, lalu coba lagi.';
-    if (code === 2) return 'Lokasi tidak tersedia. Pastikan GPS aktif di Pengaturan HP Anda dan browser tidak dalam mode penyamaran/privat.';
-    if (code === 3) return 'Waktu permintaan lokasi habis. Pastikan Anda berada di area dengan sinyal GPS yang baik, lalu coba lagi.';
-    if (code === 0) return 'Browser Anda tidak mendukung fitur Lokasi. Gunakan browser Chrome, Firefox, atau Edge versi terbaru.';
-    return 'Gagal mendapatkan lokasi. Pastikan GPS aktif dan izin lokasi telah diberikan.';
-  };
+
 
   const startExam = async () => {
     setIsSubmitting(true);
@@ -1883,7 +2134,7 @@ export default function StudentRemedialLayer({
         ? data.remedialQuestions 
         : effectiveQuestions;
 
-      const indices = activeQuestions.map((_: any, i: number) => i);
+      const indices = activeQuestions.map((_: unknown, i: number) => i);
       for (let i = indices.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [indices[i], indices[j]] = [indices[j], indices[i]];
@@ -1940,7 +2191,7 @@ export default function StudentRemedialLayer({
       setIsSubmitting(false);
       setSubmissionLabel("");
       setStep('EXAM');
-    } catch (e) {
+    } catch {
       setToast({ message: "Terjadi kesalahan saat menghubungi server. Coba lagi.", type: "error" });
       sendTelegramNotify('ERROR', undefined, "Gagal Network: Put Remedial failed");
       setIsSubmitting(false);
@@ -1950,7 +2201,6 @@ export default function StudentRemedialLayer({
   };
 
   // Flag to decouple timeout execution from the fast-updating answers/timeLeft state
-  const [isTimeoutTriggered, setIsTimeoutTriggered] = useState(false);
 
   // Timer countdown (strictly separated from answers to avoid re-render loops)
   useEffect(() => {
@@ -1964,11 +2214,7 @@ export default function StudentRemedialLayer({
           return 0;
         }
         
-        // Trigger 5 minute warning
-        if (prev === 300 && !hasShownFiveMinWarningRef.current) {
-          hasShownFiveMinWarningRef.current = true;
-          setShowFiveMinWarning(true);
-        }
+
         
         return prev - 1;
       });
@@ -2000,9 +2246,26 @@ export default function StudentRemedialLayer({
         isPenaltyApplied,
         lastUpdated: Date.now()
       });
-      handleStatusUpdate('TIMEOUT');
+      queueMicrotask(() => {
+        handleStatusUpdate('TIMEOUT');
+      });
     }
-  }, [isTimeoutTriggered, isSubmitting, step]);
+  }, [
+    isTimeoutTriggered,
+    isSubmitting,
+    step,
+    sessionId,
+    studentName,
+    className,
+    subject,
+    kkm,
+    academicYear,
+    examType,
+    semester,
+    remedialEssayCount,
+    isPenaltyApplied,
+    handleStatusUpdate
+  ]);
 
   // Proctoring: START photo + 30s auto-snap (depends ONLY on step, NOT timeLeft)
   useEffect(() => {
@@ -2052,7 +2315,7 @@ export default function StudentRemedialLayer({
           if (snap) {
             consecutiveFailCount = 0;
 
-            if (isPhotoDuplicate(snap) && consecutiveDupCountRef.current < 5) {
+            if (isPhotoDuplicate() && consecutiveDupCountRef.current < 5) {
               // Skip duplicate, tapi jangan terlalu lama — setelah 5 skip, kirim tetap
             } else {
               if (consecutiveDupCountRef.current >= 5) {
@@ -2087,7 +2350,7 @@ export default function StudentRemedialLayer({
       isProctoringActive = false;
       clearTimeout(proctorTimerId);
     };
-  }, [step, isSubmitting]);
+  }, [step, isSubmitting, capturePhoto, sendTelegramNotify]);
 
   // ── MONITORING SETUP (Heartbeat & Event Listeners) ──
   useEffect(() => {
@@ -2095,7 +2358,9 @@ export default function StudentRemedialLayer({
 
     // 1. Start Heartbeat Pulse (20s)
     heartbeatTimerRef.current = setInterval(sendHeartbeat, 20000);
-    sendHeartbeat(); // Immediate first beat
+    queueMicrotask(() => {
+      sendHeartbeat();
+    }); // Immediate first beat
 
     // 1.5 Fast Network Polling (2s) for instant offline detection
     const fastNetworkPoll = setInterval(() => {
@@ -2117,7 +2382,11 @@ export default function StudentRemedialLayer({
     };
 
     const handleBlur = () => {
-      if (hasTriggeredCheatingRef.current || isSubmittingRef.current) return;
+      if (hasTriggeredCheatingRef.current || isSubmitting) return;
+      if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+        console.log('[Dev] Skipping blur check on localhost');
+        return;
+      }
       setIsScreenshotFlash(true); // Instant white screen to block partial OS screenshots
       setTimeout(() => setIsScreenshotFlash(false), 2000);
 
@@ -2137,6 +2406,7 @@ export default function StudentRemedialLayer({
     };
 
     const handleVisibility = () => {
+      if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) return;
       if (document.hidden) {
         trackEvent('VISIBILITY_LOST', 'MEDIUM', 15, { reason: 'Siswa meminimalisir tab / buka aplikasi lain' });
         handleBlur(); // Bind the exact same penalty for losing app focus
@@ -2158,11 +2428,12 @@ export default function StudentRemedialLayer({
       if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
       clearInterval(fastNetworkPoll);
     };
-  }, [step, attemptId, isSubmitting]);
+  }, [step, attemptId, isSubmitting, sendHeartbeat, syncWithServer, trackEvent]);
 
   // Anti-cheat mechanism — basic keyboard protection
   useEffect(() => {
     if (step !== 'EXAM') return;
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) return;
 
     const handleCopyPaste = (e: ClipboardEvent) => {
       e.preventDefault();
@@ -2216,269 +2487,30 @@ export default function StudentRemedialLayer({
     } else if (showAiBotWarning && aiCountdown === 0) {
       if (!hasProcessedOverlayWarningRef.current) {
         hasProcessedOverlayWarningRef.current = true;
-        if (overlayViolationCount >= 3) {
-          // LOCKOUT: Time is up and violation still detected on Strike 3
-          setShowAiBotWarning(false);
-          handleStatusUpdate('CHEATED', 'Terdeteksi penggunaan Layer/Overlay secara berulang (Auto-Lock)');
-        } else {
-          // Flag instead of Lockout: Add to flags but don't terminate session for Strike 1 & 2
-          const reason = `Indikasi Layer/Overlay (Strike ${overlayViolationCount}/3)`;
-          setClientCheatingFlags(f => f.includes(reason) ? f : [...f, reason]);
-          
-          // Send synchronized log (DB + Tele) with Medium Confidence
-          sendActivityLog(`⚠️ ${reason} | Tingkat Kepercayaan: MEDIUM (Persisten 10s)`);
-          
-          // Stay visible for 5 more seconds then hide automatically
-          setTimeout(() => setShowAiBotWarning(false), 5000);
-        }
+        queueMicrotask(() => {
+          if (overlayViolationCount >= 3) {
+            // LOCKOUT: Time is up and violation still detected on Strike 3
+            setShowAiBotWarning(false);
+            handleStatusUpdate('CHEATED', 'Terdeteksi penggunaan Layer/Overlay secara berulang (Auto-Lock)');
+          } else {
+            // Flag instead of Lockout: Add to flags but don't terminate session for Strike 1 & 2
+            const reason = `Indikasi Layer/Overlay (Strike ${overlayViolationCount}/3)`;
+            setClientCheatingFlags(f => f.includes(reason) ? f : [...f, reason]);
+            
+            // Send synchronized log (DB + Tele) with Medium Confidence
+            sendActivityLog(`⚠️ ${reason} | Tingkat Kepercayaan: MEDIUM (Persisten 10s)`);
+            
+            // Stay visible for 5 more seconds then hide automatically
+            setTimeout(() => setShowAiBotWarning(false), 5000);
+          }
+        });
       }
     }
     return () => clearInterval(timer);
-  }, [showAiBotWarning, aiCountdown, overlayViolationCount]);
+  }, [showAiBotWarning, aiCountdown, overlayViolationCount, handleStatusUpdate, sendActivityLog]);
 
 
-
-    const evaluateAnswerValidity = (ans: string) => {
-      const text = (ans || '').trim().toLowerCase();
-      
-      // 1. Min 20 characters
-      const lengthOk = text.length >= 20;
-      
-      // 2. Garbage phrases
-      const garbagePhrases = ['tidak tahu', 'kosong', 'gak tahu', 'ndak tahu', 'null', 'undefined', 'asdf', 'qwerty'];
-      const hasGarbage = garbagePhrases.some(phrase => text.includes(phrase));
-      
-      // 3. Repetitive characters
-      const hasRepetitiveChars = /(.)\1{9,}/.test(text);
-      
-      // 4. Repetitive words
-      const words = text.split(/\s+/);
-      const uniqueWords = new Set(words);
-      const hasRepetitiveWords = words.length > 5 && (uniqueWords.size / words.length) < 0.4;
-      
-      // 5. Min words (for backend effort logic alignment)
-      const filteredWords = text.split(/\s+/).filter(w => w.length > 2);
-      const uniqueFilteredWords = new Set(filteredWords);
-      const minWordsOk = filteredWords.length >= 5;
-      const minUniqueWordsOk = uniqueFilteredWords.size >= 3;
-      
-      const isValid = lengthOk && !hasGarbage && !hasRepetitiveChars && !hasRepetitiveWords && minWordsOk && minUniqueWordsOk;
-      
-      return {
-        lengthOk,
-        hasGarbage,
-        hasRepetitiveChars,
-        hasRepetitiveWords,
-        minWordsOk,
-        minUniqueWordsOk,
-        isValid
-      };
-    };
-
-    const validateSubmission = () => {
-      const invalidIndices = answers.map((a, i) => {
-        const evaluation = evaluateAnswerValidity(a);
-        return evaluation.isValid ? -1 : i;
-      }).filter(index => index !== -1);
-      
-      if (invalidIndices.length > 0) {
-        setInvalidQuestionIndices(invalidIndices);
-        const questionNumbers = invalidIndices.map(i => i + 1).join(', ');
-        setToast({ 
-          message: `⚠️ JAWABAN TIDAK VALID: Soal nomor ${questionNumbers} belum diisi dengan jawaban yang memadai atau terdeteksi asal-asalan.`, 
-          type: "error"
-        });
-        // Auto-scroll to first invalid question
-        const firstInvalidEl = document.getElementById(`question-card-${invalidIndices[0]}`);
-        if (firstInvalidEl) {
-          firstInvalidEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        return false;
-      }
-      setInvalidQuestionIndices([]);
-      return true;
-    };
-
-    const handleStatusUpdate = async (status: 'COMPLETED' | 'CHEATED' | 'TIMEOUT', explicitReason?: string) => {
-      // For manual completion, we require validation
-      if (status === 'COMPLETED' && !validateSubmission()) {
-        return;
-      }
-
-      if (hasSubmittedRef.current) return;
-      hasSubmittedRef.current = true;
-    
-      setIsSubmitting(true);
-      if (status === 'COMPLETED') {
-        setSubmissionLabel("Mengirim jawaban...");
-      } else if (status === 'TIMEOUT') {
-        setSubmissionLabel("Menyimpan jawaban saat waktu habis...");
-      } else {
-        setSubmissionLabel("Memproses...");
-      }
-
-      const allFlags = explicitReason 
-        ? (clientCheatingFlags.includes(explicitReason) ? clientCheatingFlags : [...clientCheatingFlags, explicitReason])
-        : clientCheatingFlags;
-
-      const payload = { 
-        sessionId, 
-        studentName, 
-        status, 
-        location: currentLocation,
-        answers: (status === 'COMPLETED' || status === 'TIMEOUT') ? (() => {
-          const totalQ = shuffledQuestions.length > 0 ? shuffledQuestions.length : remedialEssayCount;
-          const mappedAnswers = new Array(totalQ).fill("");
-          shuffledQuestions.forEach((sq, i) => {
-            if (sq.originalIndex < totalQ) {
-              mappedAnswers[sq.originalIndex] = answersRef.current[i] || "";
-            }
-          });
-          return mappedAnswers;
-        })() : undefined,
-        note: status === 'COMPLETED' ? noteRef.current : undefined,
-        clientCheatingFlags: allFlags.length > 0 ? allFlags : undefined,
-        examMode,
-        cameraStatus,
-        riskLevel: allFlags.length > 0 ? 'HIGH' : (examMode === 'LIMITED' ? 'MEDIUM' : 'LOW'),
-        cheatingReason: explicitReason,
-        isPenaltyApplied
-      };
-
-      const MAX_SUBMIT_RETRIES = 3;
-      let lastError = '';
-
-      for (let attempt = 1; attempt <= MAX_SUBMIT_RETRIES; attempt++) {
-        if (attempt > 1) {
-          setSubmissionLabel(`Mencoba ulang pengiriman (${attempt}/${MAX_SUBMIT_RETRIES})...`);
-        }
-        try {
-          const res = await fetch('/api/grademaster/students/remedial', {
-            method: 'POST',
-            cache: 'no-store' as RequestCache,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-
-          if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            
-            if (errorData.error === 'RESET_REQUIRED') {
-              setToast({ message: "Sesi anda telah direset oleh proktor. Data lokal dihapus.", type: "error" });
-              setTimeout(() => {
-                clearRemedialSession();
-                window.location.reload();
-              }, 3000);
-              return;
-            }
-
-            const errMsg = errorData.error || "Terjadi kesalahan saat mengirim jawaban.";
-            
-            if (errorData.error?.includes('sudah pernah dilakukan') || errorData.error?.includes('permanen') || res.status === 403) {
-              clearRemedialSession();
-              setStep('CHEATED');
-              setToast({ message: errMsg, type: "error" });
-              setIsSubmitting(false);
-              setSubmissionLabel("");
-              return;
-            }
-
-            lastError = errMsg;
-            if (attempt < MAX_SUBMIT_RETRIES) {
-              const delay = 500 * Math.pow(2, attempt - 1);
-              setToast({ message: `Gagal mengirim (${attempt}/${MAX_SUBMIT_RETRIES}). Mencoba ulang...`, type: "error" });
-              await new Promise(resolve => setTimeout(resolve, delay));
-              continue;
-            }
-          } else {
-            const data = await res.json();
-            
-            clearRemedialSession();
-            if (typeof window !== 'undefined') {
-              const backupKey = `gm_remedial_backup_${sessionId}_${studentName.toLowerCase().trim()}`;
-              localStorage.removeItem(backupKey);
-            }
-            
-            const finalStatus = data.status || status;
-            if (data.cheatingFlags) setServerCheatingFlags(data.cheatingFlags);
-            
-            setIsHeldBack(!!data.isHeldBack);
-            setRemedialScore(data.remedialScore ?? null);
-            setPendingRemedialCount(data.pendingRemedialCount || 0);
-            setHoldbackReason(data.holdbackReason || null);
-            setRawScore(data.rawScore ?? null);
-            setDisplayedScore(data.displayedScore ?? null);
-            setFailedReason(data.failedReason || null);
-
-            if (finalStatus === 'FAILED_EFFORT') {
-              setToast({ message: "Sesi selesai: Jawaban dibatalkan karena terdeteksi tidak valid atau terlalu cepat.", type: "error" });
-              setFinalScore(0);
-            } else if (['COMPLETED', 'SUBMITTED', 'REMEDIAL'].includes(finalStatus)) {
-              const fScore = data.newFinalScore ?? data.final_score ?? 0;
-              setFinalScore(fScore);
-
-              if (data.isHeldBack) {
-                setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Nilai ditahan sementara.", type: "success" });
-              } else if (fScore < (kkm || 70)) {
-                setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Nilai Anda belum mencapai KKM.", type: "error" });
-              } else {
-                setToast({ message: "Jawaban Remedial berhasil dikumpulkan. Selamat, Anda LULUS KKM!", type: "success" });
-              }
-
-              if (data.essayDetails) setEssayAutoDetails(data.essayDetails);
-              if (data.remedialAnswerKeys) setRemedialAnswerKeys(data.remedialAnswerKeys);
-
-              sendTelegramNotify('FINISH', undefined, undefined, fScore);
-              
-              fetch(`/api/grademaster/sessions/${sessionId}/remaining-students`, { cache: 'no-store' })
-                .then(r => r.json())
-                .then(d => {
-                  setRemainingStudents(d.students || []);
-                  setSessionCreatedAt(d.sessionCreatedAt);
-                });
-            } else if (finalStatus === 'CHEATED' || finalStatus === 'AI_BOT_DETECTED') {
-              let photo = capturePhoto();
-              const cheatedReason = explicitReason || allFlags.join(', ') || 'Pelanggaran proctoring terdeteksi oleh sistem';
-              const eventType = finalStatus === 'AI_BOT_DETECTED' ? 'AI_BOT_DETECTED' : 'CHEATED';
-              
-              compressImage(photo || "").then(compressed => {
-                sendTelegramNotify(eventType, compressed || photo || undefined, cheatedReason);
-              });
-              // Pastikan UI langsung merender 0
-              setFinalScore(0);
-            } else if (finalStatus === 'TIMEOUT' || finalStatus === 'TIME_UP') {
-              const fScore = data.newFinalScore ?? data.final_score ?? 0;
-              setFinalScore(fScore);
-            }
-            setStep(finalStatus === 'REMEDIAL' ? 'SUBMITTED' : (finalStatus as RemedialStep));
-            setIsSubmitting(false);
-            setSubmissionLabel("");
-            setIsSubmissionBackupSaved(false);
-            return;
-          }
-        } catch (e) {
-          lastError = "Kesalahan jaringan";
-          if (attempt < MAX_SUBMIT_RETRIES) {
-            const delay = 500 * Math.pow(2, attempt - 1);
-            setToast({ message: `Koneksi gagal (${attempt}/${MAX_SUBMIT_RETRIES}). Mencoba ulang...`, type: "error" });
-            await new Promise(resolve => setTimeout(resolve, delay));
-            continue;
-          }
-        }
-      }
-
-      // All retries failed — save to localStorage as safety net
-      try {
-        localStorage.setItem('gm_failed_submission', JSON.stringify({ ...payload, failedAt: Date.now() }));
-        setIsSubmissionBackupSaved(true);
-      } catch { /* localStorage might be full */ }
-
-      setToast({ message: `Gagal mengirim jawaban setelah ${MAX_SUBMIT_RETRIES} percobaan: ${lastError}. Data tersimpan lokal, hubungi guru.`, type: "error" });
-      sendTelegramNotify('ERROR', undefined, `Submit gagal ${MAX_SUBMIT_RETRIES}x: ${lastError}`);
-      setIsSubmitting(false);
-      setSubmissionLabel("");
-      hasSubmittedRef.current = false; // ALLOW RETRY
-    };
+;
 
     const handleChange = (index: number, val: string) => {
       const newAnswers = [...answers];
@@ -2516,7 +2548,7 @@ export default function StudentRemedialLayer({
         }
       }
     }
-  }, [tabWarningCount, step, secondChanceUsed]);
+  }, [tabWarningCount, step, secondChanceUsed, setToast, handleStatusUpdate, sendTelegramNotify, capturePhoto]);
 
   const handleSubmit = async () => {
     const isAnyEmpty = answers.some(a => !a.trim());
@@ -2836,9 +2868,9 @@ export default function StudentRemedialLayer({
   if (step === 'SECOND_CHANCE') {
     const handleUseSecondChance = () => {
       setSecondChanceUsed(true);
-      setWarningCount(0);
       setTabWarningCount(0);
-      setBackPressCount(0);
+      backPressCountRef.current = 0;
+      cameraViolationCountRef.current = 0;
       setClientCheatingFlags([]); 
       hasTriggeredCheatingRef.current = false;
       setStep('EXAM');
@@ -2901,8 +2933,6 @@ export default function StudentRemedialLayer({
     };
 
     const handleShare = () => {
-      const timeStr = getRemainingTimeStr();
-      
       // Randomize classmate who is also in remedial from remainingStudents list
       let targetFriend = "";
       if (remainingStudents && remainingStudents.length > 0) {
@@ -3015,7 +3045,7 @@ export default function StudentRemedialLayer({
                          <span className="text-amber-500 font-bold">Durasi Minimal:</span> Penginputan remedial membutuhkan fokus dan waktu pengerjaan minimal <span className="font-bold text-white">5 menit</span>.
                        </li>
                        <li>
-                         <span className="text-amber-500 font-bold">Kualitas Jawaban:</span> Lebih dari setengah dari jumlah soal essay wajib diisi dengan jawaban sah (minimal 20 karakter, 5 kata unik, dan tidak berisi kata asal-asalan seperti 'tidak tahu', 'kosong', dll).
+                         <span className="text-amber-500 font-bold">Kualitas Jawaban:</span> Lebih dari setengah dari jumlah soal essay wajib diisi dengan jawaban sah (minimal 20 karakter, 5 kata unik, dan tidak berisi kata asal-asalan seperti &apos;tidak tahu&apos;, &apos;kosong&apos;, dll).
                        </li>
                      </ul>
                    </div>
@@ -3589,13 +3619,14 @@ export default function StudentRemedialLayer({
           id="draggable-pip-container"
           className="fixed z-[90] rounded-2xl border border-white/10 bg-slate-950/85 backdrop-blur-md px-4 py-2.5 premium-shadow animate-in slide-in-from-right duration-500 cursor-grab active:cursor-grabbing select-none touch-none flex flex-col gap-1.5 min-w-[140px] md:w-48 md:h-72 md:p-0 md:rounded-3xl md:border-2 md:border-white/20 md:bg-slate-900 md:overflow-hidden md:gap-0"
           style={pipPos
-            ? { left: `${pipPos.x}px`, top: `${pipPos.y}px`, transition: isDraggingRef.current ? 'none' : 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)' }
+            ? { left: `${pipPos.x}px`, top: `${pipPos.y}px`, transition: isDragging ? 'none' : 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)' }
             : { right: '32px', bottom: '32px' }
           }
           onMouseDown={(e) => {
             if (!pipRef.current) return;
             const rect = pipRef.current.getBoundingClientRect();
             isDraggingRef.current = true;
+            setIsDragging(true);
             wasDraggedRef.current = false;
             dragOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
             dragStartPosRef.current = { x: e.clientX, y: e.clientY };
@@ -3611,8 +3642,9 @@ export default function StudentRemedialLayer({
               const newY = Math.min(Math.max(12, ev.clientY - dragOffsetRef.current.y), window.innerHeight - elH - 12);
               setPipPos({ x: newX, y: newY });
             };
-            const onUp = (ev: MouseEvent) => {
+            const onUp = () => {
               isDraggingRef.current = false;
+              setIsDragging(false);
               window.removeEventListener('mousemove', onMove);
               window.removeEventListener('mouseup', onUp);
               if (pipRef.current) {
@@ -3632,6 +3664,7 @@ export default function StudentRemedialLayer({
             const touch = e.touches[0];
             const rect = pipRef.current.getBoundingClientRect();
             isDraggingRef.current = true;
+            setIsDragging(true);
             wasDraggedRef.current = false;
             dragOffsetRef.current = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
             dragStartPosRef.current = { x: touch.clientX, y: touch.clientY };
@@ -3648,8 +3681,9 @@ export default function StudentRemedialLayer({
             const newY = Math.min(Math.max(12, touch.clientY - dragOffsetRef.current.y), window.innerHeight - elH - 12);
             setPipPos({ x: newX, y: newY });
           }}
-          onTouchEnd={(e) => {
+          onTouchEnd={() => {
             isDraggingRef.current = false;
+            setIsDragging(false);
             if (pipRef.current) {
               const elW = pipRef.current.offsetWidth;
               const rectInner = pipRef.current.getBoundingClientRect();
@@ -3807,19 +3841,17 @@ export default function StudentRemedialLayer({
          </div>
       )}
 
-      {(isConnectionLocked || isSplitLocked) && step === 'EXAM' && (
+      {isConnectionLocked && step === 'EXAM' && (
         <div className="fixed inset-0 z-[1002] bg-transparent flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#f43f5e10,transparent)]"></div>
            <div className="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-[2.5rem] border border-rose-500/20 flex items-center justify-center mb-8 animate-bounce shadow-2xl shadow-rose-500/20">
-            {isConnectionLocked ? <MonitorOff size={48} /> : <Monitor size={48} />}
+            <MonitorOff size={48} />
           </div>
           <h2 className="text-3xl font-black text-on-surface mb-3 tracking-tighter uppercase font-outfit">
-            {isConnectionLocked ? 'Koneksi Terputus' : 'Layar Terpisah'}
+            Koneksi Terputus
           </h2>
           <p className="text-on-surface-variant font-bold max-w-xs mb-12 leading-relaxed uppercase text-[11px] tracking-widest">
-            {isConnectionLocked 
-               ? 'Ujian ditangguhkan. Hubungkan kembali akses internet untuk melanjutkan sinkronisasi data.' 
-               : 'Aktivitas Split-Screen dilarang demi integritas pengawasan. Gunakan mode layar penuh.'}
+            Ujian ditangguhkan. Hubungkan kembali akses internet untuk melanjutkan sinkronisasi data.
           </p>
           {isConnectionLocked && (
             <button 
@@ -3873,7 +3905,7 @@ export default function StudentRemedialLayer({
              </div>
              <div className="flex gap-2 items-start text-xs font-bold">
                <span className="text-primary font-black">2.</span>
-               <p className="text-[11px] leading-relaxed">Aktifkan kembali izin <span className="text-rose-400 font-black">Kamera</span> (Ubah dari "Blokir" menjadi "Izinkan").</p>
+               <p className="text-[11px] leading-relaxed">Aktifkan kembali izin <span className="text-rose-400 font-black">Kamera</span> (Ubah dari &quot;Blokir&quot; menjadi &quot;Izinkan&quot;).</p>
              </div>
              <div className="flex gap-2 items-start text-xs font-bold">
                <span className="text-primary font-black">3.</span>

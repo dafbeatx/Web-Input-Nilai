@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import {
   ArrowLeft, Users, Download, Trash2, Shield, Loader2,
-  UserPlus, ShieldCheck, Camera, AlertCircle, CheckCircle2,
-  KeyRound, Image as ImageIcon, TrendingUp
+  UserPlus, ShieldCheck, Camera, AlertCircle,
+  KeyRound, TrendingUp
 } from 'lucide-react';
 import { ToastType, StudentAccount, isImageUrl } from '@/lib/grademaster/types';
 
@@ -156,7 +157,7 @@ export default function StudentAccountsLayer({
       } else {
         setToast({ message: data.error || 'Gagal memuat akun', type: 'error' });
       }
-    } catch (err: any) {
+    } catch {
       setToast({ message: 'Gagal memuat akun siswa', type: 'error' });
     } finally {
       setIsLoading(false);
@@ -220,8 +221,9 @@ export default function StudentAccountsLayer({
       URL.revokeObjectURL(link.href);
 
       setToast({ message: 'File Excel berhasil diunduh', type: 'success' });
-    } catch (err: any) {
-      setToast({ message: err.message || 'Gagal mengekspor', type: 'error' });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setToast({ message: errMsg || 'Gagal mengekspor', type: 'error' });
     } finally {
       setIsExporting(false);
     }
@@ -419,11 +421,13 @@ export default function StudentAccountsLayer({
                 <div className="relative group shrink-0">
                   <div className="w-12 h-12 rounded-xl overflow-hidden bg-surface-variant border border-outline-variant flex items-center justify-center">
                     {account.profile_photo_url && isImageUrl(account.profile_photo_url) ? (
-                      <img
+                      <Image
                         src={account.profile_photo_url}
                         alt={account.student_name}
+                        width={48}
+                        height={48}
                         className="w-full h-full object-cover"
-                        loading="lazy"
+                        unoptimized
                       />
                     ) : (
                       <span className="text-base font-black text-primary font-outfit">{account.profile_photo_url || (account.student_name || 'S').charAt(0)}</span>

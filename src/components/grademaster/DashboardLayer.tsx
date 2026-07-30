@@ -1,20 +1,20 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import {
-  ArrowRight, Plus, User, Download, RefreshCcw,
-  Trash2, AlertCircle, Eye, AlertOctagon, Users, Timer, Clock,
-  Send, MonitorOff, Cpu, Edit2, Loader2, Globe, CheckCircle2, XCircle,
-  MoreVertical, Check, Target, Trophy, TrendingUp, Info, BarChart3,
-  ClipboardList, ShieldCheck, DownloadCloud, FileText, Filter, ChevronRight,
+  Plus, RefreshCcw,
+  Trash2, AlertCircle, Timer,
+  Cpu, Edit2, Loader2, CheckCircle2, XCircle,
+  MoreVertical, Target, Trophy, TrendingUp, BarChart3,
+  ClipboardList, ShieldCheck, DownloadCloud, FileText, ChevronRight,
   FileSpreadsheet, FileDown
 } from 'lucide-react';
 import { GradedStudent, AnalyticsResult, isImageUrl } from '@/lib/grademaster/types';
 import { exportToPDF, exportToExcel, exportToDOCX } from '@/lib/grademaster/reportExport';
-import { getCsiLabel, getLpsLabel } from '@/lib/grademaster/scoring';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, LineChart, Line, CartesianGrid 
+  PieChart, Pie, Cell, CartesianGrid 
 } from 'recharts';
 import InsightPanel from './InsightPanel';
 
@@ -57,23 +57,26 @@ interface DashboardLayerProps {
   remedialDeadline?: string;
 }
 
-const PIE_COLORS = ['#9bffce', '#ff6e84'];
+interface AIInsightsData {
+  summary?: string;
+  strengths?: string[];
+  weaknesses?: string[];
+  recommendations?: string[];
+}
 
 export default function DashboardLayer({
   teacherName, subject, studentClass, schoolLevel, gradedStudents,
-  analytics, isPublicView, sessionName, kkm, remedialEssayCount,
-  onGradeStudent, onStudentRemedial, onBack, onReSync, academicYear,
-  semester, examType, isDemo, sessionId, isAdmin = false, showRemedialButton = false,
+  analytics, sessionName, kkm,
+  onGradeStudent, onStudentRemedial, academicYear,
+  semester, examType, sessionId, isAdmin = false, showRemedialButton = false,
   isStudent = false, currentStudentName = '', onOpenRemedialDashboard, remedialDeadline
 }: DashboardLayerProps) {
   const [activeTab, setActiveTab] = useState<'ikhtisar' | 'analisis' | 'laporan'>('ikhtisar');
   const [behaviorMap, setBehaviorMap] = useState<Record<string, BehaviorRecord>>({});
-  const [isCheckingSimilarity, setIsCheckingSimilarity] = useState(false);
-  const [similarityReports, setSimilarityReports] = useState<any[] | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isEditingScore, setIsEditingScore] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [aiInsights, setAiInsights] = useState<any>(null);
+  const [aiInsights, setAiInsights] = useState<AIInsightsData | null>(null);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [insightsError, setInsightsError] = useState<string | null>(null);
 
@@ -130,8 +133,9 @@ export default function DashboardLayer({
       
       setAiInsights(data.insights);
       sessionStorage.setItem(`gm_ai_insights_${sessionId}`, JSON.stringify(data.insights));
-    } catch (err: any) {
-      setInsightsError(err.message || 'Gagal menganalisis data');
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setInsightsError(errMsg || 'Gagal menganalisis data');
     } finally {
       setIsLoadingInsights(false);
     }
@@ -150,7 +154,7 @@ export default function DashboardLayer({
       });
       if (!res.ok) throw new Error('Gagal menghapus');
       window.location.reload(); 
-    } catch (err) { alert('Gagal menghapus'); } finally { setIsDeleting(null); }
+    } catch { alert('Gagal menghapus'); } finally { setIsDeleting(null); }
   };
 
   const handleRenameStudent = async (studentId: string, currentName: string) => {
@@ -166,7 +170,7 @@ export default function DashboardLayer({
       });
       if (!res.ok) throw new Error('Gagal mengubah nama');
       window.location.reload();
-    } catch (err) { alert('Gagal mengubah nama'); } finally { setIsEditingScore(null); }
+    } catch { alert('Gagal mengubah nama'); } finally { setIsEditingScore(null); }
   };
 
   const handleEditScore = async (studentId: string, currentScore: number) => {
@@ -183,7 +187,7 @@ export default function DashboardLayer({
       });
       if (!res.ok) throw new Error('Gagal mengubah');
       window.location.reload();
-    } catch (err) { alert('Gagal mengubah'); } finally { setIsEditingScore(null); }
+    } catch { alert('Gagal mengubah'); } finally { setIsEditingScore(null); }
   };
 
   const handleExportXML = () => {
@@ -447,14 +451,14 @@ export default function DashboardLayer({
         {/* Tab Navigation Chips */}
         <section className="mb-8 -mx-6">
           <div className="flex overflow-x-auto no-scrollbar px-6 gap-3">
-            {[
+            {([
               { id: 'ikhtisar', label: 'Ikhtisar', icon: <ClipboardList size={16} /> },
               { id: 'analisis', label: 'Analisis Visual', icon: <BarChart3 size={16} /> },
               { id: 'laporan', label: 'Laporan', icon: <FileText size={16} /> },
-            ].map((t) => (
+            ] as const).map((t) => (
               <button 
                 key={t.id}
-                onClick={() => setActiveTab(t.id as any)}
+                onClick={() => setActiveTab(t.id)}
                 className={`flex-none px-6 py-2.5 rounded-full font-bold text-sm transition-all whitespace-nowrap flex items-center gap-2 ${
                   activeTab === t.id 
                   ? 'bg-tertiary text-on-tertiary shadow-[0_0_15px_rgba(155,255,206,0.3)]' 
@@ -484,7 +488,7 @@ export default function DashboardLayer({
                     <div className="flex items-center gap-4 min-w-0 flex-1">
                       <div className="w-12 h-12 rounded-2xl overflow-hidden bg-surface-container-highest flex items-center justify-center text-primary font-bold border border-outline-variant">
                         {isImageUrl(behavior?.avatar_url) ? (
-                          <img src={behavior!.avatar_url!} alt={s.name} className="w-full h-full object-cover" />
+                          <Image src={behavior!.avatar_url!} alt={s.name} width={48} height={48} className="w-full h-full object-cover" unoptimized />
                         ) : (
                           <span className="text-lg font-bold">{behavior?.avatar_url || s.name.slice(0, 2).toUpperCase()}</span>
                         )}

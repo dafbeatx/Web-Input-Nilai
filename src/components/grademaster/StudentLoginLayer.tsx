@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Search, GraduationCap } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
+import { Search } from 'lucide-react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
-import { Loader2, ShieldCheck, LogOut, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Loader2, ShieldCheck, CheckCircle2, ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
-import { ToastType } from '@/lib/grademaster/types';
+import { ToastType, StudentAccount } from '@/lib/grademaster/types';
+import { Session } from '@supabase/supabase-js';
 import NeonGraduationCap from '@/components/grademaster/ui/NeonGraduationCap';
 
 interface StudentLoginLayerProps {
-  onSuccess: (studentData: any) => void;
+  onSuccess: (studentData: StudentAccount | null) => void;
   setToast: (t: ToastType) => void;
   onLogout?: () => void;
   isLoggedIn?: boolean;
@@ -21,7 +23,6 @@ interface StudentLoginLayerProps {
 export default function StudentLoginLayer({
   onSuccess,
   setToast,
-  isLoggedIn = false,
 }: StudentLoginLayerProps) {
   // Loading States
   const [isPageEntering, setIsPageEntering] = useState(true);
@@ -51,11 +52,17 @@ export default function StudentLoginLayer({
   const [isParentMode, setIsParentMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [students, setStudents] = useState<any[]>([]);
+  interface SearchStudentResult {
+    id: string;
+    student_name: string;
+    class_name: string;
+    total_points: number;
+  }
+  const [students, setStudents] = useState<SearchStudentResult[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
   const isStudentSelectedRef = React.useRef(false);
-  const redirectTimerRef = React.useRef<any>(null);
+  const redirectTimerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -87,13 +94,13 @@ export default function StudentLoginLayer({
     if (isParentMode) fetchStudents();
   }, [debouncedQuery, isParentMode]);
 
-  const handleSelectStudent = (s: any) => {
+  const handleSelectStudent = (s: SearchStudentResult) => {
     isStudentSelectedRef.current = true;
     setIsParentMode(false);
     setIsParent(true);
     
     // Set cookie untuk autentikasi Orang Tua di API server-side
-    document.cookie = `gm_parent_student=${encodeURIComponent(s.student_name)}; path=/; max-age=604800; SameSite=Strict`;
+    window.document.cookie = `gm_parent_student=${encodeURIComponent(s.student_name)}; path=/; max-age=604800; SameSite=Strict`;
 
     if (s.class_name) {
       setStudentClass(s.class_name);
@@ -126,6 +133,24 @@ export default function StudentLoginLayer({
   };
 
 
+  const handleSessionActive = useCallback((session?: Session | null) => {
+    setIsRedirecting(true);
+    setIsCheckingSession(false);
+    
+    if (session && session.user && session.user.user_metadata) {
+      setUserName(session.user.user_metadata.full_name || session.user.email || '');
+    }
+
+    if (redirectTimerRef.current) {
+      clearTimeout(redirectTimerRef.current);
+    }
+
+    // Give user a moment to see the "Redirecting" state for a premium feel
+    redirectTimerRef.current = setTimeout(() => {
+      onSuccess(null); // Trigger parent layer switch to student_claim/home
+    }, 1800);
+  }, [onSuccess]);
+
   // ── Session & Auth Listeners ────────────────────────────────
   useEffect(() => {
     let isMounted = true;
@@ -148,7 +173,7 @@ export default function StudentLoginLayer({
     }
 
     // 3. Listen for Auth State Changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log(`[AuthListener] Event: ${event}`);
       if (event === 'SIGNED_IN' && session) {
         handleSessionActive(session);
@@ -164,25 +189,7 @@ export default function StudentLoginLayer({
         clearTimeout(redirectTimerRef.current);
       }
     };
-  }, []);
-
-  const handleSessionActive = (session?: any) => {
-    setIsRedirecting(true);
-    setIsCheckingSession(false);
-    
-    if (session && session.user && session.user.user_metadata) {
-      setUserName(session.user.user_metadata.full_name || session.user.email || '');
-    }
-
-    if (redirectTimerRef.current) {
-      clearTimeout(redirectTimerRef.current);
-    }
-
-    // Give user a moment to see the "Redirecting" state for a premium feel
-    redirectTimerRef.current = setTimeout(() => {
-      onSuccess(null); // Trigger parent layer switch to student_claim/home
-    }, 1800);
-  };
+  }, [handleSessionActive]);
 
   const handleGoogleLogin = async () => {
     setIsLoginInProgress(true);
@@ -197,8 +204,9 @@ export default function StudentLoginLayer({
       });
       if (error) throw new Error(error.message);
       // Browser will redirect to Google shortly
-    } catch (err: any) {
-      setError(err.message || 'Gagal tersambung dengan Google. Silakan coba lagi.');
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setError(errMsg || 'Gagal tersambung dengan Google. Silakan coba lagi.');
       setIsLoginInProgress(false);
     }
   };
@@ -260,10 +268,13 @@ export default function StudentLoginLayer({
       
       {/* Mascot Waving Character - Desktop Only */}
       <div className="hidden lg:block absolute bottom-0 right-10 w-[240px] xl:w-[280px] z-0 select-none pointer-events-none animate-in slide-in-from-right-10 duration-1000 ease-out">
-        <img
+        <Image
           src="/mascot_hijab_idle.png"
           alt="Student Mascot"
+          width={280}
+          height={380}
           className="w-full h-auto object-contain opacity-90 hover:opacity-100 transition-opacity duration-300"
+          unoptimized
         />
       </div>
 
@@ -291,10 +302,13 @@ export default function StudentLoginLayer({
           <div className="mb-10 relative flex flex-col items-center">
              {/* Mascot visible on mobile, hidden on desktop */}
              <div className="lg:hidden w-[140px] h-[140px] select-none pointer-events-none animate-in fade-in slide-in-from-bottom-4 duration-1000 ease-out mb-2">
-                <img
+                <Image
                   src="/mascot_hijab_idle.png"
                   alt="Student Mascot"
+                  width={140}
+                  height={140}
                   className="w-full h-full object-contain"
+                  unoptimized
                 />
              </div>
              
