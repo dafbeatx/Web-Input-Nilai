@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     // We let Telegraf handle what it can (Behavior system, etc.)
     // Note: handleUpdate is async but we don't necessarily need to await it
     // if we want to also run the manual handlers.
-    await bot.handleUpdate(update as any);
+    await bot.handleUpdate(update as unknown as Parameters<typeof bot.handleUpdate>[0]);
 
     if (update.callback_query) {
       const chatId = update.callback_query.message.chat.id;
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       if (!data.startsWith('stubeh:')) {
         await answerCallbackQuery(update.callback_query.id);
         if (isAdmin(chatId)) {
-          await handleAdminCallback(chatId, data, messageId, update);
+          await handleAdminCallback(chatId, data, messageId);
         } else {
           await handleUserCallback(chatId, data);
         }
@@ -34,12 +34,11 @@ export async function POST(req: NextRequest) {
 
     if (update.message?.text) {
       const chatId = update.message.chat.id;
-      const messageId = update.message.message_id;
       const text = update.message.text.trim();
 
       // Only run manual handler if not a behavior command or if we want dual support
       if (isAdmin(chatId)) {
-        await handleAdminCommand(chatId, text, messageId);
+        await handleAdminCommand(chatId, text);
       } else {
         await handleUserCommand(chatId, text);
       }

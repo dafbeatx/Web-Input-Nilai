@@ -274,7 +274,10 @@ export default function AttendanceLayer({
              {isAdmin ? (
                 adminUser?.[0] || 'A'
              ) : (
-                studentData?.photo_url && isImageUrl(studentData.photo_url) ? <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" /> : (studentData?.photo_url || studentData?.name?.[0] || 'S')
+                studentData?.photo_url && isImageUrl(studentData.photo_url) ? (
+                   /* eslint-disable-next-line @next/next/no-img-element */
+                   <img src={studentData.photo_url} alt="Profile" className="w-full h-full object-cover" />
+                ) : (studentData?.photo_url || studentData?.name?.[0] || 'S')
              )}
           </div>
         </div>
@@ -456,6 +459,7 @@ export default function AttendanceLayer({
                   <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
                     <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-full flex items-center justify-center text-white font-semibold text-sm md:text-lg tracking-wider relative overflow-hidden bg-slate-900 border border-slate-100 shadow-sm">
                       {isImageUrl(s.avatar_url) ? (
+                         /* eslint-disable-next-line @next/next/no-img-element */
                          <img src={s.avatar_url!} alt={s.student_name} className="w-full h-full object-cover" />
                       ) : (
                          <span className="text-xl">{s.avatar_url || s.student_name.slice(0, 2).toUpperCase()}</span>

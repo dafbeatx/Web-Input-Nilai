@@ -15,6 +15,12 @@ interface StudentLoginLayerProps {
   isLoggedIn?: boolean;
 }
 
+function setParentStudentCookie(studentName: string) {
+  if (typeof document !== 'undefined') {
+    document.cookie = `gm_parent_student=${encodeURIComponent(studentName)}; path=/; max-age=604800; SameSite=Strict`;
+  }
+}
+
 /**
  * GradeMaster OS - Student Portal Login Page
  * Redesigned with premium Apple + Linear aesthetics, pure white theme, 
@@ -87,7 +93,8 @@ export default function StudentLoginLayer({
           .order('student_name', { ascending: true })
           .limit(10);
         setStudents(data || []);
-      } catch (err) {} finally {
+      } catch {
+      } finally {
         setIsLoadingSearch(false);
       }
     };
@@ -100,7 +107,7 @@ export default function StudentLoginLayer({
     setIsParent(true);
     
     // Set cookie untuk autentikasi Orang Tua di API server-side
-    window.document.cookie = `gm_parent_student=${encodeURIComponent(s.student_name)}; path=/; max-age=604800; SameSite=Strict`;
+    setParentStudentCookie(s.student_name);
 
     if (s.class_name) {
       setStudentClass(s.class_name);

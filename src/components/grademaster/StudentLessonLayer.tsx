@@ -238,57 +238,57 @@ export default function StudentLessonLayer({
 
   // Coordinator Effect for Mascot dialog bubble and expressions
   useEffect(() => {
-    if (!selectedLesson) {
-      queueMicrotask(() => {
+    queueMicrotask(() => {
+      if (!selectedLesson) {
         setMascotState('idle');
         setMascotMessage('Halo! Yuk kita mulai belajar materi hari ini. Pilih salah satu materi di kiri ya!');
-      });
-      return;
-    }
+        return;
+      }
 
-    if (activeTab === 'materi') {
-      if (learningMode === 'santai') {
-        if (simplifiedSlides.length === 0) {
-          setMascotState('idle');
-          setMascotMessage(`Yuk kita pelajari materi tentang ${selectedLesson.subject}!`);
-        } else {
-          const total = simplifiedSlides.length;
-          if (currentSlideIdx === 0) {
+      if (activeTab === 'materi') {
+        if (learningMode === 'santai') {
+          if (simplifiedSlides.length === 0) {
             setMascotState('idle');
-            setMascotMessage(`Selamat datang di Paham Kilat AI! Yuk baca perlahan slide demi slide tentang ${selectedLesson.subject}.`);
-          } else if (currentSlideIdx === total - 1) {
-            setMascotState('success');
-            setMascotMessage(`Wah, kamu sampai di slide terakhir! Klik "Selesai" untuk melengkapi belajarmu hari ini.`);
+            setMascotMessage(`Yuk kita pelajari materi tentang ${selectedLesson.subject}!`);
           } else {
-            setMascotState('idle');
-            setMascotMessage(`Bagus! Slide ${currentSlideIdx + 1} dari ${total}. Terus baca ya, kamu hebat!`);
+            const total = simplifiedSlides.length;
+            if (currentSlideIdx === 0) {
+              setMascotState('idle');
+              setMascotMessage(`Selamat datang di Paham Kilat AI! Yuk baca perlahan slide demi slide tentang ${selectedLesson.subject}.`);
+            } else if (currentSlideIdx === total - 1) {
+              setMascotState('success');
+              setMascotMessage(`Wah, kamu sampai di slide terakhir! Klik "Selesai" untuk melengkapi belajarmu hari ini.`);
+            } else {
+              setMascotState('idle');
+              setMascotMessage(`Bagus! Slide ${currentSlideIdx + 1} dari ${total}. Terus baca ya, kamu hebat!`);
+            }
           }
-        }
-      } else {
-        setMascotState('idle');
-        setMascotMessage(`Kamu sedang membaca isi materi lengkap. Fokus dan serap ilmunya ya!`);
-      }
-    } else if (activeTab === 'chat_ai') {
-      setMascotState('idle');
-      setMascotMessage(`Ada bagian materi "${selectedLesson.subject}" yang kurang jelas? Tanyakan padaku! Aku siap membantu menjelaskan.`);
-    } else if (activeTab === 'kuis') {
-      if (showQuizResults && quizScoreRecord) {
-        const score = Math.round(quizScoreRecord.score);
-        if (score >= 70) {
-          setMascotState('success');
-          setMascotMessage(`Luar biasa! Kamu menyelesaikan kuis dengan nilai ${score}/100 dan mendapatkan +2 Poin Kebaikan! 🔥`);
         } else {
-          setMascotState('sad');
-          setMascotMessage(`Kuis selesai dengan nilai ${score}/100. Jangan berkecil hati, mari pelajari lagi materinya agar lebih paham!`);
+          setMascotState('idle');
+          setMascotMessage(`Kamu sedang membaca isi materi lengkap. Fokus dan serap ilmunya ya!`);
         }
-      } else if (isBlockedFromSusulan) {
-        setMascotState('sad');
-        setMascotMessage(`Ujian susulan ditutup karena kamu sudah memiliki nilai untuk mata pelajaran ini.`);
-      } else {
+      } else if (activeTab === 'chat_ai') {
         setMascotState('idle');
-        setMascotMessage(`Siap menguji pemahamanmu tentang ${selectedLesson.subject}? Jawab kuis ini dengan nilai >= 70 untuk bonus +2 Poin Kebaikan!`);
+        setMascotMessage(`Ada bagian materi "${selectedLesson.subject}" yang kurang jelas? Tanyakan padaku! Aku siap membantu menjelaskan.`);
+      } else if (activeTab === 'kuis') {
+        if (showQuizResults && quizScoreRecord) {
+          const score = Math.round(quizScoreRecord.score);
+          if (score >= 70) {
+            setMascotState('success');
+            setMascotMessage(`Luar biasa! Kamu menyelesaikan kuis dengan nilai ${score}/100 dan mendapatkan +2 Poin Kebaikan! 🔥`);
+          } else {
+            setMascotState('sad');
+            setMascotMessage(`Kuis selesai dengan nilai ${score}/100. Jangan berkecil hati, mari pelajari lagi materinya agar lebih paham!`);
+          }
+        } else if (isBlockedFromSusulan) {
+          setMascotState('sad');
+          setMascotMessage(`Ujian susulan ditutup karena kamu sudah memiliki nilai untuk mata pelajaran ini.`);
+        } else {
+          setMascotState('idle');
+          setMascotMessage(`Siap menguji pemahamanmu tentang ${selectedLesson.subject}? Jawab kuis ini dengan nilai >= 70 untuk bonus +2 Poin Kebaikan!`);
+        }
       }
-    }
+    });
   }, [activeTab, selectedLesson, learningMode, simplifiedSlides.length, currentSlideIdx, showQuizResults, quizScoreRecord, isBlockedFromSusulan]);
 
   const fetchSimplifiedContent = useCallback(async (subject: string, content: string) => {

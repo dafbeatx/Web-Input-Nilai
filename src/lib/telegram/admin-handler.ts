@@ -2,7 +2,6 @@ import { sendMessage, sendInlineKeyboard, editMessageText, isAdmin, supabase, se
 import { hashPassword } from '@/lib/grademaster/security';
 import { parseAnswerKey } from '@/lib/grademaster/parser';
 import { buildPaginationKeyboard, compressUUID, decompressUUID, buildBarChart } from './menu-builder';
-import { TelegramUpdate } from './bot';
 
 const adminConversations = new Map<number, { step: string; data: Record<string, unknown> }>();
 
@@ -26,7 +25,7 @@ const MAIN_KEYBOARD = [
   [{ text: '⚙️ PENGATURAN SISTEM', callback_data: 'nav:cat:system' }]
 ];
 
-export async function handleAdminCommand(chatId: number, text: string, messageId?: number) {
+export async function handleAdminCommand(chatId: number, text: string) {
   if (!isAdmin(chatId)) {
     await sendMessage(chatId, '⛔ Anda tidak memiliki akses admin.');
     return;
@@ -42,7 +41,7 @@ export async function handleAdminCommand(chatId: number, text: string, messageId
 
   // Handle Free-text Prompts (like Set Nilai, Password)
   if (conv) {
-    await handleConversationStep(chatId, text, conv, messageId);
+    await handleConversationStep(chatId, text, conv);
     return;
   }
 
@@ -53,8 +52,7 @@ export async function handleAdminCommand(chatId: number, text: string, messageId
 async function handleConversationStep(
   chatId: number,
   text: string,
-  conv: { step: string; data: Record<string, unknown> },
-  messageId?: number
+  conv: { step: string; data: Record<string, unknown> }
 ) {
   // Free text inputs for new session
   if (conv.step === 'session_name') {
@@ -274,7 +272,7 @@ async function handleConversationStep(
   }
 }
 
-export async function handleAdminCallback(chatId: number, callbackData: string, messageId?: number, update?: TelegramUpdate) {
+export async function handleAdminCallback(chatId: number, callbackData: string, messageId?: number) {
   if (!isAdmin(chatId)) return;
 
   const parts = callbackData.split(':');
@@ -406,7 +404,7 @@ export async function handleAdminCallback(chatId: number, callbackData: string, 
       if (type === 'setsts') {
         const status = parts[3];
         const studentId = targetId;
-        const updateData: any = { remedial_status: status };
+        const updateData: Record<string, unknown> = { remedial_status: status };
         if (status === 'CHEATED') updateData.is_cheated = true;
         if (status === 'BLOCKED') updateData.is_blocked = true;
         if (status === 'NONE') {
@@ -511,7 +509,7 @@ export async function handleAdminCallback(chatId: number, callbackData: string, 
         if (!session || !students) { await editOrSend(chatId, messageId, '❌ Gagal memuat data.', [[{ text: '🏠 Menu', callback_data: 'nav:main' }]]); return; }
 
         let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<Report>\n  <Session>${session.session_name}</Session>\n  <Teacher>${session.teacher}</Teacher>\n  <Subject>${session.subject}</Subject>\n  <Class>${session.class_name}</Class>\n  <Students>\n`;
-        students.forEach((s: any) => { xml += `    <Student><Name>${s.name}</Name><Score>${s.final_score}</Score><MCQ>${s.mcq_score}</MCQ><Essay>${s.essay_score}</Essay><Correct>${s.correct}</Correct><Wrong>${s.wrong}</Wrong></Student>\n`; });
+        students.forEach((s: { name: string; final_score?: number | null; mcq_score?: number | null; essay_score?: number | null; correct?: number | null; wrong?: number | null }) => { xml += `    <Student><Name>${s.name}</Name><Score>${s.final_score}</Score><MCQ>${s.mcq_score}</MCQ><Essay>${s.essay_score}</Essay><Correct>${s.correct}</Correct><Wrong>${s.wrong}</Wrong></Student>\n`; });
         xml += `  </Students>\n</Report>`;
 
         const blob = new Blob([xml], { type: 'text/xml' });
@@ -519,15 +517,16 @@ export async function handleAdminCallback(chatId: number, callbackData: string, 
         return;
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(err);
-    await sendMessage(chatId, `❌ Error: ${err.message}`);
+    const errMsg = err instanceof Error ? err.message : String(err);
+    await sendMessage(chatId, `❌ Error: ${errMsg}`);
   }
 }
 
 // ── Helpers ──
 
-async function editOrSend(chatId: number, messageId: number | undefined, text: string, keyboard?: any[]) {
+async function editOrSend(chatId: number, messageId: number | undefined, text: string, keyboard?: { text: string; callback_data: string }[][]) {
   if (messageId) {
     await editMessageText(chatId, messageId, text, keyboard);
   } else {
@@ -556,11 +555,11 @@ async function handleCategorySelection(chatId: number, messageId: number | undef
       update_id: 0,
       callback_query: {
         id: 'start',
-        from: { id: chatId, first_name: 'Admin' },
-        message: { message_id: messageId || 0, chat: { id: chatId } },
+        from: { id: chatId, first_name: 'Admin', is_bot: false },
+        message: { message_id: messageId || 0, date: Math.floor(Date.now() / 1000), chat: { id: chatId, type: 'private' } },
         data: 'stubeh:start'
       }
-    } as any);
+    } as unknown as Parameters<typeof bot.handleUpdate>[0]);
     return;
   }
 
@@ -570,11 +569,11 @@ async function handleCategorySelection(chatId: number, messageId: number | undef
       update_id: 0,
       callback_query: {
         id: 'start',
-        from: { id: chatId, first_name: 'Admin' },
-        message: { message_id: messageId || 0, chat: { id: chatId } },
+        from: { id: chatId, first_name: 'Admin', is_bot: false },
+        message: { message_id: messageId || 0, date: Math.floor(Date.now() / 1000), chat: { id: chatId, type: 'private' } },
         data: 'statt:start'
       }
-    } as any);
+    } as unknown as Parameters<typeof bot.handleUpdate>[0]);
     return;
   }
 
@@ -608,7 +607,7 @@ async function renderSessionList(chatId: number, messageId: number | undefined, 
     return;
   }
 
-  const items = sessions.map((s: any) => ({ id: s.id, text: s.session_name }));
+  const items = sessions.map((s: { id: string; session_name: string }) => ({ id: s.id, text: s.session_name }));
   const prefix = category.startsWith('sys_') ? 'sys:' + category.split('_')[1] : `nav:ses:${category}`;
   
   const keyboard = buildPaginationKeyboard(items, page, 5, prefix, `nav:sespage:${category}`, category.startsWith('sys_') ? 'nav:cat:system' : 'nav:main');
@@ -646,7 +645,7 @@ async function handleSessionSelection(chatId: number, messageId: number | undefi
     const { data: session2 } = await supabase.from('gm_sessions').select('kkm').eq('id', sessionId).single();
     const { data: students } = await supabase.from('gm_students').select('name, final_score').eq('session_id', sessionId).eq('is_deleted', false).order('final_score', { ascending: false });
     const kkm = session2?.kkm || 70;
-    const scores = students?.map((s: any) => s.final_score || 0) || [];
+    const scores = students?.map((s: { final_score?: number | null }) => s.final_score || 0) || [];
     const avg = scores.length ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : 0;
     const tuntas = scores.filter((s: number) => s >= kkm).length;
     const maxS = scores.length ? Math.max(...scores) : 0;
@@ -663,8 +662,8 @@ async function handleSessionSelection(chatId: number, messageId: number | undefi
     const chart = buildBarChart(dist);
 
     // Top 3 & Bottom 3
-    const top3 = (students || []).slice(0, 3).map((s: any, i: number) => `${['🥇', '🥈', '🥉'][i]} ${s.name}: ${s.final_score}`).join('\n');
-    const bot3 = (students || []).slice(-3).reverse().map((s: any) => `⚠️ ${s.name}: ${s.final_score}`).join('\n');
+    const top3 = (students || []).slice(0, 3).map((s: { name: string; final_score?: number | null }, i: number) => `${['🥇', '🥈', '🥉'][i]} ${s.name}: ${s.final_score}`).join('\n');
+    const bot3 = (students || []).slice(-3).reverse().map((s: { name: string; final_score?: number | null }) => `⚠️ ${s.name}: ${s.final_score}`).join('\n');
 
     const msg = `📈 <b>STATISTIK NILAI</b>\n\n` +
       `📋 ${session.session_name}\n` +
@@ -710,7 +709,7 @@ async function renderStudentList(chatId: number, messageId: number | undefined, 
     return;
   }
 
-  const items = students.map((s: any) => {
+  const items = students.map((s: { id: string; name: string; final_score?: number | null; remedial_status?: string | null; violation_count?: number | null; is_cheated?: boolean | null }) => {
     let icon = '';
     if (s.is_cheated || s.remedial_status === 'CHEATED') icon = '🚨 ';
     else if (s.final_score && s.final_score >= 70) icon = '✅ ';
@@ -811,12 +810,12 @@ async function renderRemedialOverview(chatId: number, messageId: number | undefi
 
     if (!students || students.length === 0) continue;
 
-    const needRemedial = students.filter((s: any) => (s.final_score || 0) < kkm);
+    const needRemedial = students.filter((s: { final_score?: number | null }) => (s.final_score || 0) < kkm);
     if (needRemedial.length === 0) continue;
 
-    const completed = needRemedial.filter((s: any) => s.remedial_status === 'COMPLETED').length;
-    const cheated = needRemedial.filter((s: any) => s.is_cheated || s.remedial_status === 'CHEATED').length;
-    const blocked = needRemedial.filter((s: any) => s.is_blocked).length;
+    const completed = needRemedial.filter((s: { remedial_status?: string | null }) => s.remedial_status === 'COMPLETED').length;
+    const cheated = needRemedial.filter((s: { is_cheated?: boolean | null; remedial_status?: string | null }) => s.is_cheated || s.remedial_status === 'CHEATED').length;
+    const blocked = needRemedial.filter((s: { is_blocked?: boolean | null }) => s.is_blocked).length;
     const pending = needRemedial.length - completed - cheated - blocked;
 
     overview += `📋 <b>${ses.session_name}</b>\n`;
