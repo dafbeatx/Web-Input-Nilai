@@ -399,19 +399,19 @@ export default function DashboardLayer({
         {/* Header Section */}
         <header className="mb-8 flex justify-between items-start gap-4">
           <div>
-            <div className="flex items-center gap-2 text-on-surface-variant text-[10px] font-bold uppercase tracking-[0.2em] mb-2">
+            <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wider mb-2">
               <span>{studentClass}</span>
               <span>•</span>
               <span>{subject}</span>
             </div>
-            <h1 className="font-headline font-extrabold text-2xl sm:text-3xl text-primary tracking-tight leading-none mb-2 uppercase">{sessionName || "HASIL ANALISIS NILAI"}</h1>
-            <p className="text-on-surface-variant font-medium text-sm max-w-[100%] md:max-w-[80%]">Analisis Performa Siswa & Statistik Ujian Terpadu</p>
+            <h1 className="font-headline font-black text-2xl sm:text-3xl text-slate-900 tracking-tight leading-tight mb-2 uppercase">{sessionName || "HASIL ANALISIS NILAI"}</h1>
+            <p className="text-slate-500 font-medium text-sm max-w-[100%] md:max-w-[80%]">Analisis Performa Siswa & Statistik Ujian Terpadu</p>
           </div>
           
           {isAdmin && onOpenRemedialDashboard && (
             <button
               onClick={onOpenRemedialDashboard}
-              className="shrink-0 px-3 md:px-4 py-2.5 bg-tertiary/10 text-tertiary border border-tertiary/20 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-tertiary hover:text-on-tertiary transition-all flex items-center gap-2 shadow-lg shadow-tertiary/5 active:scale-95"
+              className="shrink-0 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold tracking-wide hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-md shadow-indigo-500/20 active:scale-95"
             >
               <Target size={16} />
               <span className="hidden sm:inline">Siapkan Remedial</span>
@@ -421,30 +421,34 @@ export default function DashboardLayer({
         </header>
 
         {/* Bento Statistics Grid */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
-          <div className="bg-surface-container-high rounded-2xl p-4 flex flex-col items-center justify-center gap-1 border border-outline-variant relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-12 h-12 bg-tertiary/5 rounded-bl-full group-hover:bg-tertiary/10 transition-all"></div>
-            <TrendingUp size={20} className="text-tertiary mb-1" />
-            <span className="font-headline font-extrabold text-2xl text-primary">{analytics.avgScore}</span>
-            <span className="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Rata-rata</span>
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-10">
+          <div className="clean-card p-5 md:p-6 flex flex-col items-center justify-center gap-1.5 relative overflow-hidden group">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-1">
+              <TrendingUp size={20} />
+            </div>
+            <span className="font-headline font-black text-3xl text-slate-900">{analytics.avgScore}</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Rata-rata</span>
           </div>
-          <div className="bg-surface-container-high rounded-2xl p-4 flex flex-col items-center justify-center gap-1 border border-outline-variant relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-12 h-12 bg-primary-container/5 rounded-bl-full group-hover:bg-primary-container/10 transition-all"></div>
-            <Target size={20} className="text-primary-container mb-1" />
-            <span className="font-headline font-extrabold text-2xl text-primary">{passRate}%</span>
-            <span className="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Lulus (KKM {kkm})</span>
+          <div className="clean-card p-5 md:p-6 flex flex-col items-center justify-center gap-1.5 relative overflow-hidden group">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-1">
+              <Target size={20} />
+            </div>
+            <span className="font-headline font-black text-3xl text-emerald-600">{passRate}%</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Lulus (KKM {kkm})</span>
           </div>
-          <div className="bg-surface-container-high rounded-2xl p-4 flex flex-col items-center justify-center gap-1 border border-outline-variant relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-12 h-12 bg-outline/5 rounded-bl-full group-hover:bg-outline/10 transition-all"></div>
-            <Trophy size={20} className="text-outline mb-1" />
-            <span className="font-headline font-extrabold text-2xl text-primary">{analytics.highestScore}</span>
-            <span className="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Tertinggi</span>
+          <div className="clean-card p-5 md:p-6 flex flex-col items-center justify-center gap-1.5 relative overflow-hidden group">
+            <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center mb-1">
+              <Trophy size={20} />
+            </div>
+            <span className="font-headline font-black text-3xl text-slate-900">{analytics.highestScore}</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tertinggi</span>
           </div>
-          <div className="bg-surface-container-high rounded-2xl p-4 flex flex-col items-center justify-center gap-1 border border-outline-variant relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-12 h-12 bg-error/5 rounded-bl-full group-hover:bg-error/10 transition-all"></div>
-            <XCircle size={20} className="text-error mb-1" />
-            <span className="font-headline font-extrabold text-2xl text-primary">{analytics.lowestScore}</span>
-            <span className="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Terendah</span>
+          <div className="clean-card p-5 md:p-6 flex flex-col items-center justify-center gap-1.5 relative overflow-hidden group">
+            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mb-1">
+              <XCircle size={20} />
+            </div>
+            <span className="font-headline font-black text-3xl text-rose-600">{analytics.lowestScore}</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Terendah</span>
           </div>
         </section>
 

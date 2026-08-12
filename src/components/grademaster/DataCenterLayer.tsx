@@ -1296,24 +1296,24 @@ const matchesYear = s.academicYear === academicYear;
         </div>
 
         {/* Controls */}
-        <section className="flex flex-col md:flex-row justify-between gap-4">
+        <section className="flex flex-col md:flex-row justify-between gap-4 items-stretch md:items-center">
            <div className="relative flex-1 max-w-md">
-             <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/50" />
+             <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
              <input 
                 type="text"
                 placeholder="Cari nama atau kelas..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-2xl pl-12 pr-4 py-3 text-sm font-medium text-primary placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none"
+                className="clean-input w-full pl-11"
              />
            </div>
-           <div className="flex gap-2">
+           <div className="flex flex-wrap gap-2.5 items-center">
                {selectedClass !== 'Semua' && filteredStudents.length > 0 && (
                  <>
                    <button 
                      onClick={() => generateClassAcademicPdfReport(filteredStudents, selectedClass)}
                      disabled={isAnyActionActive}
-                     className="px-4 py-3 bg-emerald-500/10 text-emerald-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-2 border border-emerald-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                     className="clean-button bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60 font-semibold"
                      title="Unduh seluruh Rapor Akademik kelas ini"
                    >
                       {isDownloadingClassAcademicPdf ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />} 
@@ -1327,7 +1327,7 @@ const matchesYear = s.academicYear === academicYear;
                         className: selectedClass
                       })}
                       disabled={isAnyActionActive}
-                      className="px-4 py-3 bg-rose-500/10 text-rose-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all flex items-center gap-2 border border-rose-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="clean-button bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/60 font-semibold"
                       title="Unduh seluruh Laporan Pelanggaran kelas ini"
                     >
                        {isDownloadingClassBehaviorPdf ? <Loader2 size={16} className="animate-spin" /> : <AlertTriangle size={16} />} 
@@ -1341,17 +1341,17 @@ const matchesYear = s.academicYear === academicYear;
                     setWizardStep(1);
                   }}
                   disabled={isAnyActionActive}
-                  className="px-4 py-3 bg-amber-500/10 text-amber-500 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all flex items-center gap-2 border border-amber-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="clean-button bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/60 font-semibold"
                 >
                    {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Edit2 size={16} />} Import Excel
                 </button>
                <button 
-                 onClick={() => setIsAddingStudent(true)}
-                 disabled={isAnyActionActive}
-                 className="px-4 py-3 bg-primary text-surface-container-lowest rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-               >
-                  {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} strokeWidth={3} />} Tambah Siswa
-               </button>
+                  onClick={() => setIsAddingStudent(true)}
+                  disabled={isAnyActionActive}
+                  className="clean-button bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-500/20 font-semibold"
+                >
+                   <Plus size={16} /> Tambah Siswa
+                </button>
            </div>
         </section>
 

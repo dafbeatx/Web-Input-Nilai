@@ -113,27 +113,27 @@ export default function Navbar() {
           </div>
 
           {/* Navigation Items */}
-          <div className="flex flex-col gap-2 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+          <div className="flex flex-col gap-2.5 flex-1 overflow-y-auto pr-1 custom-scrollbar">
             <button
                 onClick={() => onNavigate('home')}
-                className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 ${
-                  isActive('exam') ? 'bg-primary/10 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
+                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                  isActive('exam') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                 }`}
             >
                 <Home size={18} /> Beranda
             </button>
             <button
                 onClick={() => onNavigate('behavior')}
-                className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 ${
-                  isActive('behavior') ? 'bg-primary/10 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
+                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                  isActive('behavior') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                 }`}
             >
                 <ShieldCheck size={18} /> Sikap
             </button>
             <button
                 onClick={() => onNavigate('attendance')}
-                className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 ${
-                  isActive('attendance') ? 'bg-primary/10 text-primary border border-primary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
+                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                  isActive('attendance') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                 }`}
             >
                 <Calendar size={18} /> Kehadiran
@@ -141,12 +141,12 @@ export default function Navbar() {
 
             {(isStudent || isParent) && (
                 <>
-                  <div className="my-2 border-t border-outline-variant"></div>
-                  <span className="text-[10px] text-on-surface-variant/50 font-bold uppercase tracking-widest px-2 mb-1">Portal Siswa</span>
+                  <div className="my-2 border-t border-slate-200/60"></div>
+                  <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider px-3 mb-1">Portal Siswa</span>
                   <button
                     onClick={() => onNavigate('student_lesson')}
-                    className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 min-h-[44px] ${
-                      isActive('student_lesson') ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
+                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] ${
+                      isActive('student_lesson') ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                     }`}
                   >
                     <BookOpen size={18} /> Pelajaran Saya
@@ -156,36 +156,36 @@ export default function Navbar() {
 
             {isAdmin && (
                 <>
-                  <div className="my-2 border-t border-outline-variant"></div>
-                  <span className="text-[10px] text-on-surface-variant/50 font-bold uppercase tracking-widest px-2 mb-1">Admin Panel</span>
+                  <div className="my-2 border-t border-slate-200/60"></div>
+                  <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider px-3 mb-1">Admin Panel</span>
                   <button
                     onClick={() => onNavigate('lesson_management')}
-                    className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 ${
-                      layer === 'lesson_management' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
+                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                      layer === 'lesson_management' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                     }`}
                   >
                     <BookOpen size={18} /> Pelajaran
                   </button>
                   <button
                     onClick={() => onNavigate('data_center')}
-                    className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 ${
-                      layer === 'data_center' ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
+                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                      layer === 'data_center' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                     }`}
                   >
                     <Database size={18} /> Pusat Data
                   </button>
                   <button
                     onClick={() => onNavigate('student_accounts')}
-                    className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 ${
-                      layer === 'student_accounts' ? 'bg-[#00b4ff]/10 text-[#00b4ff] border border-[#00b4ff]/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
+                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                      layer === 'student_accounts' ? 'bg-sky-600 text-white shadow-md shadow-sky-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                     }`}
                   >
                     <Users size={18} /> Akun Siswa
                   </button>
                   <button
                     onClick={() => onNavigate('remedial_dashboard')}
-                    className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3 ${
-                      layer === 'remedial_dashboard' ? 'bg-secondary/10 text-secondary border border-secondary/20' : 'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface border border-transparent'
+                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                      layer === 'remedial_dashboard' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                     }`}
                   >
                     <Settings size={18} /> Remedial

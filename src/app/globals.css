@@ -54,6 +54,47 @@
     @apply bg-white/10 backdrop-blur-[20px] border border-white/10;
   }
 
+  /* Clean UI Design Utilities - Neat, Spacious & Uncrowded */
+  .clean-card {
+    @apply bg-white border border-slate-200/80 rounded-2xl p-6 md:p-8 shadow-sm hover:shadow-md transition-all duration-200;
+  }
+
+  .clean-card-dark {
+    @apply bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 md:p-8 shadow-xl transition-all duration-200;
+  }
+
+  .clean-table {
+    @apply w-full text-left text-sm border-collapse;
+  }
+
+  .clean-table th {
+    @apply py-3.5 px-5 bg-slate-50/80 text-slate-500 font-semibold text-xs uppercase tracking-wider border-b border-slate-200/80;
+  }
+
+  .clean-table td {
+    @apply py-4 px-5 border-b border-slate-100 text-slate-700 align-middle;
+  }
+
+  .clean-table tr:last-child td {
+    @apply border-b-0;
+  }
+
+  .clean-table tr:hover td {
+    @apply bg-slate-50/50;
+  }
+
+  .clean-input {
+    @apply px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-150;
+  }
+
+  .clean-button {
+    @apply px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98];
+  }
+
+  .clean-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-wide;
+  }
+
   .premium-shadow {
     box-shadow: 0 10px 40px -10px rgba(37, 99, 235, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
