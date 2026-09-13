@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useSyncExternalStore } from 'react';
 import {
   GraduationCap,
   Menu,
@@ -44,8 +44,19 @@ export default function Navbar() {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
 
-  // Hidden in behavior page (uses its own nav), exam, auth, and student profile/lesson layers
-  const isHidden = pathname?.startsWith('/behavior') || ['login', 'student_login', 'student_claim', 'teacher_claim', 'remedial', 'lesson_management', 'grading', 'student_profile', 'student_lesson'].includes(layer);
+  const isEmbedMode = useSyncExternalStore(
+    () => () => {},
+    () => {
+      if (typeof window === 'undefined') return false;
+      const inIframe = window.self !== window.top;
+      const urlParams = new URLSearchParams(window.location.search);
+      return inIframe || urlParams.get('embed') === 'true' || urlParams.get('mode') === 'embed' || urlParams.get('guru') === 'true';
+    },
+    () => false
+  );
+
+  // Hidden in iframe/embed mode, behavior page (uses its own nav), exam, auth, and student profile/lesson layers
+  const isHidden = isEmbedMode || pathname?.startsWith('/behavior') || ['login', 'student_login', 'student_claim', 'teacher_claim', 'remedial', 'lesson_management', 'grading', 'student_profile', 'student_lesson'].includes(layer);
 
   useEffect(() => {
     if (!isHidden) {

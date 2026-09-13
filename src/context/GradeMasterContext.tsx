@@ -131,12 +131,30 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
 
       if (typeof window !== 'undefined') {
         const urlParams = new URLSearchParams(window.location.search);
+        const isIframe = window.self !== window.top;
+        const isEmbedMode = isIframe || urlParams.get('embed') === 'true' || urlParams.get('mode') === 'embed' || urlParams.get('guru') === 'true';
+
         if (urlParams.get('dev') === 'admin') {
           setIsAdmin(true);
           setAdminUser("Dev Admin");
           setIsStudent(false);
           setIsParent(false);
           setLayer("home");
+          setIsAuthLoading(false);
+          return;
+        }
+
+        // Support for embedding inside Smart Absensi Guru (iframe or direct link to #setup / #grading)
+        if (isEmbedMode || hash === 'setup' || hash === 'grading') {
+          console.log("[AuthCheck] Embed / Teacher setup direct mode detected.");
+          const teacherNameParam = urlParams.get('teacher') || urlParams.get('nama') || "Guru Pengampu";
+          setIsAdmin(true);
+          setAdminUser(teacherNameParam);
+          setIsStudent(false);
+          setIsParent(false);
+          const targetLayer: Layer = (hash === 'grading' || hash === 'setup') ? (hash as Layer) : 'setup';
+          setLayer(targetLayer);
+          window.history.replaceState({ layer: targetLayer }, '', `#${targetLayer}`);
           setIsAuthLoading(false);
           return;
         }
@@ -342,7 +360,14 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
             initialLayer = 'student_profile';
           }
         } else {
-          if (adminOnlyLayers.includes(initialLayer) || protectedLayers.includes(initialLayer) || initialLayer === 'home' || initialLayer === 'student_claim') {
+          const isIframe = typeof window !== 'undefined' && window.self !== window.top;
+          const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+          const isEmbed = isIframe || urlParams?.get('embed') === 'true' || urlParams?.get('mode') === 'embed' || urlParams?.get('guru') === 'true';
+
+          if ((isEmbed || initialLayer === 'setup' || initialLayer === 'grading') && (initialLayer === 'setup' || initialLayer === 'grading')) {
+            setIsAdmin(true);
+            setAdminUser(urlParams?.get('teacher') || urlParams?.get('nama') || "Guru Pengampu");
+          } else if (adminOnlyLayers.includes(initialLayer) || protectedLayers.includes(initialLayer) || initialLayer === 'home' || initialLayer === 'student_claim') {
             initialLayer = 'student_login';
           }
         }
@@ -476,9 +501,17 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         const authLayers = ['login', 'student_login'];
         const { isAdmin: curAdmin, isStudent: curStudent, isParent: curParent } = authStateRef.current;
 
+        const isIframe = typeof window !== 'undefined' && window.self !== window.top;
+        const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const isEmbed = isIframe || urlParams?.get('embed') === 'true' || urlParams?.get('mode') === 'embed' || urlParams?.get('guru') === 'true';
+
         if (adminOnlyLayers.includes(newHash) && !curAdmin) {
-          setLayer('student_login');
-          window.history.replaceState({ layer: 'student_login' }, '', '#student_login');
+          if ((isEmbed || newHash === 'setup' || newHash === 'grading') && (newHash === 'setup' || newHash === 'grading')) {
+            setLayer(newHash);
+          } else {
+            setLayer('student_login');
+            window.history.replaceState({ layer: 'student_login' }, '', '#student_login');
+          }
         } else if (protectedLayers.includes(newHash) && !curAdmin && !curStudent && !curParent) {
           setLayer('student_login');
           window.history.replaceState({ layer: 'student_login' }, '', '#student_login');
@@ -525,8 +558,17 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     const protectedLayers = ['remedial', 'student_lesson', 'student_profile'];
     const authLayers = ['login', 'student_login'];
 
+    const isIframe = typeof window !== 'undefined' && window.self !== window.top;
+    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const isEmbed = isIframe || urlParams?.get('embed') === 'true' || urlParams?.get('mode') === 'embed' || urlParams?.get('guru') === 'true';
+
     if (!bypassGuards) {
       if (adminOnlyLayers.includes(newLayer) && !isAdmin) {
+        if ((isEmbed || newLayer === 'setup' || newLayer === 'grading') && (newLayer === 'setup' || newLayer === 'grading')) {
+          setLayer(newLayer);
+          window.history.pushState({ layer: newLayer }, '', `#${newLayer}`);
+          return;
+        }
         setLayer('student_login');
         window.history.pushState({ layer: 'student_login' }, '', '#student_login');
         return;
