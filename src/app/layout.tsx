@@ -16,6 +16,7 @@ import StarBackground from '@/components/grademaster/ui/StarBackground';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import SafeStorageScript from '@/components/SafeStorageScript';
 import AICopilot from '@/components/grademaster/AICopilot';
+import DeploymentGuard from '@/components/grademaster/DeploymentGuard';
 
 
 export default function RootLayout({
@@ -44,6 +45,7 @@ export default function RootLayout({
 
         <ErrorBoundary>
           <GradeMasterProvider>
+            <DeploymentGuard />
             <Navbar />
             <main className="relative flex-1 main-content-wrapper">
               {children}

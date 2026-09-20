@@ -1,7 +1,31 @@
+import { execSync } from 'child_process';
+
+const getBuildVersion = () => {
+  if (process.env.VERCEL_GIT_COMMIT_SHA) {
+    return process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 12);
+  }
+  if (process.env.VERCEL_DEPLOYMENT_ID) {
+    return process.env.VERCEL_DEPLOYMENT_ID;
+  }
+  try {
+    return execSync('git rev-parse --short HEAD').toString().trim();
+  } catch {
+    return `v${Date.now()}`;
+  }
+};
+
+const appVersion = getBuildVersion();
+const buildTime = new Date().toISOString();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ['sharp'],
+  env: {
+    NEXT_PUBLIC_APP_VERSION: appVersion,
+    NEXT_PUBLIC_BUILD_TIME: buildTime,
+  },
+  generateBuildId: async () => appVersion,
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -34,8 +58,43 @@ const nextConfig = {
           },
         ],
       },
+      {
+        source: '/sw.js',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache',
+          },
+          {
+            key: 'Expires',
+            value: '0',
+          },
+        ],
+      },
+      {
+        source: '/api/version',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache',
+          },
+          {
+            key: 'Expires',
+            value: '0',
+          },
+        ],
+      },
     ];
   },
 };
 
 export default nextConfig;
+

@@ -76,7 +76,7 @@ interface GradeMasterContextType {
   logout: () => void;
 }
 
-const GradeMasterContext = createContext<GradeMasterContextType | undefined>(undefined);
+export const GradeMasterContext = createContext<GradeMasterContextType | undefined>(undefined);
 
 export function GradeMasterProvider({ children }: { children: ReactNode }) {
   const [layer, setLayer] = useState<Layer>("home");

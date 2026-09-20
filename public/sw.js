@@ -1,4 +1,23 @@
-// Service Worker for GradeMaster OS Web Push Notifications
+// Service Worker for GradeMaster OS Web Push Notifications & Auto-Updates
+
+// Instant activation on install
+self.addEventListener('install', function () {
+  self.skipWaiting();
+});
+
+// Immediately claim clients so new service worker controls all tabs
+self.addEventListener('activate', function (event) {
+  event.waitUntil(self.clients.claim());
+});
+
+// Allow client pages to trigger SKIP_WAITING manually
+self.addEventListener('message', function (event) {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// Web Push Notifications
 self.addEventListener('push', function (event) {
   if (!event.data) {
     console.warn('[Service Worker] Push event received with no payload.');
