@@ -27,7 +27,7 @@ self.addEventListener('push', function (event) {
   let data = {};
   try {
     data = event.data.json();
-  } catch (err) {
+  } catch {
     // Fallback if payload is plain text
     data = {
       title: 'Notifikasi GradeMaster OS',
