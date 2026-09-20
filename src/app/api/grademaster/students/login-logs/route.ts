@@ -1,16 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 import { getStudentSession } from '@/lib/grademaster/studentAuth';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { cookies } from 'next/headers';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export const dynamic = "force-dynamic";
+
+async function getDb(): Promise<SupabaseClient> {
+  try {
+    return supabaseAdmin;
+  } catch {
+    return await createClient();
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const studentName = searchParams.get('name');
     const className = searchParams.get('class');
+
+    let db: SupabaseClient = await getDb();
 
     const adminSession = await getAdminSession();
     const studentSession = await getStudentSession();
@@ -39,7 +51,7 @@ export async function GET(req: NextRequest) {
     }
 
     // 1. Resolve student account
-    let accountQuery = supabaseAdmin
+    let accountQuery = db
       .from('gm_student_accounts')
       .select('id')
       .eq('student_name', targetStudentName);
@@ -48,7 +60,19 @@ export async function GET(req: NextRequest) {
       accountQuery = accountQuery.eq('class_name', targetClassName);
     }
 
-    const { data: account, error: accountError } = await accountQuery.maybeSingle();
+    let { data: account, error: accountError } = await accountQuery.maybeSingle();
+
+    if (accountError && accountError.message?.includes('Invalid API key')) {
+      db = await createClient();
+      let retryQuery = db
+        .from('gm_student_accounts')
+        .select('id')
+        .eq('student_name', targetStudentName);
+      if (targetClassName) retryQuery = retryQuery.eq('class_name', targetClassName);
+      const retryRes = await retryQuery.maybeSingle();
+      account = retryRes.data;
+      accountError = retryRes.error;
+    }
 
     if (accountError) throw accountError;
 
@@ -57,18 +81,31 @@ export async function GET(req: NextRequest) {
     }
 
     // 2. Fetch login logs
-    const { data: logs, error: logsError } = await supabaseAdmin
+    let { data: logs, error: logsError } = await db
       .from('gm_student_login_logs')
       .select('id, ip_address, user_agent, created_at')
       .eq('account_id', account.id)
       .order('created_at', { ascending: false })
       .limit(50);
 
+    if (logsError && logsError.message?.includes('Invalid API key')) {
+      db = await createClient();
+      const retryLogs = await db
+        .from('gm_student_login_logs')
+        .select('id, ip_address, user_agent, created_at')
+        .eq('account_id', account.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      logs = retryLogs.data;
+      logsError = retryLogs.error;
+    }
+
     if (logsError) throw logsError;
 
     return NextResponse.json({ logs: logs || [] });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Gagal memuat riwayat login';
     console.error('Failed to get student login logs:', err);
-    return NextResponse.json({ error: err.message || 'Gagal memuat riwayat login' }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

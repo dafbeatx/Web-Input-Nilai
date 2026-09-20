@@ -7,14 +7,18 @@ export async function getAdminSession() {
 
     if (!user) return null;
 
+    const email = user.email?.toLowerCase() || '';
+    const adminDomains = ['@guru.smp.belajar.id', '@guru.belajar.id', '@smp.belajar.id', '@admin.belajar.id'];
+    const isWhitelisted = adminDomains.some(domain => email.endsWith(domain)) || email === 'dafbeatx@gmail.com';
+
     // Verify they are actually an admin
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (profile?.role !== 'admin') {
+    if (profile?.role !== 'admin' && !isWhitelisted) {
       return null;
     }
 
@@ -29,5 +33,6 @@ export async function getAdminSession() {
 }
 
 // These are now obsolete due to Supabase Auth, kept as no-ops to prevent immediate crashes
-export async function createAdminSession(userId: string) { return null; }
+export async function createAdminSession() { return null; }
 export async function clearAdminSession() { }
+

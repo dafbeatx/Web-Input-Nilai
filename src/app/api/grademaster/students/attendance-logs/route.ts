@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../../lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 import { getStudentSession } from '@/lib/grademaster/studentAuth';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { cookies } from 'next/headers';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+export const dynamic = "force-dynamic";
+
+async function getDb(): Promise<SupabaseClient> {
+  try {
+    return supabaseAdmin;
+  } catch {
+    return await createClient();
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,6 +26,8 @@ export async function GET(req: NextRequest) {
     if (!studentName) {
       return NextResponse.json({ error: 'Nama siswa wajib diisi' }, { status: 400 });
     }
+
+    let db: SupabaseClient = await getDb();
 
     const adminSession = await getAdminSession();
     const studentSession = await getStudentSession();
@@ -35,7 +49,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    let query = supabaseAdmin
+    let query = db
       .from('gm_attendance')
       .select('subject, date, status')
       .eq('student_name', targetStudentName)
@@ -45,13 +59,27 @@ export async function GET(req: NextRequest) {
       query = query.eq('class_name', className);
     }
 
-    const { data: attendanceLogs, error: attError } = await query.order('date', { ascending: false });
+    let { data: attendanceLogs, error: attError } = await query.order('date', { ascending: false });
+
+    if (attError && attError.message?.includes('Invalid API key')) {
+      db = await createClient();
+      let retryQuery = db
+        .from('gm_attendance')
+        .select('subject, date, status')
+        .eq('student_name', targetStudentName)
+        .eq('academic_year', academicYear);
+      if (className) retryQuery = retryQuery.eq('class_name', className);
+      const retryRes = await retryQuery.order('date', { ascending: false });
+      attendanceLogs = retryRes.data;
+      attError = retryRes.error;
+    }
 
     if (attError) throw attError;
 
     return NextResponse.json({ logs: attendanceLogs || [] });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Gagal memuat log absensi';
     console.error('Attendance logs error:', err);
-    return NextResponse.json({ error: err.message || 'Gagal memuat log absensi' }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

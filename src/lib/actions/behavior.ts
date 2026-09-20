@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Pure calculator: returns computed total_points from gm_behavior_logs.
@@ -13,14 +14,30 @@ import { revalidatePath } from 'next/cache';
  * Does NOT write to DB — callers are responsible for persistence.
  */
 async function computePointsFromLogs(studentId: string): Promise<number> {
-  const { data: logs, error } = await supabaseAdmin
-    .from('gm_behavior_logs')
-    .select('points_delta')
-    .eq('student_id', studentId);
+  let logs: { points_delta?: number | null }[] | null = null;
+  let error: unknown = null;
 
-  if (error) throw error;
+  try {
+    const res = await supabaseAdmin
+      .from('gm_behavior_logs')
+      .select('points_delta')
+      .eq('student_id', studentId);
+    logs = res.data;
+    error = res.error;
+  } catch (err) {
+    error = err;
+  }
 
-  const deltaSum = (logs || []).reduce((sum: number, log: any) => sum + (log.points_delta || 0), 0);
+  if (error || !logs) {
+    const supabase = await createClient();
+    const res = await supabase
+      .from('gm_behavior_logs')
+      .select('points_delta')
+      .eq('student_id', studentId);
+    logs = res.data;
+  }
+
+  const deltaSum = (logs || []).reduce((sum: number, log: { points_delta?: number | null }) => sum + (log.points_delta || 0), 0);
   return deltaSum;
 }
 
@@ -32,12 +49,25 @@ async function computePointsFromLogs(studentId: string): Promise<number> {
 async function recomputeAndPersistPoints(studentId: string): Promise<number> {
   const total = await computePointsFromLogs(studentId);
 
-  const { error: updateError } = await supabaseAdmin
-    .from('gm_behaviors')
-    .update({ total_points: total, updated_at: new Date().toISOString() })
-    .eq('id', studentId);
+  let updateError: unknown = null;
+  try {
+    const res = await supabaseAdmin
+      .from('gm_behaviors')
+      .update({ total_points: total, updated_at: new Date().toISOString() })
+      .eq('id', studentId);
+    updateError = res.error;
+  } catch (err) {
+    updateError = err;
+  }
 
-  if (updateError) throw updateError;
+  if (updateError) {
+    const supabase = await createClient();
+    const res = await supabase
+      .from('gm_behaviors')
+      .update({ total_points: total, updated_at: new Date().toISOString() })
+      .eq('id', studentId);
+    if (res.error) throw res.error;
+  }
 
   return total;
 }
@@ -72,9 +102,9 @@ export async function addBehaviorAction(formData: {
 
     revalidatePath('/behavior');
     return { success: true, data: { new_total: newTotal } };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Add behavior error:', err);
-    return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -104,9 +134,9 @@ export async function updateBehaviorAction(logId: string, formData: {
 
     revalidatePath('/behavior');
     return { success: true, newTotal };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Update behavior error:', err);
-    return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -127,9 +157,9 @@ export async function deleteBehaviorAction(logId: string, studentId: string) {
 
     revalidatePath('/behavior');
     return { success: true, newTotal };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Delete behavior error:', err);
-    return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -138,56 +168,102 @@ export async function deleteBehaviorAction(logId: string, studentId: string) {
  */
 export async function getBehaviorLogsAction(studentId: string) {
   try {
+    let client: SupabaseClient = supabaseAdmin;
+
     // 1. Dapatkan nama siswa dari gm_behaviors berdasarkan studentId
-    let { data: beh } = await supabaseAdmin
+    let behRes = await client
       .from('gm_behaviors')
       .select('student_name')
       .eq('id', studentId)
       .maybeSingle();
 
-    let name = beh?.student_name;
+    if (behRes.error && (behRes.error.message?.includes('Invalid API key') || behRes.error.code === 'PGRST301')) {
+      client = await createClient();
+      behRes = await client
+        .from('gm_behaviors')
+        .select('student_name')
+        .eq('id', studentId)
+        .maybeSingle();
+    }
+
+    let name = behRes.data?.student_name;
 
     // 2. Jika tidak ditemukan, coba cari di gm_student_accounts (apabila yang dikirim adalah ID akun)
     if (!name) {
-      const { data: acc } = await supabaseAdmin
+      let accRes = await client
         .from('gm_student_accounts')
         .select('student_name')
         .eq('id', studentId)
         .maybeSingle();
-      name = acc?.student_name;
+
+      if (accRes.error && accRes.error.message?.includes('Invalid API key')) {
+        client = await createClient();
+        accRes = await client
+          .from('gm_student_accounts')
+          .select('student_name')
+          .eq('id', studentId)
+          .maybeSingle();
+      }
+      name = accRes.data?.student_name;
     }
 
     // 3. Jika nama siswa berhasil diidentifikasi, ambil semua ID perilaku miliknya lintas tahun ajaran/kelas
     if (name) {
-      const { data: allBehaviors } = await supabaseAdmin
+      let allBehRes = await client
         .from('gm_behaviors')
         .select('id')
         .eq('student_name', name);
-      
-      const behaviorIds = allBehaviors?.map(b => b.id) || [];
+
+      if (allBehRes.error && allBehRes.error.message?.includes('Invalid API key')) {
+        client = await createClient();
+        allBehRes = await client
+          .from('gm_behaviors')
+          .select('id')
+          .eq('student_name', name);
+      }
+
+      const behaviorIds = allBehRes.data?.map((b: { id: string }) => b.id) || [];
       if (behaviorIds.length > 0) {
-        const { data, error } = await supabaseAdmin
+        let logsRes = await client
           .from('gm_behavior_logs')
           .select('*')
           .in('student_id', behaviorIds)
           .order('violation_date', { ascending: false });
-        
-        if (error) throw error;
-        return { success: true, logs: data };
+
+        if (logsRes.error && logsRes.error.message?.includes('Invalid API key')) {
+          client = await createClient();
+          logsRes = await client
+            .from('gm_behavior_logs')
+            .select('*')
+            .in('student_id', behaviorIds)
+            .order('violation_date', { ascending: false });
+        }
+
+        if (logsRes.error) throw logsRes.error;
+        return { success: true, logs: logsRes.data || [] };
       }
     }
 
     // Fallback: Jika gagal menyelesaikan nama, kembalikan pencarian default ID saja
-    const { data, error } = await supabaseAdmin
+    let defaultRes = await client
       .from('gm_behavior_logs')
       .select('*')
       .eq('student_id', studentId)
       .order('violation_date', { ascending: false });
 
-    if (error) throw error;
-    return { success: true, logs: data };
-  } catch (err: any) {
+    if (defaultRes.error && defaultRes.error.message?.includes('Invalid API key')) {
+      client = await createClient();
+      defaultRes = await client
+        .from('gm_behavior_logs')
+        .select('*')
+        .eq('student_id', studentId)
+        .order('violation_date', { ascending: false });
+    }
+
+    if (defaultRes.error) throw defaultRes.error;
+    return { success: true, logs: defaultRes.data || [] };
+  } catch (err: unknown) {
     console.error('Fetch logs error:', err);
-    return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }

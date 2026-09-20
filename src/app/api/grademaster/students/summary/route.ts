@@ -1,8 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../../lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 import { getStudentSession } from '@/lib/grademaster/studentAuth';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { cookies } from 'next/headers';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+export const dynamic = "force-dynamic";
+
+interface SiblingRecord {
+  id: string;
+  name: string;
+  final_score: number | null;
+  original_score: number | null;
+  remedial_status: string | null;
+  session_id: string;
+}
+
+interface ScoringConfig {
+  remedialDeadline?: string;
+  remedialQuestions?: unknown[];
+  [key: string]: unknown;
+}
+
+interface SessionData {
+  session_name?: string;
+  subject?: string;
+  kkm?: number | string;
+  academic_year?: string;
+  class_name?: string;
+  updated_at?: string;
+  created_at?: string;
+  scoring_config?: ScoringConfig | string;
+}
+
+interface StudentGradeRecord {
+  id: string;
+  final_score: number | null;
+  remedial_score: number | null;
+  remedial_status: string | null;
+  cheating_flags: string[] | null;
+  session_id: string;
+  gm_sessions: SessionData | SessionData[];
+}
+
+async function getDb(): Promise<SupabaseClient> {
+  try {
+    return supabaseAdmin;
+  } catch {
+    return await createClient();
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,6 +62,8 @@ export async function GET(req: NextRequest) {
     if (!studentName) {
       return NextResponse.json({ error: 'Nama siswa wajib diisi' }, { status: 400 });
     }
+
+    let db: SupabaseClient = await getDb();
 
     const adminSession = await getAdminSession();
     const studentSession = await getStudentSession();
@@ -39,7 +89,7 @@ export async function GET(req: NextRequest) {
     let targetAcademicYear = academicYear;
 
     if (className === 'LULUS' || className === 'ALUMNI' || !className) {
-      const { data: pastBehavior } = await supabaseAdmin
+      let pastRes = await db
         .from('gm_behaviors')
         .select('class_name, academic_year')
         .eq('student_name', targetStudentName)
@@ -49,14 +99,27 @@ export async function GET(req: NextRequest) {
         .limit(1)
         .maybeSingle();
 
-      if (pastBehavior) {
-        targetClassName = pastBehavior.class_name;
-        targetAcademicYear = pastBehavior.academic_year;
+      if (pastRes.error && pastRes.error.message?.includes('Invalid API key')) {
+        db = await createClient();
+        pastRes = await db
+          .from('gm_behaviors')
+          .select('class_name, academic_year')
+          .eq('student_name', targetStudentName)
+          .not('class_name', 'eq', 'LULUS')
+          .not('class_name', 'eq', 'ALUMNI')
+          .order('academic_year', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+      }
+
+      if (pastRes.data) {
+        targetClassName = pastRes.data.class_name;
+        targetAcademicYear = pastRes.data.academic_year;
       }
     }
 
     // 1. Fetch Attendance Stats with targetClassName filter if provided
-    let attQuery = supabaseAdmin
+    let attQuery = db
       .from('gm_attendance')
       .select('status')
       .eq('student_name', targetStudentName)
@@ -66,17 +129,30 @@ export async function GET(req: NextRequest) {
       attQuery = attQuery.eq('class_name', targetClassName);
     }
 
-    const { data: attData, error: attError } = await attQuery;
+    let { data: attData, error: attError } = await attQuery;
+
+    if (attError && attError.message?.includes('Invalid API key')) {
+      db = await createClient();
+      let retryAttQuery = db
+        .from('gm_attendance')
+        .select('status')
+        .eq('student_name', targetStudentName)
+        .eq('academic_year', targetAcademicYear);
+      if (targetClassName) retryAttQuery = retryAttQuery.eq('class_name', targetClassName);
+      const retryAttRes = await retryAttQuery;
+      attData = retryAttRes.data;
+      attError = retryAttRes.error;
+    }
 
     if (attError) throw attError;
 
     const totalAttendance = attData?.length || 0;
-    const presentCount = attData?.filter((a: any) => a.status === 'Hadir').length || 0;
+    const presentCount = attData?.filter((a: { status?: string }) => a.status === 'Hadir').length || 0;
     const attendancePercent = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : null;
 
     // 2. Fetch Academic History
     // We join gm_students with gm_sessions and filter by class & year
-    let gradeQuery = supabaseAdmin
+    let gradeQuery = db
       .from('gm_students')
       .select(`
         id,
@@ -104,22 +180,56 @@ export async function GET(req: NextRequest) {
       gradeQuery = gradeQuery.eq('gm_sessions.class_name', targetClassName);
     }
 
-    const { data: gradeData, error: gradeError } = await gradeQuery.order('created_at', { ascending: false });
+    let { data: gradeData, error: gradeError } = await gradeQuery.order('created_at', { ascending: false });
+
+    if (gradeError && gradeError.message?.includes('Invalid API key')) {
+      db = await createClient();
+      let retryGradeQuery = db
+        .from('gm_students')
+        .select(`
+          id,
+          final_score,
+          remedial_score,
+          remedial_status,
+          cheating_flags,
+          session_id,
+          gm_sessions!inner (
+            session_name,
+            subject,
+            kkm,
+            academic_year,
+            class_name,
+            updated_at,
+            created_at,
+            scoring_config
+          )
+        `)
+        .eq('name', targetStudentName)
+        .eq('is_deleted', false);
+
+      retryGradeQuery = retryGradeQuery.eq('gm_sessions.academic_year', targetAcademicYear);
+      if (targetClassName) {
+        retryGradeQuery = retryGradeQuery.eq('gm_sessions.class_name', targetClassName);
+      }
+      const retryGradeRes = await retryGradeQuery.order('created_at', { ascending: false });
+      gradeData = retryGradeRes.data;
+      gradeError = retryGradeRes.error;
+    }
 
     if (gradeError) throw gradeError;
 
     // Fetch siblings for all session IDs in parallel to compute isHeldBack
-    const sessionIds = Array.from(new Set((gradeData || []).map((g: any) => g.session_id))).filter(Boolean);
-    const siblingMap: Record<string, any[]> = {};
+    const sessionIds = Array.from(new Set((gradeData || []).map((g: { session_id?: string }) => g.session_id))).filter(Boolean) as string[];
+    const siblingMap: Record<string, SiblingRecord[]> = {};
     
     if (sessionIds.length > 0) {
-      const { data: allSiblings } = await supabaseAdmin
+      const { data: allSiblings } = await db
         .from('gm_students')
         .select('id, name, final_score, original_score, remedial_status, session_id')
         .in('session_id', sessionIds)
         .eq('is_deleted', false);
-        
-      (allSiblings || []).forEach((s: any) => {
+
+      (allSiblings || []).forEach((s: SiblingRecord) => {
         if (!siblingMap[s.session_id]) {
           siblingMap[s.session_id] = [];
         }
@@ -127,15 +237,16 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const academicHistory = await Promise.all((gradeData || []).map(async (g: any) => {
+    const academicHistory = await Promise.all((gradeData || []).map(async (rawG: unknown) => {
+      const g = rawG as StudentGradeRecord;
       const sessionData = Array.isArray(g.gm_sessions) ? g.gm_sessions[0] : g.gm_sessions;
       const kkm = Number(sessionData?.kkm || 70);
       let finalScore = Number(g.final_score);
       let cheatingFlags = g.cheating_flags || [];
       
-      let config = sessionData?.scoring_config;
+      let config = sessionData?.scoring_config as ScoringConfig | undefined;
       if (typeof config === 'string') {
-        try { config = JSON.parse(config); } catch(e) {}
+        try { config = JSON.parse(config); } catch { /* ignore parsing errors */ }
       }
       
       const deadline = config?.remedialDeadline;
@@ -148,7 +259,7 @@ export async function GET(req: NextRequest) {
         
         console.log(`[Summary Auto-Release] Deadline passed for student=${targetStudentName}, session=${g.session_id}. Releasing score=${releasedScore}`);
         
-        const { error: updateErr } = await supabaseAdmin
+        const { error: updateErr } = await db
           .from('gm_students')
           .update({
             final_score: releasedScore,
@@ -170,16 +281,16 @@ export async function GET(req: NextRequest) {
 
       // Calculate sibling held back states
       const sessionSiblings = siblingMap[g.session_id] || [];
-      const currentStudentInSession = sessionSiblings.find((s: any) => s.name.toLowerCase() === targetStudentName.toLowerCase());
+      const currentStudentInSession = sessionSiblings.find((s: SiblingRecord) => s.name.toLowerCase() === targetStudentName.toLowerCase());
 
-      const isCandidate = (s: any) => {
+      const isCandidate = (s: SiblingRecord) => {
         const orig = s.original_score !== null && s.original_score !== undefined ? Number(s.original_score) : 0;
         const fin = s.final_score !== null && s.final_score !== undefined ? Number(s.final_score) : 0;
         const baseScore = (orig > 0) ? orig : fin;
         return baseScore < kkm;
       };
 
-      const pendingRemedialSiblings = sessionSiblings.filter((s: any) => {
+      const pendingRemedialSiblings = sessionSiblings.filter((s: SiblingRecord) => {
         if (currentStudentInSession && s.id === currentStudentInSession.id) return false;
         if (!isCandidate(s)) return false;
         const finishedStates = ['COMPLETED', 'CHEATED', 'TIMEOUT', 'FAILED_EFFORT', 'TIME_UP', 'SUBMITTED'];
@@ -217,7 +328,7 @@ export async function GET(req: NextRequest) {
       } else if (g.remedial_status === 'TIME_UP') {
         remedialUiState = 'TIME_UP';
         remedialMessage = 'Ujian remedial ditutup karena batas waktu habis tanpa ada jawaban esai yang cukup valid/memadai.';
-      } else if (['STARTED', 'INITIATED', 'ACTIVE'].includes(g.remedial_status)) {
+      } else if (Boolean(g.remedial_status && ['STARTED', 'INITIATED', 'ACTIVE'].includes(g.remedial_status))) {
         remedialUiState = 'REMEDIAL_ACTIVE';
         remedialMessage = 'Ujian remedial sedang berlangsung. Harap selesaikan dengan jujur.';
       } else if (g.remedial_status === 'SUBMITTED' || g.remedial_status === 'COMPLETED') {
@@ -241,7 +352,7 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      const canStartRemedial = hasRemedialAvailable && !['SUBMITTED', 'COMPLETED', 'TIME_UP', 'FAILED_EFFORT', 'CHEATED', 'ACTIVE', 'INITIATED', 'STARTED'].includes(g.remedial_status);
+      const canStartRemedial = hasRemedialAvailable && !(g.remedial_status && ['SUBMITTED', 'COMPLETED', 'TIME_UP', 'FAILED_EFFORT', 'CHEATED', 'ACTIVE', 'INITIATED', 'STARTED'].includes(g.remedial_status));
       const remedialScore = g.remedial_score !== null && g.remedial_score !== undefined ? Number(g.remedial_score) : null;
       const displayedScore = isHeldBack ? (remedialScore !== null ? remedialScore : finalScore) : finalScore;
 
@@ -268,7 +379,7 @@ export async function GET(req: NextRequest) {
       };
     })) || [];
     // 3. Fetch latest total points to keep UI synced independently of local storage
-    const { data: behaviorData } = await supabaseAdmin
+    const { data: behaviorData } = await db
       .from('gm_behaviors')
       .select('total_points')
       .eq('student_name', targetStudentName)
@@ -279,7 +390,7 @@ export async function GET(req: NextRequest) {
     const totalPoints = behaviorData?.total_points ?? 0;
 
     // Fetch google_email from gm_student_accounts
-    let accountQuery = supabaseAdmin
+    let accountQuery = db
       .from('gm_student_accounts')
       .select('google_email')
       .eq('student_name', targetStudentName);
@@ -292,7 +403,7 @@ export async function GET(req: NextRequest) {
     const googleEmail = accountData?.google_email ?? null;
 
     // Fetch enrollment history from gm_behaviors
-    const { data: rawEnrollment } = await supabaseAdmin
+    const { data: rawEnrollment } = await db
       .from('gm_behaviors')
       .select('class_name, academic_year')
       .eq('student_name', targetStudentName)
@@ -300,7 +411,7 @@ export async function GET(req: NextRequest) {
 
     const enrollmentHistory: { class_name: string; academic_year: string }[] = [];
     const seen = new Set();
-    (rawEnrollment || []).forEach((h: any) => {
+    (rawEnrollment || []).forEach((h: { class_name: string; academic_year: string }) => {
       const key = `${h.class_name}|${h.academic_year}`;
       if (!seen.has(key)) {
         seen.add(key);
@@ -332,8 +443,9 @@ export async function GET(req: NextRequest) {
       total_points: totalPoints,
       email: googleEmail
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Gagal memuat ringkasan siswa';
     console.error('Student summary error:', err);
-    return NextResponse.json({ error: err.message || 'Gagal memuat ringkasan siswa' }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

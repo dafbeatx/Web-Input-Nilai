@@ -92,6 +92,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const lastUserEmailRef = useRef<string | null>(null);
+  const inFlightCheckEmailRef = useRef<string | null>(null);
   const hasInitialLoadedRef = useRef(false);
   const activeCheckIdRef = useRef(0);
   const checkAuthAndRouteRef = useRef<((session: Session | null) => Promise<void>) | null>(null);
@@ -126,6 +127,13 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     });
 
     const checkAuthAndRoute = async (currentSession: Session | null) => {
+      const currentEmail = currentSession?.user?.email?.toLowerCase() || null;
+      if (currentEmail && inFlightCheckEmailRef.current === currentEmail) {
+        console.log(`[AuthCheck] Skipping concurrent check already in flight for: ${currentEmail}`);
+        return;
+      }
+      inFlightCheckEmailRef.current = currentEmail;
+
       activeCheckIdRef.current += 1;
       const checkId = activeCheckIdRef.current;
 
@@ -186,15 +194,15 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         let resolvedStudentData: StudentData | null = null;
         let activeAdminUser: string | null = null;
 
-        // Helper for retrying fetches with cache bypassing and signal timeout (fast fail for auth bootstrap)
-        const fetchWithRetry = async (url: string, retries = 1, delay = 250): Promise<Response> => {
+        // Helper for retrying fetches with cache bypassing and signal timeout (8s for cold starts)
+        const fetchWithRetry = async (url: string, retries = 2, delay = 350): Promise<Response> => {
           for (let i = 0; i < retries; i++) {
             try {
               const urlObj = new URL(url, window.location.origin);
               urlObj.searchParams.set('t', Date.now().toString());
               console.log(`[AuthInit Fetch] ${urlObj.toString()} (attempt ${i + 1}/${retries + 1})...`);
               const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 2500);
+              const timeoutId = setTimeout(() => controller.abort(), 8000);
               const res = await fetch(urlObj.toString(), { cache: 'no-store', signal: controller.signal });
               clearTimeout(timeoutId);
               if (res.ok) return res;
@@ -206,7 +214,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
           const finalUrlObj = new URL(url, window.location.origin);
           finalUrlObj.searchParams.set('t', Date.now().toString());
           const finalController = new AbortController();
-          const finalTimeoutId = setTimeout(() => finalController.abort(), 2500);
+          const finalTimeoutId = setTimeout(() => finalController.abort(), 8000);
           try {
             const res = await fetch(finalUrlObj.toString(), { cache: 'no-store', signal: finalController.signal });
             clearTimeout(finalTimeoutId);
@@ -256,16 +264,22 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
             setIsStudent(false);
             setIsParent(false);
 
-            // Get actual profile metadata from backend
-            const adminRes = await fetchWithRetry("/api/admin/check");
-            if (checkId !== activeCheckIdRef.current) {
-              console.log(`[AuthCheck] checkId ${checkId} superseded. Aborting admin profile load.`);
-              return;
+            // Get actual profile metadata from backend with graceful fallback
+            try {
+              const adminRes = await fetchWithRetry("/api/admin/check");
+              if (checkId !== activeCheckIdRef.current) {
+                console.log(`[AuthCheck] checkId ${checkId} superseded. Aborting admin profile load.`);
+                return;
+              }
+              const adminData = await adminRes.json();
+              if (checkId !== activeCheckIdRef.current) return;
+              activeAdminUser = adminData.displayName || adminData.username || currentSession.user.user_metadata?.full_name || email;
+              setAdminUser(activeAdminUser);
+            } catch (profileErr) {
+              console.warn("[AuthCheck] /api/admin/check fetch failed or timed out, using session metadata fallback:", profileErr);
+              activeAdminUser = currentSession.user.user_metadata?.full_name || email;
+              setAdminUser(activeAdminUser);
             }
-            const adminData = await adminRes.json();
-            if (checkId !== activeCheckIdRef.current) return;
-            activeAdminUser = adminData.displayName || adminData.username || currentSession.user.user_metadata?.full_name || email;
-            setAdminUser(activeAdminUser);
           } else {
             console.log("[AuthInit] Email domain resolved as Student");
             activeStudent = true;
@@ -395,6 +409,9 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         setLayer("student_login");
         window.history.replaceState({ layer: 'student_login' }, '', '#student_login');
       } finally {
+        if (inFlightCheckEmailRef.current === currentEmail) {
+          inFlightCheckEmailRef.current = null;
+        }
         if (checkId === activeCheckIdRef.current) {
           setIsAuthLoading(false);
         }
@@ -408,6 +425,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
 
       if (event === 'SIGNED_OUT') {
         lastUserEmailRef.current = null;
+        inFlightCheckEmailRef.current = null;
         hasInitialLoadedRef.current = true;
         // Reset all states immediately on sign out
         setIsAdmin(false);
@@ -420,7 +438,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         setIsAuthLoading(false);
       } else {
         // SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED, INITIAL_SESSION
-        if (hasInitialLoadedRef.current && currentEmail === lastUserEmailRef.current) {
+        if (currentEmail && currentEmail === lastUserEmailRef.current) {
           console.log(`[Global Auth Change] Skipping redundant check for same user: ${currentEmail}`);
           return;
         }
@@ -449,12 +467,12 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
           console.error("[AuthInit] Failed to subscribe to auth changes:", subErr);
         }
 
-        // 2. Query initial session with 2.5s timeout guard to prevent SDK hangs
+        // 2. Query initial session with 3.5s timeout guard to prevent SDK hangs
         let session: Session | null = null;
         try {
           const sessionPromise = supabase.auth.getSession();
           const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) =>
-            setTimeout(() => resolve({ data: { session: null } }), 2500)
+            setTimeout(() => resolve({ data: { session: null } }), 3500)
           );
           const res = await Promise.race([sessionPromise, timeoutPromise]);
           session = res.data?.session || null;
@@ -476,11 +494,12 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Safety timeout guard: Guarantee isAuthLoading resolves within 4.5 seconds
+    // Safety timeout guard: Guarantee isAuthLoading resolves within 12 seconds
     const safetyTimeout = setTimeout(() => {
       if (!isUnmounted && !hasInitialLoadedRef.current) {
-        console.warn("[AuthInit] Global auth check timed out after 4.5s. Forcing fallback to unauthenticated state.");
+        console.warn("[AuthInit] Global auth check timed out after 12s. Forcing fallback to unauthenticated state.");
         hasInitialLoadedRef.current = true;
+        inFlightCheckEmailRef.current = null;
         setIsAdmin(false);
         setAdminUser(null);
         setIsStudent(false);
@@ -488,7 +507,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         setStudentData(null);
         setIsAuthLoading(false);
       }
-    }, 4500);
+    }, 12000);
 
     initAuth();
 

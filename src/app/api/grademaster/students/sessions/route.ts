@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin as supabase } from '@/lib/supabase/admin';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 import { getStudentSession } from '@/lib/grademaster/studentAuth';
+import { getAdminSession } from '@/lib/grademaster/admin';
 import { cookies } from 'next/headers';
 
 export const dynamic = "force-dynamic";
@@ -11,87 +13,197 @@ async function getRequestToken() {
   return cookieStore.get('gm_student_token')?.value || '';
 }
 
+// Helper to get database client with fallback
+async function getClient() {
+  try {
+    return supabaseAdmin;
+  } catch {
+    return await createClient();
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
-    const session = await getStudentSession();
-    if (!session) {
+    const adminSession = await getAdminSession();
+    const studentSession = await getStudentSession();
+
+    if (!adminSession && !studentSession) {
       return NextResponse.json({ error: 'Akses ditolak: Sesi tidak valid' }, { status: 403 });
     }
 
-    const currentToken = await getRequestToken();
+    let client = await getClient();
+    const currentToken = studentSession ? await getRequestToken() : '';
+    let targetAccountId = studentSession?.student?.id;
 
-    const { data: sessions, error } = await supabase
+    if (adminSession) {
+      const { searchParams } = new URL(req.url);
+      const studentId = searchParams.get('studentId');
+      const studentName = searchParams.get('name');
+      const className = searchParams.get('class');
+
+      if (studentId) {
+        let accRes = await client
+          .from('gm_student_accounts')
+          .select('id')
+          .eq('id', studentId)
+          .maybeSingle();
+
+        if (accRes.error && accRes.error.message?.includes('Invalid API key')) {
+          client = await createClient();
+          accRes = await client
+            .from('gm_student_accounts')
+            .select('id')
+            .eq('id', studentId)
+            .maybeSingle();
+        }
+
+        if (accRes.data?.id) {
+          targetAccountId = accRes.data.id;
+        }
+      }
+
+      if (!targetAccountId && studentName) {
+        let query = client
+          .from('gm_student_accounts')
+          .select('id')
+          .eq('student_name', studentName);
+        if (className) query = query.eq('class_name', className);
+        
+        let accRes = await query.maybeSingle();
+        if (accRes.error && accRes.error.message?.includes('Invalid API key')) {
+          client = await createClient();
+          let retryQuery = client
+            .from('gm_student_accounts')
+            .select('id')
+            .eq('student_name', studentName);
+          if (className) retryQuery = retryQuery.eq('class_name', className);
+          accRes = await retryQuery.maybeSingle();
+        }
+
+        if (accRes.data?.id) {
+          targetAccountId = accRes.data.id;
+        }
+      }
+
+      if (!targetAccountId) {
+        // No student account found or student has not logged in yet
+        return NextResponse.json({ sessions: [] });
+      }
+    }
+
+    let { data: sessions, error } = await client
       .from('gm_student_sessions')
       .select('id, ip_address, user_agent, created_at, expires_at, token')
-      .eq('account_id', session.student.id)
+      .eq('account_id', targetAccountId)
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false });
 
+    if (error && error.message?.includes('Invalid API key')) {
+      client = await createClient();
+      const retryRes = await client
+        .from('gm_student_sessions')
+        .select('id, ip_address, user_agent, created_at, expires_at, token')
+        .eq('account_id', targetAccountId)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false });
+      sessions = retryRes.data;
+      error = retryRes.error;
+    }
+
     if (error) throw error;
 
-    const formattedSessions = (sessions || []).map((s) => ({
+    const formattedSessions = (sessions || []).map((s: { id: string; ip_address: string | null; user_agent: string | null; created_at: string; expires_at: string; token: string }) => ({
       id: s.id,
       ip_address: s.ip_address || 'unknown',
       user_agent: s.user_agent || 'unknown',
       created_at: s.created_at,
       expires_at: s.expires_at,
-      is_current: s.token === currentToken
+      is_current: currentToken ? s.token === currentToken : false
     }));
 
     return NextResponse.json({ sessions: formattedSessions });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Gagal memuat sesi aktif';
     console.error('Failed to fetch active student sessions:', err);
-    return NextResponse.json({ error: err.message || 'Gagal memuat sesi aktif' }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getStudentSession();
-    if (!session) {
+    const adminSession = await getAdminSession();
+    const studentSession = await getStudentSession();
+
+    if (!adminSession && !studentSession) {
       return NextResponse.json({ error: 'Akses ditolak: Sesi tidak valid' }, { status: 403 });
     }
 
-    const currentToken = await getRequestToken();
+    const client = await getClient();
+    const currentToken = studentSession ? await getRequestToken() : '';
     const { searchParams } = new URL(req.url);
     const deleteType = searchParams.get('type'); // 'all_other' or 'specific'
     const sessionId = searchParams.get('id');
+    const studentIdParam = searchParams.get('studentId');
+    const studentNameParam = searchParams.get('name');
+    const classParam = searchParams.get('class');
+
+    let targetAccountId = studentSession?.student?.id;
+
+    if (adminSession) {
+      if (studentIdParam) {
+        const { data: acc } = await client
+          .from('gm_student_accounts')
+          .select('id')
+          .eq('id', studentIdParam)
+          .maybeSingle();
+        if (acc?.id) targetAccountId = acc.id;
+      }
+      if (!targetAccountId && studentNameParam) {
+        let q = client.from('gm_student_accounts').select('id').eq('student_name', studentNameParam);
+        if (classParam) q = q.eq('class_name', classParam);
+        const { data: acc } = await q.maybeSingle();
+        if (acc?.id) targetAccountId = acc.id;
+      }
+      if (!targetAccountId) {
+        return NextResponse.json({ error: 'Akun siswa tidak ditemukan' }, { status: 404 });
+      }
+    }
 
     if (deleteType === 'all_other') {
-      // Delete all sessions for this account except the current token
-      const { error } = await supabase
+      let query = client
         .from('gm_student_sessions')
         .delete()
-        .eq('account_id', session.student.id)
-        .neq('token', currentToken);
+        .eq('account_id', targetAccountId);
 
+      if (currentToken) {
+        query = query.neq('token', currentToken);
+      }
+
+      const { error } = await query;
       if (error) throw error;
 
       return NextResponse.json({ success: true, message: 'Berhasil mengakhiri semua sesi perangkat lain.' });
     } else if (sessionId) {
-      // Delete specific session
-      // Check if it is the current session
-      const { data: targetSession, error: checkError } = await supabase
+      const { data: targetSession, error: checkError } = await client
         .from('gm_student_sessions')
         .select('token')
         .eq('id', sessionId)
-        .eq('account_id', session.student.id)
+        .eq('account_id', targetAccountId)
         .single();
 
       if (checkError || !targetSession) {
         return NextResponse.json({ error: 'Sesi tidak ditemukan' }, { status: 404 });
       }
 
-      const { error } = await supabase
+      const { error } = await client
         .from('gm_student_sessions')
         .delete()
         .eq('id', sessionId)
-        .eq('account_id', session.student.id);
+        .eq('account_id', targetAccountId);
 
       if (error) throw error;
 
-      // If the terminated session is the current session, instruct the client to log out
-      const isCurrent = targetSession.token === currentToken;
+      const isCurrent = currentToken ? targetSession.token === currentToken : false;
 
       return NextResponse.json({ 
         success: true, 
@@ -101,8 +213,9 @@ export async function DELETE(req: NextRequest) {
     }
 
     return NextResponse.json({ error: 'Parameter pemutusan sesi tidak valid' }, { status: 400 });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Gagal mengakhiri sesi perangkat';
     console.error('Failed to delete student session:', err);
-    return NextResponse.json({ error: err.message || 'Gagal mengakhiri sesi perangkat' }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

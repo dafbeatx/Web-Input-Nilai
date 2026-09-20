@@ -793,10 +793,15 @@ export default function StudentProfileLayer({
   }, [studentName, activeClass]);
 
   const fetchActiveSessions = useCallback(async () => {
-    if (!studentId) return;
+    if (!studentId && !studentName) return;
+    if (isParent) return;
     setIsLoadingSessions(true);
     try {
-      const res = await fetch('/api/grademaster/students/sessions');
+      const q = new URLSearchParams();
+      if (studentId) q.set('studentId', studentId);
+      if (studentName) q.set('name', studentName);
+      if (activeClass) q.set('class', activeClass);
+      const res = await fetch(`/api/grademaster/students/sessions?${q.toString()}`);
       if (res.ok) {
         const data = await res.json();
         if (data.sessions) {
@@ -808,7 +813,7 @@ export default function StudentProfileLayer({
     } finally {
       setIsLoadingSessions(false);
     }
-  }, [studentId]);
+  }, [studentId, studentName, activeClass, isParent]);
 
   useEffect(() => {
     if (behaviorReasons && behaviorReasons.length > 0) {
@@ -997,9 +1002,14 @@ export default function StudentProfileLayer({
   const handleEndOtherSessions = async (type: 'all_other' | 'specific', sessionId?: string) => {
     setIsEndingSessions(true);
     try {
-      const url = type === 'all_other' 
-        ? '/api/grademaster/students/sessions?type=all_other' 
-        : `/api/grademaster/students/sessions?id=${sessionId}`;
+      const q = new URLSearchParams();
+      q.set('type', type);
+      if (sessionId) q.set('id', sessionId);
+      if (studentId) q.set('studentId', studentId);
+      if (studentName) q.set('name', studentName);
+      if (activeClass) q.set('class', activeClass);
+
+      const url = `/api/grademaster/students/sessions?${q.toString()}`;
         
       const res = await fetch(url, { method: 'DELETE' });
       const data = await res.json();
