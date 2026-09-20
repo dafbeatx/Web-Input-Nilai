@@ -197,14 +197,25 @@ export async function POST(req: NextRequest) {
 }
 
   export async function GET(req: NextRequest) {
+  try {
+    let adminSession: Awaited<ReturnType<typeof getAdminSession>> = null;
     try {
-      const adminSession = await getAdminSession();
-      const { searchParams } = new URL(req.url);
-      const name = searchParams.get('name');
-      const password = searchParams.get('password');
-  
-      // List all sessions — both admin (write) and student (read-only) see all non-demo sessions
-      if (!name && !password) {
+      adminSession = await getAdminSession();
+    } catch (authErr) {
+      console.warn('Admin session check failed, proceeding as non-admin:', authErr);
+    }
+
+    const { searchParams } = new URL(req.url);
+    const name = searchParams.get('name');
+    const password = searchParams.get('password');
+
+    // List all sessions — both admin (write) and student (read-only) see all non-demo sessions
+    if (!name && !password) {
+      let data: any = null;
+      let error: any = null;
+
+      // 1. Try querying via supabaseAdmin
+      try {
         let query = supabaseAdmin
           .from('gm_sessions')
           .select(`
@@ -227,14 +238,79 @@ export async function POST(req: NextRequest) {
           `)
           .order('updated_at', { ascending: false });
 
-        // Hide demo sessions from non-admin users (students see real sessions only)
         if (!adminSession) {
           query = query.eq('is_demo', false);
         }
 
-        const { data, error } = await query;
-  
-        if (error) throw error;
+        const res = await query;
+        data = res.data;
+        error = res.error;
+      } catch (adminErr) {
+        console.warn('supabaseAdmin query caught error:', adminErr);
+      }
+
+      // 2. Fallback to createClient (standard server client using anon/publishable key)
+      if (error || !data) {
+        try {
+          const supabase = await createClient();
+          let fallbackQuery = supabase
+            .from('gm_sessions')
+            .select(`
+              id, 
+              session_name, 
+              teacher, 
+              subject, 
+              class_name, 
+              school_level, 
+              exam_type, 
+              academic_year, 
+              updated_at, 
+              kkm, 
+              remedial_essay_count, 
+              remedial_timer, 
+              is_public, 
+              is_demo, 
+              scoring_config,
+              gm_students(count)
+            `)
+            .order('updated_at', { ascending: false });
+
+          if (!adminSession) {
+            fallbackQuery = fallbackQuery.eq('is_demo', false);
+          }
+
+          const fallbackRes = await fallbackQuery;
+          if (fallbackRes.data && !fallbackRes.error) {
+            data = fallbackRes.data;
+            error = null;
+          } else {
+            error = fallbackRes.error;
+          }
+        } catch (clientErr) {
+          console.warn('createClient fallback caught error:', clientErr);
+        }
+      }
+
+      // 3. Fallback without relational count if relation gm_students is not linked in schema
+      if (error || !data) {
+        try {
+          const supabase = await createClient();
+          const simpleRes = await supabase
+            .from('gm_sessions')
+            .select('id, session_name, teacher, subject, class_name, school_level, exam_type, academic_year, updated_at, kkm, remedial_essay_count, remedial_timer, is_public, is_demo, scoring_config')
+            .eq('is_demo', false)
+            .order('updated_at', { ascending: false });
+
+          if (simpleRes.data && !simpleRes.error) {
+            data = simpleRes.data;
+            error = null;
+          }
+        } catch (simpleErr) {
+          console.warn('simple query fallback caught error:', simpleErr);
+        }
+      }
+
+      if (error) throw error;
 
       // Map the query result to include student_count and clean up gm_students field
       const sessionsWithCounts = (data || []).map((s: Record<string, unknown>) => {
@@ -263,11 +339,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan' }, { status: 429 });
     }
 
-    const { data: session, error: sessError } = await supabaseAdmin
-      .from('gm_sessions')
-      .select('*, gm_students(*)')
-      .eq('session_name', name.trim())
-      .single();
+    let session: any = null;
+    let sessError: any = null;
+
+    try {
+      const res = await supabaseAdmin
+        .from('gm_sessions')
+        .select('*, gm_students(*)')
+        .eq('session_name', name.trim())
+        .single();
+      session = res.data;
+      sessError = res.error;
+    } catch {}
+
+    if (sessError || !session) {
+      try {
+        const supabase = await createClient();
+        const res = await supabase
+          .from('gm_sessions')
+          .select('*, gm_students(*)')
+          .eq('session_name', name.trim())
+          .single();
+        session = res.data;
+        sessError = res.error;
+      } catch {}
+    }
 
     if (sessError || !session) return NextResponse.json({ error: 'Sesi tidak ditemukan' }, { status: 404 });
 
@@ -296,11 +392,27 @@ export async function POST(req: NextRequest) {
       isReadOnly = true;
     }
 
-    const { data: students } = await supabaseAdmin
-      .from('gm_students')
-      .select('*')
-      .eq('session_id', session.id)
-      .order('created_at', { ascending: true });
+    let students: any = null;
+    try {
+      const res = await supabaseAdmin
+        .from('gm_students')
+        .select('*')
+        .eq('session_id', session.id)
+        .order('created_at', { ascending: true });
+      students = res.data;
+    } catch {}
+
+    if (!students) {
+      try {
+        const supabase = await createClient();
+        const res = await supabase
+          .from('gm_students')
+          .select('*')
+          .eq('session_id', session.id)
+          .order('created_at', { ascending: true });
+        students = res.data;
+      } catch {}
+    }
 
     const config = session.scoring_config || { pgWeight: 0.7, essayWeight: 0.3 };
 
@@ -411,9 +523,16 @@ export async function POST(req: NextRequest) {
       gradedStudents: isReadOnly ? [] : gradedStudents,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Gagal memuat sesi';
-    console.error('Session load error:', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    const message = err instanceof Error 
+      ? err.message 
+      : (typeof err === 'object' && err !== null && 'message' in err)
+        ? String((err as Record<string, unknown>).message)
+        : (typeof err === 'object' && err !== null && 'error' in err)
+          ? String((err as Record<string, unknown>).error)
+          : 'Gagal memuat sesi';
+    const code = (typeof err === 'object' && err !== null && 'code' in err) ? String((err as Record<string, unknown>).code) : '';
+    console.error('Session load error:', code, message, err);
+    return NextResponse.json({ error: `${code ? `[${code}] ` : ''}${message}` }, { status: 500 });
   }
 }
 

@@ -1,24 +1,27 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
 let clientInstance: SupabaseClient | null = null;
 
 /**
  * Helper to retrieve the Supabase Admin Client.
- * Throws an explicit error if the required environment variables are not configured.
+ * Dynamically resolves environment variables and falls back to publishable/anon key if service role is not set.
  */
 export function getSupabaseAdmin(): SupabaseClient {
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = 
+    process.env.SUPABASE_SERVICE_ROLE_KEY || 
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
     throw new Error(
-      "Supabase Admin Client configuration is missing. " +
-      "Please ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in your environment variables."
+      "Supabase Client configuration is missing. " +
+      "Please ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY are set."
     );
   }
 
   if (!clientInstance) {
-    clientInstance = createClient(supabaseUrl, supabaseServiceRoleKey, {
+    clientInstance = createClient(supabaseUrl, supabaseKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
@@ -37,4 +40,3 @@ export const supabaseAdmin = new Proxy({} as SupabaseClient, {
     return typeof value === 'function' ? value.bind(adminClient) : value;
   },
 });
-
