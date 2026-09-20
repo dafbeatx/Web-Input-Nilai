@@ -271,51 +271,33 @@ export default function StudentLoginLayer({
 
   // ── MAIN UI ─────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen bg-white flex flex-col relative font-inter transition-all duration-1000 ${isPageEntering ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'} selection:bg-slate-100`}>
+    <div className={`min-h-screen bg-slate-50 flex flex-col items-center justify-between relative font-inter transition-all duration-700 ${isPageEntering ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'} selection:bg-slate-100`}>
       
-      {/* Mascot Waving Character - Desktop Only */}
-      <div className="hidden lg:block absolute bottom-0 right-10 w-[240px] xl:w-[280px] z-0 select-none pointer-events-none animate-in slide-in-from-right-10 duration-1000 ease-out">
-        <Image
-          src="/mascot_hijab_idle.png"
-          alt="Student Mascot"
-          width={280}
-          height={380}
-          className="w-full h-auto object-contain opacity-90 hover:opacity-100 transition-opacity duration-300"
-          unoptimized
-        />
-      </div>
-
-      {/* Background Decor — Clean & Sparse */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.03]">
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-slate-900 rounded-full blur-[120px]" />
-        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-slate-700 rounded-full blur-[120px]" />
-      </div>
-
-      {/* Top Header */}
-      <header className="w-full pt-safe pb-4 flex items-center justify-between px-6 sm:px-10 relative z-10 shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-sm">
-             <NeonGraduationCap size={18} />
+      {/* Top Mobile Header */}
+      <header className="w-full max-w-md pt-safe pb-2 flex items-center justify-between px-4 sm:px-6 relative z-10 shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-sm">
+             <NeonGraduationCap size={16} />
           </div>
           <div>
             <span className="text-xs font-black text-slate-900 tracking-wider uppercase font-outfit block leading-none">GradeMaster</span>
-            <span className="text-[10px] font-semibold text-slate-500">Portal Akademik</span>
+            <span className="text-[9.5px] font-semibold text-slate-500">Portal Akademik</span>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 relative z-10 py-6">
-        <div className="w-full max-w-md bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col items-center">
+      {/* Main Mobile App Card */}
+      <main className="w-full max-w-md flex-1 flex flex-col items-center justify-center px-3.5 py-2 relative z-10">
+        <div className="w-full bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col items-center">
           
-          {/* Mascot / Icon Header */}
-          <div className="mb-6 flex flex-col items-center">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 select-none pointer-events-none mb-2">
+          {/* Mascot Header */}
+          <div className="mb-4 flex flex-col items-center">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 select-none pointer-events-none mb-1">
               <Image
                 src="/mascot_hijab_idle.png"
                 alt="Maskot Portal"
-                width={96}
-                height={96}
+                width={80}
+                height={80}
                 className="w-full h-full object-contain"
                 unoptimized
               />

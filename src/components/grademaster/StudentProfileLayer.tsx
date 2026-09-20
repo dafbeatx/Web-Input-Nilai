@@ -1402,25 +1402,25 @@ export default function StudentProfileLayer({
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-100/70 flex justify-center z-[1000] font-sans antialiased text-slate-800 selection:bg-indigo-500/10">
-      <div className="w-full max-w-md md:max-w-4xl lg:max-w-5xl bg-slate-50 flex flex-col relative h-full shadow-lg md:border-x border-slate-200/80 overflow-hidden">
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex justify-center items-center z-[1000] font-sans antialiased text-slate-800 selection:bg-indigo-500/10">
+      <div className="w-full max-w-md h-full sm:h-[94vh] sm:max-h-[920px] bg-slate-50 flex flex-col relative sm:rounded-[2.5rem] shadow-2xl sm:border border-slate-300/80 overflow-hidden">
         
-        {/* Top AppBar */}
-        {activeTab !== 'LESSON' && (
-          <header className="sticky top-0 w-full z-40 bg-white flex items-center justify-between px-4 sm:px-6 pt-safe pb-3 border-b border-slate-200/80 shrink-0">
+        {/* Top Mobile AppBar */}
+        <header className="sticky top-0 w-full z-40 bg-white flex items-center justify-between px-3.5 pt-safe pb-2.5 border-b border-slate-200/80 shrink-0">
           {activeTab === 'HOME' ? (
-            <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
               {isAdmin && (
                 <button 
                   onClick={onBack}
                   className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 transition-all text-slate-600 active:scale-95 border border-slate-200 shrink-0"
+                  title="Kembali"
                 >
                   <ArrowLeft size={14} />
                 </button>
               )}
-              <div className={`w-9 h-9 rounded-full border text-slate-700 flex items-center justify-center text-xs font-black tracking-tight shrink-0 overflow-hidden ${
+              <div className={`w-8 h-8 rounded-full border text-slate-700 flex items-center justify-center text-xs font-black tracking-tight shrink-0 overflow-hidden ${
                 isEmojiAvatar(currentAvatarUrl) 
-                  ? `bg-gradient-to-br ${getGradientForEmoji(currentAvatarUrl)} text-white border-white/20 text-base` 
+                  ? `bg-gradient-to-br ${getGradientForEmoji(currentAvatarUrl)} text-white border-white/20 text-sm` 
                   : 'bg-slate-100 border-slate-200'
               }`}>
                 {currentAvatarUrl ? (
@@ -1434,12 +1434,12 @@ export default function StudentProfileLayer({
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-slate-900 font-extrabold text-xs sm:text-sm tracking-tight leading-tight uppercase font-outfit truncate">
+                <div className="flex items-center gap-1.5">
+                  <h2 className="text-slate-900 font-black text-xs tracking-tight leading-tight uppercase font-outfit truncate">
                     {studentName}
                   </h2>
-                  <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                    {isParent ? 'Wali Murid' : 'Siswa'}
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 shrink-0">
+                    {isParent ? 'Wali' : 'Siswa'}
                   </span>
                 </div>
                 {studentSummary?.enrollmentHistory && studentSummary.enrollmentHistory.length > 1 ? (
@@ -1451,7 +1451,7 @@ export default function StudentProfileLayer({
                         setActiveClass(cls);
                         setActiveYear(yr);
                       }}
-                      className="bg-indigo-50 border border-indigo-100/80 rounded-lg px-2 py-0.5 text-[10px] font-bold text-indigo-700 outline-none cursor-pointer hover:bg-indigo-100 transition-all font-outfit"
+                      className="bg-indigo-50 border border-indigo-100/80 rounded-lg px-2 py-0.5 text-[9.5px] font-bold text-indigo-700 outline-none cursor-pointer hover:bg-indigo-100 transition-all font-outfit"
                     >
                       {studentSummary.enrollmentHistory.map((h: any, i: number) => (
                         <option key={i} value={`${h.class_name}|${h.academic_year}`} className="bg-white text-slate-700">
@@ -1461,76 +1461,31 @@ export default function StudentProfileLayer({
                     </select>
                   </div>
                 ) : (
-                  <p className="text-slate-500 text-[10px] font-semibold tracking-wide leading-none mt-0.5">
-                    Kelas {activeClass} • Tahun Ajaran {activeYear}
+                  <p className="text-slate-500 text-[9.5px] font-semibold tracking-wide leading-none mt-0.5 truncate">
+                    Kelas {activeClass} • {activeYear}
                   </p>
                 )}
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <button 
                 onClick={() => setActiveTab('HOME')}
                 className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 transition-all text-slate-600 active:scale-95 border border-slate-200 shrink-0"
+                title="Kembali ke Beranda"
               >
                 <ArrowLeft size={14} />
               </button>
-              <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900 font-outfit">
+              <h2 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 font-outfit truncate">
                 {activeTab === 'GRADES' && "Nilai Akademik"}
+                {activeTab === 'LESSON' && (isParent ? "Pelajaran Ananda" : "Pelajaran Saya")}
                 {activeTab === 'ATTENDANCE' && "Kehadiran Siswa"}
                 {activeTab === 'ACCOUNT' && (isParent ? "Data Ananda & Rapor" : "Berkas & Profil")}
               </h2>
             </div>
           )}
 
-          {/* Desktop Navigation Tabs (Hidden on mobile) */}
-          <div className="hidden md:flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/70 mx-4">
-            <button
-              type="button"
-              onClick={() => setActiveTab('HOME')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeTab === 'HOME' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Beranda
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('GRADES')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeTab === 'GRADES' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Nilai Akademik
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('LESSON')}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900"
-            >
-              Pelajaran
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('ATTENDANCE')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeTab === 'ATTENDANCE' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Kehadiran
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('ACCOUNT')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeTab === 'ACCOUNT' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              {isParent ? 'Data & Rapor' : 'Akun'}
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={async () => {
                 setIsRefreshingProfile(true);
@@ -1544,11 +1499,11 @@ export default function StudentProfileLayer({
                 setIsRefreshingProfile(false);
               }}
               disabled={isRefreshingProfile}
-              className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all active:scale-95 border border-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all active:scale-95 border border-slate-200 disabled:opacity-50"
               title="Sinkronisasi Data"
             >
               {isRefreshingProfile ? (
-                <Loader2 size={16} className="animate-spin text-indigo-600" />
+                <Loader2 size={15} className="animate-spin text-indigo-600" />
               ) : (
                 <span className="material-symbols-outlined text-[16px]">sync</span>
               )}
@@ -1558,49 +1513,47 @@ export default function StudentProfileLayer({
               <button
                 type="button"
                 onClick={onLogout}
-                className="px-2.5 py-1.5 text-xs font-bold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-xl transition-all flex items-center gap-1 min-h-[32px]"
+                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 transition-all active:scale-95"
                 title="Keluar dari Portal"
               >
                 <LogOut size={14} />
-                <span className="hidden sm:inline">Keluar</span>
               </button>
             )}
           </div>
         </header>
-        )}
 
         {/* Main Content Area */}
         {activeTab !== 'LESSON' ? (
-          <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 no-scrollbar pb-24 md:pb-8">
+          <main className="flex-1 overflow-y-auto px-3.5 py-3 space-y-3.5 no-scrollbar pb-28">
             
                {activeTab === 'HOME' && (
             <div className="space-y-4 animate-in fade-in duration-300">
 
               {/* Welcome Hero Banner */}
-              <div className="relative bg-slate-900 text-white border border-slate-800 rounded-2xl p-5 sm:p-6 overflow-hidden flex items-center justify-between gap-4 shadow-sm">
-                <div className="min-w-0 z-10 text-left">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/10 text-white rounded-full text-[10px] font-bold uppercase tracking-wider">
+              <div className="relative bg-slate-900 text-white border border-slate-800 rounded-2xl p-4 sm:p-5 overflow-hidden flex items-center justify-between gap-3 shadow-sm">
+                <div className="min-w-0 z-10 text-left flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/10 text-white rounded-full text-[9px] font-bold uppercase tracking-wider">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                      {isParent ? 'Portal Orang Tua / Wali' : 'Siswa Aktif'}
+                      {isParent ? 'Portal Orang Tua' : 'Siswa Aktif'}
                     </span>
-                    <span className="text-[11px] text-slate-300 font-semibold">
+                    <span className="text-[10px] text-slate-300 font-semibold truncate">
                       Kelas {activeClass} • {activeYear}
                     </span>
                   </div>
                   
-                  <h3 className="text-white font-black text-lg sm:text-xl mt-2 leading-tight font-outfit truncate">
-                    {isParent ? `Perkembangan Belajar: ${studentName}` : `Halo, ${studentName.split(' ')[0]}! 👋`}
+                  <h3 className="text-white font-black text-base sm:text-lg mt-1.5 leading-tight font-outfit truncate">
+                    {isParent ? `Perkembangan: ${studentName}` : `Halo, ${studentName.split(' ')[0]}! 👋`}
                   </h3>
                   
-                  <p className="text-slate-300 text-xs sm:text-sm font-medium mt-1 leading-relaxed max-w-lg">
+                  <p className="text-slate-300 text-[11px] sm:text-xs font-medium mt-1 leading-relaxed line-clamp-2">
                     {isParent 
-                      ? `Pantau capaian nilai ujian, kehadiran kelas, dan catatan kedisiplinan ananda di ${getSchoolName(activeClass)}.`
-                      : `Semoga hari belajarmu menyenangkan dan terus berprestasi di ${getSchoolName(activeClass)}.`}
+                      ? `Pantau nilai ujian, kehadiran, dan kedisiplinan ananda di ${getSchoolName(activeClass)}.`
+                      : `Lihat nilai ujian, materi pelajaran, dan presensi belajarmu hari ini.`}
                   </p>
                 </div>
                 
-                <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 relative select-none pointer-events-none">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 relative select-none pointer-events-none">
                   <img 
                     src="/mascot_hijab_idle.png" 
                     alt="Maskot" 
@@ -1816,8 +1769,8 @@ export default function StudentProfileLayer({
                 );
               })()}
 
-              {/* Quick Action Grid (Responsive 2 cols on mobile, 4 cols on desktop) */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {/* Quick Action Grid (2 columns on mobile) */}
+              <div className="grid grid-cols-2 gap-2.5">
                 {/* Tombol 1: Nilai & Remedial */}
                 <button
                   type="button"
@@ -2064,7 +2017,7 @@ export default function StudentProfileLayer({
                       <p className="text-xs font-bold text-slate-500 uppercase mt-2">Belum ada catatan ujian</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-2.5">
                       {academicHistory.map((grade: any, idx: number) => {
                         const isPassing = grade.isPassing;
                         return (
@@ -2227,7 +2180,7 @@ export default function StudentProfileLayer({
                     <p className="text-xs font-bold text-slate-500 uppercase mt-2">Tidak ada log presensi</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-2">
                     {attendanceLogs.map((log, idx) => {
                       let statusBadge = "bg-emerald-50 text-emerald-800 border-emerald-200";
                       if (log.status === 'Sakit') statusBadge = "bg-amber-50 text-amber-800 border-amber-200";
@@ -2836,61 +2789,61 @@ export default function StudentProfileLayer({
           </div>
         )}
 
-        {/* Bottom Navigation Bar (Mobile Only, >= 44px tap targets) */}
-        <nav className="md:hidden absolute bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 py-1.5 flex justify-around pb-safe shrink-0 shadow-sm">
+        {/* Bottom Navigation Bar (Always visible across mobile & preview) */}
+        <nav className="absolute bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-1.5 py-1.5 flex justify-around pb-safe shrink-0 shadow-lg">
           <button 
             type="button"
             onClick={() => setActiveTab('HOME')}
-            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[48px] px-2 py-1 rounded-lg transition-all ${
-              activeTab === 'HOME' ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-800'
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[46px] min-w-[50px] px-2 py-1 rounded-xl transition-all ${
+              activeTab === 'HOME' ? 'text-indigo-600 font-bold bg-indigo-50/60' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Home size={19} className={activeTab === 'HOME' ? 'scale-105' : ''} />
-            <span className="text-[10px] font-bold">Beranda</span>
+            <Home size={19} className={activeTab === 'HOME' ? 'scale-105 stroke-[2.5]' : ''} />
+            <span className="text-[10px] font-bold tracking-tight">Beranda</span>
           </button>
 
           <button 
             type="button"
             onClick={() => setActiveTab('GRADES')}
-            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[48px] px-2 py-1 rounded-lg transition-all ${
-              activeTab === 'GRADES' ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-800'
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[46px] min-w-[50px] px-2 py-1 rounded-xl transition-all ${
+              activeTab === 'GRADES' ? 'text-indigo-600 font-bold bg-indigo-50/60' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <BookOpen size={19} className={activeTab === 'GRADES' ? 'scale-105' : ''} />
-            <span className="text-[10px] font-bold">Nilai</span>
+            <BookOpen size={19} className={activeTab === 'GRADES' ? 'scale-105 stroke-[2.5]' : ''} />
+            <span className="text-[10px] font-bold tracking-tight">Nilai</span>
           </button>
 
           <button 
             type="button"
             onClick={() => setActiveTab('LESSON')}
-            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[48px] px-2 py-1 rounded-lg transition-all ${
-              activeTab === 'LESSON' ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-800'
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[46px] min-w-[50px] px-2 py-1 rounded-xl transition-all ${
+              activeTab === 'LESSON' ? 'text-indigo-600 font-bold bg-indigo-50/60' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <GraduationCap size={19} className={activeTab === 'LESSON' ? 'scale-105' : ''} />
-            <span className="text-[10px] font-bold">Pelajaran</span>
+            <GraduationCap size={19} className={activeTab === 'LESSON' ? 'scale-105 stroke-[2.5]' : ''} />
+            <span className="text-[10px] font-bold tracking-tight">Pelajaran</span>
           </button>
 
           <button 
             type="button"
             onClick={() => setActiveTab('ATTENDANCE')}
-            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[48px] px-2 py-1 rounded-lg transition-all ${
-              activeTab === 'ATTENDANCE' ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-800'
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[46px] min-w-[50px] px-2 py-1 rounded-xl transition-all ${
+              activeTab === 'ATTENDANCE' ? 'text-indigo-600 font-bold bg-indigo-50/60' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Calendar size={19} className={activeTab === 'ATTENDANCE' ? 'scale-105' : ''} />
-            <span className="text-[10px] font-bold">Kehadiran</span>
+            <Calendar size={19} className={activeTab === 'ATTENDANCE' ? 'scale-105 stroke-[2.5]' : ''} />
+            <span className="text-[10px] font-bold tracking-tight">Presensi</span>
           </button>
 
           <button 
             type="button"
             onClick={() => setActiveTab('ACCOUNT')}
-            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[48px] px-2 py-1 rounded-lg transition-all ${
-              activeTab === 'ACCOUNT' ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-800'
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[46px] min-w-[50px] px-2 py-1 rounded-xl transition-all ${
+              activeTab === 'ACCOUNT' ? 'text-indigo-600 font-bold bg-indigo-50/60' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <User size={19} className={activeTab === 'ACCOUNT' ? 'scale-105' : ''} />
-            <span className="text-[10px] font-bold">{isParent ? 'Data' : 'Akun'}</span>
+            <User size={19} className={activeTab === 'ACCOUNT' ? 'scale-105 stroke-[2.5]' : ''} />
+            <span className="text-[10px] font-bold tracking-tight">{isParent ? 'Data' : 'Akun'}</span>
           </button>
         </nav>
 
