@@ -76,6 +76,17 @@ interface GradeMasterContextType {
   logout: () => void;
 }
 
+/**
+ * Automatically computes the active Indonesian academic year (July to June).
+ * e.g., Sept 2026 -> "2026/2027", Feb 2026 -> "2025/2026".
+ */
+export function getCurrentAcademicYear(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0 = Jan, 6 = July
+  return month >= 6 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
+}
+
 export const GradeMasterContext = createContext<GradeMasterContextType | undefined>(undefined);
 
 export function GradeMasterProvider({ children }: { children: ReactNode }) {
@@ -88,7 +99,13 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ToastType | null>(null);
   const [modal, setModal] = useState<ModalType>(null);
   const [studentClass, setStudentClass] = useState("");
-  const [academicYear, setAcademicYear] = useState("2025/2026");
+  const [academicYear, setAcademicYear] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const saved = safeLocalStorage.getItem("gm_academicYear");
+      if (saved) return saved;
+    }
+    return getCurrentAcademicYear();
+  });
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const lastUserEmailRef = useRef<string | null>(null);
@@ -119,7 +136,8 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     ];
 
     const savedClass = safeLocalStorage.getItem('gm_studentClass');
-    const savedYear = safeLocalStorage.getItem('gm_academicYear') || "2025/2026";
+    const defaultYear = getCurrentAcademicYear();
+    const savedYear = safeLocalStorage.getItem('gm_academicYear') || defaultYear;
 
     queueMicrotask(() => {
       if (savedClass) setStudentClass(savedClass);

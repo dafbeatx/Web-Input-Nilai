@@ -72,7 +72,15 @@ export default function HomeLayer(props: HomeLayerProps) {
   const [behaviorSummary, setBehaviorSummary] = useState<Record<string, { count: number; avgPoints: number }>>({});
 
   // AI Chat states and context
-  const { setLayer, setStudentClass, studentClass } = useGradeMaster();
+  const { setLayer, setStudentClass, studentClass, academicYear, setAcademicYear } = useGradeMaster();
+
+  const predefinedYears = useMemo(() => {
+    const baseYears = ['2024/2025', '2025/2026', '2026/2027', '2027/2028'];
+    if (academicYear && !baseYears.includes(academicYear)) {
+      return [...baseYears, academicYear].sort();
+    }
+    return baseYears;
+  }, [academicYear]);
 
   interface ChatMessage {
     id: string;
@@ -369,19 +377,26 @@ export default function HomeLayer(props: HomeLayerProps) {
   const classGroups = useMemo(() => {
     const map: Record<string, ClassGroup> = {};
     for (const s of sessions) {
-      const key = `${s.class_name || 'Umum'}__${s.academic_year || '2025/2026'}`;
+      const year = s.academic_year || academicYear || '2026/2027';
+      const key = `${s.class_name || 'Umum'}__${year}`;
       if (!map[key]) {
         map[key] = {
           className: s.class_name || 'Umum',
-          academicYear: s.academic_year || '2025/2026',
+          academicYear: year,
           schoolLevel: s.school_level || 'SMP',
           sessions: [],
         };
       }
       map[key].sessions.push(s);
     }
-    return Object.values(map).sort((a, b) => a.className.localeCompare(b.className));
-  }, [sessions]);
+    return Object.values(map).sort((a, b) => {
+      const aCurrent = a.academicYear === academicYear;
+      const bCurrent = b.academicYear === academicYear;
+      if (aCurrent && !bCurrent) return -1;
+      if (!aCurrent && bCurrent) return 1;
+      return a.className.localeCompare(b.className);
+    });
+  }, [sessions, academicYear]);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -456,41 +471,75 @@ export default function HomeLayer(props: HomeLayerProps) {
   return (
     <main className="flex-1 min-h-screen pt-2 md:pt-[env(safe-area-inset-top,20px)] mt-2 md:mt-24 pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-32 px-2 sm:px-6 flex flex-col gap-4 md:gap-8 max-w-7xl mx-auto w-full animate-in fade-in transition-all duration-300">
       
-      {/* Personalized Identity Section */}
+      {/* Personalized Identity Section with Academic Year */}
       {!expandedGroup && (
-        <section className="mb-2 animate-in slide-in-from-top-4 duration-700 hidden md:block">
-          <div className="bg-surface-container-low p-5 rounded-[2rem] border border-outline-variant/10 flex items-center gap-4 relative overflow-hidden premium-shadow">
-             <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
+        <section className="mb-2 sm:mb-3 animate-in slide-in-from-top-4 duration-700 block">
+          <div className="bg-surface-container-low p-4 sm:p-5 rounded-2xl sm:rounded-[2rem] border border-outline-variant/10 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 sm:gap-4 relative overflow-hidden premium-shadow">
+             <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+               <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
+                 {isAdmin ? (
+                   <span className="material-symbols-outlined text-2xl">shield_person</span>
+                 ) : (
+                   <span className="material-symbols-outlined text-2xl">person_pin</span>
+                 )}
+               </div>
+               <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant/60 leading-none mb-1.5">
+                    {isAdmin ? 'Admin / Guru' : 'Siswa Terverifikasi'}
+                  </p>
+                  <h2 className="text-base sm:text-lg font-black text-on-surface truncate tracking-tight leading-none">
+                    {userData.name || (isAdmin ? 'Guru GradeMaster' : 'Siswa')}
+                  </h2>
+                  <div className="flex items-center gap-2 mt-2">
+                     <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 bg-surface-container text-on-surface-variant rounded-md">
+                       {isAdmin ? (userData.subject || 'Sistem') : (`Kelas ${userData.class_name || '-'}`)}
+                     </span>
+                     {isStudent && (
+                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                     )}
+                  </div>
+               </div>
+             </div>
+
+             {/* Academic Year Control for Admin & Badge for Students */}
+             <div className="flex flex-col items-end shrink-0 z-10 pl-2">
+               <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-on-surface-variant/70 flex items-center gap-1 mb-1">
+                 <span className="material-symbols-outlined text-[13px] text-primary">calendar_month</span>
+                 Tahun Ajaran
+               </span>
                {isAdmin ? (
-                 <span className="material-symbols-outlined text-2xl">shield_person</span>
+                 <div className="relative">
+                   <select
+                     value={academicYear}
+                     onChange={(e) => setAcademicYear(e.target.value)}
+                     className="appearance-none bg-surface-container hover:bg-surface-container-high text-primary font-black text-xs sm:text-sm px-3 py-1.5 pr-8 rounded-xl border border-primary/20 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all cursor-pointer"
+                     title="Pilih Tahun Ajaran Aktif"
+                   >
+                     {predefinedYears.map((year) => (
+                       <option key={year} value={year} className="bg-surface-container text-on-surface font-bold">
+                         {year}
+                       </option>
+                     ))}
+                   </select>
+                   <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-sm text-primary pointer-events-none">
+                     expand_more
+                   </span>
+                 </div>
                ) : (
-                 <span className="material-symbols-outlined text-2xl">person_pin</span>
+                 <span className="text-xs sm:text-sm font-black text-primary px-3 py-1.5 bg-primary/10 rounded-xl border border-primary/20">
+                   {academicYear}
+                 </span>
                )}
              </div>
-             <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant/60 leading-none mb-1.5">
-                  {isAdmin ? 'Admin / Guru' : 'Siswa Terverifikasi'}
-                </p>
-                <h2 className="text-lg font-black text-on-surface truncate tracking-tight leading-none">
-                  {userData.name || (isAdmin ? 'Guru GradeMaster' : 'Siswa')}
-                </h2>
-                <div className="flex items-center gap-2 mt-2">
-                   <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 bg-surface-container text-on-surface-variant rounded-md">
-                     {isAdmin ? (userData.subject || 'Sistem') : (`Kelas ${userData.class_name || '-'}`)}
-                   </span>
-                   {isStudent && (
-                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                   )}
-                </div>
-             </div>
+
              {/* Abstract Decor */}
-             <div className="absolute -right-6 -top-6 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
+             <div className="absolute -right-6 -top-6 w-24 h-24 bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
           </div>
         </section>
       )}
 
       {/* Header Section */}
-      <header className="flex flex-col">
+      <header className="flex flex-col mb-2">
         {expandedGroup ? (
           <div className="flex flex-col gap-4">
             <p className="text-xs font-semibold tracking-widest text-on-surface-variant uppercase border-t border-surface-container-high pt-4 inline-block">
@@ -503,25 +552,57 @@ export default function HomeLayer(props: HomeLayerProps) {
               >
                 <span className="material-symbols-outlined text-on-surface text-xl">arrow_back</span>
               </button>
-              <h1 className="font-headline text-4xl font-bold text-on-primary-fixed tracking-[-0.04em]">Kelas {expandedGroup.className}</h1>
+              <h1 className="font-headline text-3xl sm:text-4xl font-bold text-on-primary-fixed tracking-[-0.04em]">Kelas {expandedGroup.className}</h1>
             </div>
-            <p className="text-on-surface-variant text-base leading-relaxed">Daftar sesi evaluasi dan ujian yang aktif untuk kelas ini.</p>
+            <p className="text-on-surface-variant text-sm sm:text-base leading-relaxed">Daftar sesi evaluasi dan ujian yang aktif untuk kelas ini.</p>
           </div>
         ) : (
-          <div className="hidden md:flex flex-col">
-            <div className="flex items-start justify-between mb-3">
-              <h1 className="text-4xl font-headline font-bold text-on-primary-fixed tracking-[-0.04em]">Dashboard Utama</h1>
+          <div className="flex flex-col">
+            <div className="flex items-start sm:items-center justify-between gap-3 mb-2">
+              <div>
+                <h1 className="text-2xl sm:text-4xl font-headline font-bold text-on-primary-fixed tracking-[-0.04em]">
+                  Dashboard Utama
+                </h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs font-semibold text-on-surface-variant flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm text-primary">event_available</span>
+                    Tahun Ajaran Aktif:
+                  </span>
+                  {isAdmin ? (
+                    <div className="relative inline-flex items-center">
+                      <select
+                        value={academicYear}
+                        onChange={(e) => setAcademicYear(e.target.value)}
+                        className="bg-primary/10 text-primary border border-primary/25 hover:bg-primary/20 text-xs font-black px-2.5 py-0.5 pr-6 rounded-lg cursor-pointer outline-none focus:ring-2 focus:ring-primary/30 transition-all appearance-none"
+                      >
+                        {predefinedYears.map((year) => (
+                          <option key={year} value={year} className="bg-surface-container text-on-surface font-semibold">
+                            {year}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="material-symbols-outlined absolute right-1 text-xs text-primary pointer-events-none">
+                        expand_more
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-xs font-extrabold text-primary px-2 py-0.5 bg-primary/10 rounded-md">
+                      {academicYear}
+                    </span>
+                  )}
+                </div>
+              </div>
               {isAdmin && (
                 <button 
                   onClick={onCreateNew}
-                  className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-surface-container-lowest shrink-0 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-primary flex items-center justify-center text-surface-container-lowest shrink-0 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
                   title="Buat Sesi Kelas Baru"
                 >
-                  <span className="material-symbols-outlined" style={{ fontVariationSettings: "'wght' 600" }}>add</span>
+                  <span className="material-symbols-outlined text-xl sm:text-2xl" style={{ fontVariationSettings: "'wght' 600" }}>add</span>
                 </button>
               )}
             </div>
-            <p className="text-on-surface-variant text-base leading-relaxed w-[85%]">
+            <p className="text-on-surface-variant text-xs sm:text-base leading-relaxed max-w-2xl">
               Gunakan asisten AI Navigator di bawah ini untuk berpindah halaman secara cerdas, atau pilih kelas secara manual.
             </p>
           </div>
@@ -638,7 +719,12 @@ export default function HomeLayer(props: HomeLayerProps) {
                 <span className="material-symbols-outlined text-on-surface text-xl">arrow_back</span>
               </button>
               <div>
-                <h2 className="font-headline text-2xl font-bold text-on-surface">Daftar Kelas Tradisional</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-headline text-2xl font-bold text-on-surface">Daftar Kelas Tradisional</h2>
+                  <span className="px-2.5 py-0.5 rounded-lg bg-primary/10 text-primary text-xs font-black">
+                    TA {academicYear}
+                  </span>
+                </div>
                 <p className="text-xs text-on-surface-variant leading-none mt-1">Pilih kelas di bawah ini untuk melihat sesi evaluasi & presensi secara manual.</p>
               </div>
             </div>
@@ -681,9 +767,14 @@ export default function HomeLayer(props: HomeLayerProps) {
                         <span className="material-symbols-outlined text-on-surface-variant/40" style={{ fontSize: '20px' }}>person</span>
                       )}
                     </div>
-                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest bg-surface-container-low px-3 py-1.5 rounded-full border border-outline-variant/5">
-                      {g.schoolLevel}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest bg-surface-container-low px-2.5 py-1 rounded-full border border-outline-variant/5">
+                        {g.schoolLevel}
+                      </span>
+                      <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full border ${g.academicYear === academicYear ? 'bg-primary/10 text-primary border-primary/25' : 'bg-surface-container text-on-surface-variant/70 border-outline-variant/5'}`}>
+                        TA {g.academicYear}
+                      </span>
+                    </div>
                   </div>
                   
                   <div className="flex justify-between items-end relative z-10 border-t border-surface-container-low pt-4">
@@ -741,6 +832,23 @@ export default function HomeLayer(props: HomeLayerProps) {
               </div>
               
               <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <div className="flex items-center gap-1 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 rounded-xl border border-white/10 text-xs text-slate-200 transition-all">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">TA:</span>
+                    <select
+                      value={academicYear}
+                      onChange={(e) => setAcademicYear(e.target.value)}
+                      className="bg-transparent text-xs font-black text-sky-400 outline-none cursor-pointer"
+                      title="Pilih Tahun Ajaran"
+                    >
+                      {predefinedYears.map((year) => (
+                        <option key={year} value={year} className="bg-slate-900 text-white font-bold">
+                          {year}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <button
                   onClick={() => savePreference('traditional')}
                   className="px-3.5 py-2 bg-white/5 hover:bg-white/10 text-slate-200 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 border border-white/5"

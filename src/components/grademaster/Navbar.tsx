@@ -37,7 +37,8 @@ export default function Navbar() {
     layer, 
     setLayer: onNavigate, 
     logout: onLogout, 
-    setModal 
+    setModal,
+    academicYear 
   } = useGradeMaster();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -214,7 +215,12 @@ export default function Navbar() {
                         <CheckCircle2 size={16} />
                      </div>
                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Admin</p>
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Admin</p>
+                          <span className="text-[9px] font-black text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
+                            {academicYear}
+                          </span>
+                        </div>
                         <p className="text-sm font-black text-on-surface truncate leading-tight">{adminUser || 'Admin'}</p>
                      </div>
                   </div>
@@ -463,7 +469,12 @@ export default function Navbar() {
                       <CheckCircle2 size={22} className="text-secondary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Administrator</p>
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Administrator</p>
+                        <span className="text-[9px] font-black text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
+                          TA {academicYear}
+                        </span>
+                      </div>
                       <p className="text-sm font-extrabold text-on-surface truncate mt-0.5">{adminUser || 'Admin'}</p>
                     </div>
                   </div>

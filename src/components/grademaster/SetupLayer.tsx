@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   GraduationCap,
   FolderOpen,
@@ -63,7 +63,7 @@ export default function SetupLayer(props: SetupLayerProps) {
     studentClass, setStudentClass,
     schoolLevel, setSchoolLevel,
     keyInput, setKeyInput,
-    studentList, setStudentList,
+    setStudentList,
     examType, setExamType,
     academicYear, setAcademicYear,
     semester, setSemester,
@@ -77,7 +77,7 @@ export default function SetupLayer(props: SetupLayerProps) {
   const [smaClasses, setSmaClasses] = useState<string[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
 
-  const PREDEFINED_SUBJECTS = [
+  const PREDEFINED_SUBJECTS = useMemo(() => [
     "Informatika",
     "Matematika",
     "IPA",
@@ -89,65 +89,53 @@ export default function SetupLayer(props: SetupLayerProps) {
     "PJOK",
     "Seni Budaya",
     "PKn"
-  ];
+  ], []);
 
-  const [isCustomSubject, setIsCustomSubject] = useState(() => {
-    return subject !== "" && !PREDEFINED_SUBJECTS.includes(subject);
-  });
-
-  useEffect(() => {
-    if (subject !== "" && !PREDEFINED_SUBJECTS.includes(subject)) {
-      setIsCustomSubject(true);
-    } else if (subject === "") {
-      // Keep custom input visible if user clears the custom subject value while editing/typing
-    } else {
-      setIsCustomSubject(false);
-    }
-  }, [subject]);
+  const [manualCustomSubject, setManualCustomSubject] = useState(false);
+  const isCustomSubject = manualCustomSubject || (subject !== "" && !PREDEFINED_SUBJECTS.includes(subject));
 
   const handleSubjectChange = (val: string) => {
     if (val === "__custom__") {
-      setIsCustomSubject(true);
+      setManualCustomSubject(true);
       setSubject("");
     } else {
-      setIsCustomSubject(false);
+      setManualCustomSubject(false);
       setSubject(val);
     }
   };
 
-  const PREDEFINED_YEARS = ["2024/2025", "2025/2026", "2026/2027"];
-  const [isCustomYear, setIsCustomYear] = useState(() => {
-    return academicYear !== "" && !PREDEFINED_YEARS.includes(academicYear);
-  });
-
-  useEffect(() => {
-    if (academicYear !== "" && !PREDEFINED_YEARS.includes(academicYear)) {
-      setIsCustomYear(true);
-    } else if (academicYear === "") {
-      // Keep custom input visible if user clears
-    } else {
-      setIsCustomYear(false);
-    }
-  }, [academicYear]);
+  const PREDEFINED_YEARS = useMemo(() => ["2024/2025", "2025/2026", "2026/2027", "2027/2028"], []);
+  const [manualCustomYear, setManualCustomYear] = useState(false);
+  const isCustomYear = manualCustomYear || (academicYear !== "" && !PREDEFINED_YEARS.includes(academicYear));
 
   const handleYearChange = (val: string) => {
     if (val === "__custom__") {
-      setIsCustomYear(true);
+      setManualCustomYear(true);
       setAcademicYear("");
     } else {
-      setIsCustomYear(false);
+      setManualCustomYear(false);
       setAcademicYear(val);
     }
   };
 
   useEffect(() => {
     if (schoolLevel !== 'SMA') return;
-    setIsLoadingClasses(true);
+    let isCurrent = true;
     fetch(`/api/grademaster/behaviors?year=${encodeURIComponent(academicYear)}`)
       .then(res => res.json())
-      .then(data => setSmaClasses(data.classes || []))
-      .catch(() => setSmaClasses([]))
-      .finally(() => setIsLoadingClasses(false));
+      .then(data => {
+        if (isCurrent) setSmaClasses(data.classes || []);
+      })
+      .catch(() => {
+        if (isCurrent) setSmaClasses([]);
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoadingClasses(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
   }, [schoolLevel, academicYear]);
 
   useEffect(() => {
@@ -175,7 +163,7 @@ export default function SetupLayer(props: SetupLayerProps) {
       const res = await fetch(`/api/grademaster/behaviors?class=${encodeURIComponent(studentClass)}&year=${encodeURIComponent(academicYear)}`);
       const data = await res.json();
       
-      let students = data.students?.map((s: any) => s.student_name) || [];
+      let students = (data.students || []).map((s: { student_name: string }) => s.student_name);
       if (students.length === 0) {
         setToast({ message: `Peringatan: Tidak ada data siswa di kelas ${studentClass} tahun ${academicYear}. Harap isi di menu Kehadiran & Perilaku.`, type: 'error' });
       } else {
@@ -212,7 +200,8 @@ export default function SetupLayer(props: SetupLayerProps) {
 
       setStudentList(students);
       onSubmit();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      console.error('Submit setup error:', err);
       setToast({ message: 'Gagal memuat sinkronisasi data siswa otomatis', type: 'error' });
       onSubmit(); 
     }
@@ -354,6 +343,7 @@ export default function SetupLayer(props: SetupLayerProps) {
                       <option value="2024/2025">2024/2025</option>
                       <option value="2025/2026">2025/2026</option>
                       <option value="2026/2027">2026/2027</option>
+                      <option value="2027/2028">2027/2028</option>
                       <option value="__custom__">-- Ketik Manual (Lainnya) --</option>
                     </select>
                     {isCustomYear && (
