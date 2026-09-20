@@ -1402,25 +1402,25 @@ export default function StudentProfileLayer({
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-100/50 flex justify-center z-[1000] font-sans antialiased text-slate-800 selection:bg-indigo-500/10">
-      <div className="w-full max-w-md bg-slate-50 flex flex-col relative h-full shadow-[0_0_40px_rgba(0,0,0,0.06)] border-x border-slate-200/50 overflow-hidden">
+    <div className="fixed inset-0 bg-slate-100/70 flex justify-center z-[1000] font-sans antialiased text-slate-800 selection:bg-indigo-500/10">
+      <div className="w-full max-w-md md:max-w-4xl lg:max-w-5xl bg-slate-50 flex flex-col relative h-full shadow-lg md:border-x border-slate-200/80 overflow-hidden">
         
         {/* Top AppBar */}
         {activeTab !== 'LESSON' && (
-          <header className="sticky top-0 w-full z-40 bg-white flex items-center justify-between px-4 pt-safe pb-2.5 border-b border-slate-100 shrink-0">
+          <header className="sticky top-0 w-full z-40 bg-white flex items-center justify-between px-4 sm:px-6 pt-safe pb-3 border-b border-slate-200/80 shrink-0">
           {activeTab === 'HOME' ? (
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               {isAdmin && (
                 <button 
                   onClick={onBack}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 transition-all text-slate-600 active:scale-95 border border-slate-100 shrink-0"
+                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 transition-all text-slate-600 active:scale-95 border border-slate-200 shrink-0"
                 >
                   <ArrowLeft size={14} />
                 </button>
               )}
-              <div className={`w-8 h-8 rounded-full border text-slate-700 flex items-center justify-center text-[10px] font-black tracking-tight shrink-0 overflow-hidden ${
+              <div className={`w-9 h-9 rounded-full border text-slate-700 flex items-center justify-center text-xs font-black tracking-tight shrink-0 overflow-hidden ${
                 isEmojiAvatar(currentAvatarUrl) 
-                  ? `bg-gradient-to-br ${getGradientForEmoji(currentAvatarUrl)} text-white border-white/20 text-[14px]` 
+                  ? `bg-gradient-to-br ${getGradientForEmoji(currentAvatarUrl)} text-white border-white/20 text-base` 
                   : 'bg-slate-100 border-slate-200'
               }`}>
                 {currentAvatarUrl ? (
@@ -1434,9 +1434,14 @@ export default function StudentProfileLayer({
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="text-slate-800 font-extrabold text-[11.5px] tracking-tight leading-tight uppercase font-outfit truncate">
-                  {studentName} <span className="text-indigo-650 font-bold text-[9.5px] tracking-normal normal-case">({activeClass})</span>
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-slate-900 font-extrabold text-xs sm:text-sm tracking-tight leading-tight uppercase font-outfit truncate">
+                    {studentName}
+                  </h2>
+                  <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                    {isParent ? 'Wali Murid' : 'Siswa'}
+                  </span>
+                </div>
                 {studentSummary?.enrollmentHistory && studentSummary.enrollmentHistory.length > 1 ? (
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <select
@@ -1446,7 +1451,7 @@ export default function StudentProfileLayer({
                         setActiveClass(cls);
                         setActiveYear(yr);
                       }}
-                      className="bg-indigo-50 border border-indigo-100/60 rounded-lg px-2 py-0.5 text-[9px] font-bold text-indigo-700 outline-none cursor-pointer hover:bg-indigo-100/50 transition-all font-outfit"
+                      className="bg-indigo-50 border border-indigo-100/80 rounded-lg px-2 py-0.5 text-[10px] font-bold text-indigo-700 outline-none cursor-pointer hover:bg-indigo-100 transition-all font-outfit"
                     >
                       {studentSummary.enrollmentHistory.map((h: any, i: number) => (
                         <option key={i} value={`${h.class_name}|${h.academic_year}`} className="bg-white text-slate-700">
@@ -1456,7 +1461,9 @@ export default function StudentProfileLayer({
                     </select>
                   </div>
                 ) : (
-                  <p className="text-slate-400 text-[8px] font-bold uppercase tracking-wider leading-none mt-0.5">Tahun Ajaran {activeYear}</p>
+                  <p className="text-slate-500 text-[10px] font-semibold tracking-wide leading-none mt-0.5">
+                    Kelas {activeClass} • Tahun Ajaran {activeYear}
+                  </p>
                 )}
               </div>
             </div>
@@ -1464,19 +1471,66 @@ export default function StudentProfileLayer({
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <button 
                 onClick={() => setActiveTab('HOME')}
-                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 transition-all text-slate-600 active:scale-95 border border-slate-100 shrink-0"
+                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 transition-all text-slate-600 active:scale-95 border border-slate-200 shrink-0"
               >
                 <ArrowLeft size={14} />
               </button>
-              <h2 className="font-extrabold text-[12px] uppercase tracking-wider text-slate-850 font-outfit">
+              <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900 font-outfit">
                 {activeTab === 'GRADES' && "Nilai Akademik"}
                 {activeTab === 'ATTENDANCE' && "Kehadiran Siswa"}
-                {activeTab === 'ACCOUNT' && "Berkas & Profil"}
+                {activeTab === 'ACCOUNT' && (isParent ? "Data Ananda & Rapor" : "Berkas & Profil")}
               </h2>
             </div>
           )}
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          {/* Desktop Navigation Tabs (Hidden on mobile) */}
+          <div className="hidden md:flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/70 mx-4">
+            <button
+              type="button"
+              onClick={() => setActiveTab('HOME')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'HOME' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Beranda
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('GRADES')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'GRADES' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Nilai Akademik
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('LESSON')}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900"
+            >
+              Pelajaran
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('ATTENDANCE')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'ATTENDANCE' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Kehadiran
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('ACCOUNT')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'ACCOUNT' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              {isParent ? 'Data & Rapor' : 'Akun'}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={async () => {
                 setIsRefreshingProfile(true);
@@ -1490,50 +1544,67 @@ export default function StudentProfileLayer({
                 setIsRefreshingProfile(false);
               }}
               disabled={isRefreshingProfile}
-              className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all active:scale-95 border border-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all active:scale-95 border border-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
               title="Sinkronisasi Data"
             >
               {isRefreshingProfile ? (
-                <Loader2 size={16} className="animate-spin text-indigo-500" />
+                <Loader2 size={16} className="animate-spin text-indigo-600" />
               ) : (
                 <span className="material-symbols-outlined text-[16px]">sync</span>
               )}
             </button>
+
+            {onLogout && (
+              <button
+                type="button"
+                onClick={onLogout}
+                className="px-2.5 py-1.5 text-xs font-bold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-xl transition-all flex items-center gap-1 min-h-[32px]"
+                title="Keluar dari Portal"
+              >
+                <LogOut size={14} />
+                <span className="hidden sm:inline">Keluar</span>
+              </button>
+            )}
           </div>
         </header>
         )}
 
         {/* Main Content Area */}
         {activeTab !== 'LESSON' ? (
-          <main className="flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar pb-24">
+          <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 no-scrollbar pb-24 md:pb-8">
             
                {activeTab === 'HOME' && (
             <div className="space-y-4 animate-in fade-in duration-300">
 
-              {/* Welcome Hero Banner with Mascot */}
-              <div className="relative bg-gradient-to-r from-slate-900 to-indigo-950 border border-slate-800 rounded-[2.2rem] p-5 overflow-hidden flex items-center justify-between gap-4 shadow-lg shadow-indigo-950/15">
-                {/* Abstract light decor */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-                <div className="absolute -left-10 -bottom-10 w-24 h-24 bg-purple-500/10 rounded-full blur-xl pointer-events-none" />
-
+              {/* Welcome Hero Banner */}
+              <div className="relative bg-slate-900 text-white border border-slate-800 rounded-2xl p-5 sm:p-6 overflow-hidden flex items-center justify-between gap-4 shadow-sm">
                 <div className="min-w-0 z-10 text-left">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/10 text-white rounded-full text-[9px] font-extrabold uppercase tracking-widest backdrop-blur-md">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Siswa Aktif
-                  </span>
-                  <h3 className="text-white font-black text-lg mt-2.5 leading-tight font-outfit truncate">
-                    Halo, {studentName.split(' ')[0]}! 👋
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/10 text-white rounded-full text-[10px] font-bold uppercase tracking-wider">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      {isParent ? 'Portal Orang Tua / Wali' : 'Siswa Aktif'}
+                    </span>
+                    <span className="text-[11px] text-slate-300 font-semibold">
+                      Kelas {activeClass} • {activeYear}
+                    </span>
+                  </div>
+                  
+                  <h3 className="text-white font-black text-lg sm:text-xl mt-2 leading-tight font-outfit truncate">
+                    {isParent ? `Perkembangan Belajar: ${studentName}` : `Halo, ${studentName.split(' ')[0]}! 👋`}
                   </h3>
-                  <p className="text-slate-300 text-[11px] font-semibold mt-1 leading-normal max-w-[210px]">
-                    Semoga hari belajarmu menyenangkan di {getSchoolName(activeClass)}.
+                  
+                  <p className="text-slate-300 text-xs sm:text-sm font-medium mt-1 leading-relaxed max-w-lg">
+                    {isParent 
+                      ? `Pantau capaian nilai ujian, kehadiran kelas, dan catatan kedisiplinan ananda di ${getSchoolName(activeClass)}.`
+                      : `Semoga hari belajarmu menyenangkan dan terus berprestasi di ${getSchoolName(activeClass)}.`}
                   </p>
                 </div>
                 
-                <div className="w-20 h-20 shrink-0 relative select-none pointer-events-none -mb-5 -mr-1">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 relative select-none pointer-events-none">
                   <img 
                     src="/mascot_hijab_idle.png" 
-                    alt="Waving Mascot" 
-                    className="w-full h-full object-contain transform scale-125 origin-bottom" 
+                    alt="Maskot" 
+                    className="w-full h-full object-contain" 
                   />
                 </div>
               </div>
@@ -1677,28 +1748,47 @@ export default function StudentProfileLayer({
                 const heldBackGrades = academicHistory.filter((g: any) => g.remedialUiState === 'REMEDIAL_SUBMITTED_HELD_BACK');
 
                 return (
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {pendingRemedials.length > 0 ? (
-                      <div className="bg-rose-50/80 border border-rose-100/50 rounded-2xl p-4 text-left flex items-start gap-3 animate-in slide-in-from-top-3 duration-300">
-                        <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-[18px]">warning</span>
+                      <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-4 text-left flex items-start justify-between gap-3 animate-in fade-in duration-200">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                            <span className="material-symbols-outlined text-[18px]">info</span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-amber-950 font-bold text-xs uppercase tracking-wider font-outfit">
+                              {isParent ? 'Pemberitahuan Remedial Ananda' : 'Ujian Belum Tuntas'}
+                            </h4>
+                            <p className="text-amber-900 text-xs sm:text-sm font-medium mt-0.5 leading-relaxed">
+                              {isParent ? (
+                                <>Ananda memiliki <strong className="font-bold">{pendingRemedials.length} mata pelajaran</strong> di bawah KKM yang memerlukan remedial.</>
+                              ) : (
+                                <>Kamu memiliki <strong className="font-bold">{pendingRemedials.length} mata pelajaran</strong> remedial. Yuk tuntaskan sekarang!</>
+                              )}
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-rose-950 font-black text-[10.5px] uppercase tracking-wider font-outfit">Ujian Belum Tuntas</h4>
-                          <p className="text-rose-800 text-[11.5px] font-semibold mt-0.5 leading-snug">
-                            Kamu memiliki <strong className="font-extrabold">{pendingRemedials.length} pelajaran</strong> remedial. Yuk selesaikan sekarang!
-                          </p>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('GRADES')}
+                          className="shrink-0 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-lg text-xs font-bold transition-all shadow-sm"
+                        >
+                          {isParent ? 'Lihat Nilai' : 'Mulai Remedial'}
+                        </button>
                       </div>
                     ) : (
-                      <div className="bg-emerald-50/80 border border-emerald-100/50 rounded-2xl p-4 text-left flex items-start gap-3 animate-in slide-in-from-top-3 duration-300">
-                        <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                      <div className="bg-emerald-50/90 border border-emerald-200 rounded-xl p-4 text-left flex items-start gap-3 animate-in fade-in duration-200">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                           <span className="material-symbols-outlined text-[18px]">check_circle</span>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h4 className="text-emerald-950 font-black text-[10.5px] uppercase tracking-wider font-outfit">Status Ujian Aman</h4>
-                          <p className="text-emerald-800 text-[11.5px] font-semibold mt-0.5 leading-snug">
-                            Keren! Semua ujianmu berada di atas KKM. Pertahankan prestasimu ya! 🎉
+                          <h4 className="text-emerald-950 font-bold text-xs uppercase tracking-wider font-outfit">
+                            {isParent ? 'Capaian Akademik Tuntas' : 'Status Ujian Aman'}
+                          </h4>
+                          <p className="text-emerald-900 text-xs sm:text-sm font-medium mt-0.5 leading-relaxed">
+                            {isParent 
+                              ? 'Alhamdulillah, seluruh nilai ujian ananda telah berada di atas batas standar KKM.' 
+                              : 'Keren! Semua ujianmu berada di atas KKM. Pertahankan prestasimu! 🎉'}
                           </p>
                         </div>
                       </div>
@@ -1707,14 +1797,16 @@ export default function StudentProfileLayer({
                     {heldBackGrades.map((g: any, idx: number) => {
                       const deadlineText = g.remedialDeadline ? formatDate(g.remedialDeadline) : 'batas waktu sesi';
                       return (
-                        <div key={idx} className="bg-amber-50/80 border border-amber-100/50 rounded-2xl p-4 text-left flex items-start gap-3 animate-in slide-in-from-top-3 duration-300">
-                          <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                        <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-left flex items-start gap-3 animate-in fade-in duration-200">
+                          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
                             <span className="material-symbols-outlined text-[18px]">pending_actions</span>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <h4 className="text-amber-950 font-black text-[10.5px] uppercase tracking-wider font-outfit">Nilai Remedial Ditahan</h4>
-                            <p className="text-amber-800 text-[11.5px] font-semibold mt-0.5 leading-snug">
-                              Jawaban remedial untuk <strong>{g.subject} ({g.sessionName})</strong> sudah dikumpulkan. Nilai final masih ditahan sementara sampai teman sekelas selesai atau sampai {deadlineText}.
+                            <h4 className="text-slate-900 font-bold text-xs uppercase tracking-wider font-outfit">
+                              {isParent ? 'Nilai Remedial Sedang Diproses' : 'Nilai Remedial Ditahan'}
+                            </h4>
+                            <p className="text-slate-700 text-xs sm:text-sm font-medium mt-0.5 leading-relaxed">
+                              Jawaban remedial untuk <strong>{g.subject} ({g.sessionName})</strong> sudah tersimpan. Nilai final akan difinalisasi setelah sesi berakhir atau sampai {deadlineText}.
                             </p>
                           </div>
                         </div>
@@ -1724,70 +1816,78 @@ export default function StudentProfileLayer({
                 );
               })()}
 
-              {/* Quick Action Grid (2x2) */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Quick Action Grid (Responsive 2 cols on mobile, 4 cols on desktop) */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {/* Tombol 1: Nilai & Remedial */}
                 <button
+                  type="button"
                   onClick={() => setActiveTab('GRADES')}
-                  className="p-4 bg-white hover:bg-slate-50/80 active:scale-98 border border-slate-100 rounded-3xl flex flex-col items-start gap-3 text-left transition-all relative shadow-[0_2px_8px_rgba(0,0,0,0.01)] group"
+                  className="p-4 bg-white hover:bg-slate-50 active:scale-[0.99] border border-slate-200/90 rounded-xl flex flex-col items-start gap-2.5 text-left transition-all relative shadow-sm group min-h-[110px]"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                  <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
                     <BookOpen size={18} />
                   </div>
                   <div>
-                    <h4 className="text-[12px] font-black text-slate-800 tracking-tight leading-none font-outfit">Nilai Ujian</h4>
-                    <p className="text-[13px] text-slate-900 font-black mt-1 font-outfit">Rata-rata: {isLoadingSummary ? <span className="inline-block w-8 h-4 bg-slate-100 rounded animate-pulse" /> : <span className="text-indigo-600">{avgScore}</span>}</p>
-                    <p className="text-[9px] text-slate-450 font-bold mt-1.5 leading-tight">Detail nilai akademik</p>
+                    <h4 className="text-xs font-bold text-slate-800 tracking-tight leading-none font-outfit">Nilai Ujian</h4>
+                    <p className="text-sm sm:text-base text-slate-900 font-black mt-1 font-outfit">
+                      {isLoadingSummary ? <span className="inline-block w-8 h-4 bg-slate-100 rounded animate-pulse" /> : <span className="text-indigo-600">{avgScore}</span>}
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-medium mt-1 leading-tight">Detail nilai akademik</p>
                   </div>
                   {!isLoadingSummary && pendingCount > 0 && (
-                    <span className="absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white ring-4 ring-white">
-                      {pendingCount}
+                    <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm">
+                      {pendingCount} Remedial
                     </span>
                   )}
                 </button>
 
                 {/* Tombol 2: Kehadiran */}
                 <button
+                  type="button"
                   onClick={() => setActiveTab('ATTENDANCE')}
-                  className="p-4 bg-white hover:bg-slate-50/80 active:scale-98 border border-slate-100 rounded-3xl flex flex-col items-start gap-3 text-left transition-all shadow-[0_2px_8px_rgba(0,0,0,0.01)] group"
+                  className="p-4 bg-white hover:bg-slate-50 active:scale-[0.99] border border-slate-200/90 rounded-xl flex flex-col items-start gap-2.5 text-left transition-all shadow-sm group min-h-[110px]"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
                     <Calendar size={18} />
                   </div>
                   <div>
-                    <h4 className="text-[12px] font-black text-slate-800 tracking-tight leading-none font-outfit">Kehadiran</h4>
-                    <p className="text-[13px] text-emerald-600 font-black mt-1 font-outfit">{attPercent}</p>
-                    <p className="text-[9px] text-slate-455 font-bold mt-1.5 leading-tight">Log kehadiran harian</p>
+                    <h4 className="text-xs font-bold text-slate-800 tracking-tight leading-none font-outfit">Kehadiran</h4>
+                    <p className="text-sm sm:text-base text-emerald-600 font-black mt-1 font-outfit">{attPercent}</p>
+                    <p className="text-[11px] text-slate-500 font-medium mt-1 leading-tight">Log kehadiran harian</p>
                   </div>
                 </button>
 
                 {/* Tombol 3: Prestasi Siswa */}
                 <button
+                  type="button"
                   onClick={() => setShowAchievementsModal(true)}
-                  className="p-4 bg-white hover:bg-slate-50/80 active:scale-98 border border-slate-100 rounded-3xl flex flex-col items-start gap-3 text-left transition-all shadow-[0_2px_8px_rgba(0,0,0,0.01)] group"
+                  className="p-4 bg-white hover:bg-slate-50 active:scale-[0.99] border border-slate-200/90 rounded-xl flex flex-col items-start gap-2.5 text-left transition-all shadow-sm group min-h-[110px]"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                  <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
                     <Trophy size={18} />
                   </div>
                   <div>
-                    <h4 className="text-[12px] font-black text-slate-800 tracking-tight leading-none font-outfit">Prestasi Siswa</h4>
-                    <p className="text-[13px] text-amber-600 font-black mt-1 font-outfit">{badgesCount} Lencana</p>
-                    <p className="text-[9px] text-slate-455 font-bold mt-1.5 leading-tight">Piala & penghargaan</p>
+                    <h4 className="text-xs font-bold text-slate-800 tracking-tight leading-none font-outfit">Prestasi Siswa</h4>
+                    <p className="text-sm sm:text-base text-amber-600 font-black mt-1 font-outfit">{badgesCount} Lencana</p>
+                    <p className="text-[11px] text-slate-500 font-medium mt-1 leading-tight">Piala & penghargaan</p>
                   </div>
                 </button>
 
                 {/* Tombol 4: Unduh Berkas */}
                 <button
+                  type="button"
                   onClick={() => setActiveTab('ACCOUNT')}
-                  className="p-4 bg-white hover:bg-slate-50/80 active:scale-98 border border-slate-100 rounded-3xl flex flex-col items-start gap-3 text-left transition-all shadow-[0_2px_8px_rgba(0,0,0,0.01)] group"
+                  className="p-4 bg-white hover:bg-slate-50 active:scale-[0.99] border border-slate-200/90 rounded-xl flex flex-col items-start gap-2.5 text-left transition-all shadow-sm group min-h-[110px]"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                  <div className="w-9 h-9 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
                     <FileText size={18} />
                   </div>
                   <div>
-                    <h4 className="text-[12px] font-black text-slate-800 tracking-tight leading-none font-outfit">Unduh Berkas</h4>
-                    <p className="text-[13px] text-sky-600 font-black mt-1 font-outfit">{docsCount} Dokumen</p>
-                    <p className="text-[9px] text-slate-455 font-bold mt-1.5 leading-tight">Rapor & sertifikat</p>
+                    <h4 className="text-xs font-bold text-slate-800 tracking-tight leading-none font-outfit">
+                      {isParent ? 'Rapor & Berkas' : 'Unduh Berkas'}
+                    </h4>
+                    <p className="text-sm sm:text-base text-sky-600 font-black mt-1 font-outfit">{docsCount} Dokumen</p>
+                    <p className="text-[11px] text-slate-500 font-medium mt-1 leading-tight">Rapor & sertifikat resmi</p>
                   </div>
                 </button>
               </div>
@@ -1860,7 +1960,7 @@ export default function StudentProfileLayer({
             const passPercent = totalExams > 0 ? Math.round((passedExams / totalExams) * 100) : 0;
             const highestScore = totalExams > 0 ? Math.max(...academicHistory.map((g: any) => Number(g.score || 0))) : 0;
             
-            let bestSubject = "—";
+            let bestSubject = "-";
             if (totalExams > 0) {
               const subjectsMap: Record<string, number[]> = {};
               academicHistory.forEach((g: any) => {
@@ -1884,7 +1984,7 @@ export default function StudentProfileLayer({
                 {isLoadingSummary ? (
                   <div className="grid grid-cols-3 gap-2.5">
                     {[1, 2, 3].map((i) => (
-                      <div key={i} className="bg-white border border-slate-100 rounded-2xl p-3 text-center shadow-sm animate-pulse space-y-2">
+                      <div key={i} className="bg-white border border-slate-200/80 rounded-xl p-3 text-center shadow-sm animate-pulse space-y-2">
                         <div className="h-2.5 bg-slate-100 rounded w-10 mx-auto" />
                         <div className="h-6 bg-slate-100 rounded w-12 mx-auto" />
                       </div>
@@ -1892,37 +1992,37 @@ export default function StudentProfileLayer({
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2.5">
-                    <div className="bg-white border border-slate-100 rounded-2xl p-3 text-center shadow-sm">
-                      <p className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">Rata-Rata</p>
-                      <p className="text-xl font-black text-indigo-600 font-outfit mt-1">{avgScore.toFixed(1)}</p>
+                    <div className="bg-white border border-slate-200/80 rounded-xl p-3 text-center shadow-sm">
+                      <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Rata-Rata</p>
+                      <p className="text-xl sm:text-2xl font-black text-indigo-600 font-outfit mt-1">{avgScore.toFixed(1)}</p>
                     </div>
-                    <div className="bg-white border border-slate-100 rounded-2xl p-3 text-center shadow-sm">
-                      <p className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">Tuntas</p>
-                      <p className="text-xl font-black text-emerald-600 font-outfit mt-1">{passPercent}%</p>
+                    <div className="bg-white border border-slate-200/80 rounded-xl p-3 text-center shadow-sm">
+                      <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Tuntas</p>
+                      <p className="text-xl sm:text-2xl font-black text-emerald-600 font-outfit mt-1">{passPercent}%</p>
                     </div>
-                    <div className="bg-white border border-slate-100 rounded-2xl p-3 text-center shadow-sm">
-                      <p className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">Nilai Tertinggi</p>
-                      <p className="text-xl font-black text-amber-500 font-outfit mt-1">{highestScore}</p>
+                    <div className="bg-white border border-slate-200/80 rounded-xl p-3 text-center shadow-sm">
+                      <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Tertinggi</p>
+                      <p className="text-xl sm:text-2xl font-black text-amber-600 font-outfit mt-1">{highestScore}</p>
                     </div>
                   </div>
                 )}
 
                 {/* Grafik Perkembangan Nilai */}
                 {isLoadingSummary ? (
-                  <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-sm animate-pulse">
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm animate-pulse">
                     <div className="h-3 bg-slate-100 rounded w-36 mb-4" />
-                    <div className="h-[160px] bg-slate-50/50 rounded-2xl" />
+                    <div className="h-[160px] bg-slate-50/50 rounded-xl" />
                   </div>
                 ) : (
                   isMounted && totalExams >= 1 && (
-                    <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-sm">
-                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                        <TrendingUp size={12} className="text-indigo-500" /> Tren Perkembangan Nilai
+                    <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                        <TrendingUp size={14} className="text-indigo-600" /> Tren Perkembangan Nilai
                       </h4>
                       <div className="h-[160px] w-full">
                         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                           <LineChart data={chartData} margin={CHART_MARGIN}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" vertical={false} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={CHART_TICK_STYLE} />
                             <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={CHART_TICK_STYLE} />
                             <Tooltip 
@@ -1938,52 +2038,56 @@ export default function StudentProfileLayer({
                 )}
 
                 {/* Kesimpulan Ringkas */}
-                <div className="bg-indigo-50/50 border border-indigo-100/50 rounded-2xl p-3.5">
-                  <p className="text-[11px] font-semibold text-indigo-900 leading-relaxed">
+                <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-xl p-4">
+                  <p className="text-xs sm:text-sm font-semibold text-indigo-950 leading-relaxed">
                     {totalExams === 0 
                       ? "Belum ada riwayat ujian yang tercatat pada sistem." 
-                      : `Siswa memperoleh rata-rata nilai sebesar ${avgScore.toFixed(1)} dari total ${totalExams} sesi ujian. Pelajaran dengan capaian terbaik diraih pada bidang ${bestSubject} dengan skor tertinggi ${highestScore}.`
+                      : isParent 
+                        ? `Ananda memperoleh rata-rata nilai sebesar ${avgScore.toFixed(1)} dari total ${totalExams} sesi ujian. Capaian terbaik diraih pada mata pelajaran ${bestSubject} dengan nilai ${highestScore}.`
+                        : `Kamu memperoleh rata-rata nilai sebesar ${avgScore.toFixed(1)} dari total ${totalExams} sesi ujian. Capaian terbaikmu diraih pada mata pelajaran ${bestSubject} dengan nilai ${highestScore}.`
                     }
                   </p>
                 </div>
 
                 {/* List Sesi Ujian */}
-                <div className="space-y-2">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Riwayat Sesi Ujian</h4>
+                <div className="space-y-2.5">
+                  <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider px-1">Riwayat Sesi Ujian</h4>
                   
                   {isLoadingSummary ? (
-                    <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-400 bg-white border border-slate-100 rounded-3xl">
-                      <Loader2 size={24} className="animate-spin text-indigo-500" />
-                      <p className="text-[10px] font-bold uppercase tracking-wider">Memuat Ujian...</p>
+                    <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-500 bg-white border border-slate-200/80 rounded-2xl">
+                      <Loader2 size={24} className="animate-spin text-indigo-600" />
+                      <p className="text-xs font-bold uppercase tracking-wider">Memuat Ujian...</p>
                     </div>
                   ) : academicHistory.length === 0 ? (
-                    <div className="py-16 text-center bg-white border border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center px-4">
-                      <span className="material-symbols-outlined text-[28px] text-slate-350">import_contacts</span>
-                      <p className="text-[11px] font-bold text-slate-400 uppercase mt-2">Tidak ada data ujian</p>
+                    <div className="py-12 text-center bg-white border border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center px-4">
+                      <span className="material-symbols-outlined text-[28px] text-slate-400">import_contacts</span>
+                      <p className="text-xs font-bold text-slate-500 uppercase mt-2">Belum ada catatan ujian</p>
                     </div>
                   ) : (
-                    <div className="space-y-2.5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {academicHistory.map((grade: any, idx: number) => {
                         const isPassing = grade.isPassing;
                         return (
-                          <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-100/80 shadow-[0_2px_8px_rgba(0,0,0,0.01)] flex items-center justify-between transition-all hover:border-slate-200">
-                            <div className="min-w-0 flex-1 pr-3">
-                              <h4 className="text-slate-800 font-extrabold text-[12.5px] uppercase tracking-tight truncate leading-tight">{grade.sessionName}</h4>
-                              <p className="text-[9.5px] font-bold text-slate-400 uppercase mt-1 tracking-wide truncate">
+                          <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3 transition-all hover:border-slate-300">
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-slate-900 font-extrabold text-xs sm:text-sm truncate leading-tight">
+                                {grade.sessionName}
+                              </h4>
+                              <p className="text-xs font-medium text-slate-500 mt-1 truncate">
                                 {grade.subject} • {formatDate(grade.date)}
                               </p>
                               
                               {/* Display remedial status text/message */}
                               {grade.remedialMessage && (
                                 <div className="mt-1.5 flex items-center">
-                                  <span className={`text-[8.5px] font-bold px-2 py-0.5 rounded-full ${
-                                    grade.remedialUiState === 'REMEDIAL_SUBMITTED_HELD_BACK' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                                    grade.remedialUiState === 'FAILED_EFFORT' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
-                                    grade.remedialUiState === 'CHEATED' ? 'bg-rose-100 text-rose-800 border border-rose-200' :
-                                    grade.remedialUiState === 'TIME_UP' ? 'bg-slate-50 text-slate-600 border border-slate-100' :
-                                    grade.remedialUiState === 'PASSING' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                                    grade.remedialUiState === 'DEADLINE_PASSED' ? 'bg-slate-100 text-slate-500 border border-slate-200' :
-                                    'bg-slate-50 text-slate-500'
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                                    grade.remedialUiState === 'REMEDIAL_SUBMITTED_HELD_BACK' ? 'bg-amber-50 text-amber-800 border-amber-200' :
+                                    grade.remedialUiState === 'FAILED_EFFORT' ? 'bg-rose-50 text-rose-800 border-rose-200' :
+                                    grade.remedialUiState === 'CHEATED' ? 'bg-rose-100 text-rose-900 border-rose-200' :
+                                    grade.remedialUiState === 'TIME_UP' ? 'bg-slate-50 text-slate-700 border-slate-200' :
+                                    grade.remedialUiState === 'PASSING' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
+                                    grade.remedialUiState === 'DEADLINE_PASSED' ? 'bg-slate-100 text-slate-700 border-slate-200' :
+                                    'bg-slate-50 text-slate-700 border-slate-200'
                                   }`} title={grade.remedialMessage}>
                                     {grade.remedialMessage}
                                   </span>
@@ -1994,51 +2098,42 @@ export default function StudentProfileLayer({
                             <div className="text-right shrink-0 flex flex-col items-end gap-1">
                               {grade.remedialUiState === 'REMEDIAL_SUBMITTED_HELD_BACK' ? (
                                 <div className="flex flex-col items-end gap-0.5">
-                                  <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Remedial: {grade.remedialScore} (Ditahan)</span>
+                                  <span className="text-[11px] font-bold text-amber-700">Remedial: {grade.remedialScore}</span>
                                   <p className="text-xs font-bold text-slate-400 leading-none">
                                     Final: {grade.score} (Sementara)
                                   </p>
                                 </div>
                               ) : (
-                                <p className={`text-xl font-black font-outfit leading-none ${isPassing ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                <p className={`text-xl font-black font-outfit leading-none ${isPassing ? 'text-emerald-600' : 'text-rose-600'}`}>
                                   {grade.score}
                                 </p>
                               )}
-                              <span className="text-[8px] font-bold text-slate-400 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded uppercase mt-0.5">
+                              <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded uppercase">
                                 KKM: {grade.kkm}
                               </span>
 
-                              {/* Aksi Remedial / Share WA */}
-                              {!isAdmin && grade.canStartRemedial && onStartRemedial && (
-                                isParent ? (
-                                  <button 
-                                    disabled
-                                    title="Remedial harus diakses oleh Siswa dengan Google Account"
-                                    className="mt-1 px-2.5 py-1 bg-slate-100 text-slate-400 rounded-lg text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 cursor-not-allowed opacity-80"
-                                  >
-                                    Remedial (Siswa)
-                                  </button>
-                                ) : (
-                                  <button 
-                                    onClick={() => handleStartRemedial(grade.sessionName)}
-                                    disabled={startingRemedialSessionName !== null}
-                                    className="mt-1 px-2.5 py-1 bg-rose-500 hover:bg-rose-600 disabled:bg-rose-400 disabled:opacity-85 text-white rounded-lg text-[9px] font-extrabold uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm shadow-rose-500/10 disabled:cursor-not-allowed"
-                                  >
-                                    {startingRemedialSessionName === grade.sessionName ? (
-                                      <>
-                                        <Loader2 size={10} className="animate-spin" />
-                                        Memuat Sesi...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <span className="material-symbols-outlined text-[10px]">edit</span>
-                                        Mulai Remedial
-                                      </>
-                                    )}
-                                  </button>
-                                )
+                              {/* Aksi Siswa (Remedial) */}
+                              {!isAdmin && !isParent && grade.canStartRemedial && onStartRemedial && (
+                                <button 
+                                  onClick={() => handleStartRemedial(grade.sessionName)}
+                                  disabled={startingRemedialSessionName !== null}
+                                  className="mt-1 px-2.5 py-1 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white rounded-lg text-xs font-bold uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm"
+                                >
+                                  {startingRemedialSessionName === grade.sessionName ? (
+                                    <>
+                                      <Loader2 size={10} className="animate-spin" />
+                                      <span>Memuat...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="material-symbols-outlined text-[12px]">edit</span>
+                                      <span>Remedial</span>
+                                    </>
+                                  )}
+                                </button>
                               )}
 
+                              {/* Aksi Orang Tua (Pengingat WhatsApp) */}
                               {!isPassing && isParent && (
                                 <button 
                                   onClick={() => {
@@ -2047,26 +2142,24 @@ export default function StudentProfileLayer({
                                     
                                     let reasonText = 'Nilai di bawah batas kelulusan KKM.';
                                     if (grade.remedialUiState === 'REMEDIAL_SUBMITTED_HELD_BACK') {
-                                      reasonText = 'Nilai remedial ditahan sementara menunggu teman sekelas selesai.';
+                                      reasonText = 'Nilai remedial sedang dalam proses verifikasi.';
                                     } else if (grade.remedialUiState === 'FAILED_EFFORT') {
-                                      reasonText = 'Remedial gagal karena pengerjaan asal-asalan atau terlalu cepat.';
+                                      reasonText = 'Remedial perlu diulang dengan persiapan lebih matang.';
                                     } else if (grade.remedialUiState === 'TIME_UP') {
                                       reasonText = 'Batas waktu pengerjaan habis.';
-                                    } else if (grade.remedialUiState === 'CHEATED') {
-                                      reasonText = 'Terdeteksi indikasi kecurangan selama remedial.';
                                     } else if (grade.remedialUiState === 'DEADLINE_PASSED') {
                                       reasonText = 'Batas waktu remedial telah terlewati.';
                                     }
                                     
-                                    const message = `*GradeMaster OS - Pemberitahuan Remedial* 🔄\n\nHalo, berikut adalah informasi pengerjaan remedial:\n👤 *Nama Siswa*: ${studentName}\n🏫 *Kelas*: ${className}\n📚 *Mata Pelajaran*: ${grade.subject}\n📝 *Sesi*: ${grade.sessionName}\n📊 *Nilai Ujian*: ${grade.score} (KKM: ${grade.kkm})\n⚠️ *Alasan*: ${reasonText}\n\nSilakan penuhi persyaratan ujian melalui tautan resmi ini:\n🔗 *Link Portal*: ${appUrl}\n\n*Batas Waktu*: ${deadlineText}\nMohon diselesaikan sebelum tenggat waktu. Terima kasih!`;
+                                    const message = `*GradeMaster OS - Pengingat Ujian Ananda*\n\nHalo, mohon perhatian untuk ananda:\n👤 Siswa: *${studentName}*\n🏫 Kelas: *${className}*\n📚 Mata Pelajaran: *${grade.subject}*\n📝 Sesi: *${grade.sessionName}*\n📊 Nilai: *${grade.score}* (Standar KKM: ${grade.kkm})\n⚠️ Catatan: ${reasonText}\n\nSilakan buka tautan portal untuk menyelesaikan ujian/remedial:\n🔗 ${appUrl}\n\nBatas waktu: *${deadlineText}*.\nTerima kasih atas bimbingan Ayah/Bunda di rumah.`;
                                     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
                                     window.open(waUrl, '_blank');
                                   }}
-                                  className="mt-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[9px] font-extrabold uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm shadow-emerald-600/10"
-                                  title="Bagikan ke WhatsApp"
+                                  className="mt-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
+                                  title="Bagikan Pengingat ke WhatsApp"
                                 >
-                                  <Share2 size={9} />
-                                  Bagikan WA
+                                  <Share2 size={11} />
+                                  <span>Ingatkan via WA</span>
                                 </button>
                               )}
                             </div>
@@ -2089,7 +2182,7 @@ export default function StudentProfileLayer({
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Rasio Kehadiran Kelas</p>
                 <div className="py-4">
                   <p className="text-4xl font-black text-emerald-600 font-outfit">{studentSummary?.attendance?.percentage ?? 0}%</p>
-                  <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">
+                  <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">
                     Hadir {studentSummary?.attendance?.present ?? 0} dari {studentSummary?.attendance?.total ?? 0} Pertemuan
                   </p>
                 </div>
@@ -2101,18 +2194,18 @@ export default function StudentProfileLayer({
                   const izin = logs.filter(l => l.status === 'Izin').length;
                   const alfa = logs.filter(l => l.status === 'Alfa').length;
                   return (
-                    <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-50">
-                      <div className="bg-slate-50 p-2 rounded-xl text-center">
-                        <p className="text-[8px] font-black text-slate-400 uppercase">Sakit</p>
-                        <p className="text-[13px] font-black text-amber-600 mt-0.5">{sakit}</p>
+                    <div className="grid grid-cols-3 gap-2.5 pt-3 border-t border-slate-100">
+                      <div className="bg-slate-50 p-2.5 rounded-xl text-center border border-slate-200/60">
+                        <p className="text-xs font-bold text-slate-600 uppercase">Sakit</p>
+                        <p className="text-base font-black text-amber-600 mt-0.5 font-outfit">{sakit}</p>
                       </div>
-                      <div className="bg-slate-50 p-2 rounded-xl text-center">
-                        <p className="text-[8px] font-black text-slate-400 uppercase">Izin</p>
-                        <p className="text-[13px] font-black text-sky-600 mt-0.5">{izin}</p>
+                      <div className="bg-slate-50 p-2.5 rounded-xl text-center border border-slate-200/60">
+                        <p className="text-xs font-bold text-slate-600 uppercase">Izin</p>
+                        <p className="text-base font-black text-sky-600 mt-0.5 font-outfit">{izin}</p>
                       </div>
-                      <div className="bg-slate-50 p-2 rounded-xl text-center">
-                        <p className="text-[8px] font-black text-slate-400 uppercase">Alfa</p>
-                        <p className="text-[13px] font-black text-rose-500 mt-0.5">{alfa}</p>
+                      <div className="bg-slate-50 p-2.5 rounded-xl text-center border border-slate-200/60">
+                        <p className="text-xs font-bold text-slate-600 uppercase">Alfa</p>
+                        <p className="text-base font-black text-rose-600 mt-0.5 font-outfit">{alfa}</p>
                       </div>
                     </div>
                   );
@@ -2120,34 +2213,34 @@ export default function StudentProfileLayer({
               </div>
 
               {/* Log Kehadiran */}
-              <div className="space-y-2">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Riwayat Kehadiran Harian</h4>
+              <div className="space-y-2.5">
+                <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider px-1">Riwayat Kehadiran Harian</h4>
                 
                 {isLoadingAttendance ? (
-                  <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-400 bg-white border border-slate-100 rounded-3xl">
-                    <Loader2 size={24} className="animate-spin text-indigo-500" />
-                    <p className="text-[10px] font-bold uppercase tracking-wider">Memuat Presensi...</p>
+                  <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-500 bg-white border border-slate-200/80 rounded-2xl">
+                    <Loader2 size={24} className="animate-spin text-indigo-600" />
+                    <p className="text-xs font-bold uppercase tracking-wider">Memuat Presensi...</p>
                   </div>
                 ) : attendanceLogs.length === 0 ? (
-                  <div className="py-16 text-center bg-white border border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center px-4">
-                    <span className="material-symbols-outlined text-[28px] text-slate-350">event_available</span>
-                    <p className="text-[11px] font-bold text-slate-400 uppercase mt-2">Tidak ada log presensi</p>
+                  <div className="py-12 text-center bg-white border border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center px-4">
+                    <span className="material-symbols-outlined text-[28px] text-slate-400">event_available</span>
+                    <p className="text-xs font-bold text-slate-500 uppercase mt-2">Tidak ada log presensi</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {attendanceLogs.map((log, idx) => {
-                      let statusBadge = "bg-emerald-50 text-emerald-700 border-emerald-100";
-                      if (log.status === 'Sakit') statusBadge = "bg-amber-50 text-amber-700 border-amber-100";
-                      else if (log.status === 'Izin') statusBadge = "bg-sky-50 text-sky-700 border-sky-100";
-                      else if (log.status === 'Alfa') statusBadge = "bg-rose-50 text-rose-700 border-rose-100";
+                      let statusBadge = "bg-emerald-50 text-emerald-800 border-emerald-200";
+                      if (log.status === 'Sakit') statusBadge = "bg-amber-50 text-amber-800 border-amber-200";
+                      else if (log.status === 'Izin') statusBadge = "bg-sky-50 text-sky-800 border-sky-200";
+                      else if (log.status === 'Alfa') statusBadge = "bg-rose-50 text-rose-800 border-rose-200";
 
                       return (
-                        <div key={idx} className="bg-white px-4 py-3 rounded-2xl border border-slate-100 flex items-center justify-between shadow-[0_2px_8px_rgba(0,0,0,0.01)] transition-all">
+                        <div key={idx} className="bg-white px-4 py-3 rounded-xl border border-slate-200/80 flex items-center justify-between shadow-sm transition-all hover:border-slate-300">
                           <div>
-                            <p className="font-extrabold text-[12px] text-slate-800 leading-tight">{log.subject}</p>
-                            <p className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider mt-1">{formatDate(log.date)}</p>
+                            <p className="font-bold text-xs sm:text-sm text-slate-900 leading-tight">{log.subject}</p>
+                            <p className="text-xs text-slate-500 font-medium mt-1">{formatDate(log.date)}</p>
                           </div>
-                          <span className={`text-[9.5px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${statusBadge}`}>
+                          <span className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${statusBadge}`}>
                             {log.status}
                           </span>
                         </div>
@@ -2162,18 +2255,14 @@ export default function StudentProfileLayer({
           {activeTab === 'ACCOUNT' && (
             <div className="space-y-5 animate-in fade-in duration-300 text-left">
               
-              {/* Profil Card Baru (Premium & Modern) */}
-              <div className="relative bg-gradient-to-br from-white to-slate-50/50 border border-slate-100 rounded-[2.5rem] p-6 shadow-xl shadow-slate-100/30 overflow-hidden text-center flex flex-col items-center">
-                {/* Light reflection decor */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none" />
-                <div className="absolute -left-10 -bottom-10 w-28 h-28 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
-
-                {/* Avatar with gradient border */}
+              {/* Profil Card (Clean & Responsive) */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm text-center flex flex-col items-center relative">
+                {/* Avatar with status */}
                 <div className="relative group">
-                  <div className={`w-20 h-20 rounded-[2rem] border-4 border-white shadow-md flex items-center justify-center text-3xl font-black tracking-tight shrink-0 overflow-hidden relative ${
+                  <div className={`w-20 h-20 rounded-2xl border-2 border-slate-200 shadow-sm flex items-center justify-center text-3xl font-black tracking-tight shrink-0 overflow-hidden relative ${
                     isEmojiAvatar(currentAvatarUrl) 
                       ? `bg-gradient-to-br ${getGradientForEmoji(currentAvatarUrl)} text-white` 
-                      : 'bg-slate-50 border border-slate-100'
+                      : 'bg-slate-100 border border-slate-200'
                   }`}>
                     {currentAvatarUrl ? (
                       isEmojiAvatar(currentAvatarUrl) ? (
@@ -2196,20 +2285,20 @@ export default function StudentProfileLayer({
                           <Upload size={16} />
                         )}
                       </button>
-                    ) : (
+                    ) : !isParent ? (
                       <button 
                         onClick={() => setShowAvatarModal(true)}
                         className="absolute inset-0 bg-slate-900/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer active:opacity-100"
                       >
                         <Settings size={16} />
                       </button>
-                    )}
+                    ) : null}
                   </div>
-                  {/* Floating edit button for avatar */}
-                  {!isAdmin && (
+                  {/* Floating edit button for avatar (siswa only) */}
+                  {!isAdmin && !isParent && (
                     <button
                       onClick={() => setShowAvatarModal(true)}
-                      className="absolute -bottom-1 -right-1 w-7.5 h-7.5 bg-white hover:bg-slate-50 text-indigo-600 rounded-full border border-slate-150 shadow-md flex items-center justify-center transition-all active:scale-90"
+                      className="absolute -bottom-1 -right-1 w-7 h-7 bg-white hover:bg-slate-50 text-indigo-600 rounded-full border border-slate-200 shadow-sm flex items-center justify-center transition-all active:scale-90"
                       title="Ganti Avatar"
                     >
                       <Settings size={13} />
@@ -2219,52 +2308,56 @@ export default function StudentProfileLayer({
 
                 {/* Profile Details */}
                 <div className="mt-4 w-full">
-                  <h3 className="font-extrabold text-[15px] text-slate-800 font-outfit tracking-tight leading-snug">{studentName}</h3>
+                  <h3 className="font-extrabold text-base text-slate-900 font-outfit tracking-tight leading-snug">{studentName}</h3>
                   <div className="flex flex-wrap justify-center gap-1.5 mt-2">
-                    <span className="px-3 py-1 bg-slate-100 border border-slate-200/50 text-slate-500 rounded-full text-[9px] font-extrabold uppercase tracking-wider">
+                    <span className="px-3 py-1 bg-slate-100 border border-slate-200/60 text-slate-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
                       Kelas {activeClass}
                     </span>
-                    <span className="px-3 py-1 bg-indigo-50 border border-indigo-100/50 text-indigo-700 rounded-full text-[9px] font-extrabold uppercase tracking-wider">
+                    <span className="px-3 py-1 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
                       ID: #{studentId.slice(0, 8).toUpperCase()}
                     </span>
+                    {isParent && (
+                      <span className="px-3 py-1 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                        Portal Orang Tua
+                      </span>
+                    )}
                   </div>
                   
                   {studentSummary?.email && (
-                    <p className="text-[10px] text-indigo-650 font-bold mt-2.5 leading-none">
+                    <p className="text-xs text-indigo-700 font-semibold mt-2.5 leading-none">
                       {studentSummary.email}
                     </p>
                   )}
-                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-2">Tahun Ajaran {activeYear}</p>
+                  <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mt-2">Tahun Ajaran {activeYear}</p>
                 </div>
 
-                {/* Score Grid (Pelanggaran vs Kebaikan - Big Modern Blocks) */}
-                <div className="grid grid-cols-2 gap-3 w-full mt-5 border-t border-slate-100/60 pt-4.5">
-                  <div className="bg-rose-50/50 border border-rose-100/70 rounded-[1.8rem] p-3.5 flex flex-col items-center justify-center relative overflow-hidden group hover:bg-rose-50 transition-colors">
-                    <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center mb-1.5 shrink-0">
+                {/* Score Grid (Pelanggaran vs Kebaikan) */}
+                <div className="grid grid-cols-2 gap-3 w-full mt-5 border-t border-slate-100 pt-4">
+                  <div className="bg-rose-50/70 border border-rose-200 rounded-xl p-3 flex flex-col items-center justify-center transition-colors">
+                    <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center mb-1 shrink-0">
                       <span className="material-symbols-outlined text-[16px]">gavel</span>
                     </div>
-                    <span className="text-[18px] font-black leading-none text-rose-700 font-outfit">{totalDemerits}</span>
-                    <span className="text-[8px] font-black uppercase tracking-widest text-rose-500 mt-1.5">Pelanggaran</span>
+                    <span className="text-xl font-black leading-none text-rose-700 font-outfit">{totalDemerits}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 mt-1">Pelanggaran</span>
                   </div>
 
-                  <div className="bg-emerald-50/50 border border-emerald-100/70 rounded-[1.8rem] p-3.5 flex flex-col items-center justify-center relative overflow-hidden group hover:bg-emerald-50 transition-colors">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-1.5 shrink-0">
+                  <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 flex flex-col items-center justify-center transition-colors">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center mb-1 shrink-0">
                       <span className="material-symbols-outlined text-[16px]">award</span>
                     </div>
-                    <span className="text-[18px] font-black leading-none text-emerald-700 font-outfit">{totalMerits}</span>
-                    <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600 mt-1.5">Kebaikan</span>
+                    <span className="text-xl font-black leading-none text-emerald-700 font-outfit">{totalMerits}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 mt-1">Kebaikan</span>
                   </div>
                 </div>
               </div>
 
               {/* Klaim Foto Profil (Hanya untuk Siswa) */}
               {!isAdmin && !isParent && (
-                <div className="p-5 bg-gradient-to-br from-indigo-50/80 to-purple-50/80 border border-indigo-100 rounded-3xl text-left relative overflow-hidden shadow-sm animate-in slide-in-from-bottom-2 duration-300">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-xl pointer-events-none" />
-                  <h4 className="text-indigo-950 font-black text-[12px] uppercase tracking-wider font-outfit flex items-center gap-1.5">
+                <div className="p-4 bg-indigo-50/80 border border-indigo-200/80 rounded-xl text-left shadow-sm animate-in fade-in duration-200">
+                  <h4 className="text-indigo-950 font-bold text-xs uppercase tracking-wider font-outfit flex items-center gap-1.5">
                     📸 Klaim Foto Profil Siswa
                   </h4>
-                  <p className="text-slate-600 text-[11px] font-medium mt-1 leading-normal">
+                  <p className="text-slate-600 text-xs font-medium mt-1 leading-normal">
                     Silakan klik tombol di bawah untuk mengklaim foto profil resmi Anda di folder Google Drive bersama.
                   </p>
                   <button
@@ -2287,7 +2380,7 @@ export default function StudentProfileLayer({
                       // Redirect ke link Google Drive
                       window.open('https://drive.google.com/drive/folders/1mEONL_xhG-oPkk4DYA3XlBCry1njM7AF?usp=sharing', '_blank');
                     }}
-                    className="w-full mt-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-750 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-all active:scale-97 cursor-pointer"
+                    className="w-full mt-3 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.99] cursor-pointer"
                   >
                     Klaim Foto Sekarang 🚀
                   </button>
@@ -2743,56 +2836,61 @@ export default function StudentProfileLayer({
           </div>
         )}
 
-        {/* Bottom Navigation Bar (Permanen) */}
-        <nav className="absolute bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-150 px-4 py-2.5 flex justify-around pb-safe shrink-0 shadow-[0_-4px_16px_rgba(0,0,0,0.03)]">
+        {/* Bottom Navigation Bar (Mobile Only, >= 44px tap targets) */}
+        <nav className="md:hidden absolute bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 py-1.5 flex justify-around pb-safe shrink-0 shadow-sm">
           <button 
+            type="button"
             onClick={() => setActiveTab('HOME')}
-            className={`flex flex-col items-center gap-1 transition-all ${
-              activeTab === 'HOME' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[48px] px-2 py-1 rounded-lg transition-all ${
+              activeTab === 'HOME' ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <Home size={19} className={activeTab === 'HOME' ? 'scale-105' : ''} />
-            <span className="text-[9px] font-black uppercase tracking-wider">Beranda</span>
+            <span className="text-[10px] font-bold">Beranda</span>
           </button>
 
           <button 
+            type="button"
             onClick={() => setActiveTab('GRADES')}
-            className={`flex flex-col items-center gap-1 transition-all ${
-              activeTab === 'GRADES' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[48px] px-2 py-1 rounded-lg transition-all ${
+              activeTab === 'GRADES' ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <BookOpen size={19} className={activeTab === 'GRADES' ? 'scale-105' : ''} />
-            <span className="text-[9px] font-black uppercase tracking-wider">Nilai</span>
+            <span className="text-[10px] font-bold">Nilai</span>
           </button>
 
           <button 
+            type="button"
             onClick={() => setActiveTab('LESSON')}
-            className={`flex flex-col items-center gap-1 transition-all ${
-              activeTab === 'LESSON' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[48px] px-2 py-1 rounded-lg transition-all ${
+              activeTab === 'LESSON' ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <GraduationCap size={19} className={activeTab === 'LESSON' ? 'scale-105' : ''} />
-            <span className="text-[9px] font-black uppercase tracking-wider">Pelajaran</span>
+            <span className="text-[10px] font-bold">Pelajaran</span>
           </button>
 
           <button 
+            type="button"
             onClick={() => setActiveTab('ATTENDANCE')}
-            className={`flex flex-col items-center gap-1 transition-all ${
-              activeTab === 'ATTENDANCE' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[48px] px-2 py-1 rounded-lg transition-all ${
+              activeTab === 'ATTENDANCE' ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <Calendar size={19} className={activeTab === 'ATTENDANCE' ? 'scale-105' : ''} />
-            <span className="text-[9px] font-black uppercase tracking-wider">Kehadiran</span>
+            <span className="text-[10px] font-bold">Kehadiran</span>
           </button>
 
           <button 
+            type="button"
             onClick={() => setActiveTab('ACCOUNT')}
-            className={`flex flex-col items-center gap-1 transition-all ${
-              activeTab === 'ACCOUNT' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[48px] px-2 py-1 rounded-lg transition-all ${
+              activeTab === 'ACCOUNT' ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <User size={19} className={activeTab === 'ACCOUNT' ? 'scale-105' : ''} />
-            <span className="text-[9px] font-black uppercase tracking-wider">Akun</span>
+            <span className="text-[10px] font-bold">{isParent ? 'Data' : 'Akun'}</span>
           </button>
         </nav>
 

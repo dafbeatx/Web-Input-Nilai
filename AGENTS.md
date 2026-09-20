@@ -1,11 +1,6 @@
 <!-- antislop:start -->
 ## antislop
-For UI, copy, people, mobile layout, or code comments work, read `antislop.md` (core) and then the skill for the task:
-- Core filter, always on: `.agents/skills/antislop/SKILL.md`
-- UI / visual: `.agents/skills/antislop-ui/SKILL.md`
-- Copy & text: `.agents/skills/antislop-copywriting/SKILL.md`
-- People: `.agents/skills/antislop-human/SKILL.md`
-- Mobile / responsive: `.agents/skills/antislop-layoutmobile/SKILL.md`
-- Code comments: `.agents/skills/antislop-code/SKILL.md`
+For UI, copy, people, mobile layout, or code comments work, load the antislop skill for the task:
+- Core filter, always on: `antislop`
 Before starting, ask the user when antislop applies: during the work, or after it is done.
 <!-- antislop:end -->

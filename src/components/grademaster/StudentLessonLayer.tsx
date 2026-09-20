@@ -138,7 +138,7 @@ export default function StudentLessonLayer({
   isTab = false,
   studentClassOverride
 }: StudentLessonLayerProps) {
-  const { studentData, studentClass, academicYear } = useGradeMaster();
+  const { studentData, studentClass, academicYear, isParent } = useGradeMaster();
   const activeClassName = studentClassOverride || studentData?.class_name || studentClass || "";
 
   // Core State
@@ -588,6 +588,13 @@ export default function StudentLessonLayer({
       setToast({ message: "Harap jawab semua soal pilihan ganda sebelum mengirimkan kuis", type: 'error' });
       return;
     }
+    if (isParent) {
+      setToast({
+        message: "Mode Orang Tua / Wali: Kuis interaktif diselesaikan langsung oleh siswa melalui akun mereka.",
+        type: "error"
+      });
+      return;
+    }
 
     setIsSubmittingQuiz(true);
     try {
@@ -810,20 +817,28 @@ export default function StudentLessonLayer({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className={`${isTab ? 'text-2xl font-black text-slate-900 tracking-tight' : 'text-3xl md:text-5xl font-black text-slate-900 tracking-tight leading-none'}`}>
-              Pelajaran Saya
+              {isParent ? 'Materi Pelajaran Ananda' : 'Pelajaran Saya'}
             </h1>
             <p className="text-slate-500 text-xs sm:text-sm font-medium mt-2">
-              Akses ringkasan materi AI, tanya jawab interaktif, dan kuis kelas {activeClassName}.
+              {isParent 
+                ? `Memantau kurikulum, ringkasan materi pembelajaran, dan aktivitas kelas ${activeClassName}.`
+                : `Akses ringkasan materi AI, tanya jawab interaktif, dan kuis kelas ${activeClassName}.`}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
-            {/* Study Streak Widget */}
-            <div className="flex items-center gap-1.5 px-4.5 py-2 bg-amber-50 text-amber-700 rounded-full border border-amber-200/60 text-[10.5px] font-black uppercase tracking-wider shadow-sm animate-in fade-in slide-in-from-right-4 duration-500">
-              <span className="text-sm select-none">🔥</span>
-              <span>{streakCount} Hari Streak</span>
-            </div>
+            {isParent ? (
+              <div className="flex items-center gap-1.5 px-4 py-2 bg-indigo-50 text-indigo-800 rounded-full border border-indigo-200 text-xs font-bold shadow-sm">
+                <span>👨‍👩‍👧</span>
+                <span>Mode Wali Murid</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 px-4 py-2 bg-amber-50 text-amber-800 rounded-full border border-amber-200 text-xs font-bold shadow-sm animate-in fade-in duration-300">
+                <span className="text-sm select-none">🔥</span>
+                <span>{streakCount} Hari Streak</span>
+              </div>
+            )}
 
-            <div className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 text-[10px] font-black uppercase tracking-widest">
+            <div className="px-4 py-2 bg-emerald-50 text-emerald-800 rounded-full border border-emerald-200 text-xs font-bold">
                Kelas {activeClassName}
             </div>
           </div>
@@ -1172,17 +1187,23 @@ export default function StudentLessonLayer({
                                 })}
                               </div>
 
-                              <button
-                                onClick={handleSubmitQuiz}
-                                disabled={isSubmittingQuiz}
-                                className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all transform active:scale-[0.98] shadow-lg shadow-emerald-500/15 flex items-center justify-center gap-2 min-h-[44px]"
-                              >
-                                {isSubmittingQuiz ? (
-                                  <Loader2 className="animate-spin" size={16} />
-                                ) : (
-                                  <>Kirim Jawaban Kuis</>
-                                )}
-                              </button>
+                              {isParent ? (
+                                <div className="w-full p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs font-semibold text-center leading-relaxed">
+                                  Mode Orang Tua / Wali: Kuis interaktif diselesaikan langsung oleh siswa melalui akun mereka.
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={handleSubmitQuiz}
+                                  disabled={isSubmittingQuiz}
+                                  className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all transform active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 min-h-[44px]"
+                                >
+                                  {isSubmittingQuiz ? (
+                                    <Loader2 className="animate-spin" size={16} />
+                                  ) : (
+                                    <>Kirim Jawaban Kuis</>
+                                  )}
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
