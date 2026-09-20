@@ -74,7 +74,7 @@ export default function SetupLayer(props: SetupLayerProps) {
     onSubmit, onBack, isLoading, setToast,
   } = props;
 
-  const [smaClasses, setSmaClasses] = useState<string[]>([]);
+  const [dbClasses, setDbClasses] = useState<string[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
 
   const PREDEFINED_SUBJECTS = useMemo(() => [
@@ -119,15 +119,17 @@ export default function SetupLayer(props: SetupLayerProps) {
   };
 
   useEffect(() => {
-    if (schoolLevel !== 'SMA') return;
     let isCurrent = true;
+    queueMicrotask(() => {
+      if (isCurrent) setIsLoadingClasses(true);
+    });
     fetch(`/api/grademaster/behaviors?year=${encodeURIComponent(academicYear)}`)
       .then(res => res.json())
       .then(data => {
-        if (isCurrent) setSmaClasses(data.classes || []);
+        if (isCurrent) setDbClasses(data.classes || []);
       })
       .catch(() => {
-        if (isCurrent) setSmaClasses([]);
+        if (isCurrent) setDbClasses([]);
       })
       .finally(() => {
         if (isCurrent) setIsLoadingClasses(false);
@@ -136,7 +138,40 @@ export default function SetupLayer(props: SetupLayerProps) {
     return () => {
       isCurrent = false;
     };
-  }, [schoolLevel, academicYear]);
+  }, [academicYear]);
+
+  const smpClasses = useMemo(() => {
+    const list = dbClasses.filter(c => {
+      const u = c.toUpperCase();
+      return !u.includes('SMA') && !u.startsWith('10') && !u.startsWith('11') && !u.startsWith('12') && !u.startsWith('X');
+    });
+    if (list.length > 0) return list;
+    return ['7', '7A', '7B', '8A', '8B', '9A', '9B'];
+  }, [dbClasses]);
+
+  const smaClasses = useMemo(() => {
+    const list = dbClasses.filter(c => {
+      const u = c.toUpperCase();
+      return u.includes('SMA') || u.startsWith('10') || u.startsWith('11') || u.startsWith('12') || u.startsWith('X');
+    });
+    if (list.length > 0) return list;
+    return ['SMA', '10', '11', '12'];
+  }, [dbClasses]);
+
+  const currentAvailableClasses = schoolLevel === 'SMP' ? smpClasses : smaClasses;
+
+  const [manualCustomClass, setManualCustomClass] = useState(false);
+  const isCustomClass = manualCustomClass || (studentClass !== "" && !currentAvailableClasses.includes(studentClass));
+
+  const handleClassChange = (val: string) => {
+    if (val === "__custom__") {
+      setManualCustomClass(true);
+      setStudentClass("");
+    } else {
+      setManualCustomClass(false);
+      setStudentClass(val);
+    }
+  };
 
   useEffect(() => {
     if (/^[789]/i.test(studentClass)) {
@@ -303,28 +338,34 @@ export default function SetupLayer(props: SetupLayerProps) {
                   </div>
                   <div className="col-span-1">
                     <label className={labelClass}><LayoutGrid size={14} /> Kelas</label>
-                    <select value={studentClass} onChange={(e) => setStudentClass(e.target.value)} className={`${inputClass} cursor-pointer`}>
+                    <select
+                      value={isCustomClass ? "__custom__" : studentClass}
+                      onChange={(e) => handleClassChange(e.target.value)}
+                      className={`${inputClass} cursor-pointer`}
+                    >
                       <option value="">-- Pilih Kelas --</option>
-                      {schoolLevel === 'SMP' ? (
-                        <optgroup label="Tingkat SMP">
-                          <option value="7A">Kelas 7A</option><option value="7B">Kelas 7B</option><option value="7C">Kelas 7C</option>
-                          <option value="8A">Kelas 8A</option><option value="8B">Kelas 8B</option><option value="8C">Kelas 8C</option>
-                          <option value="9A">Kelas 9A</option><option value="9B">Kelas 9B</option><option value="9C">Kelas 9C</option>
-                        </optgroup>
+                      {isLoadingClasses ? (
+                        <option disabled>Memuat kelas...</option>
                       ) : (
-                        <optgroup label="Tingkat SMA">
-                          {isLoadingClasses ? (
-                            <option disabled>Memuat kelas...</option>
-                          ) : smaClasses.length > 0 ? (
-                            smaClasses.map(cls => (
-                              <option key={cls} value={cls}>{cls}</option>
-                            ))
-                          ) : (
-                            <option value="SMA">SMA</option>
-                          )}
+                        <optgroup label={schoolLevel === 'SMP' ? "Tingkat SMP" : "Tingkat SMA"}>
+                          {currentAvailableClasses.map(cls => (
+                            <option key={cls} value={cls}>Kelas {cls}</option>
+                          ))}
                         </optgroup>
                       )}
+                      <option value="__custom__">-- Ketik Manual (Lainnya) --</option>
                     </select>
+                    {isCustomClass && (
+                      <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <input
+                          type="text"
+                          value={studentClass}
+                          onChange={(e) => setStudentClass(e.target.value)}
+                          placeholder="Contoh: 7, VII, dll."
+                          className={inputClass}
+                        />
+                      </div>
+                    )}
                   </div>
                   <div className="col-span-1">
                     <label className={labelClass}><BookOpen size={14} /> Semester</label>
