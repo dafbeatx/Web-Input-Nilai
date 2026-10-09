@@ -67,20 +67,45 @@ const QuestionCanvas = ({ text }: { text: string }) => {
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const font = 'italic bold 18px Outfit, Inter, sans-serif';
+    const isMobile = dimensions.width < 500;
+    const fontSize = isMobile ? 15 : 18;
+    const lineHeight = isMobile ? 24 : 28;
+    const padding = isMobile ? 14 : 20;
+    const font = `italic bold ${fontSize}px Outfit, Inter, sans-serif`;
     ctx.font = font;
 
     const words = text.split(' ');
     const lines: string[] = [];
     let currentLine = '';
-    const maxWidth = dimensions.width - 40; 
+    const maxWidth = Math.max(120, dimensions.width - padding * 2);
 
     for (let i = 0; i < words.length; i++) {
-      const testLine = currentLine ? currentLine + ' ' + words[i] : words[i];
+      const word = words[i];
+
+      // Handle extra long words/tokens gracefully by splitting if needed
+      if (ctx.measureText(word).width > maxWidth) {
+        if (currentLine) {
+          lines.push(currentLine);
+          currentLine = '';
+        }
+        let chunk = '';
+        for (const char of word) {
+          if (ctx.measureText(chunk + char).width > maxWidth) {
+            lines.push(chunk);
+            chunk = char;
+          } else {
+            chunk += char;
+          }
+        }
+        currentLine = chunk;
+        continue;
+      }
+
+      const testLine = currentLine ? currentLine + ' ' + word : word;
       const metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && i > 0) {
+      if (metrics.width > maxWidth && i > 0 && currentLine) {
         lines.push(currentLine);
-        currentLine = words[i];
+        currentLine = word;
       } else {
         currentLine = testLine;
       }
@@ -89,8 +114,6 @@ const QuestionCanvas = ({ text }: { text: string }) => {
       lines.push(currentLine);
     }
 
-    const lineHeight = 28;
-    const padding = 20;
     const calculatedHeight = lines.length * lineHeight + padding * 2;
 
     canvas.width = dimensions.width * dpr;
@@ -118,7 +141,7 @@ const QuestionCanvas = ({ text }: { text: string }) => {
   }, [text, dimensions.width]);
 
   return (
-    <div ref={containerRef} className="w-full bg-surface-variant rounded-[2rem] border border-outline-variant shadow-sm overflow-hidden select-none" onContextMenu={(e) => e.preventDefault()}>
+    <div ref={containerRef} className="w-full bg-surface-variant text-on-surface rounded-2xl md:rounded-[2rem] border border-outline-variant shadow-sm overflow-hidden select-none" onContextMenu={(e) => e.preventDefault()}>
       <canvas ref={canvasRef} className="block select-none pointer-events-none w-full" />
     </div>
   );
@@ -2384,12 +2407,22 @@ export default function StudentRemedialLayer({
       trackEvent('NETWORK_OFFLINE', 'HIGH', 15, { reason: 'Connection lost' });
     };
 
-    const handleBlur = () => {
+    const triggerBlurPenalty = (isForcedByVisibility = false) => {
       if (hasTriggeredCheatingRef.current || isSubmitting) return;
       if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
         console.log('[Dev] Skipping blur check on localhost');
         return;
       }
+
+      // On mobile devices (Android & iOS), window.blur fires during keyboard appearance,
+      // autocomplete/autofill bar popup, or system UI interactions while the document is still visible.
+      // If the document is not hidden, do NOT penalize the student or trigger screen flash.
+      const isMobile = typeof window !== 'undefined' && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+      const isActuallyHidden = isForcedByVisibility || (typeof document !== 'undefined' && document.hidden);
+      if (isMobile && !isActuallyHidden) {
+        return;
+      }
+
       setIsScreenshotFlash(true); // Instant white screen to block partial OS screenshots
       setTimeout(() => setIsScreenshotFlash(false), 2000);
 
@@ -2408,11 +2441,15 @@ export default function StudentRemedialLayer({
       });
     };
 
+    const handleBlur = () => {
+      triggerBlurPenalty(false);
+    };
+
     const handleVisibility = () => {
       if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) return;
       if (document.hidden) {
         trackEvent('VISIBILITY_LOST', 'MEDIUM', 15, { reason: 'Siswa meminimalisir tab / buka aplikasi lain' });
-        handleBlur(); // Bind the exact same penalty for losing app focus
+        triggerBlurPenalty(true); // Bind penalty when tab is actually hidden/switched
       } else {
         trackEvent('VISIBILITY_RESTORED', 'LOW', 0, { reason: 'Siswa kembali fokus ke tab ujian' });
         syncWithServer();
@@ -2658,19 +2695,19 @@ export default function StudentRemedialLayer({
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#3b82f615,transparent)]"></div>
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-30"></div>
         
-        <div className="w-full max-w-xl relative bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant rounded-[2.5rem] premium-shadow p-6 md:p-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-           <header className="text-center mb-8">
-              <div className="w-20 h-20 bg-primary/20 rounded-[2rem] border border-primary/30 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/20">
-                 <ShieldCheck size={40} className="text-primary" />
+        <div className="w-full max-w-xl relative bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant rounded-2xl md:rounded-[2.5rem] premium-shadow p-5 sm:p-6 md:p-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+           <header className="text-center mb-6 md:mb-8">
+              <div className="w-16 h-16 md:w-20 md:h-20 bg-primary/20 rounded-2xl md:rounded-[2rem] border border-primary/30 flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-2xl shadow-primary/20">
+                 <ShieldCheck size={36} className="text-primary md:w-10 md:h-10" />
               </div>
-              <h2 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight uppercase leading-tight font-outfit">Protokol Keamanan <br /><span className="text-primary italic">GradeMaster OS</span></h2>
-              <div className="flex justify-center gap-2 mt-4">
+              <h2 className="text-xl md:text-3xl font-black text-on-surface tracking-tight uppercase leading-tight font-outfit">Protokol Keamanan <br /><span className="text-primary italic">GradeMaster OS</span></h2>
+              <div className="flex justify-center gap-2 mt-3 md:mt-4">
                  <Badge color="indigo">{subject}</Badge>
                  <Badge color="emerald">{examType}</Badge>
               </div>
            </header>
 
-           <div className="space-y-4 mb-8 h-[320px] overflow-y-auto pr-2 custom-scrollbar focus:outline-none">
+           <div className="space-y-3 md:space-y-4 mb-6 md:mb-8 max-h-[220px] md:max-h-[320px] overflow-y-auto pr-2 custom-scrollbar focus:outline-none">
               {[
                 { icon: <MonitorOff size={18}/>, title: "Layar Penuh", desc: "Sistem akan mendeteksi aktifitas pemisahan layar atau pergantian tab secara instan." },
                 { icon: <Camera size={18}/>, title: "Monitoring Visual", desc: "Akses kamera diperlukan untuk verifikasi identitas dan pengawasan berkelanjutan." },
@@ -2721,7 +2758,7 @@ export default function StudentRemedialLayer({
       <div className="fixed inset-0 z-[100] bg-transparent overflow-y-auto pt-safe">
         <div className="flex min-h-full flex-col items-center justify-center p-4">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#3b82f610,transparent)]"></div>
-        <div className="w-full max-w-lg relative bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant rounded-[2.5rem] premium-shadow p-6 md:p-10 animate-in zoom-in duration-500">
+        <div className="w-full max-w-lg relative bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant rounded-2xl md:rounded-[2.5rem] premium-shadow p-5 sm:p-6 md:p-10 animate-in zoom-in duration-500">
            <button onClick={() => setStep('RULES')} className="flex items-center gap-2 text-on-surface-variant hover:text-white font-black text-[10px] uppercase tracking-widest transition-all mb-8 group">
             <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Kembali ke Peraturan
           </button>
@@ -2813,7 +2850,7 @@ export default function StudentRemedialLayer({
       <div className="fixed inset-0 z-[100] bg-transparent overflow-y-auto pt-safe">
         <div className="flex min-h-full flex-col items-center justify-center p-4">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,#3b82f610,transparent)]"></div>
-        <div className="w-full max-w-xl relative bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant rounded-[2.5rem] premium-shadow p-6 md:p-10 animate-in slide-in-from-bottom-8 duration-700">
+        <div className="w-full max-w-xl relative bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant rounded-2xl md:rounded-[2.5rem] premium-shadow p-5 sm:p-6 md:p-10 animate-in slide-in-from-bottom-8 duration-700">
           <button onClick={() => setStep('INFO')} className="flex items-center gap-2 text-on-surface-variant hover:text-white font-black text-[10px] uppercase tracking-widest transition-all mb-8 group">
             <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Kembali ke Persiapan
           </button>
@@ -2884,7 +2921,7 @@ export default function StudentRemedialLayer({
     return (
       <div className="fixed inset-0 z-[1000] bg-transparent flex items-center justify-center p-4 pt-safe">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#f59e0b10,transparent)]"></div>
-        <div className="bg-surface premium-shadow backdrop-blur-2xl border border-amber-500/20 max-w-lg w-full rounded-[2.5rem] p-8 md:p-10 premium-shadow text-center relative">
+        <div className="bg-surface premium-shadow backdrop-blur-2xl border border-amber-500/20 max-w-lg w-full rounded-2xl md:rounded-[2.5rem] p-5 sm:p-8 md:p-10 premium-shadow text-center relative">
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
           <div className="w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-6 bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse">
             <AlertTriangle size={40} />
@@ -2953,7 +2990,7 @@ export default function StudentRemedialLayer({
       <div className="fixed inset-0 z-[100] bg-transparent flex flex-col items-center justify-center p-4 overflow-y-auto custom-scrollbar">
         <div className={`absolute inset-0 opacity-20 ${isCheat ? 'bg-rose-500/10' : (isTimeout || isFailedEffort) ? 'bg-amber-500/10' : 'bg-emerald-500/10'}`}></div>
         
-        <div className={`w-full max-w-xl relative bg-surface premium-shadow backdrop-blur-2xl border rounded-[2.5rem] p-8 md:p-12 text-center animate-in zoom-in-95 duration-700 ${isCheat ? 'border-rose-500/20' : (isTimeout || isFailedEffort) ? 'border-amber-500/20' : 'border-emerald-500/20'}`}>
+        <div className={`w-full max-w-xl relative bg-surface premium-shadow backdrop-blur-2xl border rounded-2xl md:rounded-[2.5rem] p-5 sm:p-8 md:p-12 text-center animate-in zoom-in-95 duration-700 ${isCheat ? 'border-rose-500/20' : (isTimeout || isFailedEffort) ? 'border-amber-500/20' : 'border-emerald-500/20'}`}>
           <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-${isCheat ? 'rose' : (isTimeout || isFailedEffort) ? 'amber' : 'emerald'}-500/50 to-transparent`}></div>
           
           <div className={`w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border ${isCheat ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : isTimeout ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : isFailedEffort ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
@@ -3482,15 +3519,15 @@ export default function StudentRemedialLayer({
           {answers.map((ans, idx) => {
             const isInvalid = invalidQuestionIndices.includes(idx);
             return (
-            <div key={idx} id={`question-card-${idx}`} className={`bg-surface premium-shadow backdrop-blur-2xl rounded-[2.5rem] p-8 md:p-12 border premium-shadow relative overflow-hidden group transition-all ${isInvalid ? 'border-rose-500/60 ring-2 ring-rose-500/20 shadow-rose-500/10' : 'border-outline-variant hover:border-primary/30'}`}>
+            <div key={idx} id={`question-card-${idx}`} className={`bg-surface premium-shadow backdrop-blur-2xl rounded-2xl md:rounded-[2.5rem] p-5 sm:p-8 md:p-12 border premium-shadow relative overflow-hidden group transition-all ${isInvalid ? 'border-rose-500/60 ring-2 ring-rose-500/20 shadow-rose-500/10' : 'border-outline-variant hover:border-primary/30'}`}>
               <div className={`absolute top-0 left-0 w-1.5 h-full transition-all duration-500 ${isInvalid ? 'bg-rose-500' : 'bg-primary/20 group-hover:bg-primary'}`} />
               
-              <div className="flex items-center gap-4 mb-8">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg border shadow-lg ${isInvalid ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 shadow-rose-500/20' : 'bg-primary/10 text-primary border-primary/20 shadow-primary/20'}`}>
+              <div className="flex items-center gap-4 mb-6 md:mb-8">
+                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center font-black text-base md:text-lg border shadow-lg ${isInvalid ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 shadow-rose-500/20' : 'bg-primary/10 text-primary border-primary/20 shadow-primary/20'}`}>
                   {idx + 1}
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-on-surface tracking-tight font-outfit uppercase">Soal Essay {idx + 1}</h3>
+                  <h3 className="text-lg md:text-xl font-black text-on-surface tracking-tight font-outfit uppercase">Soal Essay {idx + 1}</h3>
                   {isInvalid ? (
                     <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-1">
                       <AlertTriangle size={10} /> Jawaban Tidak Valid — Perbaiki Jawaban Anda
@@ -3502,14 +3539,14 @@ export default function StudentRemedialLayer({
               </div>
 
               {shuffledQuestions[idx] && (
-                <div className="mb-10">
+                <div className="mb-6 md:mb-10">
                   <QuestionCanvas text={shuffledQuestions[idx].text} />
                 </div>
               )}
 
               <div className="relative">
                 <textarea
-                  className="w-full bg-surface-variant border border-outline-variant rounded-[2rem] p-8 text-lg font-bold text-on-surface outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all resize-none min-h-[320px] shadow-sm custom-scrollbar"
+                  className="w-full bg-surface-variant border border-outline-variant rounded-2xl md:rounded-[2rem] p-4 sm:p-6 md:p-8 text-sm md:text-lg font-bold text-on-surface outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all resize-none min-h-[220px] md:min-h-[320px] shadow-sm custom-scrollbar"
                   placeholder="Ketikkan argumentasi jawaban Anda secara sistematis di sini..."
                   value={ans}
                   onChange={(e) => handleChange(idx, e.target.value)}
@@ -3518,9 +3555,9 @@ export default function StudentRemedialLayer({
                   autoComplete="off"
                   spellCheck="false"
                 />
-                <div className="absolute top-4 right-8">
-                   <div className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
-                     <span className="text-[9px] font-black text-primary uppercase tracking-widest">Essay Mode</span>
+                <div className="absolute top-3 right-4 md:top-4 md:right-8">
+                   <div className="px-2.5 py-0.5 md:px-3 md:py-1 rounded-full bg-primary/10 border border-primary/20">
+                     <span className="text-[8px] md:text-[9px] font-black text-primary uppercase tracking-widest">Essay Mode</span>
                    </div>
                 </div>
               </div>
@@ -3743,8 +3780,8 @@ export default function StudentRemedialLayer({
             </div>
           </div>
 
-          {/* Desktop/Camera View Wrapper: visible on desktop, hidden/1px on mobile */}
-          <div className="pointer-events-none transition-all duration-500 overflow-hidden absolute md:static left-0 top-0 w-[1px] h-[1px] opacity-[0.001] md:w-full md:h-full md:opacity-100">
+          {/* Desktop/Camera View Wrapper: visible on desktop, kept alive off-screen with real dimensions for mobile WebKit */}
+          <div className="pointer-events-none transition-all duration-500 overflow-hidden absolute md:static -top-[9999px] left-0 w-32 h-24 opacity-[0.01] md:top-auto md:w-full md:h-full md:opacity-100">
             <div className="w-full h-full pointer-events-auto">
               <ProctoringCamera 
                 ref={videoRef} 

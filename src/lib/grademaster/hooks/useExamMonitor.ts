@@ -105,12 +105,45 @@ export const useExamMonitor = ({ attemptId, onViolation, onNetworkChange, examSt
     const handleResize = () => {
       const currWidth = window.innerWidth;
       const currHeight = window.innerHeight;
+
+      if (!initialWidthRef.current || !initialHeightRef.current) {
+        initialWidthRef.current = currWidth;
+        initialHeightRef.current = currHeight;
+        return;
+      }
       
-      // Threshold: 20% change indicates likely split-screen or orientation change
       const wDiff = Math.abs(currWidth - initialWidthRef.current) / initialWidthRef.current;
       const hDiff = Math.abs(currHeight - initialHeightRef.current) / initialHeightRef.current;
       
-      if (wDiff > 0.2 || hDiff > 0.2) {
+      // Mobile Virtual Keyboard Detection:
+      // On Android & iOS, opening the on-screen keyboard shrinks window.innerHeight by 30-50%
+      // while screen width remains unchanged (wDiff < 0.05).
+      const isInputFocused = typeof document !== 'undefined' && 
+        document.activeElement && 
+        (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) || (document.activeElement as HTMLElement).isContentEditable);
+      
+      const isMobileVirtualKeyboard = (wDiff < 0.05 && hDiff > 0.12) || (isInputFocused && wDiff < 0.08);
+      if (isMobileVirtualKeyboard) {
+        // Legitimate typing action on mobile device - do not treat as split screen violation
+        return;
+      }
+
+      // Device Orientation Change Detection (Portrait <-> Landscape)
+      const wasPortrait = initialHeightRef.current > initialWidthRef.current;
+      const isPortrait = currHeight > currWidth;
+      if (wasPortrait !== isPortrait) {
+        // Device was rotated, update baseline references
+        initialWidthRef.current = currWidth;
+        initialHeightRef.current = currHeight;
+        sendLog('ORIENTATION_CHANGE', 'LOW', { 
+          orientation: isPortrait ? 'PORTRAIT' : 'LANDSCAPE',
+          viewport: { w: currWidth, h: currHeight }
+        });
+        return;
+      }
+
+      // Threshold: 20% width change or 25% height change (when not virtual keyboard) indicates split-screen
+      if (wDiff > 0.2 || hDiff > 0.25) {
         onViolationRef.current('SPLIT_SCREEN', 'Possible split-screen or window resize detected', 'MEDIUM');
         sendLog('VIEWPORT_RESIZE', 'MEDIUM', { 
           from: { w: initialWidthRef.current, h: initialHeightRef.current },
