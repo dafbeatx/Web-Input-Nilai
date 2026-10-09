@@ -34,10 +34,10 @@ export async function GET(req: NextRequest) {
 
     // Determine target regular exam types to check based on the susulan type
     let targetExamTypes: string[] = [];
-    if (examType === 'Susulan UTS') {
-      targetExamTypes = ['UTS', 'Susulan UTS'];
-    } else if (examType === 'Susulan UAS') {
-      targetExamTypes = ['UAS', 'PAS', 'PAT', 'Susulan UAS'];
+    if (examType === 'Susulan UTS' || examType === 'Susulan ASTS') {
+      targetExamTypes = ['UTS', 'ASTS', 'Susulan UTS', 'Susulan ASTS'];
+    } else if (examType === 'Susulan UAS' || examType === 'Susulan ASAS') {
+      targetExamTypes = ['UAS', 'PAS', 'PAT', 'ASAS', 'Susulan UAS', 'Susulan ASAS'];
     }
 
     if (targetExamTypes.length === 0) {

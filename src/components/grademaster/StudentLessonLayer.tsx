@@ -405,7 +405,7 @@ export default function StudentLessonLayer({
             // Check Susulan eligibility
             if (firstQuiz.title && firstQuiz.title.includes('Susulan')) {
               try {
-                const examType = firstQuiz.title.includes('UTS') ? 'Susulan UTS' : 'Susulan UAS';
+                const examType = (firstQuiz.title.includes('UTS') || firstQuiz.title.includes('ASTS')) ? 'Susulan UTS' : 'Susulan UAS';
                 const studentName = studentData?.name;
                 if (studentName) {
                   const checkRes = await fetch(

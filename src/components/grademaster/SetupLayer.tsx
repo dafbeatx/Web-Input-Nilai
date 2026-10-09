@@ -202,7 +202,7 @@ export default function SetupLayer(props: SetupLayerProps) {
       if (students.length === 0) {
         setToast({ message: `Peringatan: Tidak ada data siswa di kelas ${studentClass} tahun ${academicYear}. Harap isi di menu Kehadiran & Perilaku.`, type: 'error' });
       } else {
-        if (examType === 'Susulan UTS' || examType === 'Susulan UAS') {
+        if (examType === 'Susulan UTS' || examType === 'Susulan UAS' || examType === 'Susulan ASTS' || examType === 'Susulan ASAS') {
           try {
             const scoresRes = await fetch(
               `/api/grademaster/students/existing-scores?class=${encodeURIComponent(studentClass)}&subject=${encodeURIComponent(subject)}&year=${encodeURIComponent(academicYear)}&semester=${encodeURIComponent(semester)}&examType=${encodeURIComponent(examType)}`
@@ -406,12 +406,16 @@ export default function SetupLayer(props: SetupLayerProps) {
                     <label className={labelClass}><BookOpen size={14} /> Jenis Ujian</label>
                     <select value={examType} onChange={(e) => setExamType(e.target.value)} className={`${inputClass} cursor-pointer`}>
                       <option value="UTS">UTS (Tengah Semester)</option>
+                      <option value="ASTS">ASTS (Asesmen Sumatif Tengah Semester)</option>
                       <option value="UAS">UAS (Akhir Semester)</option>
                       <option value="PAS">PAS (Penilaian Akhir Semester)</option>
+                      <option value="ASAS">ASAS (Asesmen Sumatif Akhir Semester)</option>
                       <option value="PAT">PAT (Penilaian Akhir Tahun)</option>
                       <option value="Ulangan Harian">Ulangan Harian</option>
                       <option value="Susulan UTS">Susulan UTS (Tengah Semester)</option>
+                      <option value="Susulan ASTS">Susulan ASTS (Tengah Semester)</option>
                       <option value="Susulan UAS">Susulan UAS (Akhir Semester)</option>
+                      <option value="Susulan ASAS">Susulan ASAS (Akhir Semester)</option>
                     </select>
                   </div>
                 </div>

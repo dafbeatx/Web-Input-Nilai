@@ -340,7 +340,8 @@ export async function handleAdminCallback(chatId: number, callbackData: string, 
           conv.data.schoolLevel = parts[2];
           conv.step = 'exam_type_wait';
           await editOrSend(chatId, messageId, '📝 Pilih <b>jenis ujian</b>:', [
-            [{ text: 'UTS', callback_data: 'sys:sel_exm:UTS' }, { text: 'UAS', callback_data: 'sys:sel_exm:UAS' }],
+            [{ text: 'UTS', callback_data: 'sys:sel_exm:UTS' }, { text: 'ASTS', callback_data: 'sys:sel_exm:ASTS' }],
+            [{ text: 'UAS', callback_data: 'sys:sel_exm:UAS' }, { text: 'ASAS', callback_data: 'sys:sel_exm:ASAS' }],
             [{ text: 'PAT', callback_data: 'sys:sel_exm:PAT' }, { text: 'PAS', callback_data: 'sys:sel_exm:PAS' }]
           ]);
         }

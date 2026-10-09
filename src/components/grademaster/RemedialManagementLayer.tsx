@@ -212,8 +212,10 @@ export default function RemedialManagementLayer({
                 <select value={examType} onChange={(e) => setExamType(e.target.value)} className={`${inputClass} cursor-pointer`}>
                   <option value="">-- Pilih Jenis Ujian --</option>
                   <option value="UTS">UTS (Tengah Semester)</option>
+                  <option value="ASTS">ASTS (Asesmen Sumatif Tengah Semester)</option>
                   <option value="UAS">UAS (Akhir Semester)</option>
                   <option value="PAS">PAS (Penilaian Akhir Semester)</option>
+                  <option value="ASAS">ASAS (Asesmen Sumatif Akhir Semester)</option>
                   <option value="PAT">PAT (Penilaian Akhir Tahun)</option>
                   <option value="Ulangan Harian">Ulangan Harian</option>
                 </select>

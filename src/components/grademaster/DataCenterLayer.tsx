@@ -1582,8 +1582,10 @@ const matchesYear = s.academicYear === academicYear;
                         className="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-primary focus:ring-1 focus:ring-amber-500/40 outline-none"
                       >
                         <option value="UTS">UTS</option>
+                        <option value="ASTS">ASTS</option>
                         <option value="UAS">UAS</option>
                         <option value="PAS">PAS</option>
+                        <option value="ASAS">ASAS</option>
                         <option value="PAT">PAT</option>
                         <option value="QUIZ">Kuis</option>
                         <option value="MANUAL">Tugas Manual</option>
