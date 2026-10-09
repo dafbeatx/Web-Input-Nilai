@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const studentName = searchParams.get('name');
-    const academicYear = searchParams.get('year') || '2025/2026';
+    const academicYear = searchParams.get('year') || '2026/2027';
     const className = searchParams.get('class');
 
     if (!studentName) {
