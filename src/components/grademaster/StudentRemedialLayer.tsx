@@ -1624,8 +1624,6 @@ export default function StudentRemedialLayer({
       const snap = capturePhoto();
       if (!snap) return;
 
-      setAiProctorStatus('scanning');
-
       try {
         const res = await fetch('/api/grademaster/proctoring-analyze', {
           method: 'POST',
@@ -3758,20 +3756,16 @@ export default function StudentRemedialLayer({
             <div className="flex items-center justify-between border-t border-white/10 pt-1.5 gap-4">
               <div className="flex items-center gap-1.5">
                 <div className={`w-1.5 h-1.5 rounded-full ${
-                  aiProctorStatus === 'scanning' ? 'bg-blue-400 shadow-blue-400/50 animate-pulse' :
                   aiProctorStatus === 'warning' ? 'bg-amber-400 shadow-amber-400/50 animate-pulse' :
                   aiProctorStatus === 'critical' ? 'bg-rose-500 shadow-rose-500/50 animate-bounce' :
                   'bg-emerald-500 shadow-emerald-500/50 animate-pulse'
                 }`} />
                 <span className={`text-[8px] font-black uppercase tracking-wider ${
-                  aiProctorStatus === 'scanning' ? 'text-blue-400' :
                   aiProctorStatus === 'warning' ? 'text-amber-400 font-black' :
                   aiProctorStatus === 'critical' ? 'text-rose-400 font-black animate-pulse' :
                   'text-emerald-400'
                 }`}>
-                  {aiProctorStatus === 'scanning' ? 'AI: Scan...' :
-                   aiProctorStatus === 'safe' ? 'AI: Aman' :
-                   aiProctorStatus === 'warning' ? 'AI: Rawan' :
+                  {aiProctorStatus === 'warning' ? 'AI: Rawan' :
                    aiProctorStatus === 'critical' ? 'AI: Kritis' :
                    'AI: Aktif'}
                 </span>
@@ -3796,31 +3790,22 @@ export default function StudentRemedialLayer({
             <div className="hidden md:block absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
             <div className="hidden md:flex absolute bottom-3 left-3 flex-col gap-1">
               <div className="flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full animate-pulse shadow-lg ${
-                  aiProctorStatus === 'scanning' ? 'bg-blue-400 shadow-blue-400/50' :
-                  aiProctorStatus === 'warning' ? 'bg-amber-400 shadow-amber-400/50' :
-                  aiProctorStatus === 'critical' ? 'bg-rose-500 shadow-rose-500/50' :
-                  aiProctorStatus === 'safe' ? 'bg-emerald-500 shadow-emerald-500/50' :
+                <div className={`w-1.5 h-1.5 rounded-full shadow-lg ${
+                  aiProctorStatus === 'warning' ? 'bg-amber-400 shadow-amber-400/50 animate-pulse' :
+                  aiProctorStatus === 'critical' ? 'bg-rose-500 shadow-rose-500/50 animate-bounce' :
                   'bg-emerald-500 shadow-emerald-500/50'
                 }`} />
                 <span className={`text-[8px] font-black uppercase tracking-widest ${
-                  aiProctorStatus === 'scanning' ? 'text-blue-400' :
                   aiProctorStatus === 'warning' ? 'text-amber-400' :
                   aiProctorStatus === 'critical' ? 'text-rose-400' :
                   'text-on-surface'
                 }`}>
-                  {aiProctorStatus === 'scanning' ? 'AI Scan...' :
-                   aiProctorStatus === 'safe' ? 'AI: Aman ✓' :
-                   aiProctorStatus === 'warning' ? 'AI: Peringatan ⚠' :
+                  {aiProctorStatus === 'warning' ? 'AI: Peringatan ⚠' :
                    aiProctorStatus === 'critical' ? 'AI: Kritis ✕' :
                    'Live AI'}
                 </span>
               </div>
             </div>
-            {/* AI scanning ring indicator */}
-            {aiProctorStatus === 'scanning' && (
-              <div className="hidden md:block absolute inset-0 rounded-3xl border-2 border-blue-400/40 animate-pulse pointer-events-none" />
-            )}
             {aiProctorStatus === 'critical' && (
               <div className="hidden md:block absolute inset-0 rounded-3xl border-2 border-rose-500/60 animate-pulse pointer-events-none" />
             )}
