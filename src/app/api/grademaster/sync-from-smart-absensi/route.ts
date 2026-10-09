@@ -5,6 +5,43 @@ export const dynamic = 'force-dynamic';
 
 const DEFAULT_SYNC_KEY = 'gm_sync_smart_absensi_2026';
 
+function getCorsHeaders(req?: NextRequest) {
+  const origin = req?.headers.get('origin') || '*';
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-sync-key, x-api-key, X-Requested-With',
+    'Access-Control-Max-Age': '86400',
+  };
+  if (origin !== '*') {
+    headers['Access-Control-Allow-Credentials'] = 'true';
+  }
+  return headers;
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: getCorsHeaders(req),
+  });
+}
+
+export async function GET(req: NextRequest) {
+  return jsonResponse({
+    status: 'online',
+    endpoint: '/api/grademaster/sync-from-smart-absensi',
+    description: 'GradeMaster Sync Bridge API for Smart Absensi Guru',
+    timestamp: new Date().toISOString(),
+  }, 200, req);
+}
+
+function jsonResponse(data: unknown, status = 200, req?: NextRequest) {
+  return NextResponse.json(data, {
+    status,
+    headers: getCorsHeaders(req),
+  });
+}
+
 interface ScoreItem {
   studentName: string;
   score: number | string;
@@ -50,14 +87,14 @@ export async function POST(req: NextRequest) {
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json({ error: 'Format JSON request tidak valid' }, { status: 400 });
+      return jsonResponse({ error: 'Format JSON request tidak valid' }, 400, req);
     }
 
     const providedKey = headerKey || bearerKey || body.secretKey;
     if (!providedKey || providedKey !== rawSyncKey) {
-      return NextResponse.json({ 
+      return jsonResponse({ 
         error: 'Akses ditolak: Kunci autentikasi sinkronisasi (x-sync-key) tidak valid.' 
-      }, { status: 401 });
+      }, 401, req);
     }
 
     const {
@@ -72,18 +109,18 @@ export async function POST(req: NextRequest) {
     } = body;
 
     if (!className?.trim()) {
-      return NextResponse.json({ 
+      return jsonResponse({ 
         error: 'Parameter className wajib diisi' 
-      }, { status: 400 });
+      }, 400, req);
     }
 
     const hasScores = Array.isArray(scores) && scores.length > 0;
     const hasBehaviors = Array.isArray(behaviors) && behaviors.length > 0;
 
     if (!hasScores && !hasBehaviors) {
-      return NextResponse.json({ 
+      return jsonResponse({ 
         error: 'Harus menyertakan setidaknya salah satu data: scores (nilai) atau behaviors (perilaku)' 
-      }, { status: 400 });
+      }, 400, req);
     }
 
     const cleanClass = className.trim();
@@ -105,9 +142,9 @@ export async function POST(req: NextRequest) {
     // ==========================================
     if (hasScores) {
       if (!subject?.trim()) {
-        return NextResponse.json({ 
+        return jsonResponse({ 
           error: 'Parameter subject wajib diisi jika mengirimkan data scores' 
-        }, { status: 400 });
+        }, 400, req);
       }
 
       const cleanSubject = subject.trim();
@@ -214,7 +251,7 @@ export async function POST(req: NextRequest) {
             .from('gm_students')
             .select('id')
             .eq('session_id', sessionId)
-            .eq('name', studentName)
+            .ilike('name', studentName)
             .maybeSingle();
 
           if (existingStudent) {
@@ -277,9 +314,6 @@ export async function POST(req: NextRequest) {
         const reason = item.reason?.trim() || 'Catatan sikap dari Smart Absensi';
         const teacher = item.teacherName?.trim() || cleanTeacher;
         
-        // Tentukan bobot poin:
-        // Demerit (pelanggaran) = angka positif (> 0)
-        // Merit (kebaikan/prestasi) = angka negatif (< 0)
         let delta = 5;
         if (item.pointsDelta !== undefined && !isNaN(Number(item.pointsDelta))) {
           const rawDelta = Number(item.pointsDelta);
@@ -295,7 +329,6 @@ export async function POST(req: NextRequest) {
         }
 
         try {
-          // Cari atau buat record siswa di gm_behaviors
           let { data: behaviorRecord } = await supabase
             .from('gm_behaviors')
             .select('id, total_points')
@@ -322,7 +355,6 @@ export async function POST(req: NextRequest) {
           }
 
           if (behaviorRecord) {
-            // Tambahkan log ke gm_behavior_logs
             const logCreatedAt = item.date ? new Date(item.date).toISOString() : new Date().toISOString();
             const { error: logErr } = await supabase
               .from('gm_behavior_logs')
@@ -336,7 +368,6 @@ export async function POST(req: NextRequest) {
 
             if (logErr) throw logErr;
 
-            // Hitung ulang total_points dari semua riwayat log siswa ini
             const { data: allLogs } = await supabase
               .from('gm_behavior_logs')
               .select('points_delta')
@@ -360,7 +391,6 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Pastikan akun siswa di gm_student_accounts tersinkron tahun ajarannya
       if (behaviorStudentNames.length > 0) {
         await supabase
           .from('gm_student_accounts')
@@ -372,15 +402,15 @@ export async function POST(req: NextRequest) {
       resultSummary.behaviorsProcessed = behaviorsCount;
     }
 
-    return NextResponse.json({
+    return jsonResponse({
       success: true,
       message: `Sinkronisasi berhasil diproses untuk kelas ${cleanClass} (${cleanYear}).`,
       ...resultSummary,
       errors: errors.length > 0 ? errors : undefined,
-    });
+    }, 200, req);
   } catch (err: unknown) {
     console.error('[SyncFromSmartAbsensi] Unhandled Exception:', err);
     const message = err instanceof Error ? err.message : 'Terjadi kesalahan pada server';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonResponse({ error: message }, 500, req);
   }
 }
