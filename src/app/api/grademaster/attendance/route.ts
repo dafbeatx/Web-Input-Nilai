@@ -83,9 +83,10 @@ export async function GET(req: NextRequest) {
       records: records || [], 
       attendance: records || [] 
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Fetch attendance failure:', err);
-    return NextResponse.json({ error: err.message || 'Gagal memuat data absensi' }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Gagal memuat data absensi';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -119,8 +120,9 @@ export async function POST(req: NextRequest) {
       throw error;
     }
     return NextResponse.json({ message: 'Absensi berhasil disimpan', data });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Save attendance failure:', err);
-    return NextResponse.json({ error: err.message || 'Gagal menyimpan absensi' }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Gagal menyimpan absensi';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
