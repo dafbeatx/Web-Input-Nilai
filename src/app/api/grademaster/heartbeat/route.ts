@@ -32,23 +32,25 @@ export async function POST(req: NextRequest) {
 
     if (updateError) throw updateError;
 
-    // 2. Record the event log
-    const { error: logError } = await supabase
-      .from('gm_attempt_logs')
-      .insert({
-        attempt_id: attemptId,
-        event_type: eventType,
-        severity: severity,
-        metadata: {
-          ...metadata,
-          network: networkStatus,
-          client_timestamp: now,
-          latency: latencyMs
-        }
-      });
+    // 2. Record event log ONLY for non-routine events to prevent log ingestion bloat
+    if (eventType !== 'HEARTBEAT' || severity !== 'LOW') {
+      const { error: logError } = await supabase
+        .from('gm_attempt_logs')
+        .insert({
+          attempt_id: attemptId,
+          event_type: eventType,
+          severity: severity,
+          metadata: {
+            ...metadata,
+            network: networkStatus,
+            client_timestamp: now,
+            latency: latencyMs
+          }
+        });
 
-    if (logError) {
-      console.warn('Logging error (non-critical):', logError);
+      if (logError) {
+        console.warn('Logging error (non-critical):', logError);
+      }
     }
 
     return NextResponse.json({ 

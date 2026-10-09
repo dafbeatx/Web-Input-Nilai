@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
       .from(IMAGE_CONFIG.bucket)
       .upload(filePath, webpBuffer, {
         contentType: 'image/webp',
+        cacheControl: '31536000, immutable',
         upsert: true,
       });
 

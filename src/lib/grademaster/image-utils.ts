@@ -1,6 +1,6 @@
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const OUTPUT_QUALITY = 80;
-const MAX_DIMENSION = 512;
+const OUTPUT_QUALITY = 78;
+const MAX_DIMENSION = 256;
 
 export function validateImageSize(size: number): boolean {
   return size <= MAX_FILE_SIZE;

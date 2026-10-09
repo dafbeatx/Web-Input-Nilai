@@ -23,6 +23,13 @@ interface ScoringConfig {
   [key: string]: unknown;
 }
 
+interface SummaryCacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+const summarySiblingsCache = new Map<string, SummaryCacheEntry<SiblingRecord[]>>();
+const SUMMARY_SIBLINGS_CACHE_TTL = 30000; // 30 seconds cache
+
 interface SessionData {
   session_name?: string;
   subject?: string;
@@ -226,22 +233,39 @@ export async function GET(req: NextRequest) {
 
     if (gradeError) throw gradeError;
 
-    // Fetch siblings for all session IDs in parallel to compute isHeldBack
+    // Fetch siblings for all session IDs in parallel with in-memory caching to minimize Supabase egress
     const sessionIds = Array.from(new Set((gradeData || []).map((g: { session_id?: string }) => g.session_id))).filter(Boolean) as string[];
     const siblingMap: Record<string, SiblingRecord[]> = {};
-    
-    if (sessionIds.length > 0) {
-      const { data: allSiblings } = await db
+    const nowSummaryTime = Date.now();
+    const missingSessionIds: string[] = [];
+
+    sessionIds.forEach(sid => {
+      const cached = summarySiblingsCache.get(sid);
+      if (cached && nowSummaryTime - cached.timestamp < SUMMARY_SIBLINGS_CACHE_TTL) {
+        siblingMap[sid] = cached.data;
+      } else {
+        missingSessionIds.push(sid);
+      }
+    });
+
+    if (missingSessionIds.length > 0) {
+      const { data: fetchedSiblings } = await db
         .from('gm_students')
         .select('id, name, final_score, original_score, remedial_status, session_id')
-        .in('session_id', sessionIds)
+        .in('session_id', missingSessionIds)
         .eq('is_deleted', false);
 
-      (allSiblings || []).forEach((s: SiblingRecord) => {
-        if (!siblingMap[s.session_id]) {
-          siblingMap[s.session_id] = [];
-        }
-        siblingMap[s.session_id].push(s);
+      const grouped: Record<string, SiblingRecord[]> = {};
+      missingSessionIds.forEach(sid => { grouped[sid] = []; });
+      (fetchedSiblings || []).forEach((s: SiblingRecord) => {
+        if (!grouped[s.session_id]) grouped[s.session_id] = [];
+        grouped[s.session_id].push(s);
+      });
+
+      missingSessionIds.forEach(sid => {
+        const list = grouped[sid] || [];
+        summarySiblingsCache.set(sid, { data: list, timestamp: nowSummaryTime });
+        siblingMap[sid] = list;
       });
     }
 

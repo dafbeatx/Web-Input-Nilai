@@ -2,12 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/grademaster/security';
 
+interface SettingsCacheEntry {
+  data: any;
+  timestamp: number;
+}
+const settingsCache = new Map<string, SettingsCacheEntry>();
+const SETTINGS_CACHE_TTL = 60000; // 60 seconds
+
 export async function GET(req: NextRequest) {
   try {
-    const supabase = await createClient();
     const { searchParams } = new URL(req.url);
-    const academicYear = searchParams.get('year') || '2025/2026';
+    const academicYear = searchParams.get('year') || '2026/2027';
 
+    const now = Date.now();
+    const cached = settingsCache.get(academicYear);
+    if (cached && now - cached.timestamp < SETTINGS_CACHE_TTL) {
+      return NextResponse.json({ settings: cached.data }, {
+        headers: {
+          'Cache-Control': 'private, max-age=60, stale-while-revalidate=300',
+        }
+      });
+    }
+
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from('gm_behavior_settings')
       .select('reasons')
@@ -32,7 +49,14 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ settings: settings || null });
+    const finalResult = settings || null;
+    settingsCache.set(academicYear, { data: finalResult, timestamp: now });
+
+    return NextResponse.json({ settings: finalResult }, {
+      headers: {
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=300',
+      }
+    });
   } catch (err: unknown) {
     console.error('Fetch global behavior settings error:', err);
     const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -64,6 +88,7 @@ export async function POST(req: NextRequest) {
       .select();
 
     if (error) throw error;
+    settingsCache.clear();
     return NextResponse.json({ message: 'Pengaturan perilaku global berhasil disimpan', data });
   } catch (err: unknown) {
     console.error('Save global behavior settings error:', err);

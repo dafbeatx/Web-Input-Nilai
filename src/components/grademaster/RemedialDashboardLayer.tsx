@@ -229,10 +229,11 @@ export default function RemedialDashboardLayer({
     }
     
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       if (onRefreshRef.current) {
         onRefreshRef.current();
       }
-    }, 10000); // 10 seconds
+    }, 25000); // 25 seconds
     
     return () => clearInterval(interval);
   }, [activeSessionId]);

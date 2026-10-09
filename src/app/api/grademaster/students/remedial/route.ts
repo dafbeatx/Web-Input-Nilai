@@ -5,6 +5,14 @@ import { checkRateLimit } from '@/lib/grademaster/security';
 
 import { submitRemedial } from '@/lib/grademaster/services/remedial.service';
 
+interface RemedialCacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+const sessionMetaCache = new Map<string, RemedialCacheEntry<{ kkm: number; remedialQuestions: string[]; remedialAnswerKeys: string[] }>>();
+const siblingsCache = new Map<string, RemedialCacheEntry<any[]>>();
+const REMEDIAL_CACHE_TTL_MS = 15000; // 15 seconds cache to drastically reduce egress
+
 export async function GET(req: NextRequest) {
   try {
       const supabase = supabaseAdmin;
@@ -73,27 +81,43 @@ export async function GET(req: NextRequest) {
     let remedialQuestions: string[] = [];
     let remedialAnswerKeys: string[] = [];
     let kkm = 70;
+    const nowTimestamp = Date.now();
+
     if (sessionId) {
-      const { data: session } = await supabase
-        .from('gm_sessions')
-        .select('scoring_config, kkm')
-        .eq('id', sessionId)
-        .single();
-      if (session) {
-        kkm = session.kkm || 70;
-        if (session.scoring_config) {
-          remedialQuestions = session.scoring_config.remedialQuestions || [];
-          remedialAnswerKeys = session.scoring_config.remedialAnswerKeys || [];
-        }
+      let cachedMeta = sessionMetaCache.get(sessionId);
+      if (!cachedMeta || nowTimestamp - cachedMeta.timestamp > REMEDIAL_CACHE_TTL_MS) {
+        const { data: session } = await supabase
+          .from('gm_sessions')
+          .select('scoring_config, kkm')
+          .eq('id', sessionId)
+          .single();
+        const freshMeta = {
+          kkm: session?.kkm || 70,
+          remedialQuestions: (session?.scoring_config as any)?.remedialQuestions || [],
+          remedialAnswerKeys: (session?.scoring_config as any)?.remedialAnswerKeys || [],
+        };
+        cachedMeta = { data: freshMeta, timestamp: nowTimestamp };
+        sessionMetaCache.set(sessionId, cachedMeta);
       }
+      kkm = cachedMeta.data.kkm;
+      remedialQuestions = cachedMeta.data.remedialQuestions;
+      remedialAnswerKeys = cachedMeta.data.remedialAnswerKeys;
     }
 
-    // Holdback calculation for GET
-    const { data: siblingStudents } = await supabaseAdmin
-      .from('gm_students')
-      .select('id, name, final_score, original_score, remedial_status')
-      .eq('session_id', sessionId)
-      .eq('is_deleted', false);
+    // Holdback calculation for GET with in-memory caching to save Supabase egress
+    let cachedSiblings = sessionId ? siblingsCache.get(sessionId) : null;
+    if (!cachedSiblings || nowTimestamp - cachedSiblings.timestamp > REMEDIAL_CACHE_TTL_MS) {
+      const { data: freshSiblings } = await supabaseAdmin
+        .from('gm_students')
+        .select('id, name, final_score, original_score, remedial_status')
+        .eq('session_id', sessionId)
+        .eq('is_deleted', false);
+      cachedSiblings = { data: freshSiblings || [], timestamp: nowTimestamp };
+      if (sessionId) {
+        siblingsCache.set(sessionId, cachedSiblings);
+      }
+    }
+    const siblingStudents = cachedSiblings.data;
 
     const isCandidate = (s: any) => {
       const orig = s.original_score !== null && s.original_score !== undefined ? Number(s.original_score) : 0;

@@ -392,11 +392,15 @@ export async function POST(req: NextRequest) {
       isReadOnly = true;
     }
 
+    const studentColumns = isReadOnly
+      ? 'id, name, correct, wrong, mcq_score, essay_score, final_score, csi, lps, remedial_status, original_score, remedial_score, final_score_locked, remedial_attempts, essay_score_auto, essay_score_manual, essay_score_final'
+      : 'id, name, mcq_answers, essay_scores, correct, wrong, mcq_score, essay_score, final_score, csi, lps, remedial_status, remedial_location, remedial_photo, remedial_answers, remedial_note, original_score, remedial_score, final_score_locked, is_cheated, teacher_reviewed, cheating_flags, remedial_attempts, essay_score_auto, essay_score_manual, essay_score_final, essay_auto_details';
+
     let students: any = null;
     try {
-      const res = await supabaseAdmin
-        .from('gm_students')
-        .select('*')
+      const res = await (supabaseAdmin
+        .from('gm_students') as any)
+        .select(studentColumns)
         .eq('session_id', session.id)
         .order('created_at', { ascending: true });
       students = res.data;
@@ -405,9 +409,9 @@ export async function POST(req: NextRequest) {
     if (!students) {
       try {
         const supabase = await createClient();
-        const res = await supabase
-          .from('gm_students')
-          .select('*')
+        const res = await (supabase
+          .from('gm_students') as any)
+          .select(studentColumns)
           .eq('session_id', session.id)
           .order('created_at', { ascending: true });
         students = res.data;

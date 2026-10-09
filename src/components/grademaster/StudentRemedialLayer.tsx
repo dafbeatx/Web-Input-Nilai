@@ -1489,7 +1489,10 @@ export default function StudentRemedialLayer({
     };
 
     checkServerStatus();
-    const intervalId = setInterval(checkServerStatus, 10000);
+    const intervalId = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      checkServerStatus();
+    }, 25000);
     return () => clearInterval(intervalId);
   }, [sessionId, studentName, step, remedialTimer, className, academicYear, setToast]);
 
@@ -2356,8 +2359,8 @@ export default function StudentRemedialLayer({
   useEffect(() => {
     if (step !== 'EXAM' || !attemptId || isSubmitting) return;
 
-    // 1. Start Heartbeat Pulse (20s)
-    heartbeatTimerRef.current = setInterval(sendHeartbeat, 20000);
+    // 1. Start Heartbeat Pulse (30s to reduce Supabase egress)
+    heartbeatTimerRef.current = setInterval(sendHeartbeat, 30000);
     queueMicrotask(() => {
       sendHeartbeat();
     }); // Immediate first beat

@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
       .from('avatars')
       .upload(filePath, processedImageBuffer, {
         contentType: 'image/webp',
-        cacheControl: '3600',
+        cacheControl: '31536000, immutable',
         upsert: true,
       });
 

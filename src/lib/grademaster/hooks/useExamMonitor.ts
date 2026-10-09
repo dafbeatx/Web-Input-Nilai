@@ -67,19 +67,19 @@ export const useExamMonitor = ({ attemptId, onViolation, onNetworkChange, examSt
     initialHeightRef.current = window.innerHeight;
     sendLog('EXAM_START', 'LOW', { message: 'Monitoring started' });
 
-    // 2. Heartbeat (Every 10 seconds)
+    // 2. Heartbeat (Every 25 seconds to preserve bandwidth & egress)
     heartbeatTimerRef.current = setInterval(() => {
       const now = Date.now();
       const diff = now - lastHeartbeatRef.current;
       
       // Detection: If heartbeat is delayed, it might mean the app was suspended or killed
-      if (diff > 15000) {
+      if (diff > 35000) {
         sendLog('SUSPICIOUS_DELAY', 'MEDIUM', { delayMs: diff });
       }
       
       sendLog('HEARTBEAT');
       lastHeartbeatRef.current = now;
-    }, 10000);
+    }, 25000);
 
     // 3. Network Listeners
     const handleOnline = () => {
