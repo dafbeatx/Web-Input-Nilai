@@ -443,6 +443,16 @@ export default function AttendanceLayer({
                <h3 className="text-base font-black text-slate-800 mb-1">Belum Ada Presensi Aktif</h3>
                <p className="text-xs text-slate-400 max-w-xs leading-relaxed">Pilih Kelas, Mapel, dan Tanggal untuk memuat daftar absensi.</p>
              </div>
+          ) : students.length === 0 ? (
+             <div className="text-center py-20 bg-white rounded-2xl border border-slate-100 flex flex-col items-center justify-center px-4 shadow-sm">
+               <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 mb-3 border border-slate-100">
+                 <Users size={24} />
+               </div>
+               <h3 className="text-base font-bold text-slate-800 mb-1">Tidak Ada Siswa di Kelas Ini</h3>
+               <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
+                 Belum ada data siswa terdaftar untuk Kelas <span className="font-semibold text-slate-600">{className}</span> pada Tahun Ajaran <span className="font-semibold text-slate-600">{academicYear}</span>.
+               </p>
+             </div>
           ) : (
             students.map((s) => {
               const currentStatus = attendanceMap[s.student_name];
