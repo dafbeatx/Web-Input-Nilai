@@ -67,36 +67,55 @@ JANGAN berikan teks pengantar, penutup, markdown, atau penjelasan tambahan di lu
 
     const userPrompt = `Nilai lembar jawaban berikut:\n\n${JSON.stringify(evalData, null, 2)}`;
 
-    // Call Groq Chat Completions API with 6-second timeout to prevent blocking student submission
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const candidateModels = [
+      'qwen/qwen3.8-27b',
+      'llama-3.3-70b-versatile',
+      'openai/gpt-oss-120b'
+    ];
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.1,
-        response_format: { type: 'json_object' }
-      }),
-      signal: controller.signal
-    });
+    let data: any = null;
+    let lastError: Error | null = null;
 
-    clearTimeout(timeoutId);
+    for (const model of candidateModels) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.1,
+            response_format: { type: 'json_object' }
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errText = await response.text().catch(() => '');
-      throw new Error(`Groq API returned HTTP error ${response.status}: ${errText}`);
+        if (response.ok) {
+          data = await response.json();
+          break;
+        } else {
+          const errText = await response.text().catch(() => '');
+          lastError = new Error(`Groq API (${model}) returned HTTP error ${response.status}: ${errText}`);
+        }
+      } catch (err: unknown) {
+        clearTimeout(timeoutId);
+        lastError = err instanceof Error ? err : new Error(String(err));
+      }
     }
 
-    const data = await response.json();
+    if (!data) {
+      throw lastError || new Error('Groq scoring failed across all candidate models');
+    }
+
     const content = data?.choices?.[0]?.message?.content;
     if (!content) {
       throw new Error('Groq API response content is empty');

@@ -221,28 +221,42 @@ JANGAN menulis penjelasan tambahan di luar JSON. Respon Anda harus langsung dimu
           `Bukti Foto AI Proctoring:\n${JSON.stringify(simplifiedSnaps, null, 2)}\n\n` +
           `Baseline Heuristik Model:\n${JSON.stringify(heuristicResults, null, 2)}`;
 
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt }
-            ],
-            temperature: 0.1,
-            response_format: { type: 'json_object' }
-          })
-        });
+        const candidateModels = [
+          'qwen/qwen3.8-27b',
+          'llama-3.3-70b-versatile',
+          'openai/gpt-oss-120b'
+        ];
 
-        if (!response.ok) {
-          throw new Error(`Groq API returned HTTP ${response.status}`);
+        let data: any = null;
+        for (const model of candidateModels) {
+          try {
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+              },
+              body: JSON.stringify({
+                model,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userPrompt }
+                ],
+                temperature: 0.1,
+                response_format: { type: 'json_object' }
+              })
+            });
+
+            if (response.ok) {
+              data = await response.json();
+              break;
+            }
+          } catch {}
         }
 
-        const data = await response.json();
+        if (!data) {
+          throw new Error('Groq security analysis failed across candidate models');
+        }
         const content = data?.choices?.[0]?.message?.content;
         if (content) {
           const parsedResult = JSON.parse(content);

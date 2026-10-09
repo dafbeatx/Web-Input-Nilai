@@ -156,41 +156,50 @@ JANGAN menulis penjelasan tambahan di luar JSON. Respon Anda harus langsung dimu
       }
     ];
 
-    // Call Groq API with an 8-second timeout limit to prevent Serverless hanging
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const candidateModels = [
+      'qwen/qwen3.8-27b',
+      'openai/gpt-oss-120b',
+      'llama-3.3-70b-versatile'
+    ];
 
-    let response;
-    try {
-      response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages,
-          temperature: 0.3,
-          response_format: { type: 'json_object' }
-        }),
-        signal: controller.signal
-      });
-    } catch (fetchErr: any) {
-      if (fetchErr.name === 'AbortError') {
-        throw new Error('Groq API request timed out (limit 8s)');
+    let resData: any = null;
+    let lastError: Error | null = null;
+
+    for (const model of candidateModels) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature: 0.3,
+            response_format: { type: 'json_object' }
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (response.ok) {
+          resData = await response.json();
+          break;
+        } else {
+          const errText = await response.text().catch(() => '');
+          lastError = new Error(`Groq API (${model}) HTTP ${response.status}: ${errText}`);
+        }
+      } catch (fetchErr: unknown) {
+        clearTimeout(timeoutId);
+        lastError = fetchErr instanceof Error ? fetchErr : new Error(String(fetchErr));
       }
-      throw fetchErr;
-    } finally {
-      clearTimeout(timeoutId);
     }
 
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Groq API HTTP ${response.status}: ${errText}`);
+    if (!resData) {
+      throw lastError || new Error('Gagal menghubungi AI provider');
     }
-
-    const resData = await response.json();
     const content = resData.choices?.[0]?.message?.content;
     
     if (!content) {

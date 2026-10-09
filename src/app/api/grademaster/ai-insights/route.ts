@@ -94,30 +94,50 @@ JANGAN menulis penjelasan tambahan di luar JSON. Respon Anda harus langsung dimu
       `Tingkat Kesulitan Soal (Berdasarkan Kegagalan):\n${JSON.stringify(difficulties, null, 2)}\n\n` +
       `Daftar Nilai Siswa:\n${JSON.stringify(studentList, null, 2)}`;
 
-    // Call Groq API
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.2,
-        response_format: { type: 'json_object' }
-      })
-    });
+    // Call Groq API with robust model fallback
+    const candidateModels = [
+      'qwen/qwen3.8-27b',
+      'llama-3.3-70b-versatile',
+      'openai/gpt-oss-120b'
+    ];
 
-    if (!response.ok) {
-      const errBody = await response.text().catch(() => '');
-      throw new Error(`Groq API returned HTTP ${response.status}: ${errBody}`);
+    let data: any = null;
+    let lastError: Error | null = null;
+
+    for (const model of candidateModels) {
+      try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.2,
+            response_format: { type: 'json_object' }
+          })
+        });
+
+        if (response.ok) {
+          data = await response.json();
+          break;
+        } else {
+          const errBody = await response.text().catch(() => '');
+          lastError = new Error(`Groq API (${model}) returned HTTP ${response.status}: ${errBody}`);
+        }
+      } catch (err: unknown) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+      }
     }
 
-    const data = await response.json();
+    if (!data) {
+      throw lastError || new Error('Gagal menghubungi AI provider');
+    }
     const content = data?.choices?.[0]?.message?.content;
     if (!content) {
       throw new Error('Respons Groq kosong.');
