@@ -659,7 +659,7 @@ export default function LessonManagementLayer({
 
   return (
     <div 
-      className="h-full w-full bg-[#000000] text-white flex flex-col font-sans relative overflow-hidden"
+      className="fixed inset-0 z-40 h-[100dvh] max-h-[100dvh] w-full bg-[#000000] text-white flex flex-col font-sans overflow-hidden"
       style={{ 
         fontFamily: '-apple-system-body, ui-sans-serif, -apple-system, system-ui, Segoe UI, Helvetica, Arial, sans-serif',
         fontSize: '14px',
@@ -703,10 +703,10 @@ export default function LessonManagementLayer({
       </header>
 
       {/* Main Workspace split */}
-      <main className="flex-1 flex overflow-hidden relative z-10">
+      <main className="flex-1 min-h-0 flex overflow-hidden relative z-10">
         
         {/* LEFT COLUMN: HISTORY SIDEBAR */}
-        <section className="w-80 border-r border-white/10 bg-[#171717] shrink-0 hidden md:flex flex-col">
+        <section className="w-80 border-r border-white/10 bg-[#171717] shrink-0 hidden md:flex flex-col min-h-0">
           <div className="p-4 border-b border-white/10 flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <h3 className="text-[10px] font-bold text-[#afafaf] uppercase tracking-widest pl-1">Riwayat Pelajaran</h3>
@@ -760,10 +760,10 @@ export default function LessonManagementLayer({
         </section>
 
         {/* RIGHT COLUMN: AI CONVERSATION */}
-        <section className="flex-1 flex flex-col bg-[#000000]">
+        <section className="flex-1 min-h-0 flex flex-col bg-[#000000] overflow-hidden">
           
           {/* Chat Window Messages */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-8 max-w-3xl mx-auto w-full flex flex-col custom-scrollbar">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-8 max-w-3xl mx-auto w-full flex flex-col custom-scrollbar">
             {messages.map((msg, idx) => {
               const isAI = msg.role === 'assistant';
               return (
@@ -905,19 +905,19 @@ export default function LessonManagementLayer({
                   )}
                 </div>
 
-                {/* Final actions */}
+                {/* Final actions inside review card */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-white/10">
                   <button
                     onClick={() => handleSaveAction(true)}
                     disabled={isAiResponding}
-                    className="w-full sm:flex-1 h-11 bg-[#d25e28] hover:bg-[#c15321] text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-[#d25e28]/20 flex items-center justify-center gap-2 order-1 sm:order-2 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#d25e28] outline-none"
+                    className="w-full sm:flex-1 h-11 bg-[#d25e28] hover:bg-[#c15321] text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-[#d25e28]/25 flex items-center justify-center gap-2 order-1 sm:order-2 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#d25e28] outline-none cursor-pointer"
                   >
-                    <CheckCircle2 size={14} /> Terbitkan (Publish)
+                    <CheckCircle2 size={16} /> Terbitkan (Publish)
                   </button>
                   <button
                     onClick={() => handleSaveAction(false)}
                     disabled={isAiResponding}
-                    className="w-full sm:flex-1 h-11 bg-[#2f2f2f] hover:bg-[#3f3f3f] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-colors border border-white/10 order-2 sm:order-1 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-white outline-none"
+                    className="w-full sm:flex-1 h-11 bg-[#2f2f2f] hover:bg-[#3f3f3f] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-colors border border-white/10 order-2 sm:order-1 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-white outline-none cursor-pointer"
                   >
                     Simpan Draft
                   </button>
@@ -927,7 +927,7 @@ export default function LessonManagementLayer({
                       resetChatToInit();
                     }}
                     disabled={isAiResponding}
-                    className="w-full sm:w-auto sm:px-6 h-11 bg-transparent hover:bg-white/5 text-[#afafaf] hover:text-white border border-white/10 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors order-3 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-white outline-none"
+                    className="w-full sm:w-auto sm:px-6 h-11 bg-transparent hover:bg-white/5 text-[#afafaf] hover:text-white border border-white/10 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors order-3 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-white outline-none cursor-pointer"
                   >
                     Batal
                   </button>
@@ -938,32 +938,74 @@ export default function LessonManagementLayer({
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Input Bar (ChatGPT Style Capsule) */}
-          <div className="p-4 bg-[#000000] border-t border-white/10 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-6">
-            <form onSubmit={handleFormSubmit} className="flex gap-2 max-w-3xl mx-auto w-full relative">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder={
-                  !flowType 
-                    ? "Pilih opsi di atas untuk memulai..." 
-                    : isAiResponding 
-                    ? "Asisten sedang memproses..." 
-                    : "Ketik pesan untuk asisten kurikulum..."
-                }
-                disabled={!flowType || isAiResponding || !!aiResult}
-                className="w-full h-12 bg-[#212121] border border-white/10 rounded-2xl pl-4 pr-14 text-sm font-medium text-white placeholder:text-[#afafaf] focus:border-[#d25e28]/50 focus-visible:ring-2 focus-visible:ring-[#d25e28] outline-none transition-all disabled:opacity-40"
-              />
-              <button
-                type="submit"
-                disabled={!inputValue.trim() || isAiResponding || !flowType || !!aiResult}
-                className="absolute right-1.5 top-1.5 w-9 h-9 bg-[#d25e28] hover:bg-[#c15321] text-white rounded-xl flex items-center justify-center shadow-md transition-all disabled:opacity-20 disabled:bg-[#2f2f2f] focus-visible:ring-2 focus-visible:ring-[#d25e28] outline-none"
-              >
-                <Send size={14} />
-              </button>
-            </form>
-          </div>
+          {/* Bottom Bar: Pinned Action Bar when AI Result is ready, or Quick Input Capsule otherwise */}
+          {aiResult ? (
+            <div className="shrink-0 p-3 sm:p-4 bg-[#141414] border-t border-white/15 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-4 shadow-2xl z-20 animate-in slide-in-from-bottom-2 duration-200">
+              <div className="max-w-3xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                  <div className="w-8 h-8 rounded-lg bg-[#d25e28]/20 flex items-center justify-center text-[#d25e28] shrink-0">
+                    <Sparkles size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white uppercase tracking-wider truncate">Draf Formulasi Siap</p>
+                    <p className="text-[10px] text-[#afafaf] truncate">Tinjau preview di atas lalu publikasikan ke siswa</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
+                  <button
+                    onClick={() => {
+                      setAiResult(null);
+                      resetChatToInit();
+                    }}
+                    disabled={isAiResponding}
+                    className="px-3 sm:px-4 h-10 bg-transparent hover:bg-white/5 text-[#afafaf] hover:text-white border border-white/10 rounded-xl font-bold text-xs uppercase tracking-wider transition-all active:scale-95 focus-visible:ring-2 focus-visible:ring-white outline-none cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={() => handleSaveAction(false)}
+                    disabled={isAiResponding}
+                    className="px-4 sm:px-5 h-10 bg-[#262626] hover:bg-[#333333] text-white border border-white/10 rounded-xl font-bold text-xs uppercase tracking-wider transition-all active:scale-95 focus-visible:ring-2 focus-visible:ring-white outline-none cursor-pointer"
+                  >
+                    Simpan Draft
+                  </button>
+                  <button
+                    onClick={() => handleSaveAction(true)}
+                    disabled={isAiResponding}
+                    className="flex-1 sm:flex-initial px-5 sm:px-6 h-10 bg-[#d25e28] hover:bg-[#e06b32] text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-[#d25e28]/30 flex items-center justify-center gap-2 active:scale-95 focus-visible:ring-2 focus-visible:ring-[#d25e28] outline-none cursor-pointer"
+                  >
+                    <CheckCircle2 size={16} /> Terbitkan (Publish)
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="shrink-0 p-4 bg-[#000000] border-t border-white/10 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-6">
+              <form onSubmit={handleFormSubmit} className="flex gap-2 max-w-3xl mx-auto w-full relative">
+                <input
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder={
+                    !flowType 
+                      ? "Pilih opsi di atas untuk memulai..." 
+                      : isAiResponding 
+                      ? "Asisten sedang memproses..." 
+                      : "Ketik pesan untuk asisten kurikulum..."
+                  }
+                  disabled={!flowType || isAiResponding}
+                  className="w-full h-12 bg-[#212121] border border-white/10 rounded-2xl pl-4 pr-14 text-sm font-medium text-white placeholder:text-[#afafaf] focus:border-[#d25e28]/50 focus-visible:ring-2 focus-visible:ring-[#d25e28] outline-none transition-all disabled:opacity-40"
+                />
+                <button
+                  type="submit"
+                  disabled={!inputValue.trim() || isAiResponding || !flowType}
+                  className="absolute right-1.5 top-1.5 w-9 h-9 bg-[#d25e28] hover:bg-[#c15321] text-white rounded-xl flex items-center justify-center shadow-md transition-all disabled:opacity-20 disabled:bg-[#2f2f2f] focus-visible:ring-2 focus-visible:ring-[#d25e28] outline-none"
+                >
+                  <Send size={14} />
+                </button>
+              </form>
+            </div>
+          )}
         </section>
       </main>
 
