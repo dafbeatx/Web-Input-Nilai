@@ -169,6 +169,7 @@ export default function LessonManagementLayer({
   const [isLoadingPreviewQuizzes, setIsLoadingPreviewQuizzes] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const aiResultRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const subjects = [
@@ -176,12 +177,16 @@ export default function LessonManagementLayer({
     'Bahasa Inggris', 'PAI', 'PJOK', 'Seni Budaya', 'Informatika'
   ];
 
-  // Auto-scroll chat to bottom
+  // Auto-scroll chat to bottom or to aiResult when generated
   useEffect(() => {
-    if (messagesEndRef.current) {
+    if (aiResult) {
+      setTimeout(() => {
+        aiResultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    } else if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isAiResponding]);
+  }, [messages, isAiResponding, aiResult]);
 
   const loadHistory = async () => {
     try {
@@ -758,7 +763,7 @@ export default function LessonManagementLayer({
         <section className="flex-1 flex flex-col bg-[#000000]">
           
           {/* Chat Window Messages */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-8 no-scrollbar max-w-3xl mx-auto w-full flex flex-col">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-8 max-w-3xl mx-auto w-full flex flex-col custom-scrollbar">
             {messages.map((msg, idx) => {
               const isAI = msg.role === 'assistant';
               return (
@@ -855,13 +860,13 @@ export default function LessonManagementLayer({
 
             {/* AI Result Review Panel inside Chat */}
             {aiResult && (
-              <div className="border border-white/10 bg-[#171717] rounded-3xl p-5 sm:p-6 space-y-6 shadow-2xl animate-in zoom-in-95 duration-200 mt-4 relative overflow-hidden text-left">
+              <div ref={aiResultRef} className="border border-white/10 bg-[#171717] rounded-3xl p-5 sm:p-6 space-y-6 shadow-2xl animate-in zoom-in-95 duration-200 mt-4 relative overflow-hidden text-left">
                 <div className="flex items-center justify-between pb-4 border-b border-white/10">
                   <h3 className="flex items-center gap-2 text-xs sm:text-sm font-bold uppercase tracking-wider text-[#d25e28]">
                     <Sparkles size={16} /> Hasil Formulasi Groq AI
                   </h3>
                   <span className="text-[9px] font-bold px-2 py-0.5 bg-[#d25e28]/15 text-[#d25e28] border border-[#d25e28]/35 rounded-md">
-                    Llama 70B
+                    Groq AI
                   </span>
                 </div>
 
@@ -869,9 +874,9 @@ export default function LessonManagementLayer({
                   {/* Material summary preview */}
                   <div>
                     <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#afafaf] mb-2">1. Preview Ringkasan</h4>
-                    <p className="text-white text-xs leading-relaxed font-normal bg-[#212121] p-4 rounded-xl border border-white/5">
-                      {aiResult.preview}
-                    </p>
+                    <div className="text-white text-xs leading-relaxed font-normal bg-[#212121] p-4 rounded-xl border border-white/5 whitespace-pre-wrap max-h-96 overflow-y-auto custom-scrollbar">
+                      {aiResult.preview || 'Tidak ada konten ringkasan.'}
+                    </div>
                   </div>
 
                   {/* MCQ & Essay Questions preview */}
