@@ -22,6 +22,7 @@ import {
   fetchAllLessons, 
   deleteLesson 
 } from '@/lib/grademaster/lessonActions';
+import { parseLessonToSlides } from '@/lib/grademaster/lessonParser';
 
 const getSubjectExample = (subject: string): { daily: string; quiz: string } => {
   const examples: Record<string, { daily: string; quiz: string }> = {
@@ -873,9 +874,30 @@ export default function LessonManagementLayer({
                 <div className="space-y-5">
                   {/* Material summary preview */}
                   <div>
-                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#afafaf] mb-2">1. Preview Ringkasan</h4>
-                    <div className="text-white text-xs leading-relaxed font-normal bg-[#212121] p-4 rounded-xl border border-white/5 whitespace-pre-wrap max-h-96 overflow-y-auto custom-scrollbar">
-                      {aiResult.preview || 'Tidak ada konten ringkasan.'}
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#afafaf] mb-2 flex items-center justify-between">
+                      <span>1. Preview Buku Pelajaran ({parseLessonToSlides(aiResult.preview).length} Slide)</span>
+                      <span className="text-[#d25e28] text-[9px] font-mono">Format Slide Buku Aktif</span>
+                    </h4>
+                    <div className="bg-[#212121] p-4 rounded-xl border border-white/5 max-h-96 overflow-y-auto custom-scrollbar space-y-4">
+                      {parseLessonToSlides(aiResult.preview).map((slide, sIdx) => (
+                        <div key={sIdx} className="space-y-2 pb-4 border-b border-white/10 last:border-b-0 last:pb-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-[#d25e28]/20 text-[#d25e28] border border-[#d25e28]/30">
+                              Slide {sIdx + 1}
+                            </span>
+                            <h5 className="text-xs font-bold text-white uppercase tracking-wider">
+                              {slide.title}
+                            </h5>
+                          </div>
+                          <div className="space-y-2 pl-2">
+                            {slide.paragraphs.map((p, pIdx) => (
+                              <p key={pIdx} className="text-slate-300 text-xs leading-relaxed font-normal">
+                                {p}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
@@ -1035,15 +1057,34 @@ export default function LessonManagementLayer({
             </div>
 
             <div className="space-y-5 sm:space-y-6">
-              {/* Summary */}
+              {/* Summary as Book Slides */}
               {previewingLesson.ai_reading_preview && (
-                <div className="bg-[#d25e28]/5 rounded-2xl p-4 sm:p-5 border border-[#d25e28]/15">
-                  <h4 className="text-[#d25e28] text-xs font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                    <Sparkles size={14} /> Ringkasan Materi AI
+                <div className="bg-[#d25e28]/5 rounded-2xl p-4 sm:p-5 border border-[#d25e28]/15 space-y-3">
+                  <h4 className="text-[#d25e28] text-xs font-bold uppercase tracking-widest mb-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5"><Sparkles size={14} /> Buku Materi Digital ({parseLessonToSlides(previewingLesson.ai_reading_preview).length} Slide)</span>
+                    <span className="text-[9px] font-mono text-[#d25e28]">Format Slide</span>
                   </h4>
-                  <p className="text-white text-xs font-normal leading-relaxed">
-                    {previewingLesson.ai_reading_preview}
-                  </p>
+                  <div className="space-y-4 max-h-72 overflow-y-auto custom-scrollbar pr-1">
+                    {parseLessonToSlides(previewingLesson.ai_reading_preview).map((slide, sIdx) => (
+                      <div key={sIdx} className="space-y-2 pb-3 border-b border-white/10 last:border-b-0 last:pb-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-[#d25e28]/20 text-[#d25e28] border border-[#d25e28]/30">
+                            Slide {sIdx + 1}
+                          </span>
+                          <h5 className="text-xs font-bold text-white uppercase tracking-wider">
+                            {slide.title}
+                          </h5>
+                        </div>
+                        <div className="space-y-2 pl-2">
+                          {slide.paragraphs.map((p, pIdx) => (
+                            <p key={pIdx} className="text-slate-300 text-xs leading-relaxed font-normal">
+                              {p}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   ArrowLeft, 
   BookOpen, 
@@ -14,13 +14,16 @@ import {
   HelpCircle,
   Award,
   AlertCircle,
-  Lightbulb
+  Lightbulb,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import { DailyLesson, Quiz, ToastType } from '@/lib/grademaster/types';
 import GradeMasterMascot from './ui/GradeMasterMascot';
 import { addBehaviorAction } from '@/lib/actions/behavior';
+import { parseLessonToSlides, BookSlide } from '@/lib/grademaster/lessonParser';
 
 interface SimplifiedSlide {
   title: string;
@@ -171,6 +174,14 @@ export default function StudentLessonLayer({
   const [simplifiedSlides, setSimplifiedSlides] = useState<SimplifiedSlide[]>([]);
   const [isLoadingSimplify, setIsLoadingSimplify] = useState(false);
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
+  const [bookViewMode, setBookViewMode] = useState<'slide' | 'scroll'>('slide');
+
+  // Compute parsed book slides dynamically from lesson material
+  const bookSlides: BookSlide[] = useMemo(() => {
+    if (!selectedLesson) return [];
+    const textToParse = selectedLesson.ai_reading_preview || selectedLesson.content || '';
+    return parseLessonToSlides(textToParse, selectedLesson.subject);
+  }, [selectedLesson]);
 
   // Streak & Mascot states
   const [streakCount, setStreakCount] = useState<number>(studentData?.study_streak || 0);
@@ -703,101 +714,288 @@ export default function StudentLessonLayer({
     </div>
   );
 
-  const renderSlideDeck = () => {
-    if (simplifiedSlides.length === 0) return null;
-    const currentSlide = simplifiedSlides[currentSlideIdx];
-    const totalSlides = simplifiedSlides.length;
+  const renderFormattedText = (text: string) => {
+    if (!text) return null;
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, idx) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return (
+          <strong key={idx} className="font-bold text-slate-900">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      return part;
+    });
+  };
+
+  const renderBookDeck = () => {
+    const isSimplified = learningMode === 'santai' && simplifiedSlides.length > 0;
+    
+    interface DisplaySlide {
+      title: string;
+      paragraphs: string[];
+      analogy?: string;
+    }
+
+    const currentSlides: DisplaySlide[] = isSimplified 
+      ? simplifiedSlides.map((s, idx) => ({
+          title: s.title || `Slide ${idx + 1}`,
+          paragraphs: s.content.split('\n').filter(p => p.trim().length > 0),
+          analogy: s.analogy
+        }))
+      : bookSlides.map((s) => ({
+          title: s.title,
+          paragraphs: s.paragraphs
+        }));
+
+    if (currentSlides.length === 0) {
+      return (
+        <div className="bg-white border border-slate-200 rounded-3xl p-8 text-center text-slate-400">
+          Belum ada isi materi pelajaran.
+        </div>
+      );
+    }
+
+    const totalSlides = currentSlides.length;
+    const activeSlide = currentSlides[currentSlideIdx] || currentSlides[0];
 
     return (
       <div className="flex flex-col gap-4 animate-in fade-in duration-300">
         
-        {/* Slide Progress Indicator */}
-        <div className="flex gap-1.5 w-full px-1">
-          {Array.from({ length: totalSlides }).map((_, idx) => (
-            <div 
-              key={idx} 
-              className={`h-1.5 rounded-full flex-1 transition-all duration-300 ${
-                idx <= currentSlideIdx ? 'bg-emerald-500' : 'bg-slate-150'
-              }`}
-            />
-          ))}
-        </div>
-
-        {/* The Card */}
-        <div className="bg-gradient-to-br from-emerald-50/20 to-teal-50/5 border border-emerald-500/10 rounded-[2rem] p-5 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[340px]">
-          
-          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-bl-full pointer-events-none" />
-
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-[9px] font-black uppercase tracking-widest text-emerald-650 bg-emerald-100/50 px-2.5 py-1 rounded-full border border-emerald-500/10">
-                Slide {currentSlideIdx + 1} dari {totalSlides}
+        {/* Top Header: Badge, Slide indicator & View Mode toggle */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-100/70 px-3 py-1 rounded-full border border-emerald-500/20 flex items-center gap-1.5 shadow-sm shadow-emerald-500/5">
+              <BookOpen size={12} className="text-emerald-600" />
+              Slide {currentSlideIdx + 1} dari {totalSlides}
+            </span>
+            {isSimplified && (
+              <span className="text-[9px] font-black uppercase tracking-wider text-amber-700 bg-amber-100/70 px-2 py-0.5 rounded-md border border-amber-500/20 flex items-center gap-1">
+                <Sparkles size={10} className="text-amber-600" /> Paham Kilat AI
               </span>
-              <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                <Sparkles size={11} className="text-emerald-500 animate-pulse" /> Paham Kilat AI
-              </div>
-            </div>
-
-            <h3 className="text-base font-black text-slate-900 leading-tight font-outfit">
-              {currentSlide.title}
-            </h3>
-
-            <div className="text-slate-700 text-[12.5px] leading-relaxed whitespace-pre-wrap font-medium space-y-2">
-              {currentSlide.content.split('\n').map((para: string, pIdx: number) => {
-                const trimmed = para.trim();
-                if (trimmed.startsWith('-') || trimmed.startsWith('*')) {
-                  return (
-                    <div key={pIdx} className="flex items-start gap-2 pl-1 mt-1">
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1.5 shrink-0" />
-                      <p className="flex-1 text-slate-750 font-bold">{trimmed.substring(1).trim()}</p>
-                    </div>
-                  );
-                }
-                return <p key={pIdx} className="text-slate-750 font-semibold">{trimmed}</p>;
-              })}
-            </div>
-
-            {/* Analogi Box */}
-            {currentSlide.analogy && (
-              <div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-3.5 mt-4 text-left flex items-start gap-2.5 animate-in slide-in-from-bottom-2 duration-300">
-                <div className="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-                  <Lightbulb size={13} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h5 className="text-[10px] font-black text-amber-950 uppercase tracking-wider">💡 Gampangnya Gini:</h5>
-                  <p className="text-slate-650 text-[11.5px] font-semibold mt-0.5 leading-relaxed">
-                    {currentSlide.analogy}
-                  </p>
-                </div>
-              </div>
             )}
           </div>
 
-          {/* Navigation buttons inside card */}
-          <div className="flex justify-between items-center gap-3 pt-5 border-t border-slate-100 mt-6 shrink-0">
-            <button
-              onClick={() => setCurrentSlideIdx(prev => Math.max(0, prev - 1))}
-              disabled={currentSlideIdx === 0}
-              className="px-3.5 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-[10.5px] font-black uppercase tracking-wider disabled:opacity-40 transition-all border border-slate-100 min-h-[38px] active:scale-95 flex items-center gap-1"
-            >
-              Kembali
-            </button>
-            <button
-              onClick={async () => {
-                if (currentSlideIdx < totalSlides - 1) {
-                  setCurrentSlideIdx(prev => prev + 1);
-                } else {
-                  setToast({ message: "Hebat! Kamu sudah membaca semua materi hari ini 🚀", type: "success" });
-                  await triggerStreakUpdate();
-                }
-              }}
-              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[10.5px] font-black uppercase tracking-wider transition-all min-h-[38px] active:scale-95 shadow-sm shadow-emerald-500/15 flex items-center gap-1"
-            >
-              {currentSlideIdx === totalSlides - 1 ? 'Selesai' : 'Lanjut'}
-            </button>
+          <div className="flex items-center gap-2">
+            {/* View Mode Toggle: Slide vs Scroll */}
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200/60">
+              <button
+                onClick={() => setBookViewMode('slide')}
+                className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
+                  bookViewMode === 'slide' 
+                    ? 'bg-white text-emerald-600 shadow-sm' 
+                    : 'text-slate-400 hover:text-slate-600'
+                }`}
+                title="Mode Slide per Halaman Buku"
+              >
+                Slide
+              </button>
+              <button
+                onClick={() => setBookViewMode('scroll')}
+                className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
+                  bookViewMode === 'scroll' 
+                    ? 'bg-white text-emerald-600 shadow-sm' 
+                    : 'text-slate-400 hover:text-slate-600'
+                }`}
+                title="Mode Baca Semua Paragraf"
+              >
+                Semua
+              </button>
+            </div>
           </div>
-
         </div>
+
+        {bookViewMode === 'slide' ? (
+          <>
+            {/* Segmented Progress Bar */}
+            <div className="flex gap-1.5 w-full px-1">
+              {Array.from({ length: totalSlides }).map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentSlideIdx(idx)}
+                  className={`h-1.5 rounded-full flex-1 transition-all duration-300 cursor-pointer ${
+                    idx === currentSlideIdx 
+                      ? 'bg-emerald-500 shadow-sm shadow-emerald-500/30 ring-1 ring-emerald-400' 
+                      : idx < currentSlideIdx 
+                      ? 'bg-emerald-400/80' 
+                      : 'bg-slate-200 hover:bg-slate-300'
+                  }`}
+                  title={`Lompat ke Slide ${idx + 1}`}
+                />
+              ))}
+            </div>
+
+            {/* Slide Card - Book page style */}
+            <div className="bg-white border border-slate-200/80 rounded-[2rem] p-5 sm:p-7 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[380px] transition-all">
+              <div className="space-y-5">
+                {/* Slide Title */}
+                <div className="border-b border-slate-100 pb-3.5 flex items-start justify-between gap-3">
+                  <div>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 font-mono">
+                      Halaman {currentSlideIdx + 1}
+                    </span>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 leading-snug font-outfit mt-0.5">
+                      {activeSlide.title}
+                    </h3>
+                  </div>
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100/60">
+                    <BookOpen size={16} />
+                  </div>
+                </div>
+
+                {/* Slide Paragraphs */}
+                <div className="space-y-4 text-slate-700 text-sm leading-relaxed font-normal">
+                  {activeSlide.paragraphs.map((para, pIdx) => {
+                    const trimmed = para.trim();
+                    if (!trimmed) return null;
+
+                    if (trimmed.startsWith('-') || trimmed.startsWith('*')) {
+                      return (
+                        <div key={pIdx} className="flex items-start gap-2.5 pl-1.5 py-0.5">
+                          <span className="w-2 h-2 bg-emerald-500 rounded-full mt-2 shrink-0 shadow-sm shadow-emerald-500/20" />
+                          <p className="flex-1 font-medium text-slate-800 leading-relaxed">
+                            {renderFormattedText(trimmed.substring(1).trim())}
+                          </p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <p key={pIdx} className="font-normal text-slate-800 leading-relaxed text-justify sm:text-left">
+                        {renderFormattedText(trimmed)}
+                      </p>
+                    );
+                  })}
+                </div>
+
+                {/* Optional Analogy Box if present */}
+                {activeSlide.analogy && (
+                  <div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-3.5 mt-3 text-left flex items-start gap-2.5 animate-in slide-in-from-bottom-2 duration-300">
+                    <div className="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
+                      <Lightbulb size={13} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h5 className="text-[10px] font-black text-amber-950 uppercase tracking-wider">💡 Gampangnya Gini:</h5>
+                      <p className="text-slate-700 text-xs font-semibold mt-0.5 leading-relaxed">
+                        {activeSlide.analogy}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Navigation Controls */}
+              <div className="flex justify-between items-center gap-2 pt-5 border-t border-slate-100 mt-6 shrink-0">
+                <button
+                  onClick={() => setCurrentSlideIdx(prev => Math.max(0, prev - 1))}
+                  disabled={currentSlideIdx === 0}
+                  className="px-3.5 sm:px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-black uppercase tracking-wider disabled:opacity-30 transition-all border border-slate-200/60 min-h-[40px] active:scale-95 flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft size={16} /> <span className="hidden xs:inline">Sebelumnya</span>
+                </button>
+
+                {/* Direct pagination numbers */}
+                <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar max-w-[180px] sm:max-w-none">
+                  {Array.from({ length: totalSlides }).map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentSlideIdx(idx)}
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl text-[10px] sm:text-xs font-black transition-all flex items-center justify-center cursor-pointer shrink-0 ${
+                        idx === currentSlideIdx 
+                          ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25 scale-105' 
+                          : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                      }`}
+                      title={`Slide ${idx + 1}`}
+                    >
+                      {idx + 1}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={async () => {
+                    if (currentSlideIdx < totalSlides - 1) {
+                      setCurrentSlideIdx(prev => prev + 1);
+                    } else {
+                      setToast({ message: "Hebat! Kamu sudah membaca semua materi hari ini 🚀", type: "success" });
+                      await triggerStreakUpdate();
+                      fireConfetti();
+                    }
+                  }}
+                  className={`px-4 sm:px-5 py-2 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all min-h-[40px] active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-md ${
+                    currentSlideIdx === totalSlides - 1
+                      ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/25'
+                      : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/25'
+                  }`}
+                >
+                  {currentSlideIdx === totalSlides - 1 ? (
+                    <>Selesai <CheckCircle2 size={16} /></>
+                  ) : (
+                    <><span className="hidden xs:inline">Lanjut</span> <ChevronRight size={16} /></>
+                  )}
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Mode Semua Paragraf (Scroll Mode) */
+          <div className="bg-white border border-slate-200/80 rounded-[2rem] p-5 sm:p-7 shadow-sm space-y-6">
+            <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
+                Daftar Seluruh Materi ({totalSlides} Slide)
+              </h3>
+              <span className="text-[10px] font-bold text-slate-400">Mode Baca Gulir</span>
+            </div>
+
+            {currentSlides.map((slide, sIdx) => (
+              <div key={sIdx} className="space-y-3 pb-6 border-b border-slate-100 last:border-b-0 last:pb-0">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-black flex items-center justify-center shrink-0">
+                    {sIdx + 1}
+                  </span>
+                  <h4 className="text-sm sm:text-base font-black text-slate-900 font-outfit">
+                    {slide.title}
+                  </h4>
+                </div>
+
+                <div className="space-y-3.5 pl-8 text-slate-700 text-sm leading-relaxed">
+                  {slide.paragraphs.map((p, pIdx) => {
+                    const trimmed = p.trim();
+                    if (!trimmed) return null;
+
+                    if (trimmed.startsWith('-') || trimmed.startsWith('*')) {
+                      return (
+                        <div key={pIdx} className="flex items-start gap-2.5">
+                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-2 shrink-0" />
+                          <p className="flex-1 font-medium text-slate-800">
+                            {renderFormattedText(trimmed.substring(1).trim())}
+                          </p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <p key={pIdx} className="font-normal text-slate-800 leading-relaxed">
+                        {renderFormattedText(trimmed)}
+                      </p>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Optional: Detail Catatan Tambahan Guru jika berbeda dari ringkasan */}
+        {selectedLesson?.content && selectedLesson.content.trim() !== selectedLesson.ai_reading_preview?.trim() && selectedLesson.content.length > 50 && (
+          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 sm:p-5 text-left space-y-2 mt-2">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-0.5">
+              Catatan / Instruksi Tambahan Guru
+            </h4>
+            <div className="text-xs text-slate-700 leading-relaxed font-medium whitespace-pre-wrap">
+              {selectedLesson.content}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -941,59 +1139,8 @@ export default function StudentLessonLayer({
                   {/* TAB: MATERIAL */}
                   {activeTab === 'materi' && (
                     <div className="space-y-5">
-                      
-                      {/* Mode Belajar Toggle */}
-                      <div className="bg-slate-100/80 border border-slate-200/50 rounded-2xl p-1 flex">
-                        <button
-                          onClick={() => setLearningMode('santai')}
-                          className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all min-h-[36px] ${
-                            learningMode === 'santai'
-                              ? 'bg-white text-emerald-600 shadow-sm border border-slate-200/20'
-                              : 'text-slate-400 hover:text-slate-600'
-                          }`}
-                        >
-                          <Sparkles size={13} /> Paham Kilat AI
-                        </button>
-                        <button
-                          onClick={() => setLearningMode('standar')}
-                          className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all min-h-[36px] ${
-                            learningMode === 'standar'
-                              ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/20'
-                              : 'text-slate-400 hover:text-slate-600'
-                          }`}
-                        >
-                          <BookOpen size={13} /> Buku Teks
-                        </button>
-                      </div>
-
-                      {learningMode === 'santai' ? (
-                        isLoadingSimplify ? (
-                          renderSimplifySkeleton()
-                        ) : (
-                          renderSlideDeck()
-                        )
-                      ) : (
-                        <div className="space-y-5 animate-in fade-in duration-300">
-                          {selectedLesson.ai_reading_preview && (
-                            <div className="bg-emerald-50/50 rounded-2xl p-5 border border-emerald-100 flex items-start gap-4">
-                              <div className="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/10">
-                                <Sparkles size={18} />
-                              </div>
-                              <div>
-                                <h4 className="text-emerald-800 text-xs font-black uppercase tracking-widest mb-1.5">Rangkuman AI</h4>
-                                <p className="text-emerald-900 text-sm font-medium leading-relaxed">{selectedLesson.ai_reading_preview}</p>
-                              </div>
-                            </div>
-                          )}
-                          
-                          <div className="space-y-3">
-                            <h4 className="text-slate-400 text-xs font-black uppercase tracking-widest pl-1">Isi Materi Lengkap</h4>
-                            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 sm:p-6 text-slate-800 text-sm leading-relaxed whitespace-pre-wrap font-medium">
-                              {selectedLesson.content || "Guru belum menambahkan isi materi detail."}
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                      {/* Interactive Digital Book Slides */}
+                      {renderBookDeck()}
                     </div>
                   )}
 

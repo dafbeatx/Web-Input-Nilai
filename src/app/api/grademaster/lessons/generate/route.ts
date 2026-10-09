@@ -11,7 +11,16 @@ PANDUAN PEMBUATAN KONTEN:
 1. Rangkuman Materi (preview):
    - Hasilkan penjelasan materi pelajaran yang sangat lengkap, kaya detail konsep, mendalam, dan terstruktur secara akademis.
    - Panjang materi pelajaran HARUS minimal 1200 hingga 2000 kata. Jelaskan secara mendalam tentang teori dasar, rumus/logika (jika ada), klasifikasi/kategori, contoh kasus/analogi nyata yang 100% RELEVAN dengan mata pelajaran "${subject}", serta sub-konsep penting terkait.
-   - Gunakan format paragraf yang rapi dengan judul bab dan sub-bab yang jelas.
+   - Gunakan format BUKU DIGITAL INTERAKTIF dengan beberapa SLIDE (minimal 4-6 slide bertahap).
+   - Gunakan format judul slide markdown:
+     ## Slide 1: [Judul Konsep 1]
+     [Paragraf 1 yang rapi dan ringkas, 2-3 kalimat]
+
+     [Paragraf 2 yang rapi, 2-3 kalimat]
+
+     ## Slide 2: [Judul Konsep 2]
+     ...
+   - DILARANG KERAS menggabungkan seluruh teks ke dalam satu paragraf panjang! Setiap slide harus memiliki 2 sampai 4 paragraf terpisah dengan pemisah baris ganda.
    - KURANGI PENGGUNAAN BOLD FORMATTING (**kata**) yang berlebihan. Gunakan bold HANYA untuk judul bab, sub-bab, atau istilah asing/kata kunci krusial. Hindari menebalkan kata-kata biasa agar tampilan teks terlihat bersih, profesional, dan premium.
    - JANGAN menyertakan kuis, soal latihan, atau pertanyaan ujian dalam bentuk apa pun di dalam materi ini.
 
@@ -85,6 +94,8 @@ Tugas Anda adalah merangkum dokumen materi pelajaran yang diunggah guru secara k
 PANDUAN PEMBUATAN KONTEN:
 1. Rangkuman Materi (preview):
    - Ringkas isi dokumen yang diunggah guru secara mendalam, lengkap, dan informatif (minimal 1200 kata).
+   - WAJIB menstrukturkan materi ke dalam format BUKU DIGITAL INTERAKTIF dengan beberapa SLIDE (minimal 4-6 slide bertahap: "## Slide 1: [Judul]", "## Slide 2: [Judul]", dst).
+   - DILARANG KERAS menggabungkan semua teks ke dalam satu paragraf panjang! Setiap slide harus memiliki 2 sampai 4 paragraf terpisah dengan pemisah baris ganda.
    - KURANGI PENGGUNAAN BOLD FORMATTING yang berlebihan. Batasi hanya pada kata kunci utama atau judul bab agar teks tetap bersih.
    - Contoh kasus dan pembahasan harus disesuaikan agar relevan dengan mata pelajaran "${subject}".
 
