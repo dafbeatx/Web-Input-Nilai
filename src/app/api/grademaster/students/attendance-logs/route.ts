@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const studentName = searchParams.get('name');
-    const academicYear = searchParams.get('year') || '2025/2026';
+    const academicYear = searchParams.get('year') || '2026/2027';
     const className = searchParams.get('class');
 
     if (!studentName) {
@@ -42,17 +42,25 @@ export async function GET(req: NextRequest) {
       const cookieStore = await cookies();
       const parentStudent = cookieStore.get('gm_parent_student')?.value;
       if (parentStudent) {
-        targetStudentName = parentStudent;
+        try {
+          targetStudentName = decodeURIComponent(parentStudent).trim();
+        } catch {
+          targetStudentName = parentStudent.trim();
+        }
       } else {
         // Jika tidak ada session admin, siswa, maupun parent cookie, tolak akses demi keamanan data
         return NextResponse.json({ error: 'Akses ditolak: Sesi tidak valid' }, { status: 403 });
       }
     }
 
+    if (targetStudentName) {
+      targetStudentName = targetStudentName.trim();
+    }
+
     let query = db
       .from('gm_attendance')
       .select('subject, date, status')
-      .eq('student_name', targetStudentName)
+      .ilike('student_name', targetStudentName)
       .eq('academic_year', academicYear);
 
     if (className) {
@@ -66,7 +74,7 @@ export async function GET(req: NextRequest) {
       let retryQuery = db
         .from('gm_attendance')
         .select('subject, date, status')
-        .eq('student_name', targetStudentName)
+        .ilike('student_name', targetStudentName)
         .eq('academic_year', academicYear);
       if (className) retryQuery = retryQuery.eq('class_name', className);
       const retryRes = await retryQuery.order('date', { ascending: false });

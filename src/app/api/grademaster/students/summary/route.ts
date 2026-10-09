@@ -78,11 +78,19 @@ export async function GET(req: NextRequest) {
       const cookieStore = await cookies();
       const parentStudent = cookieStore.get('gm_parent_student')?.value;
       if (parentStudent) {
-        targetStudentName = parentStudent;
+        try {
+          targetStudentName = decodeURIComponent(parentStudent).trim();
+        } catch {
+          targetStudentName = parentStudent.trim();
+        }
       } else {
         // Jika tidak ada session admin, siswa, maupun parent cookie, tolak akses demi keamanan data
         return NextResponse.json({ error: 'Akses ditolak: Sesi tidak valid' }, { status: 403 });
       }
+    }
+
+    if (targetStudentName) {
+      targetStudentName = targetStudentName.trim();
     }
 
     let targetClassName = className;
@@ -92,7 +100,7 @@ export async function GET(req: NextRequest) {
       let pastRes = await db
         .from('gm_behaviors')
         .select('class_name, academic_year')
-        .eq('student_name', targetStudentName)
+        .ilike('student_name', targetStudentName)
         .not('class_name', 'eq', 'LULUS')
         .not('class_name', 'eq', 'ALUMNI')
         .order('academic_year', { ascending: false })
@@ -104,7 +112,7 @@ export async function GET(req: NextRequest) {
         pastRes = await db
           .from('gm_behaviors')
           .select('class_name, academic_year')
-          .eq('student_name', targetStudentName)
+          .ilike('student_name', targetStudentName)
           .not('class_name', 'eq', 'LULUS')
           .not('class_name', 'eq', 'ALUMNI')
           .order('academic_year', { ascending: false })
@@ -122,7 +130,7 @@ export async function GET(req: NextRequest) {
     let attQuery = db
       .from('gm_attendance')
       .select('status')
-      .eq('student_name', targetStudentName)
+      .ilike('student_name', targetStudentName)
       .eq('academic_year', targetAcademicYear);
 
     if (targetClassName) {
@@ -136,7 +144,7 @@ export async function GET(req: NextRequest) {
       let retryAttQuery = db
         .from('gm_attendance')
         .select('status')
-        .eq('student_name', targetStudentName)
+        .ilike('student_name', targetStudentName)
         .eq('academic_year', targetAcademicYear);
       if (targetClassName) retryAttQuery = retryAttQuery.eq('class_name', targetClassName);
       const retryAttRes = await retryAttQuery;
@@ -172,7 +180,7 @@ export async function GET(req: NextRequest) {
           scoring_config
         )
       `)
-      .eq('name', targetStudentName)
+      .ilike('name', targetStudentName)
       .eq('is_deleted', false);
 
     gradeQuery = gradeQuery.eq('gm_sessions.academic_year', targetAcademicYear);
@@ -204,7 +212,7 @@ export async function GET(req: NextRequest) {
             scoring_config
           )
         `)
-        .eq('name', targetStudentName)
+        .ilike('name', targetStudentName)
         .eq('is_deleted', false);
 
       retryGradeQuery = retryGradeQuery.eq('gm_sessions.academic_year', targetAcademicYear);
@@ -382,7 +390,7 @@ export async function GET(req: NextRequest) {
     const { data: behaviorData } = await db
       .from('gm_behaviors')
       .select('total_points')
-      .eq('student_name', targetStudentName)
+      .ilike('student_name', targetStudentName)
       .eq('academic_year', targetAcademicYear)
       .eq('class_name', targetClassName || '')
       .maybeSingle();
@@ -393,7 +401,7 @@ export async function GET(req: NextRequest) {
     let accountQuery = db
       .from('gm_student_accounts')
       .select('google_email')
-      .eq('student_name', targetStudentName);
+      .ilike('student_name', targetStudentName);
 
     if (className) {
       accountQuery = accountQuery.eq('class_name', className);
@@ -402,25 +410,49 @@ export async function GET(req: NextRequest) {
     const { data: accountData } = await accountQuery.maybeSingle();
     const googleEmail = accountData?.google_email ?? null;
 
-    // Fetch enrollment history from gm_behaviors
-    const { data: rawEnrollment } = await db
-      .from('gm_behaviors')
-      .select('class_name, academic_year')
-      .eq('student_name', targetStudentName)
-      .order('academic_year', { ascending: false });
+    // Fetch enrollment history from BOTH gm_behaviors and gm_students -> gm_sessions
+    const [rawEnrollmentRes, sessionEnrollmentsRes] = await Promise.all([
+      db
+        .from('gm_behaviors')
+        .select('class_name, academic_year')
+        .ilike('student_name', targetStudentName)
+        .order('academic_year', { ascending: false }),
+      db
+        .from('gm_students')
+        .select('gm_sessions!inner(class_name, academic_year)')
+        .ilike('name', targetStudentName)
+        .eq('is_deleted', false)
+    ]);
 
     const enrollmentHistory: { class_name: string; academic_year: string }[] = [];
-    const seen = new Set();
-    (rawEnrollment || []).forEach((h: { class_name: string; academic_year: string }) => {
-      const key = `${h.class_name}|${h.academic_year}`;
+    const seen = new Set<string>();
+
+    const addEnrollment = (cls?: string | null, yr?: string | null) => {
+      if (!cls || !yr) return;
+      const key = `${cls}|${yr}`;
       if (!seen.has(key)) {
         seen.add(key);
         enrollmentHistory.push({
-          class_name: h.class_name,
-          academic_year: h.academic_year
+          class_name: cls,
+          academic_year: yr
         });
       }
+    };
+
+    (rawEnrollmentRes.data || []).forEach((h: { class_name: string; academic_year: string }) => {
+      addEnrollment(h.class_name, h.academic_year);
     });
+
+    (sessionEnrollmentsRes.data || []).forEach((s: unknown) => {
+      const record = s as { gm_sessions: { class_name: string; academic_year: string } | { class_name: string; academic_year: string }[] };
+      const sess = Array.isArray(record.gm_sessions) ? record.gm_sessions[0] : record.gm_sessions;
+      if (sess) {
+        addEnrollment(sess.class_name, sess.academic_year);
+      }
+    });
+
+    // Urutkan tahun ajaran paling baru (teratas)
+    enrollmentHistory.sort((a, b) => b.academic_year.localeCompare(a.academic_year));
 
     // 4. Mock Documents (In real app, this might pull from a storage table)
     const documents = [

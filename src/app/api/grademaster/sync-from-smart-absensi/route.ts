@@ -287,12 +287,58 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Pastikan akun siswa tersinkron
-      await supabase
-        .from('gm_student_accounts')
-        .update({ academic_year: cleanYear })
-        .eq('class_name', cleanClass)
-        .in('student_name', incomingStudentNames);
+      // Pastikan akun siswa dan gm_behaviors tersinkron ke tahun ajaran & kelas ini
+      for (const studentName of incomingStudentNames) {
+        try {
+          // 1. Sinkron / Pastikan gm_behaviors ada agar dapat dicari oleh Orang Tua & Siswa
+          const { data: existingBeh } = await supabase
+            .from('gm_behaviors')
+            .select('id')
+            .ilike('student_name', studentName)
+            .eq('class_name', cleanClass)
+            .eq('academic_year', cleanYear)
+            .maybeSingle();
+
+          if (!existingBeh) {
+            await supabase.from('gm_behaviors').insert({
+              student_name: studentName,
+              class_name: cleanClass,
+              academic_year: cleanYear,
+              total_points: 0,
+              behavior_logs: [],
+            });
+          }
+
+          // 2. Sinkron / Pastikan gm_student_accounts terupdate
+          const { data: existingAcc } = await supabase
+            .from('gm_student_accounts')
+            .select('id, class_name, academic_year')
+            .ilike('student_name', studentName)
+            .maybeSingle();
+
+          if (existingAcc) {
+            if (existingAcc.class_name !== cleanClass || existingAcc.academic_year !== cleanYear) {
+              await supabase
+                .from('gm_student_accounts')
+                .update({ class_name: cleanClass, academic_year: cleanYear })
+                .eq('id', existingAcc.id);
+            }
+          } else {
+            const cleanName = studentName.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '.');
+            const cleanCls = cleanClass.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const username = `${cleanName}.${cleanCls}${Math.floor(Math.random() * 1000)}`;
+            await supabase.from('gm_student_accounts').insert({
+              student_name: studentName,
+              class_name: cleanClass,
+              academic_year: cleanYear,
+              username,
+              password_hash: 'google_sso_auto',
+            });
+          }
+        } catch (syncAccountErr) {
+          console.error(`[SyncAccounts] Gagal sinkron akun siswa ${studentName}:`, syncAccountErr);
+        }
+      }
 
       resultSummary.scoresProcessed = scoresCount;
       resultSummary.sessionId = sessionId || undefined;

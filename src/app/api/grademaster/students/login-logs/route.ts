@@ -39,11 +39,19 @@ export async function GET(req: NextRequest) {
       const cookieStore = await cookies();
       const parentStudent = cookieStore.get('gm_parent_student')?.value;
       if (parentStudent) {
-        targetStudentName = parentStudent;
+        try {
+          targetStudentName = decodeURIComponent(parentStudent).trim();
+        } catch {
+          targetStudentName = parentStudent.trim();
+        }
       } else {
         // Jika tidak ada session admin, siswa, maupun parent cookie, tolak akses demi keamanan data
         return NextResponse.json({ error: 'Akses ditolak: Sesi tidak valid' }, { status: 403 });
       }
+    }
+
+    if (targetStudentName) {
+      targetStudentName = targetStudentName.trim();
     }
 
     if (!targetStudentName) {
@@ -54,7 +62,7 @@ export async function GET(req: NextRequest) {
     let accountQuery = db
       .from('gm_student_accounts')
       .select('id')
-      .eq('student_name', targetStudentName);
+      .ilike('student_name', targetStudentName);
 
     if (targetClassName) {
       accountQuery = accountQuery.eq('class_name', targetClassName);
@@ -67,7 +75,7 @@ export async function GET(req: NextRequest) {
       let retryQuery = db
         .from('gm_student_accounts')
         .select('id')
-        .eq('student_name', targetStudentName);
+        .ilike('student_name', targetStudentName);
       if (targetClassName) retryQuery = retryQuery.eq('class_name', targetClassName);
       const retryRes = await retryQuery.maybeSingle();
       account = retryRes.data;
