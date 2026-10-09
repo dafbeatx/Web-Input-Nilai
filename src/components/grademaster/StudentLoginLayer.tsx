@@ -62,6 +62,7 @@ export default function StudentLoginLayer({
     id: string;
     student_name: string;
     class_name: string;
+    academic_year?: string;
     total_points: number;
   }
   const [students, setStudents] = useState<SearchStudentResult[]>([]);
@@ -88,11 +89,21 @@ export default function StudentLoginLayer({
       try {
         const { data } = await supabase
           .from('gm_behaviors')
-          .select('id, student_name, class_name, total_points')
+          .select('id, student_name, class_name, total_points, academic_year')
           .ilike('student_name', `%${debouncedQuery}%`)
-          .order('student_name', { ascending: true })
-          .limit(10);
-        setStudents(data || []);
+          .order('academic_year', { ascending: false })
+          .limit(30);
+
+        // Deduplikasi: Jika siswa memiliki riwayat di beberapa kelas/tahun ajaran,
+        // prioritaskan kelas pada tahun ajaran paling baru (teratas).
+        const seen = new Map<string, SearchStudentResult>();
+        for (const item of (data || [])) {
+          const normName = item.student_name.trim().toLowerCase();
+          if (!seen.has(normName)) {
+            seen.set(normName, item);
+          }
+        }
+        setStudents(Array.from(seen.values()).slice(0, 10));
       } catch {
       } finally {
         setIsLoadingSearch(false);
@@ -113,11 +124,14 @@ export default function StudentLoginLayer({
       setStudentClass(s.class_name);
     }
 
+    const targetAcademicYear = s.academic_year || academicYear || '2026/2027';
+
     setStudentData({ 
       id: s.id, 
       name: s.student_name, 
       class_name: s.class_name, 
       total_points: s.total_points,
+      academic_year: targetAcademicYear,
       isGoogleLinked: false,
       isParentView: true 
     });
@@ -131,7 +145,7 @@ export default function StudentLoginLayer({
         className: s.class_name || 'Tidak Diketahui',
         event: 'PARENT_LOGIN',
         deviceInfo: typeof window !== 'undefined' ? window.navigator.userAgent : 'Unknown Device',
-        academicYear: academicYear || '2025/2026'
+        academicYear: targetAcademicYear
       })
     }).catch(err => console.error('Gagal mengirim notifikasi login orang tua ke Telegram:', err));
 
@@ -444,7 +458,9 @@ export default function StudentLoginLayer({
                               >
                                 <div className="min-w-0 pr-2">
                                   <span className="text-sm font-bold text-slate-900 block truncate group-hover:text-indigo-900">{s.student_name}</span>
-                                  <span className="text-[11px] font-semibold text-slate-500">{s.class_name || 'Siswa'}</span>
+                                  <span className="text-[11px] font-semibold text-slate-500">
+                                    {s.class_name ? `Kelas ${s.class_name}` : 'Siswa'} {s.academic_year ? `• TA ${s.academic_year}` : ''}
+                                  </span>
                                 </div>
                                 <span className="text-xs font-bold text-indigo-600 shrink-0 bg-indigo-50 group-hover:bg-indigo-100 px-2.5 py-1 rounded-lg">
                                   Pilih

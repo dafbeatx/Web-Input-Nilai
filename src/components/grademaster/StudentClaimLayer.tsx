@@ -27,6 +27,7 @@ interface StudentOption {
   id: string;
   student_name: string;
   class_name: string;
+  academic_year?: string;
 }
 
 export default function StudentClaimLayer({ 
@@ -88,21 +89,24 @@ export default function StudentClaimLayer({
       try {
         const { data, error } = await supabase
           .from('gm_behaviors')
-          .select('id, student_name, class_name')
+          .select('id, student_name, class_name, academic_year')
           .ilike('student_name', `%${debouncedQuery}%`)
-          .order('student_name', { ascending: true })
-          .limit(10);
-
-        console.log('[DEBUG QUERY RESULT] data:', data);
-        console.log('[DEBUG QUERY ERROR]:', error);
-        console.log('[DEBUG QUERY COUNT]:', data?.length ?? 0);
+          .order('academic_year', { ascending: false })
+          .limit(30);
 
         if (error) {
           console.error('[Student Claim] Query error:', error);
           setToast({ message: 'Gagal mencari daftar siswa', type: 'error' });
         } else {
-          setStudents(data || []);
-          console.log('[DEBUG STATE SET] students updated, count:', (data || []).length);
+          // Deduplikasi: Prioritaskan tahun ajaran terbaru
+          const seen = new Map<string, StudentOption>();
+          for (const item of (data || [])) {
+            const normName = item.student_name.trim().toLowerCase();
+            if (!seen.has(normName)) {
+              seen.set(normName, item);
+            }
+          }
+          setStudents(Array.from(seen.values()).slice(0, 10));
         }
       } catch (err) {
         console.error('[DEBUG CATCH] Unexpected error:', err);
@@ -255,7 +259,9 @@ export default function StudentClaimLayer({
                         >
                           <div className="flex flex-col">
                             <span className="text-base font-bold text-[#0F172A] group-hover:translate-x-1 transition-transform">{s.student_name}</span>
-                            <span className="text-xs font-medium text-slate-400">{s.class_name}</span>
+                            <span className="text-xs font-medium text-slate-400">
+                              {s.class_name ? `Kelas ${s.class_name}` : 'Siswa'} {s.academic_year ? `• TA ${s.academic_year}` : ''}
+                            </span>
                           </div>
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                             <CheckCircle2 size={18} className="text-[#10B981]" />
