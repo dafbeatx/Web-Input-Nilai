@@ -993,7 +993,7 @@ export default function StudentProfileLayer({
       scoreDetails = `🇬🇧 *Bahasa Inggris:* ${record.english_score !== null ? Number(record.english_score).toFixed(1) : '-'} [${record.english_correct_count ?? 0}/15 Butir] (Predikat: ${record.english_predicate || '-'})\n🇸🇦 *Bahasa Arab:* ${record.arabic_score !== null ? Number(record.arabic_score).toFixed(1) : '-'} [${record.arabic_correct_count ?? 0}/15 Butir] (Predikat: ${record.arabic_predicate || '-'})\n`;
     }
     
-    const text = `*LAPORAN HASIL UJIAN LISAN SANTRI*\n` +
+    const text = `*LAPORAN HASIL UJIAN LISAN SISWA*\n` +
       `*SMP TERPADU AL-ITTIHADIYAH*\n\n` +
       `👤 *Nama:* ${record.student_name}\n` +
       `🏫 *Kelas:* ${record.class_name}\n` +
@@ -2041,7 +2041,7 @@ export default function StudentProfileLayer({
                 </button>
               </div>
 
-              {/* Ringkasan Ujian Lisan Santri (BTQ, Hafalan & Bahasa) */}
+              {/* Ringkasan Ujian Lisan Siswa (BTQ, Hafalan & Bahasa) */}
               {oralExamRecords.length > 0 && (
                 <div className="bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/50 border border-indigo-100 rounded-2xl p-4 text-left shadow-sm space-y-3 animate-in fade-in duration-200">
                   <div className="flex items-center justify-between">
@@ -2051,7 +2051,7 @@ export default function StudentProfileLayer({
                       </div>
                       <div>
                         <h4 className="text-xs font-black text-slate-800 uppercase tracking-wide font-outfit">
-                          {isParent ? 'Capaian Ujian Lisan Santri' : 'Capaian Ujian Lisan'}
+                          {isParent ? 'Capaian Ujian Lisan Siswa' : 'Capaian Ujian Lisan'}
                         </h4>
                         <p className="text-[10px] text-slate-500 font-medium">
                           {oralExamRecords.length} sesi teruji (BTQ, Tahfidz & Bahasa)
@@ -2464,12 +2464,12 @@ export default function StudentProfileLayer({
                         </div>
                         <div>
                           <h4 className="text-xs font-black text-indigo-950 uppercase tracking-wide font-outfit">
-                            {isParent ? 'Laporan Ujian Lisan Santri' : 'Rapor Penilaian Ujian Lisan'}
+                            {isParent ? 'Laporan Ujian Lisan Siswa' : 'Rapor Penilaian Ujian Lisan'}
                           </h4>
                           <p className="text-xs font-medium text-indigo-900 mt-1 leading-relaxed">
                             {isParent 
                               ? `Capaian penilaian lisan ananda di SMP Terpadu Al-Ittihadiyah meliputi Tilawah Al-Qur'an (BTQ), Tahfidz (Hafalan), serta kecakapan lisan Bahasa Inggris dan Bahasa Arab.`
-                              : `Evaluasi kecakapan lisan santri meliputi Baca Tulis Al-Qur'an (BTQ), Hafalan Surah (Tahfidz), serta respons lisan Bahasa Inggris dan Bahasa Arab.`}
+                              : `Evaluasi kecakapan lisan siswa meliputi Baca Tulis Al-Qur'an (BTQ), Hafalan Surah (Tahfidz), serta respons lisan Bahasa Inggris dan Bahasa Arab.`}
                           </p>
                         </div>
                       </div>
