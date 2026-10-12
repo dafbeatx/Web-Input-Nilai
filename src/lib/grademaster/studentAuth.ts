@@ -3,7 +3,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabase/admin';
 import { randomBytes } from 'crypto';
 
 const SESSION_COOKIE = 'gm_student_token';
-const SESSION_EXPIRY_DAYS = 7;
+const SESSION_EXPIRY_DAYS = 90; // 90 days persistent login (1 full school quarter/semester)
 
 export async function createStudentSession(accountId: string, userAgent?: string, ipAddress?: string) {
   const token = randomBytes(32).toString('hex');
@@ -25,7 +25,7 @@ export async function createStudentSession(accountId: string, userAgent?: string
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: 'lax', // 'lax' ensures cookies are sent when opening links from WhatsApp / bookmarks / external apps
     path: '/',
     maxAge: 60 * 60 * 24 * SESSION_EXPIRY_DAYS,
   });
@@ -33,9 +33,9 @@ export async function createStudentSession(accountId: string, userAgent?: string
   return token;
 }
 
-export async function getStudentSession() {
+export async function getStudentSession(explicitToken?: string) {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  const token = explicitToken || cookieStore.get(SESSION_COOKIE)?.value;
 
   if (!token) return null;
 
@@ -63,8 +63,28 @@ export async function getStudentSession() {
 
   const accountData = data.gm_student_accounts as any;
 
+  // Sliding session window: extend expiration so active students stay logged in indefinitely
+  try {
+    const newExpiresAt = new Date();
+    newExpiresAt.setDate(newExpiresAt.getDate() + SESSION_EXPIRY_DAYS);
+    await supabase
+      .from('gm_student_sessions')
+      .update({ expires_at: newExpiresAt.toISOString() })
+      .eq('token', token);
+
+    (await cookies()).set(SESSION_COOKIE, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * SESSION_EXPIRY_DAYS,
+    });
+  } catch (slideErr) {
+    // Non-blocking sliding expiration failure
+    console.warn('[StudentAuth] Sliding session update skipped:', slideErr);
+  }
+
   // Look up the behavior record to get behavior_id and total_points
-  // gm_behavior_logs uses gm_behaviors.id (not gm_student_accounts.id)
   const { data: behaviorData } = await supabase
     .from('gm_behaviors')
     .select('id, total_points, avatar_url')
@@ -74,6 +94,7 @@ export async function getStudentSession() {
 
   return {
     account_id: data.account_id,
+    token,
     role: 'student' as const,
     student: {
       id: accountData.id,
@@ -88,13 +109,14 @@ export async function getStudentSession() {
       email: accountData.google_email ?? null,
       study_streak: accountData.study_streak || 0,
       last_active_date: accountData.last_active_date || null,
+      isGoogleLinked: true,
     },
   };
 }
 
-export async function clearStudentSession() {
+export async function clearStudentSession(explicitToken?: string) {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  const token = explicitToken || cookieStore.get(SESSION_COOKIE)?.value;
 
   if (token) {
     await supabase

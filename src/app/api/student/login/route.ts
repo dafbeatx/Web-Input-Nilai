@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     // 4. Buat sesi siswa dan atur cookie HTTP-only gm_student_token
     const userAgent = req.headers.get('user-agent') || 'unknown';
     const ipAddress = req.headers.get('x-forwarded-for') || 'unknown';
-    await createStudentSession(account.id, userAgent, ipAddress);
+    const sessionToken = await createStudentSession(account.id, userAgent, ipAddress);
 
     // 5. Catat riwayat log masuk siswa
     await supabaseAdmin
@@ -86,6 +86,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      token: sessionToken,
       student: {
         id: account.id,
         student_id: behaviorRecord?.id || null,

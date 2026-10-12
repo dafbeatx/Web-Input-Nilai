@@ -6,13 +6,19 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export async function GET(req: NextRequest) {
   try {
-    // 1. Check for standard student cookie session
-    const session = await getStudentSession();
+    const authHeader = req.headers.get('authorization');
+    const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7).trim() : undefined;
+    const queryToken = req.nextUrl.searchParams.get('token')?.trim() || undefined;
+    const explicitToken = headerToken || queryToken;
+
+    // 1. Check for standard student cookie session (or explicit token fallback)
+    const session = await getStudentSession(explicitToken);
 
     if (session) {
       return NextResponse.json({
         authenticated: true,
         role: 'student',
+        token: session.token,
         student: session.student,
       });
     }
@@ -43,7 +49,7 @@ export async function GET(req: NextRequest) {
         // Record the login log & establish the application-specific session cookie
         const userAgent = req.headers.get('user-agent') || 'unknown';
         const ipAddress = req.headers.get('x-forwarded-for') || 'unknown';
-        await createStudentSession(boundAccount.id, userAgent, ipAddress);
+        const sessionToken = await createStudentSession(boundAccount.id, userAgent, ipAddress);
 
         await supabaseAdmin
           .from('gm_student_login_logs')
@@ -56,6 +62,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({
           authenticated: true,
           role: 'student',
+          token: sessionToken,
           student: {
             id: boundAccount.id,
             student_id: behaviorRecord?.id, // Link to behavior logs

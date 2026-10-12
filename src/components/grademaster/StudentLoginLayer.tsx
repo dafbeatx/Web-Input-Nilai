@@ -39,7 +39,18 @@ export default function StudentLoginLayer({
   const [error, setError] = useState('');
 
   // Opsi Login Siswa
-  const [adminUsername, setAdminUsername] = useState('');
+  const [adminUsername, setAdminUsername] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('gm_saved_username') || '';
+    }
+    return '';
+  });
+  const [savedStudentName, setSavedStudentName] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('gm_saved_student_name') || '';
+    }
+    return '';
+  });
   const [adminPassword, setAdminPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isAdminLoggingIn, setIsAdminLoggingIn] = useState(false);
@@ -59,7 +70,7 @@ export default function StudentLoginLayer({
     }
   }, []);
 
-  const { setLayer, setIsParent, setStudentData, setStudentClass, academicYear } = useGradeMaster();
+  const { setLayer, setIsStudent, setIsParent, setStudentData, setStudentClass, academicYear } = useGradeMaster();
   const [isParentMode, setIsParentMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -171,10 +182,9 @@ export default function StudentLoginLayer({
       clearTimeout(redirectTimerRef.current);
     }
 
-    // Give user a moment to see the "Redirecting" state for a premium feel
     redirectTimerRef.current = setTimeout(() => {
-      onSuccess(null); // Trigger parent layer switch to student_claim/home
-    }, 1800);
+      onSuccess(null); // Trigger parent layer switch
+    }, 800);
   }, [onSuccess]);
 
   // ── Session & Auth Listeners ────────────────────────────────
@@ -185,20 +195,62 @@ export default function StudentLoginLayer({
       // 1. Initial Page Entry Animation delay
       setTimeout(() => {
         if (isMounted) setIsPageEntering(false);
-      }, 500);
+      }, 300);
 
-      // 2. Check for existing session on mount
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        // Session detected - move to redirect phase
-        handleSessionActive(session);
-      } else {
-        if (isMounted) setIsCheckingSession(false);
+      // 2. Check if student is already cached in localStorage
+      if (typeof window !== 'undefined') {
+        const isSavedStudent = localStorage.getItem('gm_isStudent') === 'true';
+        const savedData = localStorage.getItem('gm_studentData');
+        if (isSavedStudent && savedData) {
+          try {
+            const parsed = JSON.parse(savedData);
+            setUserName(parsed.name || parsed.username || 'Siswa');
+            handleSessionActive(null);
+            return;
+          } catch {}
+        }
       }
+
+      // 3. Check for existing Supabase auth session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        handleSessionActive(session);
+        return;
+      }
+
+      // 4. Check backend student session (cookie or explicit token)
+      try {
+        const savedToken = typeof window !== 'undefined' ? localStorage.getItem('gm_student_token') : null;
+        const checkUrl = savedToken ? `/api/student/check?token=${encodeURIComponent(savedToken)}` : '/api/student/check';
+        const res = await fetch(checkUrl, {
+          headers: savedToken ? { 'Authorization': `Bearer ${savedToken}` } : {},
+          cache: 'no-store'
+        });
+        if (res.ok) {
+          const checkData = await res.json();
+          if (checkData.authenticated && checkData.role === 'student') {
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('gm_isStudent', 'true');
+              if (checkData.token) localStorage.setItem('gm_student_token', checkData.token);
+              if (checkData.student) {
+                localStorage.setItem('gm_studentData', JSON.stringify({ ...checkData.student, isGoogleLinked: true }));
+                if (checkData.student.name) localStorage.setItem('gm_saved_student_name', checkData.student.name);
+                if (checkData.student.username) localStorage.setItem('gm_saved_username', checkData.student.username);
+              }
+            }
+            setUserName(checkData.student?.name || checkData.student?.username || 'Siswa');
+            handleSessionActive(null);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('[StudentLoginLayer] Session verify skipped:', err);
+      }
+
+      if (isMounted) setIsCheckingSession(false);
     }
 
-    // 3. Listen for Auth State Changes
+    // 5. Listen for Auth State Changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log(`[AuthListener] Event: ${event}`);
       if (event === 'SIGNED_IN' && session) {
@@ -266,15 +318,42 @@ export default function StudentLoginLayer({
         throw new Error(data.error || 'Gagal masuk. Periksa kembali username dan kata sandi Anda.');
       }
 
-      setUserName(data.student?.name || data.student?.username || 'Siswa');
+      const resolvedName = data.student?.name || data.student?.username || adminUsername.trim();
+      setUserName(resolvedName);
       setIsRedirecting(true);
+
+      // Persist credentials & session tokens locally so student never has to retype
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('gm_saved_username', adminUsername.trim());
+        localStorage.setItem('gm_saved_student_name', resolvedName);
+        localStorage.setItem('gm_isStudent', 'true');
+        if (data.token) {
+          localStorage.setItem('gm_student_token', data.token);
+        }
+        if (data.student) {
+          const studentPayload = { ...data.student, isGoogleLinked: true };
+          localStorage.setItem('gm_studentData', JSON.stringify(studentPayload));
+          if (data.student.class_name) {
+            localStorage.setItem('gm_studentClass', data.student.class_name);
+          }
+        }
+      }
+
+      // Update state in context directly
+      setIsStudent(true);
+      if (data.student) {
+        setStudentData({ ...data.student, isGoogleLinked: true });
+        if (data.student.class_name) {
+          setStudentClass(data.student.class_name);
+        }
+      }
 
       // Kirim Notifikasi ke Telegram
       fetch('/api/telegram/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          studentName: data.student?.name || adminUsername,
+          studentName: resolvedName,
           className: data.student?.class_name || 'Tidak Diketahui',
           event: 'STUDENT_LOGIN',
           deviceInfo: typeof window !== 'undefined' ? window.navigator.userAgent : 'Unknown Device',
@@ -288,7 +367,7 @@ export default function StudentLoginLayer({
 
       redirectTimerRef.current = setTimeout(() => {
         onSuccess(null);
-      }, 1500);
+      }, 800);
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'Terjadi kesalahan saat masuk';
       setError(errMsg);
@@ -448,6 +527,34 @@ export default function StudentLoginLayer({
                       Opsi 1: Akun Siswa yang Dibuat Guru / Sekolah
                     </span>
                   </div>
+
+                  {savedStudentName && adminUsername && (
+                    <div className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">
+                          {savedStudentName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-900 truncate">{savedStudentName}</p>
+                          <p className="text-[11px] text-slate-500 font-mono truncate">{adminUsername}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAdminUsername('');
+                          setSavedStudentName('');
+                          if (typeof window !== 'undefined') {
+                            localStorage.removeItem('gm_saved_username');
+                            localStorage.removeItem('gm_saved_student_name');
+                          }
+                        }}
+                        className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 px-2 py-1 hover:bg-slate-200/60 rounded-lg transition-colors shrink-0 min-h-[36px]"
+                      >
+                        Ganti Akun
+                      </button>
+                    </div>
+                  )}
 
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1.5">

@@ -90,15 +90,61 @@ export function getCurrentAcademicYear(): string {
 export const GradeMasterContext = createContext<GradeMasterContextType | undefined>(undefined);
 
 export function GradeMasterProvider({ children }: { children: ReactNode }) {
-  const [layer, setLayer] = useState<Layer>("home");
+  const [isStudent, setIsStudent] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return safeLocalStorage.getItem('gm_isStudent') === 'true';
+    }
+    return false;
+  });
+  const [isParent, setIsParent] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return safeLocalStorage.getItem('gm_isParent') === 'true';
+    }
+    return false;
+  });
+  const [studentData, setStudentData] = useState<StudentData | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = safeLocalStorage.getItem('gm_studentData');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
+  });
+  const [studentClass, setStudentClass] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return safeLocalStorage.getItem('gm_studentClass') || '';
+    }
+    return '';
+  });
+  const [layer, setLayer] = useState<Layer>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '') as Layer;
+      const validLayers: Layer[] = [
+        'home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 
+        'remedial_dashboard', 'login', 'attendance', 'student_accounts', 
+        'student_login', 'student_claim', 'teacher_claim', 'lesson_management', 
+        'remedial_management', 'data_center', 'student_profile', 'student_lesson'
+      ];
+      if (validLayers.includes(hash)) {
+        return hash;
+      }
+      const savedIsStudent = safeLocalStorage.getItem('gm_isStudent') === 'true';
+      const savedIsParent = safeLocalStorage.getItem('gm_isParent') === 'true';
+      if (savedIsStudent || savedIsParent) {
+        return 'student_profile';
+      }
+    }
+    return 'home';
+  });
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminUser, setAdminUser] = useState<string | null>(null);
-  const [isStudent, setIsStudent] = useState(false);
-  const [isParent, setIsParent] = useState(false);
-  const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [toast, setToast] = useState<ToastType | null>(null);
   const [modal, setModal] = useState<ModalType>(null);
-  const [studentClass, setStudentClass] = useState("");
   const [academicYear, setAcademicYear] = useState<string>(() => {
     if (typeof window !== "undefined") {
       const saved = safeLocalStorage.getItem("gm_academicYear");
@@ -189,22 +235,25 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       try {
         console.log("[AuthCheck] checkAuthAndRoute: Resolving role for session:", currentSession?.user?.email || "none");
         
-        // 2. Reset all role-related states immediately to prevent carrying over from previous logins
-        setIsAdmin(false);
-        setAdminUser(null);
-        setIsStudent(false);
-        setIsParent(false);
-        setStudentData(null);
-
-        // If there's an active Google session, clean up any conflicting parent or legacy session data
-        if (currentSession && currentSession.user) {
-          safeLocalStorage.removeItem('gm_isParent');
-          safeLocalStorage.removeItem('gm_studentData');
-          safeLocalStorage.removeItem('gm_admin_session');
-        }
-
+        const savedStudent = safeLocalStorage.getItem('gm_isStudent') === 'true';
         const savedParent = safeLocalStorage.getItem('gm_isParent') === 'true';
         const savedStudentData = safeLocalStorage.getItem('gm_studentData');
+        const savedStudentToken = safeLocalStorage.getItem('gm_student_token');
+
+        // Only reset student states if there is no locally cached student session
+        setIsAdmin(false);
+        setAdminUser(null);
+        if (!savedStudent && !savedParent) {
+          setIsStudent(false);
+          setIsParent(false);
+          setStudentData(null);
+        }
+
+        // If there's an active Google session, clean up conflicting parent session
+        if (currentSession && currentSession.user) {
+          safeLocalStorage.removeItem('gm_isParent');
+          safeLocalStorage.removeItem('gm_admin_session');
+        }
 
         let activeAdmin = false;
         let activeStudent = false;
@@ -212,16 +261,19 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         let resolvedStudentData: StudentData | null = null;
         let activeAdminUser: string | null = null;
 
-        // Helper for retrying fetches with cache bypassing and signal timeout (8s for cold starts)
-        const fetchWithRetry = async (url: string, retries = 2, delay = 350): Promise<Response> => {
+        // Helper for retrying fetches with cache bypassing, token support, and signal timeout
+        const fetchWithRetry = async (url: string, authToken?: string | null, retries = 2, delay = 350): Promise<Response> => {
           for (let i = 0; i < retries; i++) {
             try {
               const urlObj = new URL(url, window.location.origin);
               urlObj.searchParams.set('t', Date.now().toString());
-              console.log(`[AuthInit Fetch] ${urlObj.toString()} (attempt ${i + 1}/${retries + 1})...`);
+              if (authToken && !urlObj.searchParams.has('token')) {
+                urlObj.searchParams.set('token', authToken);
+              }
+              const headers: HeadersInit = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
               const controller = new AbortController();
               const timeoutId = setTimeout(() => controller.abort(), 8000);
-              const res = await fetch(urlObj.toString(), { cache: 'no-store', signal: controller.signal });
+              const res = await fetch(urlObj.toString(), { headers, cache: 'no-store', signal: controller.signal });
               clearTimeout(timeoutId);
               if (res.ok) return res;
             } catch (e) {
@@ -231,10 +283,14 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
           }
           const finalUrlObj = new URL(url, window.location.origin);
           finalUrlObj.searchParams.set('t', Date.now().toString());
+          if (authToken && !finalUrlObj.searchParams.has('token')) {
+            finalUrlObj.searchParams.set('token', authToken);
+          }
+          const finalHeaders: HeadersInit = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
           const finalController = new AbortController();
           const finalTimeoutId = setTimeout(() => finalController.abort(), 8000);
           try {
-            const res = await fetch(finalUrlObj.toString(), { cache: 'no-store', signal: finalController.signal });
+            const res = await fetch(finalUrlObj.toString(), { headers: finalHeaders, cache: 'no-store', signal: finalController.signal });
             clearTimeout(finalTimeoutId);
             return res;
           } catch (e) {
@@ -306,7 +362,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
             setIsParent(false);
 
             // Check if they are already bound to a student account
-            const studentRes = await fetchWithRetry("/api/student/check");
+            const studentRes = await fetchWithRetry("/api/student/check", savedStudentToken);
             if (checkId !== activeCheckIdRef.current) {
               console.log(`[AuthCheck] checkId ${checkId} superseded. Aborting student profile load.`);
               return;
@@ -320,6 +376,17 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
               if (resolvedStudentData && resolvedStudentData.class_name) {
                 setStudentClass(resolvedStudentData.class_name);
               }
+              safeLocalStorage.setItem('gm_isStudent', 'true');
+              safeLocalStorage.setItem('gm_studentData', JSON.stringify(resolvedStudentData));
+              if (studentData.token) {
+                safeLocalStorage.setItem('gm_student_token', studentData.token);
+              }
+              if (resolvedStudentData?.name) {
+                safeLocalStorage.setItem('gm_saved_student_name', String(resolvedStudentData.name));
+              }
+              if (resolvedStudentData?.username) {
+                safeLocalStorage.setItem('gm_saved_username', String(resolvedStudentData.username));
+              }
             } else {
               // Unlinked Google student
               resolvedStudentData = {
@@ -331,36 +398,89 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
                 isGoogleLinked: false
               };
               setStudentData(resolvedStudentData);
+              safeLocalStorage.setItem('gm_isStudent', 'true');
+              safeLocalStorage.setItem('gm_studentData', JSON.stringify(resolvedStudentData));
             }
           }
         } else {
-          console.log("[AuthInit] No Supabase session, checking backend cookies for legacy student token...");
-          const studentRes = await fetchWithRetry("/api/student/check");
-          if (checkId !== activeCheckIdRef.current) {
-            console.log(`[AuthCheck] checkId ${checkId} superseded. Aborting legacy student check.`);
-            return;
+          console.log("[AuthInit] No Supabase session, checking backend student session / token...");
+          let parsedStudentData: StudentData | null = null;
+          if (savedStudentData) {
+            try {
+              parsedStudentData = JSON.parse(savedStudentData) as StudentData;
+            } catch (e) {
+              console.error("[AuthInit] Failed to parse saved student data:", e);
+            }
           }
-          const studentCheckData = await studentRes.json();
-          if (checkId !== activeCheckIdRef.current) return;
 
-          if (studentCheckData.authenticated) {
+          // Pre-hydrate from localStorage immediately so student doesn't see login screen
+          if (savedStudent && parsedStudentData) {
             activeStudent = true;
             setIsStudent(true);
             setIsAdmin(false);
             setIsParent(false);
-            resolvedStudentData = { ...studentCheckData.student, isGoogleLinked: true };
+            resolvedStudentData = parsedStudentData;
             setStudentData(resolvedStudentData);
-            if (resolvedStudentData && resolvedStudentData.class_name) {
+            if (resolvedStudentData.class_name) {
               setStudentClass(resolvedStudentData.class_name);
             }
-            console.log("[AuthInit] Legacy student token found:", resolvedStudentData?.name);
-          } else {
-            // No session anywhere, clear all roles
-            setIsAdmin(false);
-            setAdminUser(null);
-            setIsStudent(false);
-            setIsParent(false);
-            setStudentData(null);
+          }
+
+          try {
+            const checkUrl = savedStudentToken
+              ? `/api/student/check?token=${encodeURIComponent(savedStudentToken)}`
+              : '/api/student/check';
+            const studentRes = await fetchWithRetry(checkUrl, savedStudentToken);
+            if (checkId !== activeCheckIdRef.current) {
+              console.log(`[AuthCheck] checkId ${checkId} superseded. Aborting student check.`);
+              return;
+            }
+            const studentCheckData = await studentRes.json();
+            if (checkId !== activeCheckIdRef.current) return;
+
+            if (studentCheckData.authenticated && studentCheckData.role === 'student') {
+              activeStudent = true;
+              setIsStudent(true);
+              setIsAdmin(false);
+              setIsParent(false);
+              resolvedStudentData = { ...studentCheckData.student, isGoogleLinked: true };
+              setStudentData(resolvedStudentData);
+              if (resolvedStudentData && resolvedStudentData.class_name) {
+                setStudentClass(resolvedStudentData.class_name);
+              }
+              safeLocalStorage.setItem('gm_isStudent', 'true');
+              safeLocalStorage.setItem('gm_studentData', JSON.stringify(resolvedStudentData));
+              if (studentCheckData.token) {
+                safeLocalStorage.setItem('gm_student_token', studentCheckData.token);
+              }
+              if (resolvedStudentData?.name) {
+                safeLocalStorage.setItem('gm_saved_student_name', String(resolvedStudentData.name));
+              }
+              if (resolvedStudentData?.username) {
+                safeLocalStorage.setItem('gm_saved_username', String(resolvedStudentData.username));
+              }
+              console.log("[AuthInit] Student token verified for:", resolvedStudentData?.name);
+            } else {
+              // Server explicitly returned unauthenticated
+              if (!savedStudent) {
+                setIsAdmin(false);
+                setAdminUser(null);
+                setIsStudent(false);
+                setIsParent(false);
+                setStudentData(null);
+                safeLocalStorage.removeItem('gm_isStudent');
+                safeLocalStorage.removeItem('gm_studentData');
+                safeLocalStorage.removeItem('gm_student_token');
+              }
+            }
+          } catch (fetchErr) {
+            console.warn("[AuthInit] /api/student/check network error, keeping cached student session:", fetchErr);
+            if (savedStudent && parsedStudentData) {
+              activeStudent = true;
+              setIsStudent(true);
+              resolvedStudentData = parsedStudentData;
+              setStudentData(resolvedStudentData);
+            }
           }
         }
 
@@ -416,7 +536,23 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         window.history.replaceState({ layer: initialLayer }, '', `#${initialLayer}`);
       } catch (err) {
         if (checkId !== activeCheckIdRef.current) return;
-        console.error("[AuthInit] Error during checkAuthAndRoute, fallback to student_login:", err);
+        console.error("[AuthInit] Error during checkAuthAndRoute, fallback check:", err);
+        const savedStudent = safeLocalStorage.getItem('gm_isStudent') === 'true';
+        const savedStudentData = safeLocalStorage.getItem('gm_studentData');
+        if (savedStudent && savedStudentData) {
+          console.warn("[AuthInit] Retaining cached student session despite error.");
+          try {
+            const parsed = JSON.parse(savedStudentData);
+            setIsStudent(true);
+            setStudentData(parsed);
+            if (parsed.class_name) setStudentClass(parsed.class_name);
+            lastUserEmailRef.current = null;
+            hasInitialLoadedRef.current = true;
+            setLayer("student_profile");
+            window.history.replaceState({ layer: 'student_profile' }, '', '#student_profile');
+            return;
+          } catch {}
+        }
         setIsAdmin(false);
         setAdminUser(null);
         setIsStudent(false);
@@ -574,18 +710,20 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   }, []);
 
 
-  // Sync parent session & configurations to LocalStorage
+  // Sync student & parent session & configurations to LocalStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     safeLocalStorage.setItem("gm_isParent", isParent.toString());
-    if (isParent && studentData) {
+    safeLocalStorage.setItem("gm_isStudent", isStudent.toString());
+    if ((isParent || isStudent) && studentData) {
       safeLocalStorage.setItem("gm_studentData", JSON.stringify(studentData));
-    } else if (!isStudent) {
+    } else if (!isStudent && !isParent && hasInitialLoadedRef.current) {
       safeLocalStorage.removeItem("gm_studentData");
+      safeLocalStorage.removeItem("gm_student_token");
     }
 
-    safeLocalStorage.setItem("gm_studentClass", studentClass);
+    if (studentClass) safeLocalStorage.setItem("gm_studentClass", studentClass);
     safeLocalStorage.setItem("gm_academicYear", academicYear);
   }, [isParent, isStudent, studentData, studentClass, academicYear]);
 
@@ -632,10 +770,15 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    const savedToken = safeLocalStorage.getItem('gm_student_token');
     if (isAdmin) {
       await fetch('/api/admin/logout', { method: 'POST' }).catch(() => {});
     } else if (isStudent || isParent) {
-      await fetch('/api/student/logout', { method: 'POST' }).catch(() => {});
+      await fetch('/api/student/logout', {
+        method: 'POST',
+        headers: savedToken ? { 'Authorization': `Bearer ${savedToken}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: savedToken })
+      }).catch(() => {});
     }
 
     // Hapus cookie orang tua / parent jika ada
@@ -651,7 +794,9 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
     setStudentClass("");
 
     safeLocalStorage.removeItem('gm_isParent');
+    safeLocalStorage.removeItem('gm_isStudent');
     safeLocalStorage.removeItem('gm_studentData');
+    safeLocalStorage.removeItem('gm_student_token');
     safeLocalStorage.removeItem('gm_admin_session');
     safeLocalStorage.removeItem('gm_sessionId');
     safeLocalStorage.removeItem('gm_sessionName');

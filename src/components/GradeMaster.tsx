@@ -1397,6 +1397,7 @@ export default function GradeMaster() {
             setLayer("home");
           }}
           onSuccess={async () => {
+            setLayer("student_profile");
             await refetchAuth();
           }}
         />
