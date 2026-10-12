@@ -237,4 +237,59 @@ export interface Quiz {
 
 export type ModalType = 'save' | 'load' | 'delete' | 'about' | 'error' | 'adminSettings' | null;
 export type ToastType = { message: string; type: 'success' | 'error' } | null;
-export type Layer = 'home' | 'setup' | 'dashboard' | 'grading' | 'login' | 'remedial' | 'behavior' | 'remedial_dashboard' | 'attendance' | 'student_accounts' | 'student_login' | 'student_profile' | 'student_claim' | 'teacher_claim' | 'lesson_management' | 'remedial_management' | 'data_center' | 'student_lesson';
+export type Layer = 'home' | 'setup' | 'dashboard' | 'grading' | 'login' | 'remedial' | 'behavior' | 'remedial_dashboard' | 'attendance' | 'student_accounts' | 'student_login' | 'student_profile' | 'student_claim' | 'teacher_claim' | 'lesson_management' | 'remedial_management' | 'data_center' | 'student_lesson' | 'oral_exams';
+
+export type OralExamTemplate = 'BTQ_HAFALAN' | 'BAHASA_INGGRIS_ARAB';
+
+export interface OralExamRecord {
+  id?: string;
+  session_id: string;
+  template_type: OralExamTemplate;
+  title: string;
+  academic_year: string;
+  semester: string;
+  examiner_name: string;
+  room_number?: string;
+  class_name: string;
+  exam_date: string;
+  
+  // Identitas Siswa
+  student_id: string;
+  student_name: string;
+  nisn?: string | null;
+  
+  // Template 1: BTQ & Hafalan (Tahfidz)
+  btq_score?: number | null;
+  btq_predicate?: 'A' | 'B' | 'C' | 'D' | null;
+  hafalan_score?: number | null;
+  hafalan_predicate?: 'A' | 'B' | 'C' | 'D' | null;
+  
+  // Template 2: Bahasa Inggris & Arab (15 Checklist butir)
+  english_checklist?: boolean[] | null;
+  english_correct_count?: number;
+  english_score?: number | null;
+  english_predicate?: 'A' | 'B' | 'C' | 'D' | null;
+  
+  arabic_checklist?: boolean[] | null;
+  arabic_correct_count?: number;
+  arabic_score?: number | null;
+  arabic_predicate?: 'A' | 'B' | 'C' | 'D' | null;
+  
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export function calculateOralPredicate(score: number | null | undefined): 'A' | 'B' | 'C' | 'D' | null {
+  if (score === null || score === undefined || isNaN(score)) return null;
+  if (score >= 90) return 'A';
+  if (score >= 80) return 'B';
+  if (score >= 70) return 'C';
+  return 'D';
+}
+
+export function calculateChecklistScore(correctCount: number): number {
+  if (correctCount <= 0) return 0;
+  if (correctCount >= 15) return 100;
+  return Math.round((correctCount / 15) * 100 * 100) / 100;
+}

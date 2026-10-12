@@ -12,13 +12,13 @@ import {
   Activity, DownloadCloud, User,
   Settings, LogOut, Share2, Trophy, TrendingUp,
   Home, BookOpen, Upload, GraduationCap, Bug, ArrowRight, Info, Scroll,
-  Smartphone, Laptop, RefreshCw
+  Smartphone, Laptop, RefreshCw, Mic, CheckCircle2, XCircle, ChevronDown, ChevronUp, Award
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, Tooltip, 
   ResponsiveContainer, CartesianGrid 
 } from 'recharts';
-import { ToastType, DEFAULT_VIOLATION_REASONS, DEFAULT_GOOD_REASONS } from '@/lib/grademaster/types';
+import { ToastType, DEFAULT_VIOLATION_REASONS, DEFAULT_GOOD_REASONS, OralExamRecord } from '@/lib/grademaster/types';
 import { 
   addBehaviorAction, 
   updateBehaviorAction, 
@@ -121,6 +121,12 @@ export default function StudentProfileLayer({
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [isEquippingAvatar, setIsEquippingAvatar] = useState(false);
   
+  // Oral Exams States
+  const [oralExamRecords, setOralExamRecords] = useState<OralExamRecord[]>([]);
+  const [isLoadingOralExams, setIsLoadingOralExams] = useState(false);
+  const [examTabSubView, setExamTabSubView] = useState<'WRITTEN' | 'ORAL'>('WRITTEN');
+  const [expandedChecklistRecordId, setExpandedChecklistRecordId] = useState<string | null>(null);
+
   // Management States
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ reason: '', points: 0, date: '' });
@@ -815,6 +821,194 @@ export default function StudentProfileLayer({
     }
   }, [studentId, studentName, activeClass, isParent]);
 
+  const fetchOralExams = useCallback(async () => {
+    if (!studentId && !studentName) return;
+    setIsLoadingOralExams(true);
+    try {
+      let url = `/api/grademaster/oral-exams?student_id=${encodeURIComponent(studentId)}`;
+      if (activeYear) {
+        url += `&academic_year=${encodeURIComponent(activeYear)}`;
+      }
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data && json.data.length > 0) {
+          setOralExamRecords(json.data);
+          return;
+        }
+      }
+      // Fallback pencarian dengan nama siswa
+      if (studentName) {
+        let nameUrl = `/api/grademaster/oral-exams?student_name=${encodeURIComponent(studentName)}`;
+        if (activeYear) {
+          nameUrl += `&academic_year=${encodeURIComponent(activeYear)}`;
+        }
+        const nameRes = await fetch(nameUrl);
+        if (nameRes.ok) {
+          const nameJson = await nameRes.json();
+          setOralExamRecords(nameJson.data || []);
+        }
+      }
+    } catch (err) {
+      console.error("Gagal mengambil data ujian lisan:", err);
+    } finally {
+      setIsLoadingOralExams(false);
+    }
+  }, [studentId, studentName, activeYear]);
+
+  const handleDownloadOralExamPDF = (record: OralExamRecord) => {
+    try {
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      
+      // Kop Surat Resmi
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(30, 41, 59);
+      doc.text('SMP TERPADU AL-ITTIHADIYAH', 105, 18, { align: 'center' });
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text('RAPOR RESMI HASIL PENILAIAN UJIAN LISAN (ORAL EXAMINATION)', 105, 23, { align: 'center' });
+      doc.text('Jl. Raya Cileunyi No. 123, Kab. Bandung, Jawa Barat', 105, 27, { align: 'center' });
+      
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.5);
+      doc.line(14, 30, 196, 30);
+      
+      // Identitas Siswa & Sesi
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.setFont('helvetica', 'bold');
+      doc.text('IDENTITAS SISWA & UJIAN', 14, 37);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text(`Nama Siswa        : ${record.student_name}`, 14, 43);
+      doc.text(`Kelas / Semester  : ${record.class_name} / ${record.semester || 'Ganjil'}`, 14, 48);
+      doc.text(`Tahun Ajaran      : ${record.academic_year || '2026/2027'}`, 14, 53);
+      
+      doc.text(`Judul Sesi        : ${record.title}`, 110, 43);
+      doc.text(`Guru Penguji      : ${record.examiner_name}`, 110, 48);
+      doc.text(`Ruang / Tanggal   : ${record.room_number || 'Ruang 01'} / ${record.exam_date || '-'}`, 110, 53);
+      
+      const getPredDesc = (pred?: string | null) => {
+        if (pred === 'A') return 'Mumtaz (Sangat Baik)';
+        if (pred === 'B') return 'Jayyid Jiddan (Baik)';
+        if (pred === 'C') return 'Jayyid (Cukup)';
+        if (pred === 'D') return 'Maqbul (Perlu Bimbingan)';
+        return '-';
+      };
+
+      if (record.template_type === 'BTQ_HAFALAN') {
+        const tableData = [
+          [
+            '1',
+            'Baca Tulis Al-Qur\'an (BTQ / Tilawah)',
+            record.btq_score !== null ? Number(record.btq_score).toFixed(1) : '-',
+            record.btq_predicate || '-',
+            getPredDesc(record.btq_predicate)
+          ],
+          [
+            '2',
+            'Hafalan Al-Qur\'an (Tahfidz)',
+            record.hafalan_score !== null ? Number(record.hafalan_score).toFixed(1) : '-',
+            record.hafalan_predicate || '-',
+            getPredDesc(record.hafalan_predicate)
+          ]
+        ];
+        
+        autoTable(doc, {
+          startY: 59,
+          head: [['No', 'Aspek Penilaian', 'Nilai (0-100)', 'Predikat', 'Keterangan Capaian']],
+          body: tableData,
+          theme: 'grid',
+          headStyles: { fillColor: [49, 46, 129], textColor: [255, 255, 255], fontStyle: 'bold' },
+          styles: { fontSize: 9, cellPadding: 3.5 }
+        });
+      } else {
+        const tableData = [
+          [
+            '1',
+            'Bahasa Inggris (English Oral Response)',
+            `${record.english_correct_count ?? 0} / 15 Butir`,
+            record.english_score !== null ? Number(record.english_score).toFixed(1) : '-',
+            record.english_predicate || '-',
+            getPredDesc(record.english_predicate)
+          ],
+          [
+            '2',
+            'Bahasa Arab (Muhadatsah / Respons Lisan Arab)',
+            `${record.arabic_correct_count ?? 0} / 15 Butir`,
+            record.arabic_score !== null ? Number(record.arabic_score).toFixed(1) : '-',
+            record.arabic_predicate || '-',
+            getPredDesc(record.arabic_predicate)
+          ]
+        ];
+        
+        autoTable(doc, {
+          startY: 59,
+          head: [['No', 'Aspek Penilaian', 'Respons Benar', 'Skor Akhir', 'Predikat', 'Keterangan']],
+          body: tableData,
+          theme: 'grid',
+          headStyles: { fillColor: [49, 46, 129], textColor: [255, 255, 255], fontStyle: 'bold' },
+          styles: { fontSize: 9, cellPadding: 3.5 }
+        });
+      }
+      
+      const finalY = (doc as any).lastAutoTable?.finalY || 100;
+      
+      // Catatan Penguji
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CATATAN / EVALUASI GURU PENGUJI:', 14, finalY + 10);
+      doc.setFont('helvetica', 'normal');
+      const splitNotes = doc.splitTextToSize(record.notes || 'Ananda telah menyelesaikan ujian lisan dengan baik dan tertib.', 180);
+      doc.text(splitNotes, 14, finalY + 16);
+      
+      // Tanda Tangan
+      const signY = finalY + 36;
+      doc.text('Mengetahui,', 25, signY);
+      doc.text('Kepala Sekolah', 25, signY + 5);
+      doc.text('( .................................... )', 25, signY + 28);
+      
+      doc.text(`Bandung, ${record.exam_date || new Date().toISOString().split('T')[0]}`, 140, signY);
+      doc.text('Guru Penguji Lisan,', 140, signY + 5);
+      doc.text(`( ${record.examiner_name} )`, 140, signY + 28);
+      
+      doc.save(`Rapor_Ujian_Lisan_${record.student_name.replace(/\s+/g, '_')}_${record.session_id}.pdf`);
+      setToast({ type: 'success', message: 'Rapor Ujian Lisan berhasil diunduh.' });
+    } catch (err) {
+      console.error('Gagal cetak PDF ujian lisan:', err);
+      setToast({ type: 'error', message: 'Gagal mengunduh PDF rapor lisan.' });
+    }
+  };
+
+  const handleShareOralExamWA = (record: OralExamRecord) => {
+    const isBTQ = record.template_type === 'BTQ_HAFALAN';
+    let scoreDetails = '';
+    if (isBTQ) {
+      scoreDetails = `📖 *BTQ (Tilawah):* ${record.btq_score !== null ? Number(record.btq_score).toFixed(1) : '-'} (Predikat: ${record.btq_predicate || '-'})\n🕋 *Tahfidz (Hafalan):* ${record.hafalan_score !== null ? Number(record.hafalan_score).toFixed(1) : '-'} (Predikat: ${record.hafalan_predicate || '-'})\n`;
+    } else {
+      scoreDetails = `🇬🇧 *Bahasa Inggris:* ${record.english_score !== null ? Number(record.english_score).toFixed(1) : '-'} [${record.english_correct_count ?? 0}/15 Butir] (Predikat: ${record.english_predicate || '-'})\n🇸🇦 *Bahasa Arab:* ${record.arabic_score !== null ? Number(record.arabic_score).toFixed(1) : '-'} [${record.arabic_correct_count ?? 0}/15 Butir] (Predikat: ${record.arabic_predicate || '-'})\n`;
+    }
+    
+    const text = `*LAPORAN HASIL UJIAN LISAN SANTRI*\n` +
+      `*SMP TERPADU AL-ITTIHADIYAH*\n\n` +
+      `👤 *Nama:* ${record.student_name}\n` +
+      `🏫 *Kelas:* ${record.class_name}\n` +
+      `📅 *Sesi:* ${record.title}\n` +
+      `🗓️ *Tanggal:* ${record.exam_date || '-'}\n` +
+      `👨‍🏫 *Penguji:* ${record.examiner_name}\n\n` +
+      `*HASIL PENILAIAN:*\n` +
+      scoreDetails +
+      `\n📝 *Catatan Penguji:*\n"${record.notes || 'Terus tingkatkan semangat belajar dan muroja\'ah.'}"\n\n` +
+      `_Laporan resmi dari Sistem Penilaian GradeMaster OS._`;
+      
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
   useEffect(() => {
     if (behaviorReasons && behaviorReasons.length > 0) {
       queueMicrotask(() => {
@@ -848,13 +1042,14 @@ export default function StudentProfileLayer({
         fetchStudentSummary(activeClass, activeYear);
         fetchStudentLogs();
         fetchAttendanceLogs();
+        fetchOralExams();
         fetchLoginLogs();
         fetchActiveSessions();
         // fetchClassLeaderboard();
         fetchBehaviorSettings();
       });
     }
-  }, [studentId, studentName, activeClass, activeYear, isAdmin, fetchStudentSummary, fetchStudentLogs, fetchAttendanceLogs, fetchLoginLogs, fetchActiveSessions, fetchBehaviorSettings]);
+  }, [studentId, studentName, activeClass, activeYear, isAdmin, fetchStudentSummary, fetchStudentLogs, fetchAttendanceLogs, fetchOralExams, fetchLoginLogs, fetchActiveSessions, fetchBehaviorSettings]);
 
   const fetchClassLeaderboard = async () => {
     if (!activeClass) return;
@@ -1493,7 +1688,8 @@ export default function StudentProfileLayer({
                 await Promise.allSettled([
                   fetchStudentSummary(),
                   fetchStudentLogs(),
-                  fetchAttendanceLogs()
+                  fetchAttendanceLogs(),
+                  fetchOralExams()
                 ]);
                 setToast({ message: "Data berhasil diperbarui ✨", type: "success" });
                 setIsRefreshingProfile(false);
@@ -1845,6 +2041,98 @@ export default function StudentProfileLayer({
                 </button>
               </div>
 
+              {/* Ringkasan Ujian Lisan Santri (BTQ, Hafalan & Bahasa) */}
+              {oralExamRecords.length > 0 && (
+                <div className="bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/50 border border-indigo-100 rounded-2xl p-4 text-left shadow-sm space-y-3 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                        <Mic size={16} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-slate-800 uppercase tracking-wide font-outfit">
+                          {isParent ? 'Capaian Ujian Lisan Santri' : 'Capaian Ujian Lisan'}
+                        </h4>
+                        <p className="text-[10px] text-slate-500 font-medium">
+                          {oralExamRecords.length} sesi teruji (BTQ, Tahfidz & Bahasa)
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('GRADES');
+                        setExamTabSubView('ORAL');
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold transition-all active:scale-95 flex items-center gap-1 shadow-xs cursor-pointer min-h-[36px]"
+                    >
+                      <span>Lihat Rapor</span>
+                      <ArrowRight size={12} />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                    {oralExamRecords.map((rec) => {
+                      if (rec.template_type === 'BTQ_HAFALAN') {
+                        return (
+                          <React.Fragment key={rec.id}>
+                            <div className="bg-white/95 border border-slate-200/80 rounded-xl p-2.5 flex flex-col justify-between">
+                              <span className="text-[10px] font-bold text-slate-500 uppercase">BTQ / Tilawah</span>
+                              <div className="flex items-baseline justify-between mt-1">
+                                <span className="text-base font-black text-slate-900 font-outfit">
+                                  {rec.btq_score !== null ? Number(rec.btq_score).toFixed(0) : '-'}
+                                </span>
+                                <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                  {rec.btq_predicate || '-'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="bg-white/95 border border-slate-200/80 rounded-xl p-2.5 flex flex-col justify-between">
+                              <span className="text-[10px] font-bold text-slate-500 uppercase">Tahfidz Quran</span>
+                              <div className="flex items-baseline justify-between mt-1">
+                                <span className="text-base font-black text-slate-900 font-outfit">
+                                  {rec.hafalan_score !== null ? Number(rec.hafalan_score).toFixed(0) : '-'}
+                                </span>
+                                <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                  {rec.hafalan_predicate || '-'}
+                                </span>
+                              </div>
+                            </div>
+                          </React.Fragment>
+                        );
+                      } else {
+                        return (
+                          <React.Fragment key={rec.id}>
+                            <div className="bg-white/95 border border-slate-200/80 rounded-xl p-2.5 flex flex-col justify-between">
+                              <span className="text-[10px] font-bold text-slate-500 uppercase">B. Inggris Lisan</span>
+                              <div className="flex items-baseline justify-between mt-1">
+                                <span className="text-base font-black text-slate-900 font-outfit">
+                                  {rec.english_score !== null ? Number(rec.english_score).toFixed(0) : '-'}
+                                </span>
+                                <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                  {rec.english_predicate || '-'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="bg-white/95 border border-slate-200/80 rounded-xl p-2.5 flex flex-col justify-between">
+                              <span className="text-[10px] font-bold text-slate-500 uppercase">B. Arab Lisan</span>
+                              <div className="flex items-baseline justify-between mt-1">
+                                <span className="text-base font-black text-slate-900 font-outfit">
+                                  {rec.arabic_score !== null ? Number(rec.arabic_score).toFixed(0) : '-'}
+                                </span>
+                                <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                  {rec.arabic_predicate || '-'}
+                                </span>
+                              </div>
+                            </div>
+                          </React.Fragment>
+                        );
+                      }
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Catatan Perilaku Terbaru (Maksimal 2 log) */}
               <div className="space-y-2 pt-1 text-left">
                 <div className="flex items-center justify-between px-1">
@@ -1932,196 +2220,576 @@ export default function StudentProfileLayer({
 
             return (
               <div className="space-y-4 animate-in fade-in duration-300 text-left">
-                
-                {/* Ringkasan Nilai */}
-                {isLoadingSummary ? (
-                  <div className="grid grid-cols-3 gap-2.5">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="bg-white border border-slate-200/80 rounded-xl p-3 text-center shadow-sm animate-pulse space-y-2">
-                        <div className="h-2.5 bg-slate-100 rounded w-10 mx-auto" />
-                        <div className="h-6 bg-slate-100 rounded w-12 mx-auto" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 gap-2.5">
-                    <div className="bg-white border border-slate-200/80 rounded-xl p-3 text-center shadow-sm">
-                      <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Rata-Rata</p>
-                      <p className="text-xl sm:text-2xl font-black text-indigo-600 font-outfit mt-1">{avgScore.toFixed(1)}</p>
-                    </div>
-                    <div className="bg-white border border-slate-200/80 rounded-xl p-3 text-center shadow-sm">
-                      <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Tuntas</p>
-                      <p className="text-xl sm:text-2xl font-black text-emerald-600 font-outfit mt-1">{passPercent}%</p>
-                    </div>
-                    <div className="bg-white border border-slate-200/80 rounded-xl p-3 text-center shadow-sm">
-                      <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Tertinggi</p>
-                      <p className="text-xl sm:text-2xl font-black text-amber-600 font-outfit mt-1">{highestScore}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Grafik Perkembangan Nilai */}
-                {isLoadingSummary ? (
-                  <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm animate-pulse">
-                    <div className="h-3 bg-slate-100 rounded w-36 mb-4" />
-                    <div className="h-[160px] bg-slate-50/50 rounded-xl" />
-                  </div>
-                ) : (
-                  isMounted && totalExams >= 1 && (
-                    <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
-                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                        <TrendingUp size={14} className="text-indigo-600" /> Tren Perkembangan Nilai
-                      </h4>
-                      <div className="h-[160px] w-full">
-                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                          <LineChart data={chartData} margin={CHART_MARGIN}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={CHART_TICK_STYLE} />
-                            <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={CHART_TICK_STYLE} />
-                            <Tooltip 
-                              contentStyle={TOOLTIP_CONTENT_STYLE} 
-                              formatter={(value, name, props) => [`Nilai: ${value}`, `${props.payload.subject}`]}
-                            />
-                            <Line type="monotone" dataKey="nilai" stroke="#4f46e5" strokeWidth={2.5} activeDot={ACTIVE_DOT_PROPS} dot={DOT_PROPS} />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  )
-                )}
-
-                {/* Kesimpulan Ringkas */}
-                <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-xl p-4">
-                  <p className="text-xs sm:text-sm font-semibold text-indigo-950 leading-relaxed">
-                    {totalExams === 0 
-                      ? "Belum ada riwayat ujian yang tercatat pada sistem." 
-                      : isParent 
-                        ? `Ananda memperoleh rata-rata nilai sebesar ${avgScore.toFixed(1)} dari total ${totalExams} sesi ujian. Capaian terbaik diraih pada mata pelajaran ${bestSubject} dengan nilai ${highestScore}.`
-                        : `Kamu memperoleh rata-rata nilai sebesar ${avgScore.toFixed(1)} dari total ${totalExams} sesi ujian. Capaian terbaikmu diraih pada mata pelajaran ${bestSubject} dengan nilai ${highestScore}.`
-                    }
-                  </p>
+                {/* Switcher: Ujian Tertulis vs Ujian Lisan */}
+                <div className="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-2xl border border-slate-200/70">
+                  <button
+                    type="button"
+                    onClick={() => setExamTabSubView('WRITTEN')}
+                    className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-all min-h-[44px] flex items-center justify-center gap-1.5 cursor-pointer ${
+                      examTabSubView === 'WRITTEN'
+                        ? 'bg-white text-indigo-700 shadow-sm font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <BookOpen size={15} />
+                    <span>Ujian Tertulis (CBT)</span>
+                    {academicHistory.length > 0 && (
+                      <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded-md text-[10px] font-black">
+                        {academicHistory.length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setExamTabSubView('ORAL')}
+                    className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-all min-h-[44px] flex items-center justify-center gap-1.5 cursor-pointer ${
+                      examTabSubView === 'ORAL'
+                        ? 'bg-white text-indigo-700 shadow-sm font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Mic size={15} />
+                    <span>Ujian Lisan</span>
+                    {oralExamRecords.length > 0 && (
+                      <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-[10px] font-black">
+                        {oralExamRecords.length}
+                      </span>
+                    )}
+                  </button>
                 </div>
 
-                {/* List Sesi Ujian */}
-                <div className="space-y-2.5">
-                  <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider px-1">Riwayat Sesi Ujian</h4>
-                  
-                  {isLoadingSummary ? (
-                    <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-500 bg-white border border-slate-200/80 rounded-2xl">
-                      <Loader2 size={24} className="animate-spin text-indigo-600" />
-                      <p className="text-xs font-bold uppercase tracking-wider">Memuat Ujian...</p>
+                {/* SUB-VIEW 1: UJIAN TERTULIS (CBT / KUIS) */}
+                {examTabSubView === 'WRITTEN' && (
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    {/* Ringkasan Nilai */}
+                    {isLoadingSummary ? (
+                      <div className="grid grid-cols-3 gap-2.5">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="bg-white border border-slate-200/80 rounded-xl p-3 text-center shadow-sm animate-pulse space-y-2">
+                            <div className="h-2.5 bg-slate-100 rounded w-10 mx-auto" />
+                            <div className="h-6 bg-slate-100 rounded w-12 mx-auto" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2.5">
+                        <div className="bg-white border border-slate-200/80 rounded-xl p-3 text-center shadow-sm">
+                          <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Rata-Rata</p>
+                          <p className="text-xl sm:text-2xl font-black text-indigo-600 font-outfit mt-1">{avgScore.toFixed(1)}</p>
+                        </div>
+                        <div className="bg-white border border-slate-200/80 rounded-xl p-3 text-center shadow-sm">
+                          <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Tuntas</p>
+                          <p className="text-xl sm:text-2xl font-black text-emerald-600 font-outfit mt-1">{passPercent}%</p>
+                        </div>
+                        <div className="bg-white border border-slate-200/80 rounded-xl p-3 text-center shadow-sm">
+                          <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Tertinggi</p>
+                          <p className="text-xl sm:text-2xl font-black text-amber-600 font-outfit mt-1">{highestScore}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Grafik Perkembangan Nilai */}
+                    {isLoadingSummary ? (
+                      <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm animate-pulse">
+                        <div className="h-3 bg-slate-100 rounded w-36 mb-4" />
+                        <div className="h-[160px] bg-slate-50/50 rounded-xl" />
+                      </div>
+                    ) : (
+                      isMounted && totalExams >= 1 && (
+                        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+                          <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                            <TrendingUp size={14} className="text-indigo-600" /> Tren Perkembangan Nilai
+                          </h4>
+                          <div className="h-[160px] w-full">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                              <LineChart data={chartData} margin={CHART_MARGIN}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={CHART_TICK_STYLE} />
+                                <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={CHART_TICK_STYLE} />
+                                <Tooltip 
+                                  contentStyle={TOOLTIP_CONTENT_STYLE} 
+                                  formatter={(value, name, props) => [`Nilai: ${value}`, `${props.payload.subject}`]}
+                                />
+                                <Line type="monotone" dataKey="nilai" stroke="#4f46e5" strokeWidth={2.5} activeDot={ACTIVE_DOT_PROPS} dot={DOT_PROPS} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      )
+                    )}
+
+                    {/* Kesimpulan Ringkas */}
+                    <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-xl p-4">
+                      <p className="text-xs sm:text-sm font-semibold text-indigo-950 leading-relaxed">
+                        {totalExams === 0 
+                          ? "Belum ada riwayat ujian yang tercatat pada sistem." 
+                          : isParent 
+                            ? `Ananda memperoleh rata-rata nilai sebesar ${avgScore.toFixed(1)} dari total ${totalExams} sesi ujian. Capaian terbaik diraih pada mata pelajaran ${bestSubject} dengan nilai ${highestScore}.`
+                            : `Kamu memperoleh rata-rata nilai sebesar ${avgScore.toFixed(1)} dari total ${totalExams} sesi ujian. Capaian terbaikmu diraih pada mata pelajaran ${bestSubject} dengan nilai ${highestScore}.`
+                        }
+                      </p>
                     </div>
-                  ) : academicHistory.length === 0 ? (
-                    <div className="py-12 text-center bg-white border border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center px-4">
-                      <span className="material-symbols-outlined text-[28px] text-slate-400">import_contacts</span>
-                      <p className="text-xs font-bold text-slate-500 uppercase mt-2">Belum ada catatan ujian</p>
-                    </div>
-                  ) : (
+
+                    {/* List Sesi Ujian */}
                     <div className="space-y-2.5">
-                      {academicHistory.map((grade: any, idx: number) => {
-                        const isPassing = grade.isPassing;
-                        return (
-                          <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3 transition-all hover:border-slate-300">
-                            <div className="min-w-0 flex-1">
-                              <h4 className="text-slate-900 font-extrabold text-xs sm:text-sm truncate leading-tight">
-                                {grade.sessionName}
-                              </h4>
-                              <p className="text-xs font-medium text-slate-500 mt-1 truncate">
-                                {grade.subject} • {formatDate(grade.date)}
-                              </p>
-                              
-                              {/* Display remedial status text/message */}
-                              {grade.remedialMessage && (
-                                <div className="mt-1.5 flex items-center">
-                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
-                                    grade.remedialUiState === 'REMEDIAL_SUBMITTED_HELD_BACK' ? 'bg-amber-50 text-amber-800 border-amber-200' :
-                                    grade.remedialUiState === 'FAILED_EFFORT' ? 'bg-rose-50 text-rose-800 border-rose-200' :
-                                    grade.remedialUiState === 'CHEATED' ? 'bg-rose-100 text-rose-900 border-rose-200' :
-                                    grade.remedialUiState === 'TIME_UP' ? 'bg-slate-50 text-slate-700 border-slate-200' :
-                                    grade.remedialUiState === 'PASSING' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
-                                    grade.remedialUiState === 'DEADLINE_PASSED' ? 'bg-slate-100 text-slate-700 border-slate-200' :
-                                    'bg-slate-50 text-slate-700 border-slate-200'
-                                  }`} title={grade.remedialMessage}>
-                                    {grade.remedialMessage}
-                                  </span>
+                      <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider px-1">Riwayat Sesi Ujian</h4>
+                      
+                      {isLoadingSummary ? (
+                        <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-500 bg-white border border-slate-200/80 rounded-2xl">
+                          <Loader2 size={24} className="animate-spin text-indigo-600" />
+                          <p className="text-xs font-bold uppercase tracking-wider">Memuat Ujian...</p>
+                        </div>
+                      ) : academicHistory.length === 0 ? (
+                        <div className="py-12 text-center bg-white border border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center px-4">
+                          <span className="material-symbols-outlined text-[28px] text-slate-400">import_contacts</span>
+                          <p className="text-xs font-bold text-slate-500 uppercase mt-2">Belum ada catatan ujian</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2.5">
+                          {academicHistory.map((grade: any, idx: number) => {
+                            const isPassing = grade.isPassing;
+                            return (
+                              <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3 transition-all hover:border-slate-300">
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="text-slate-900 font-extrabold text-xs sm:text-sm truncate leading-tight">
+                                    {grade.sessionName}
+                                  </h4>
+                                  <p className="text-xs font-medium text-slate-500 mt-1 truncate">
+                                    {grade.subject} • {formatDate(grade.date)}
+                                  </p>
+                                  
+                                  {/* Display remedial status text/message */}
+                                  {grade.remedialMessage && (
+                                    <div className="mt-1.5 flex items-center">
+                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                                        grade.remedialUiState === 'REMEDIAL_SUBMITTED_HELD_BACK' ? 'bg-amber-50 text-amber-800 border-amber-200' :
+                                        grade.remedialUiState === 'FAILED_EFFORT' ? 'bg-rose-50 text-rose-800 border-rose-200' :
+                                        grade.remedialUiState === 'CHEATED' ? 'bg-rose-100 text-rose-900 border-rose-200' :
+                                        grade.remedialUiState === 'TIME_UP' ? 'bg-slate-50 text-slate-700 border-slate-200' :
+                                        grade.remedialUiState === 'PASSING' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
+                                        grade.remedialUiState === 'DEADLINE_PASSED' ? 'bg-slate-100 text-slate-700 border-slate-200' :
+                                        'bg-slate-50 text-slate-700 border-slate-200'
+                                      }`} title={grade.remedialMessage}>
+                                        {grade.remedialMessage}
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                            
-                            <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                              {grade.remedialUiState === 'REMEDIAL_SUBMITTED_HELD_BACK' ? (
-                                <div className="flex flex-col items-end gap-0.5">
-                                  <span className="text-[11px] font-bold text-amber-700">Remedial: {grade.remedialScore}</span>
-                                  <p className="text-xs font-bold text-slate-400 leading-none">
-                                    Final: {grade.score} (Sementara)
+                                
+                                <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                                  {grade.remedialUiState === 'REMEDIAL_SUBMITTED_HELD_BACK' ? (
+                                    <div className="flex flex-col items-end gap-0.5">
+                                      <span className="text-[11px] font-bold text-amber-700">Remedial: {grade.remedialScore}</span>
+                                      <p className="text-xs font-bold text-slate-400 leading-none">
+                                        Final: {grade.score} (Sementara)
+                                      </p>
+                                    </div>
+                                  ) : (
+                                    <p className={`text-xl font-black font-outfit leading-none ${isPassing ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                      {grade.score}
+                                    </p>
+                                  )}
+                                  <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded uppercase">
+                                    KKM: {grade.kkm}
+                                  </span>
+
+                                  {/* Aksi Siswa (Remedial) */}
+                                  {!isAdmin && !isParent && grade.canStartRemedial && onStartRemedial && (
+                                    <button 
+                                      onClick={() => handleStartRemedial(grade.sessionName)}
+                                      disabled={startingRemedialSessionName !== null}
+                                      className="mt-1 px-2.5 py-1 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white rounded-lg text-xs font-bold uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm min-h-[44px]"
+                                    >
+                                      {startingRemedialSessionName === grade.sessionName ? (
+                                        <>
+                                          <Loader2 size={10} className="animate-spin" />
+                                          <span>Memuat...</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <span className="material-symbols-outlined text-[12px]">edit</span>
+                                          <span>Remedial</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  )}
+
+                                  {/* Aksi Orang Tua (Pengingat WhatsApp) */}
+                                  {!isPassing && isParent && (
+                                    <button 
+                                      onClick={() => {
+                                        const deadlineText = grade.remedialDeadline ? formatDate(grade.remedialDeadline) : 'Batas Waktu Sesi';
+                                        const appUrl = typeof window !== 'undefined' ? `${window.location.origin}` : 'https://web-input-nilai.vercel.app';
+                                        
+                                        let reasonText = 'Nilai di bawah batas kelulusan KKM.';
+                                        if (grade.remedialUiState === 'REMEDIAL_SUBMITTED_HELD_BACK') {
+                                          reasonText = 'Nilai remedial sedang dalam proses verifikasi.';
+                                        } else if (grade.remedialUiState === 'FAILED_EFFORT') {
+                                          reasonText = 'Remedial perlu diulang dengan persiapan lebih matang.';
+                                        } else if (grade.remedialUiState === 'TIME_UP') {
+                                          reasonText = 'Batas waktu pengerjaan habis.';
+                                        } else if (grade.remedialUiState === 'DEADLINE_PASSED') {
+                                          reasonText = 'Batas waktu remedial telah terlewati.';
+                                        }
+                                        
+                                        const message = `*GradeMaster OS - Pengingat Ujian Ananda*\n\nHalo, mohon perhatian untuk ananda:\n👤 Siswa: *${studentName}*\n🏫 Kelas: *${className}*\n📚 Mata Pelajaran: *${grade.subject}*\n📝 Sesi: *${grade.sessionName}*\n📊 Nilai: *${grade.score}* (Standar KKM: ${grade.kkm})\n⚠️ Catatan: ${reasonText}\n\nSilakan buka tautan portal untuk menyelesaikan ujian/remedial:\n🔗 ${appUrl}\n\nBatas waktu: *${deadlineText}*.\nTerima kasih atas bimbingan Ayah/Bunda di rumah.`;
+                                        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+                                        window.open(waUrl, '_blank');
+                                      }}
+                                      className="mt-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm min-h-[44px]"
+                                      title="Bagikan Pengingat ke WhatsApp"
+                                    >
+                                      <Share2 size={11} />
+                                      <span>Ingatkan via WA</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB-VIEW 2: UJIAN LISAN (BTQ, HAFALAN & BAHASA) */}
+                {examTabSubView === 'ORAL' && (
+                  <div className="space-y-4 animate-in fade-in duration-300">
+                    {/* Intro Banner */}
+                    <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-2xl p-4 text-left">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                          <Mic size={16} />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-black text-indigo-950 uppercase tracking-wide font-outfit">
+                            {isParent ? 'Laporan Ujian Lisan Santri' : 'Rapor Penilaian Ujian Lisan'}
+                          </h4>
+                          <p className="text-xs font-medium text-indigo-900 mt-1 leading-relaxed">
+                            {isParent 
+                              ? `Capaian penilaian lisan ananda di SMP Terpadu Al-Ittihadiyah meliputi Tilawah Al-Qur'an (BTQ), Tahfidz (Hafalan), serta kecakapan lisan Bahasa Inggris dan Bahasa Arab.`
+                              : `Evaluasi kecakapan lisan santri meliputi Baca Tulis Al-Qur'an (BTQ), Hafalan Surah (Tahfidz), serta respons lisan Bahasa Inggris dan Bahasa Arab.`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Loading State */}
+                    {isLoadingOralExams ? (
+                      <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-500 bg-white border border-slate-200/80 rounded-2xl">
+                        <Loader2 size={24} className="animate-spin text-indigo-600" />
+                        <p className="text-xs font-bold uppercase tracking-wider">Memuat Penilaian Lisan...</p>
+                      </div>
+                    ) : oralExamRecords.length === 0 ? (
+                      <div className="py-12 text-center bg-white border border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center px-4">
+                        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
+                          <Mic size={22} />
+                        </div>
+                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Belum Ada Catatan Ujian Lisan</h4>
+                        <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                          Nilai ujian lisan belum diinput atau dipublikasikan oleh dewan guru penguji untuk semester ini.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {oralExamRecords.map((record) => {
+                          const isBTQ = record.template_type === 'BTQ_HAFALAN';
+                          const isChecklistExpanded = expandedChecklistRecordId === record.id;
+                          
+                          const getPredColor = (pred?: string | null) => {
+                            if (pred === 'A') return 'bg-emerald-50 text-emerald-800 border-emerald-200';
+                            if (pred === 'B') return 'bg-indigo-50 text-indigo-800 border-indigo-200';
+                            if (pred === 'C') return 'bg-amber-50 text-amber-800 border-amber-200';
+                            if (pred === 'D') return 'bg-rose-50 text-rose-800 border-rose-200';
+                            return 'bg-slate-50 text-slate-700 border-slate-200';
+                          };
+
+                          const getPredLabel = (pred?: string | null) => {
+                            if (pred === 'A') return 'A • Mumtaz (Sangat Baik)';
+                            if (pred === 'B') return 'B • Jayyid Jiddan (Baik)';
+                            if (pred === 'C') return 'C • Jayyid (Cukup)';
+                            if (pred === 'D') return 'D • Maqbul (Perlu Bimbingan)';
+                            return '-';
+                          };
+
+                          return (
+                            <div key={record.id} className="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden text-left transition-all">
+                              {/* Session Header */}
+                              <div className="p-4 bg-slate-50/80 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                                <div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-800">
+                                      {isBTQ ? 'Format: BTQ & Hafalan' : 'Format: Bahasa Asing (15 Butir)'}
+                                    </span>
+                                    <span className="text-[11px] font-bold text-slate-500">
+                                      {record.academic_year} • Semester {record.semester || 'Ganjil'}
+                                    </span>
+                                  </div>
+                                  <h3 className="text-sm font-extrabold text-slate-900 mt-1 font-outfit">
+                                    {record.title}
+                                  </h3>
+                                </div>
+                                <div className="text-left sm:text-right text-[11px] text-slate-500 space-y-0.5">
+                                  <p className="font-bold text-slate-700">Penguji: {record.examiner_name}</p>
+                                  <p>{record.room_number || 'Ruang 01'} • {formatDate(record.exam_date)}</p>
+                                </div>
+                              </div>
+
+                              {/* Card Content */}
+                              <div className="p-4 space-y-4">
+                                {isBTQ ? (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {/* BTQ (Tilawah) */}
+                                    <div className="bg-slate-50/60 border border-slate-200/70 rounded-xl p-3.5 flex flex-col justify-between">
+                                      <div>
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
+                                            BTQ (Tilawah Al-Qur'an)
+                                          </span>
+                                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${getPredColor(record.btq_predicate)}`}>
+                                            {getPredLabel(record.btq_predicate)}
+                                          </span>
+                                        </div>
+                                        <div className="mt-2.5 flex items-baseline gap-2">
+                                          <span className="text-2xl font-black text-indigo-600 font-outfit">
+                                            {record.btq_score !== null ? Number(record.btq_score).toFixed(1) : '-'}
+                                          </span>
+                                          <span className="text-xs font-medium text-slate-400">/ 100</span>
+                                        </div>
+                                      </div>
+                                      <div className="mt-3">
+                                        <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                          <div 
+                                            className="bg-indigo-600 h-full rounded-full transition-all duration-500" 
+                                            style={{ width: `${Math.min(100, Math.max(0, Number(record.btq_score || 0)))}%` }}
+                                          />
+                                        </div>
+                                        <p className="text-[10px] text-slate-500 font-medium mt-1.5">
+                                          Makharijul huruf, tajwid, dan kelancaran membaca ayat.
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {/* Tahfidz (Hafalan) */}
+                                    <div className="bg-slate-50/60 border border-slate-200/70 rounded-xl p-3.5 flex flex-col justify-between">
+                                      <div>
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
+                                            Tahfidz (Hafalan Al-Qur'an)
+                                          </span>
+                                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${getPredColor(record.hafalan_predicate)}`}>
+                                            {getPredLabel(record.hafalan_predicate)}
+                                          </span>
+                                        </div>
+                                        <div className="mt-2.5 flex items-baseline gap-2">
+                                          <span className="text-2xl font-black text-emerald-600 font-outfit">
+                                            {record.hafalan_score !== null ? Number(record.hafalan_score).toFixed(1) : '-'}
+                                          </span>
+                                          <span className="text-xs font-medium text-slate-400">/ 100</span>
+                                        </div>
+                                      </div>
+                                      <div className="mt-3">
+                                        <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                          <div 
+                                            className="bg-emerald-600 h-full rounded-full transition-all duration-500" 
+                                            style={{ width: `${Math.min(100, Math.max(0, Number(record.hafalan_score || 0)))}%` }}
+                                          />
+                                        </div>
+                                        <p className="text-[10px] text-slate-500 font-medium mt-1.5">
+                                          Mutqin hafalan, sambung ayat, dan kelancaran surah pilihan.
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                      {/* Bahasa Inggris */}
+                                      <div className="bg-slate-50/60 border border-slate-200/70 rounded-xl p-3.5 flex flex-col justify-between">
+                                        <div>
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
+                                              Bahasa Inggris
+                                            </span>
+                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${getPredColor(record.english_predicate)}`}>
+                                              {getPredLabel(record.english_predicate)}
+                                            </span>
+                                          </div>
+                                          <div className="mt-2 flex items-baseline justify-between">
+                                            <div className="flex items-baseline gap-2">
+                                              <span className="text-2xl font-black text-indigo-600 font-outfit">
+                                                {record.english_score !== null ? Number(record.english_score).toFixed(1) : '-'}
+                                              </span>
+                                              <span className="text-xs font-medium text-slate-400">/ 100</span>
+                                            </div>
+                                            <span className="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-lg">
+                                              {record.english_correct_count ?? 0} / 15 Butir
+                                            </span>
+                                          </div>
+                                        </div>
+                                        <div className="mt-3">
+                                          <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                            <div 
+                                              className="bg-indigo-600 h-full rounded-full transition-all duration-500" 
+                                              style={{ width: `${Math.min(100, Math.max(0, ((record.english_correct_count ?? 0) / 15) * 100))}%` }}
+                                            />
+                                          </div>
+                                          <p className="text-[10px] text-slate-500 font-medium mt-1.5">
+                                            Respons lisan, intonasi, dan kosakata percakapan bahasa Inggris.
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      {/* Bahasa Arab */}
+                                      <div className="bg-slate-50/60 border border-slate-200/70 rounded-xl p-3.5 flex flex-col justify-between">
+                                        <div>
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
+                                              Bahasa Arab (Muhadatsah)
+                                            </span>
+                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${getPredColor(record.arabic_predicate)}`}>
+                                              {getPredLabel(record.arabic_predicate)}
+                                            </span>
+                                          </div>
+                                          <div className="mt-2 flex items-baseline justify-between">
+                                            <div className="flex items-baseline gap-2">
+                                              <span className="text-2xl font-black text-emerald-600 font-outfit">
+                                                {record.arabic_score !== null ? Number(record.arabic_score).toFixed(1) : '-'}
+                                              </span>
+                                              <span className="text-xs font-medium text-slate-400">/ 100</span>
+                                            </div>
+                                            <span className="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-lg">
+                                              {record.arabic_correct_count ?? 0} / 15 Butir
+                                            </span>
+                                          </div>
+                                        </div>
+                                        <div className="mt-3">
+                                          <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                            <div 
+                                              className="bg-emerald-600 h-full rounded-full transition-all duration-500" 
+                                              style={{ width: `${Math.min(100, Math.max(0, ((record.arabic_correct_count ?? 0) / 15) * 100))}%` }}
+                                            />
+                                          </div>
+                                          <p className="text-[10px] text-slate-500 font-medium mt-1.5">
+                                            Percakapan bahasa Arab harian dan ketepatan lafal mufradat.
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Toggle 15-Item Checklist Breakdown */}
+                                    <div className="pt-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => setExpandedChecklistRecordId(isChecklistExpanded ? null : (record.id || null))}
+                                        className="w-full py-2.5 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-between transition-all min-h-[44px] cursor-pointer"
+                                      >
+                                        <span className="flex items-center gap-1.5">
+                                          <FileText size={14} className="text-indigo-600" />
+                                          <span>Rincian 15 Butir Respons Lisan Bahasa</span>
+                                        </span>
+                                        {isChecklistExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                      </button>
+
+                                      {isChecklistExpanded && (
+                                        <div className="mt-2.5 p-3.5 bg-slate-50/70 border border-slate-200 rounded-xl space-y-4 animate-in fade-in duration-200">
+                                          {/* Bahasa Inggris Checklist */}
+                                          <div>
+                                            <h5 className="text-[11px] font-black text-slate-700 uppercase tracking-wider mb-2 flex items-center justify-between">
+                                              <span>Butir Bahasa Inggris</span>
+                                              <span className="text-indigo-600">{record.english_correct_count ?? 0} / 15 Tuntas</span>
+                                            </h5>
+                                            <div className="grid grid-cols-5 sm:grid-cols-5 gap-1.5">
+                                              {Array.from({ length: 15 }).map((_, i) => {
+                                                const isChecked = Array.isArray(record.english_checklist) ? !!record.english_checklist[i] : false;
+                                                return (
+                                                  <div
+                                                    key={i}
+                                                    className={`p-1.5 rounded-lg border text-center flex flex-col items-center justify-center min-h-[44px] ${
+                                                      isChecked
+                                                        ? 'bg-emerald-500 text-white border-emerald-600'
+                                                        : 'bg-white text-slate-400 border-slate-200'
+                                                    }`}
+                                                  >
+                                                    <span className="text-[9px] font-bold uppercase leading-none">Btr {i + 1}</span>
+                                                    <span className="text-xs font-black mt-0.5">{isChecked ? '✓' : '✕'}</span>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          </div>
+
+                                          {/* Bahasa Arab Checklist */}
+                                          <div className="pt-2 border-t border-slate-200/80">
+                                            <h5 className="text-[11px] font-black text-slate-700 uppercase tracking-wider mb-2 flex items-center justify-between">
+                                              <span>Butir Bahasa Arab</span>
+                                              <span className="text-emerald-600">{record.arabic_correct_count ?? 0} / 15 Tuntas</span>
+                                            </h5>
+                                            <div className="grid grid-cols-5 sm:grid-cols-5 gap-1.5">
+                                              {Array.from({ length: 15 }).map((_, i) => {
+                                                const isChecked = Array.isArray(record.arabic_checklist) ? !!record.arabic_checklist[i] : false;
+                                                return (
+                                                  <div
+                                                    key={i}
+                                                    className={`p-1.5 rounded-lg border text-center flex flex-col items-center justify-center min-h-[44px] ${
+                                                      isChecked
+                                                        ? 'bg-emerald-500 text-white border-emerald-600'
+                                                        : 'bg-white text-slate-400 border-slate-200'
+                                                    }`}
+                                                  >
+                                                    <span className="text-[9px] font-bold uppercase leading-none">Btr {i + 1}</span>
+                                                    <span className="text-xs font-black mt-0.5">{isChecked ? '✓' : '✕'}</span>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Catatan Evaluasi Penguji */}
+                                <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3">
+                                  <p className="text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1">
+                                    <Info size={12} /> Catatan & Evaluasi Penguji
+                                  </p>
+                                  <p className="text-xs text-amber-950 font-medium mt-1 leading-relaxed italic">
+                                    "{record.notes || 'Ananda telah menyelesaikan ujian lisan dengan baik dan tertib.'}"
                                   </p>
                                 </div>
-                              ) : (
-                                <p className={`text-xl font-black font-outfit leading-none ${isPassing ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                  {grade.score}
-                                </p>
-                              )}
-                              <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded uppercase">
-                                KKM: {grade.kkm}
-                              </span>
 
-                              {/* Aksi Siswa (Remedial) */}
-                              {!isAdmin && !isParent && grade.canStartRemedial && onStartRemedial && (
-                                <button 
-                                  onClick={() => handleStartRemedial(grade.sessionName)}
-                                  disabled={startingRemedialSessionName !== null}
-                                  className="mt-1 px-2.5 py-1 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white rounded-lg text-xs font-bold uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1 shadow-sm"
-                                >
-                                  {startingRemedialSessionName === grade.sessionName ? (
-                                    <>
-                                      <Loader2 size={10} className="animate-spin" />
-                                      <span>Memuat...</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span className="material-symbols-outlined text-[12px]">edit</span>
-                                      <span>Remedial</span>
-                                    </>
-                                  )}
-                                </button>
-                              )}
-
-                              {/* Aksi Orang Tua (Pengingat WhatsApp) */}
-                              {!isPassing && isParent && (
-                                <button 
-                                  onClick={() => {
-                                    const deadlineText = grade.remedialDeadline ? formatDate(grade.remedialDeadline) : 'Batas Waktu Sesi';
-                                    const appUrl = typeof window !== 'undefined' ? `${window.location.origin}` : 'https://web-input-nilai.vercel.app';
-                                    
-                                    let reasonText = 'Nilai di bawah batas kelulusan KKM.';
-                                    if (grade.remedialUiState === 'REMEDIAL_SUBMITTED_HELD_BACK') {
-                                      reasonText = 'Nilai remedial sedang dalam proses verifikasi.';
-                                    } else if (grade.remedialUiState === 'FAILED_EFFORT') {
-                                      reasonText = 'Remedial perlu diulang dengan persiapan lebih matang.';
-                                    } else if (grade.remedialUiState === 'TIME_UP') {
-                                      reasonText = 'Batas waktu pengerjaan habis.';
-                                    } else if (grade.remedialUiState === 'DEADLINE_PASSED') {
-                                      reasonText = 'Batas waktu remedial telah terlewati.';
-                                    }
-                                    
-                                    const message = `*GradeMaster OS - Pengingat Ujian Ananda*\n\nHalo, mohon perhatian untuk ananda:\n👤 Siswa: *${studentName}*\n🏫 Kelas: *${className}*\n📚 Mata Pelajaran: *${grade.subject}*\n📝 Sesi: *${grade.sessionName}*\n📊 Nilai: *${grade.score}* (Standar KKM: ${grade.kkm})\n⚠️ Catatan: ${reasonText}\n\nSilakan buka tautan portal untuk menyelesaikan ujian/remedial:\n🔗 ${appUrl}\n\nBatas waktu: *${deadlineText}*.\nTerima kasih atas bimbingan Ayah/Bunda di rumah.`;
-                                    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-                                    window.open(waUrl, '_blank');
-                                  }}
-                                  className="mt-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
-                                  title="Bagikan Pengingat ke WhatsApp"
-                                >
-                                  <Share2 size={11} />
-                                  <span>Ingatkan via WA</span>
-                                </button>
-                              )}
+                                {/* Actions Bar */}
+                                <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100 flex-wrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleShareOralExamWA(record)}
+                                    className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-sm min-h-[44px] cursor-pointer"
+                                    title="Bagikan ke WhatsApp"
+                                  >
+                                    <Share2 size={13} />
+                                    <span>Bagikan WA</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDownloadOralExamPDF(record)}
+                                    className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-sm min-h-[44px] cursor-pointer"
+                                    title="Unduh Rapor PDF Resmi"
+                                  >
+                                    <DownloadCloud size={13} />
+                                    <span>Unduh PDF Resmi</span>
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })()}

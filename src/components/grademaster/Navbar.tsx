@@ -16,7 +16,8 @@ import {
   Loader2,
   User,
   BookOpen,
-  Database
+  Database,
+  Mic
 } from 'lucide-react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import { usePathname } from 'next/navigation';
@@ -170,6 +171,14 @@ export default function Navbar() {
                 <>
                   <div className="my-2 border-t border-slate-200/60"></div>
                   <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider px-3 mb-1">Admin Panel</span>
+                  <button
+                    onClick={() => onNavigate('oral_exams')}
+                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                      layer === 'oral_exams' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                    }`}
+                  >
+                    <Mic size={18} /> Ujian Lisan
+                  </button>
                   <button
                     onClick={() => onNavigate('lesson_management')}
                     className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
@@ -480,6 +489,19 @@ export default function Navbar() {
                   </div>
 
                   {/* Admin Actions */}
+                  <button 
+                    onClick={() => { onNavigate('oral_exams'); setIsMobileMenuOpen(false); }} 
+                    className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/15 flex items-center justify-center">
+                      <Mic size={18} className="text-indigo-600" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-on-surface block leading-tight">Ujian Lisan</span>
+                      <span className="text-[9px] font-medium text-on-surface-variant">Penilaian BTQ, Hafalan & Bahasa</span>
+                    </div>
+                  </button>
+
                   <button 
                     onClick={() => { onNavigate('lesson_management'); setIsMobileMenuOpen(false); }} 
                     className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container"

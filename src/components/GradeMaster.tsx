@@ -34,6 +34,7 @@ import StudentLessonLayer from "./grademaster/StudentLessonLayer";
 import RemedialManagementLayer from "@/components/grademaster/RemedialManagementLayer";
 import DataCenterLayer from "@/components/grademaster/DataCenterLayer";
 import StudentAccountsLayer from "./grademaster/StudentAccountsLayer";
+import OralExamsLayer from "./grademaster/OralExamsLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 import { subscribeUser, checkSubscriptionStatus } from "@/lib/grademaster/pushHelper";
 
@@ -1385,6 +1386,14 @@ export default function GradeMaster() {
             setStudentClass(newClass);
             setAcademicYear(newYear);
           }}
+        />
+      )}
+
+      {layer === "oral_exams" && isAdmin && (
+        <OralExamsLayer
+          onBack={() => setLayer("home")}
+          setToast={setToast}
+          initialClass={studentClass}
         />
       )}
 

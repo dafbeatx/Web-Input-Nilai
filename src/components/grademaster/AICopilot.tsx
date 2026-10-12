@@ -198,7 +198,8 @@ export default function AICopilot() {
       lesson_management: "Kelola Mata Pelajaran",
       student_lesson: "Pelajaran Saya",
       remedial_management: "Kelola Soal Remedial",
-      data_center: "Pusat Data Terpadu"
+      data_center: "Pusat Data Terpadu",
+      oral_exams: "Penilaian Ujian Lisan"
     };
 
     setMessages(prev => [

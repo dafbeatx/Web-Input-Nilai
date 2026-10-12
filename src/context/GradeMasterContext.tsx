@@ -128,7 +128,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         'home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 
         'remedial_dashboard', 'login', 'attendance', 'student_accounts', 
         'student_login', 'student_claim', 'teacher_claim', 'lesson_management', 
-        'remedial_management', 'data_center', 'student_profile', 'student_lesson'
+        'remedial_management', 'data_center', 'student_profile', 'student_lesson', 'oral_exams'
       ];
       if (validLayers.includes(hash)) {
         return hash;
@@ -178,7 +178,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       'home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 
       'remedial_dashboard', 'login', 'attendance', 'student_accounts', 
       'student_login', 'student_claim', 'teacher_claim', 'lesson_management', 
-      'remedial_management', 'data_center', 'student_profile', 'student_lesson'
+      'remedial_management', 'data_center', 'student_profile', 'student_lesson', 'oral_exams'
     ];
 
     const savedClass = safeLocalStorage.getItem('gm_studentClass');
@@ -490,7 +490,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
           initialLayer = hash as Layer;
         }
 
-        const adminOnlyLayers = ['setup', 'dashboard', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
+        const adminOnlyLayers = ['setup', 'dashboard', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center', 'oral_exams'];
         const protectedLayers = ['remedial', 'student_lesson', 'student_profile'];
         const authLayers = ['login', 'student_login'];
 
@@ -729,7 +729,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
 
   // Navigate and apply Auth guards dynamically
   const navigate = (newLayer: Layer, bypassGuards: boolean = false) => {
-    const adminOnlyLayers = ['setup', 'dashboard', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center'];
+    const adminOnlyLayers = ['setup', 'dashboard', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center', 'oral_exams'];
     const protectedLayers = ['remedial', 'student_lesson', 'student_profile'];
     const authLayers = ['login', 'student_login'];
 
