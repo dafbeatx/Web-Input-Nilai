@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { Search } from 'lucide-react';
+import { Search, Loader2, CheckCircle2, KeyRound, User, Lock, Eye, EyeOff } from 'lucide-react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
-import { Loader2, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { ToastType, StudentAccount } from '@/lib/grademaster/types';
 import { Session } from '@supabase/supabase-js';
@@ -38,6 +37,13 @@ export default function StudentLoginLayer({
   const [userName, setUserName] = useState('');
   
   const [error, setError] = useState('');
+
+  // 2 Opsi Login Siswa: 'admin' (Akun dari Admin) vs 'google' (Akun Google)
+  const [studentLoginMethod, setStudentLoginMethod] = useState<'admin' | 'google'>('admin');
+  const [adminUsername, setAdminUsername] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isAdminLoggingIn, setIsAdminLoggingIn] = useState(false);
 
   const [rememberMe, setRememberMe] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -232,6 +238,66 @@ export default function StudentLoginLayer({
     }
   };
 
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminUsername.trim()) {
+      setError('Username akun siswa wajib diisi');
+      return;
+    }
+    if (!adminPassword.trim()) {
+      setError('Kata sandi wajib diisi');
+      return;
+    }
+
+    setIsAdminLoggingIn(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/student/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: adminUsername.trim(),
+          password: adminPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Gagal masuk. Periksa kembali username dan kata sandi Anda.');
+      }
+
+      setUserName(data.student?.name || data.student?.username || 'Siswa');
+      setIsRedirecting(true);
+
+      // Kirim Notifikasi ke Telegram
+      fetch('/api/telegram/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentName: data.student?.name || adminUsername,
+          className: data.student?.class_name || 'Tidak Diketahui',
+          event: 'STUDENT_LOGIN',
+          deviceInfo: typeof window !== 'undefined' ? window.navigator.userAgent : 'Unknown Device',
+          academicYear: data.student?.academic_year
+        })
+      }).catch(err => console.error('Gagal mengirim notifikasi login siswa ke Telegram:', err));
+
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+      }
+
+      redirectTimerRef.current = setTimeout(() => {
+        onSuccess(null);
+      }, 1500);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Terjadi kesalahan saat masuk';
+      setError(errMsg);
+    } finally {
+      setIsAdminLoggingIn(false);
+    }
+  };
+
   // ── RENDERING — LOADING STATES ──────────────────────────────
 
   // Full Screen checking state
@@ -359,7 +425,9 @@ export default function StudentLoginLayer({
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed px-1">
               {!isParentMode 
-                ? 'Gunakan akun Google siswa untuk mengakses nilai, absensi, jadwal, dan kuis.' 
+                ? (studentLoginMethod === 'admin' 
+                    ? 'Gunakan akun yang dibuat oleh admin/sekolah untuk mengakses nilai dan tugas.' 
+                    : 'Gunakan akun Google siswa yang telah ditautkan untuk mengakses portal.')
                 : 'Cari nama ananda untuk memantau capaian belajar, presensi, dan sikap.'}
             </p>
           </div>
@@ -374,29 +442,167 @@ export default function StudentLoginLayer({
           {/* Action Area */}
           <div className="w-full space-y-4">
             {!isParentMode ? (
-              <>
-                <button
-                  onClick={handleGoogleLogin}
-                  disabled={isLoginInProgress}
-                  className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-3 shadow-sm min-h-[48px] disabled:opacity-60 cursor-pointer"
-                >
-                  {isLoginInProgress ? (
-                    <>
-                      <Loader2 size={18} className="animate-spin text-slate-300" />
-                      <span>Menyambungkan ke Akun Google...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                      </svg>
-                      <span>Lanjutkan dengan Akun Google</span>
-                    </>
-                  )}
-                </button>
+              <div className="w-full space-y-4">
+                {/* 2 Opsi Login Siswa: Akun dari Admin vs Akun Google */}
+                <div className="w-full grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200/70 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStudentLoginMethod('admin');
+                      setError('');
+                    }}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 min-h-[40px] cursor-pointer ${
+                      studentLoginMethod === 'admin'
+                        ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <KeyRound size={14} className="text-indigo-600" />
+                    <span>Akun dari Admin</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStudentLoginMethod('google');
+                      setError('');
+                    }}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 min-h-[40px] cursor-pointer ${
+                      studentLoginMethod === 'google'
+                        ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                    <span>Akun Google</span>
+                  </button>
+                </div>
+
+                {studentLoginMethod === 'admin' ? (
+                  <form onSubmit={handleAdminLogin} className="w-full space-y-3.5 animate-in fade-in duration-200">
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                        Username Siswa
+                      </label>
+                      <div className="relative">
+                        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                          <User size={16} />
+                        </div>
+                        <input
+                          type="text"
+                          value={adminUsername}
+                          onChange={(e) => setAdminUsername(e.target.value)}
+                          placeholder="contoh: ahmad.dahlan.9a"
+                          autoComplete="username"
+                          autoCapitalize="none"
+                          required
+                          className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all min-h-[44px]"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                        Kata Sandi
+                      </label>
+                      <div className="relative">
+                        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                          <Lock size={16} />
+                        </div>
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={adminPassword}
+                          onChange={(e) => setAdminPassword(e.target.value)}
+                          placeholder="Masukkan kata sandi..."
+                          autoComplete="current-password"
+                          required
+                          className="w-full pl-10 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all min-h-[44px]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 min-h-[32px] min-w-[32px] flex items-center justify-center cursor-pointer"
+                          aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                        >
+                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isAdminLoggingIn}
+                      className="w-full mt-2 py-3 px-4 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm min-h-[46px] disabled:opacity-60 cursor-pointer"
+                    >
+                      {isAdminLoggingIn ? (
+                        <>
+                          <Loader2 size={18} className="animate-spin text-slate-300" />
+                          <span>Memeriksa Akun...</span>
+                        </>
+                      ) : (
+                        <>
+                          <KeyRound size={16} />
+                          <span>Masuk ke Akun Siswa</span>
+                        </>
+                      )}
+                    </button>
+
+                    <div className="text-center pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStudentLoginMethod('google');
+                          setError('');
+                        }}
+                        className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer py-1"
+                      >
+                        Atau masuk menggunakan Akun Google &rarr;
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="w-full space-y-3.5 animate-in fade-in duration-200">
+                    <button
+                      onClick={handleGoogleLogin}
+                      disabled={isLoginInProgress}
+                      className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-3 shadow-sm min-h-[48px] disabled:opacity-60 cursor-pointer"
+                    >
+                      {isLoginInProgress ? (
+                        <>
+                          <Loader2 size={18} className="animate-spin text-slate-300" />
+                          <span>Menyambungkan ke Akun Google...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                          </svg>
+                          <span>Lanjutkan dengan Akun Google</span>
+                        </>
+                      )}
+                    </button>
+
+                    <div className="text-center pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStudentLoginMethod('admin');
+                          setError('');
+                        }}
+                        className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer py-1"
+                      >
+                        Punya username & kata sandi dari sekolah? Masuk di sini &rarr;
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between pt-1">
                   <label className="flex items-center gap-2 cursor-pointer select-none min-h-[44px]">
@@ -417,7 +623,7 @@ export default function StudentLoginLayer({
                   </label>
                   <span className="text-[11px] text-slate-500 font-medium">Khusus Siswa Terdaftar</span>
                 </div>
-              </>
+              </div>
             ) : (
               <div className="w-full space-y-3 animate-in fade-in duration-200 text-left">
                 <label className="text-xs font-bold text-slate-700 block">

@@ -108,6 +108,12 @@ export async function POST(req: NextRequest) {
                `🏫 Kelas: ${fallback(className)}\n` +
                `⏰ Waktu: ${timestamp}${deviceStr}`;
         break;
+      case 'STUDENT_LOGIN':
+        text = `🎓 <b>LOGIN SISWA (AKUN DARI ADMIN)</b>${contextStr}\n\n` +
+               `👤 Siswa: <b>${fallback(studentName)}</b>\n` +
+               `🏫 Kelas: ${fallback(className)}\n` +
+               `⏰ Waktu: ${timestamp}${deviceStr}`;
+        break;
       case 'BUG_REPORT':
         text = `🐛 <b>LAPORAN BUG SISWA</b>${contextStr}\n\n` +
                `👤 Pengirim: <b>${fallback(studentName)}</b>\n` +
