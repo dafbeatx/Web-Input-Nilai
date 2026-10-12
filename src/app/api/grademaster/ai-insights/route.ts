@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     // Prepare simplified analytics data for the LLM context to minimize tokens and cost
     const totalStudents = gradedStudents.length;
-    const passCount = gradedStudents.filter((s: any) => s.finalScore >= kkm).length;
+    const passCount = gradedStudents.filter((s: { finalScore: number }) => s.finalScore >= kkm).length;
     const passRate = totalStudents > 0 ? Math.round((passCount / totalStudents) * 100) : 0;
 
     const classStats = {
@@ -45,19 +45,19 @@ export async function POST(req: NextRequest) {
       standardDeviation: analytics.standardDeviation || 0
     };
 
-    const difficulties = (analytics.questionDifficulties || []).map((d: any) => ({
+    const difficulties = (analytics.questionDifficulties || []).map((d: { questionNumber: number; difficultyPercent: number; label: string }) => ({
       questionNumber: d.questionNumber,
       wrongAnswerPercent: d.difficultyPercent,
       label: d.label // e.g., 'Sangat Sulit', 'Sulit', 'Sedang', 'Mudah'
     }));
 
-    const studentList = gradedStudents.map((s: any) => ({
+    const studentList = gradedStudents.map((s: { name: string; finalScore: number; csi: number; lps: number }) => ({
       name: s.name,
       score: s.finalScore,
       csi: s.csi,
       lps: s.lps,
       passed: s.finalScore >= kkm
-    })).sort((a: any, b: any) => b.score - a.score);
+    })).sort((a: { score: number }, b: { score: number }) => b.score - a.score);
 
     const systemPrompt = `Anda adalah Analis Pendidikan & Pakar Pedagogi Kurikulum Merdeka di Indonesia.
 Tugas Anda adalah menganalisis data performa kelas hasil ujian untuk memberikan evaluasi akademis yang mendalam bagi Guru.
@@ -101,7 +101,7 @@ JANGAN menulis penjelasan tambahan di luar JSON. Respon Anda harus langsung dimu
       'openai/gpt-oss-120b'
     ];
 
-    let data: any = null;
+    let data: { choices?: Array<{ message?: { content?: string } }> } | null = null;
     let lastError: Error | null = null;
 
     for (const model of candidateModels) {
@@ -146,8 +146,9 @@ JANGAN menulis penjelasan tambahan di luar JSON. Respon Anda harus langsung dimu
     const parsedInsights = JSON.parse(content);
     return NextResponse.json({ success: true, insights: parsedInsights });
 
-  } catch (err: any) {
-    console.error('[AI Insights Error]:', err.message);
-    return NextResponse.json({ error: 'Gagal menganalisis data kelas.', detail: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[AI Insights Error]:', message);
+    return NextResponse.json({ error: 'Gagal menganalisis data kelas.', detail: message }, { status: 500 });
   }
 }

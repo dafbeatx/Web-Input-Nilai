@@ -699,20 +699,6 @@ export default function StudentLessonLayer({
     }
   };
 
-  const renderSimplifySkeleton = () => (
-    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4 animate-pulse flex flex-col justify-center items-center py-12 min-h-[300px]">
-      <div className="w-14 h-14 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center shrink-0 relative animate-bounce mb-3 border border-emerald-100/50">
-        <Sparkles size={24} className="text-emerald-650" />
-      </div>
-      <div className="h-4 bg-slate-200 rounded-full w-2/3 mx-auto"></div>
-      <div className="h-3 bg-slate-100 rounded-full w-1/2 mx-auto mt-2"></div>
-      <div className="space-y-2.5 w-full pt-6">
-        <div className="h-3 bg-slate-100 rounded-full w-full"></div>
-        <div className="h-3 bg-slate-100 rounded-full w-5/6"></div>
-        <div className="h-3 bg-slate-100 rounded-full w-4/5"></div>
-      </div>
-    </div>
-  );
 
   const renderFormattedText = (text: string) => {
     if (!text) return null;

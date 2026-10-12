@@ -10,7 +10,7 @@ interface MonitorConfig {
 }
 
 export const useExamMonitor = ({ attemptId, onViolation, onNetworkChange, examState }: MonitorConfig) => {
-  const lastHeartbeatRef = useRef<number>(Date.now());
+  const lastHeartbeatRef = useRef<number>(0);
   const heartbeatTimerRef = useRef<NodeJS.Timeout | null>(null);
   const initialWidthRef = useRef<number>(0);
   const initialHeightRef = useRef<number>(0);
@@ -27,7 +27,7 @@ export const useExamMonitor = ({ attemptId, onViolation, onNetworkChange, examSt
     onNetworkChangeRef.current = onNetworkChange;
   }, [onNetworkChange]);
 
-  const sendLog = useCallback(async (eventType: string, severity: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW', metadata: any = {}) => {
+  const sendLog = useCallback(async (eventType: string, severity: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW', metadata: Record<string, unknown> = {}) => {
     if (!attemptId) return;
 
     try {

@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import {
-  ArrowLeft,
   Settings,
   BookOpen,
   Calendar,
@@ -42,7 +41,7 @@ export default function RemedialManagementLayer({
   const [aiQuestionCount, setAiQuestionCount] = useState(5);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiWeakTopics, setAiWeakTopics] = useState<string[] | null>(null);
-  const [aiDifficulties, setAiDifficulties] = useState<any[] | null>(null);
+  const [aiDifficulties, setAiDifficulties] = useState<{ questionNumber: number; difficultyPercent: number; label: string }[] | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
 
   const handleAutoFormatList = (text: string) => {
@@ -102,9 +101,10 @@ export default function RemedialManagementLayer({
       setAiDifficulties(data.difficulties || []);
 
       setToast({ message: "Soal remedial adaptif berhasil digenerasikan!", type: "success" });
-    } catch (err: any) {
-      setAiError(err.message || "Terjadi kesalahan pada AI Generator");
-      setToast({ message: err.message || "Gagal membuat soal remedial", type: "error" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setAiError(message || "Terjadi kesalahan pada AI Generator");
+      setToast({ message: message || "Gagal membuat soal remedial", type: "error" });
     } finally {
       setIsGeneratingAi(false);
     }
@@ -152,8 +152,9 @@ export default function RemedialManagementLayer({
       if (!res.ok) throw new Error(data.error);
 
       setToast({ message: data.message, type: "success" });
-    } catch (err: any) {
-      setToast({ message: err.message || "Gagal menerapkan pengaturan", type: "error" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setToast({ message: message || "Gagal menerapkan pengaturan", type: "error" });
     } finally {
       setIsLoading(false);
     }

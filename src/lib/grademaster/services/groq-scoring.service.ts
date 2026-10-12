@@ -73,7 +73,7 @@ JANGAN berikan teks pengantar, penutup, markdown, atau penjelasan tambahan di lu
       'openai/gpt-oss-120b'
     ];
 
-    let data: any = null;
+    let data: { choices?: Array<{ message?: { content?: string } }> } | null = null;
     let lastError: Error | null = null;
 
     for (const model of candidateModels) {
@@ -131,14 +131,14 @@ JANGAN berikan teks pengantar, penutup, markdown, atau penjelasan tambahan di lu
     console.log(`[Groq AI Grading] Successfully evaluated ${parsedResult.details.length} questions. Avg Score: ${parsedResult.score}`);
     return {
       score: Math.round(parsedResult.score),
-      details: parsedResult.details.map((d, idx) => ({
+      details: parsedResult.details.map((d) => ({
         similarity: typeof d.similarity === 'number' ? d.similarity : 0,
         score: typeof d.score === 'number' ? Math.round(d.score) : 0
       }))
     };
 
-  } catch (err: any) {
-    const errorMsg = err?.name === 'AbortError' ? 'Timeout (6 detik terlampaui)' : err.message;
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error && err.name === 'AbortError' ? 'Timeout (6 detik terlampaui)' : (err instanceof Error ? err.message : String(err));
     console.error(`[Groq AI Grading Error] ${errorMsg}. Falling back to local similarity engine.`);
     return localFallback(studentAnswers, answerKeys);
   }

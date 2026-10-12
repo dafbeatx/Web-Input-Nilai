@@ -64,7 +64,7 @@ Pastikan isi materi tetap akurat secara ilmiah tetapi dikemas dengan cara yang s
     ];
 
     let lastError: Error | null = null;
-    let data: any = null;
+    let data: { choices?: Array<{ message?: { content?: string } }> } | null = null;
 
     for (const model of candidateModels) {
       try {
@@ -108,16 +108,21 @@ Pastikan isi materi tetap akurat secara ilmiah tetapi dikemas dengan cara yang s
       throw new Error('Respons Groq kosong.');
     }
 
-    let parsedResponse: any = null;
+    let parsedResponse: Record<string, unknown> | null = null;
     try {
       let cleanedContent = resultText.trim();
       if (cleanedContent.startsWith('```')) {
         cleanedContent = cleanedContent.replace(/^```(?:json)?\n?/i, '').replace(/```$/, '').trim();
       }
       parsedResponse = JSON.parse(cleanedContent);
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const eMsg = e instanceof Error ? e.message : String(e);
       console.error('[Lesson Simplifier JSON Parsing Error]:', e);
-      throw new Error(`Format respons AI tidak valid JSON: ${e.message}`);
+      throw new Error(`Format respons AI tidak valid JSON: ${eMsg}`);
+    }
+
+    if (!parsedResponse) {
+      throw new Error('Format respons AI tidak valid.');
     }
 
     return NextResponse.json({
@@ -125,10 +130,11 @@ Pastikan isi materi tetap akurat secara ilmiah tetapi dikemas dengan cara yang s
       slides: parsedResponse.slides || []
     });
 
-  } catch (err: any) {
-    console.error('[AI Lesson Simplifier Error]:', err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[AI Lesson Simplifier Error]:', message);
     return NextResponse.json(
-      { error: 'Gagal menyederhanakan materi pelajaran.', detail: err.message },
+      { error: 'Gagal menyederhanakan materi pelajaran.', detail: message },
       { status: 500 }
     );
   }

@@ -4,9 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { hashPassword, verifyPassword, validateSessionInput, checkRateLimit } from '@/lib/grademaster/security';
 import { getAdminSession } from '@/lib/grademaster/admin';
-import { getStudentSession } from '@/lib/grademaster/studentAuth';
 import { generateQuestionDifficulties } from '@/lib/grademaster/analytics';
-import { GradedStudent, ScoringConfig } from '@/lib/grademaster/types';
+import { GradedStudent } from '@/lib/grademaster/types';
 import { calculateStudentResult } from '@/lib/grademaster/scoring';
 
 export async function POST(req: NextRequest) {
@@ -211,8 +210,8 @@ export async function POST(req: NextRequest) {
 
     // List all sessions — both admin (write) and student (read-only) see all non-demo sessions
     if (!name && !password) {
-      let data: any = null;
-      let error: any = null;
+      let data: Record<string, unknown>[] | null = null;
+      let error: { message?: string } | null = null;
 
       // 1. Try querying via supabaseAdmin
       try {
@@ -339,8 +338,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan' }, { status: 429 });
     }
 
-    let session: any = null;
-    let sessError: any = null;
+    interface GMSessionRecord {
+      id: string;
+      session_name: string;
+      password_hash: string;
+      is_demo?: boolean;
+      answer_key?: string[];
+      teacher?: string;
+      subject?: string;
+      class_name?: string;
+      school_level?: string;
+      student_list?: unknown[];
+      scoring_config?: {
+        pgWeight?: number;
+        essayWeight?: number;
+        remedialQuestions?: string[];
+        [key: string]: unknown;
+      } | string | null;
+      exam_type?: string;
+      academic_year?: string;
+      semester?: string;
+      kkm?: number;
+      remedial_essay_count?: number;
+      remedial_timer?: number;
+      is_public?: boolean;
+      gm_students?: unknown[];
+    }
+
+    let session: GMSessionRecord | null = null;
+    let sessError: { message?: string } | null = null;
 
     try {
       const res = await supabaseAdmin
@@ -348,7 +374,7 @@ export async function POST(req: NextRequest) {
         .select('*, gm_students(*)')
         .eq('session_name', name.trim())
         .single();
-      session = res.data;
+      session = res.data as GMSessionRecord | null;
       sessError = res.error;
     } catch {}
 
@@ -360,7 +386,7 @@ export async function POST(req: NextRequest) {
           .select('*, gm_students(*)')
           .eq('session_name', name.trim())
           .single();
-        session = res.data;
+        session = res.data as GMSessionRecord | null;
         sessError = res.error;
       } catch {}
     }
@@ -382,7 +408,7 @@ export async function POST(req: NextRequest) {
     if (adminSession) {
       isReadOnly = false;
     } else if (password) {
-      const isMatch = await verifyPassword(password.trim(), session.password_hash);
+      const isMatch = await verifyPassword(password.trim(), session.password_hash || '');
       if (isMatch) {
         isReadOnly = false;
       } else {
@@ -395,30 +421,6 @@ export async function POST(req: NextRequest) {
     const studentColumns = isReadOnly
       ? 'id, name, correct, wrong, mcq_score, essay_score, final_score, csi, lps, remedial_status, original_score, remedial_score, final_score_locked, remedial_attempts, essay_score_auto, essay_score_manual, essay_score_final'
       : 'id, name, mcq_answers, essay_scores, correct, wrong, mcq_score, essay_score, final_score, csi, lps, remedial_status, remedial_location, remedial_photo, remedial_answers, remedial_note, original_score, remedial_score, final_score_locked, is_cheated, teacher_reviewed, cheating_flags, remedial_attempts, essay_score_auto, essay_score_manual, essay_score_final, essay_auto_details';
-
-    let students: any = null;
-    try {
-      const res = await (supabaseAdmin
-        .from('gm_students') as any)
-        .select(studentColumns)
-        .eq('session_id', session.id)
-        .order('created_at', { ascending: true });
-      students = res.data;
-    } catch {}
-
-    if (!students) {
-      try {
-        const supabase = await createClient();
-        const res = await (supabase
-          .from('gm_students') as any)
-          .select(studentColumns)
-          .eq('session_id', session.id)
-          .order('created_at', { ascending: true });
-        students = res.data;
-      } catch {}
-    }
-
-    const config = session.scoring_config || { pgWeight: 0.7, essayWeight: 0.3 };
 
     interface DBStudentRow {
       id: string;
@@ -450,7 +452,37 @@ export async function POST(req: NextRequest) {
       essay_auto_details?: { similarity: number; score: number }[];
     }
 
-    const gradedStudents: GradedStudent[] = (students as unknown as DBStudentRow[] || []).map((s) => {
+    interface StudentQueryBuilder {
+      select: (columns: string) => {
+        eq: (column: string, value: string) => {
+          order: (column: string, options: { ascending: boolean }) => Promise<{ data: DBStudentRow[] | null }>;
+        };
+      };
+    }
+
+    let students: DBStudentRow[] | null = null;
+    try {
+      const res = await (supabaseAdmin.from('gm_students') as unknown as StudentQueryBuilder)
+        .select(studentColumns)
+        .eq('session_id', session.id)
+        .order('created_at', { ascending: true });
+      students = res.data;
+    } catch {}
+
+    if (!students) {
+      try {
+        const supabase = await createClient();
+        const res = await (supabase.from('gm_students') as unknown as StudentQueryBuilder)
+          .select(studentColumns)
+          .eq('session_id', session.id)
+          .order('created_at', { ascending: true });
+        students = res.data;
+      } catch {}
+    }
+
+    const config = (typeof session.scoring_config === 'object' && session.scoring_config !== null ? session.scoring_config : null) || { pgWeight: 0.7, essayWeight: 0.3 };
+
+    const gradedStudents: GradedStudent[] = (students || []).map((s) => {
       let finalScore = Number(s.final_score);
       const mcqScore = Number(s.mcq_score);
       const essayScore = Number(s.essay_score);
@@ -493,12 +525,14 @@ export async function POST(req: NextRequest) {
     });
 
     // Calculate difficulties on server before hiding answerKey
-    const questionDifficulties = generateQuestionDifficulties(gradedStudents, session.answer_key);
+    const questionDifficulties = generateQuestionDifficulties(gradedStudents, session.answer_key || []);
 
     // Menampilkan tombol remedial jika guru sudah mengatur soal remedial
-    let parsedConfig = session.scoring_config;
-    if (typeof parsedConfig === 'string') {
-      try { parsedConfig = JSON.parse(parsedConfig); } catch {}
+    let parsedConfig: { remedialQuestions?: string[]; [key: string]: unknown } | null = null;
+    if (typeof session.scoring_config === 'string') {
+      try { parsedConfig = JSON.parse(session.scoring_config); } catch {}
+    } else if (typeof session.scoring_config === 'object' && session.scoring_config !== null) {
+      parsedConfig = session.scoring_config;
     }
     const hasQuestions = Array.isArray(parsedConfig?.remedialQuestions) && parsedConfig.remedialQuestions.length > 0;
     const showRemedialButton = hasQuestions;

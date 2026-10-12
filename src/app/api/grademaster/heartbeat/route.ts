@@ -58,8 +58,9 @@ export async function POST(req: NextRequest) {
       timestamp: now,
       serverTime: Date.now()
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error('Heartbeat/Log Handler Error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -168,7 +168,7 @@ ${cleanOriginalQuestions || 'Tidak ada data soal asli. Silakan buat soal berdasa
       'openai/gpt-oss-120b'
     ];
 
-    let data: any = null;
+    let data: { choices?: Array<{ message?: { content?: string } }> } | null = null;
     let lastError: Error | null = null;
 
     for (const model of candidateModels) {
@@ -210,16 +210,17 @@ ${cleanOriginalQuestions || 'Tidak ada data soal asli. Silakan buat soal berdasa
       throw new Error('Respons Groq kosong.');
     }
 
-    let parsedResponse: any = null;
+    let parsedResponse: Record<string, unknown> | null = null;
     try {
       let cleanedContent = content.trim();
       if (cleanedContent.startsWith('```')) {
         cleanedContent = cleanedContent.replace(/^```(?:json)?\n?/i, '').replace(/```$/, '').trim();
       }
       parsedResponse = JSON.parse(cleanedContent);
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const eMsg = e instanceof Error ? e.message : String(e);
       console.error('[Adaptive Generator Parsing Error]:', e);
-      throw new Error(`Format respons AI tidak valid JSON: ${e.message}`);
+      throw new Error(`Format respons AI tidak valid JSON: ${eMsg}`);
     }
 
     return NextResponse.json({ 
@@ -230,8 +231,9 @@ ${cleanOriginalQuestions || 'Tidak ada data soal asli. Silakan buat soal berdasa
       difficulties: difficulties.slice(0, 5) // Send back top 5 difficult questions stats
     });
 
-  } catch (err: any) {
-    console.error('[AI Remedial Generator Error]:', err.message);
-    return NextResponse.json({ error: 'Gagal menghasilkan soal remedial adaptif.', detail: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[AI Remedial Generator Error]:', message);
+    return NextResponse.json({ error: 'Gagal menghasilkan soal remedial adaptif.', detail: message }, { status: 500 });
   }
 }

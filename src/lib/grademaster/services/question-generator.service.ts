@@ -78,7 +78,7 @@ export async function generateDynamicQuestions(
       'openai/gpt-oss-120b'
     ];
 
-    let data: any = null;
+    let data: { choices?: Array<{ message?: { content?: string } }> } | null = null;
     let lastError: Error | null = null;
 
     for (const model of candidateModels) {
@@ -143,8 +143,8 @@ export async function generateDynamicQuestions(
       answerKeys: parsed.answerKeys
     };
 
-  } catch (err: any) {
-    const errorMsg = err?.name === 'AbortError' ? 'Timeout (8 detik)' : err.message;
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error && err.name === 'AbortError' ? 'Timeout (8 detik)' : (err instanceof Error ? err.message : String(err));
     console.error(`[AI Question Gen Error] ${errorMsg}. Menggunakan soal asli sebagai fallback.`);
     return fallbackResult;
   }

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/grademaster/security';
 
 interface SettingsCacheEntry {
-  data: any;
+  data: { reasons: unknown } | null;
   timestamp: number;
 }
 const settingsCache = new Map<string, SettingsCacheEntry>();

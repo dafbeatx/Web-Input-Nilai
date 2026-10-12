@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
     ];
 
     let lastError: Error | null = null;
-    let data: any = null;
+    let data: { choices?: Array<{ message?: { content?: string } }> } | null = null;
 
     for (const model of candidateModels) {
       try {
@@ -211,16 +211,21 @@ export async function POST(req: NextRequest) {
       throw new Error('Respons Groq kosong.');
     }
 
-    let parsedResponse: any = null;
+    let parsedResponse: Record<string, unknown> | null = null;
     try {
       let cleanedContent = content.trim();
       if (cleanedContent.startsWith('```')) {
         cleanedContent = cleanedContent.replace(/^```(?:json)?\n?/i, '').replace(/```$/, '').trim();
       }
       parsedResponse = JSON.parse(cleanedContent);
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const eMsg = e instanceof Error ? e.message : String(e);
       console.error('[Lesson Generator JSON Parsing Error]:', e);
-      throw new Error(`Format respons AI tidak valid JSON: ${e.message}`);
+      throw new Error(`Format respons AI tidak valid JSON: ${eMsg}`);
+    }
+
+    if (!parsedResponse) {
+      throw new Error('Format respons AI tidak valid.');
     }
 
     return NextResponse.json({
@@ -230,10 +235,11 @@ export async function POST(req: NextRequest) {
       questions: parsedResponse.questions || []
     });
 
-  } catch (err: any) {
-    console.error('[AI Lesson Generator Error]:', err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[AI Lesson Generator Error]:', message);
     return NextResponse.json(
-      { error: 'Gagal menghasilkan materi pelajaran AI.', detail: err.message },
+      { error: 'Gagal menghasilkan materi pelajaran AI.', detail: message },
       { status: 500 }
     );
   }

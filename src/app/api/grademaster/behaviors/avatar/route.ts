@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Parse request based on content-type
     const contentType = req.headers.get('content-type') || '';
-    let isJson = contentType.includes('application/json');
+    const isJson = contentType.includes('application/json');
     let studentId: string | null = null;
     let file: File | null = null;
     let avatarEmoji: string | null = null;
@@ -91,8 +91,8 @@ export async function POST(req: NextRequest) {
       }
 
       const points = (logs || [])
-        .filter((log: any) => log.points_delta < 0)
-        .reduce((sum: number, log: any) => sum + Math.abs(log.points_delta), 0);
+        .filter((log: { points_delta: number }) => log.points_delta < 0)
+        .reduce((sum: number, log: { points_delta: number }) => sum + Math.abs(log.points_delta), 0);
 
       let requiredPoints = 0;
       if (avatarEmoji === '🌱') requiredPoints = 0;
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
 
     // Upload ke Storage
     const filePath = `student_${studentId}_${Date.now()}.webp`;
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+    const { error: uploadError } = await supabaseAdmin.storage
       .from('avatars')
       .upload(filePath, processedImageBuffer, {
         contentType: 'image/webp',
@@ -180,8 +180,9 @@ export async function POST(req: NextRequest) {
       avatar_url: publicAvatarUrl 
     });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error('[Avatar] Process Error:', err);
-    return NextResponse.json({ error: err.message || 'Terjadi kesalahan sistem' }, { status: 500 });
+    return NextResponse.json({ error: message || 'Terjadi kesalahan sistem' }, { status: 500 });
   }
 }

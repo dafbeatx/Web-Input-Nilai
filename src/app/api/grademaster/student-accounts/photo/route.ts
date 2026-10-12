@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'File foto dan ID akun wajib diisi' }, { status: 400 });
     }
 
-    if (!IMAGE_CONFIG.acceptedTypes.includes(file.type as any)) {
+    if (!IMAGE_CONFIG.acceptedTypes.includes(file.type as typeof IMAGE_CONFIG.acceptedTypes[number])) {
       return NextResponse.json({
         error: `Format file tidak didukung. Gunakan: ${IMAGE_CONFIG.acceptedTypes.join(', ')}`,
       }, { status: 400 });
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     const fileName = generatePhotoFileName(accountId);
     const filePath = `profiles/${fileName}`;
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from(IMAGE_CONFIG.bucket)
       .upload(filePath, webpBuffer, {
         contentType: 'image/webp',
@@ -71,8 +71,9 @@ export async function POST(req: NextRequest) {
       originalSize: file.size,
       compressedSize: webpBuffer.length,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error('Photo upload error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -28,12 +28,12 @@ export async function POST(req: NextRequest) {
     const { attemptId, studentId, useAi = false } = body;
 
     let latestAttemptId = attemptId;
-    let studentData: any = null;
+    let studentData: { name: string } | null = null;
 
     // 1. Resolve student and attempt information
     if (!latestAttemptId && studentId) {
       // Find the latest attempt for this student in the system
-      const { data: attempt, error: attemptErr } = await supabaseAdmin
+      const { data: attempt } = await supabaseAdmin
         .from('gm_remedial_attempts')
         .select('id, student_id')
         .eq('student_id', studentId)
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
       .order('created_at', { ascending: true });
 
     // Format logs for heuristics
-    const logsInput: SessionLogAction[] = (rawLogs || []).map((l: any) => ({
+    const logsInput: SessionLogAction[] = (rawLogs || []).map((l: { event_type: string; created_at: string; metadata: Record<string, unknown> }) => ({
       action: l.event_type,
       timestamp: new Date(l.created_at).getTime(),
       metadata: l.metadata
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
         const startTimestamp = attemptData.started_at ? new Date(attemptData.started_at).getTime() : Date.now();
         
         // Prepare simplified event logs for LLM
-        const simplifiedLogs = (rawLogs || []).map((l: any) => {
+        const simplifiedLogs = (rawLogs || []).map((l: { event_type: string; created_at: string; severity?: string; risk_points?: number; metadata?: Record<string, unknown> }) => {
           const relativeTimeMs = new Date(l.created_at).getTime() - startTimestamp;
           const mins = Math.floor(relativeTimeMs / 60000);
           const secs = Math.floor((relativeTimeMs % 60000) / 1000);
@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
         });
 
         // Prepare proctoring violation visual snaps metadata
-        const simplifiedSnaps = (rawSnaps || []).map((s: any) => {
+        const simplifiedSnaps = (rawSnaps || []).map((s: { violation_type: string; created_at: string; ai_analysis?: Record<string, unknown> }) => {
           const relativeTimeMs = new Date(s.created_at).getTime() - startTimestamp;
           const mins = Math.floor(relativeTimeMs / 60000);
           const secs = Math.floor((relativeTimeMs % 60000) / 1000);
@@ -227,7 +227,7 @@ JANGAN menulis penjelasan tambahan di luar JSON. Respon Anda harus langsung dimu
           'openai/gpt-oss-120b'
         ];
 
-        let data: any = null;
+        let data: { choices?: Array<{ message?: { content?: string } }> } | null = null;
         for (const model of candidateModels) {
           try {
             const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -274,8 +274,9 @@ JANGAN menulis penjelasan tambahan di luar JSON. Respon Anda harus langsung dimu
             }
           });
         }
-      } catch (err: any) {
-        console.error('[AI Forensic Engine Failed - Falling back]:', err.message);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error('[AI Forensic Engine Failed - Falling back]:', message);
       }
     }
 
@@ -285,7 +286,7 @@ JANGAN menulis penjelasan tambahan di luar JSON. Respon Anda harus langsung dimu
 
     // Create a mock chronological timeline from logs
     const startTimestamp = attemptData.started_at ? new Date(attemptData.started_at).getTime() : Date.now();
-    const mockTimeline = (rawLogs || []).slice(0, 5).map((l: any) => {
+    const mockTimeline = (rawLogs || []).slice(0, 5).map((l: { event_type: string; created_at: string; risk_points?: number; severity?: string }) => {
       const relativeTimeMs = new Date(l.created_at).getTime() - startTimestamp;
       const mins = Math.floor(relativeTimeMs / 60000);
       const secs = Math.floor((relativeTimeMs % 60000) / 1000);

@@ -62,8 +62,9 @@ export async function GET(req: NextRequest) {
     // Extract unique student names
     const existingStudents = Array.from(new Set(data?.map(s => s.name) || []));
     return NextResponse.json({ existingStudents });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error('[GET Existing Scores] Unexpected failure:', err);
-    return NextResponse.json({ error: err.message || 'Gagal memuat daftar nilai terdaftar' }, { status: 500 });
+    return NextResponse.json({ error: message || 'Gagal memuat daftar nilai terdaftar' }, { status: 500 });
   }
 }

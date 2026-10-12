@@ -142,7 +142,7 @@ JANGAN menulis penjelasan tambahan di luar JSON. Respon Anda harus langsung dimu
     // Map history to OpenAI format
     const messages = [
       { role: 'system', content: finalSystemPrompt },
-      ...safeHistory.slice(-6).map((h: any) => ({
+      ...safeHistory.slice(-6).map((h: { role: string; content: string }) => ({
         role: h.role === 'assistant' ? 'assistant' : 'user',
         content: h.content
       })),
@@ -162,7 +162,7 @@ JANGAN menulis penjelasan tambahan di luar JSON. Respon Anda harus langsung dimu
       'llama-3.3-70b-versatile'
     ];
 
-    let resData: any = null;
+    let resData: { choices?: Array<{ message?: { content?: string } }> } | null = null;
     let lastError: Error | null = null;
 
     for (const model of candidateModels) {
@@ -215,10 +215,11 @@ JANGAN menulis penjelasan tambahan di luar JSON. Respon Anda harus langsung dimu
     const parsedResult = JSON.parse(cleanedContent);
     return NextResponse.json(parsedResult);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Groq AI Copilot Error]', error);
     
-    const isTimeout = error.message && error.message.includes('timed out');
+    const message = error instanceof Error ? error.message : String(error);
+    const isTimeout = message && message.includes('timed out');
     const statusCode = isTimeout ? 504 : 500;
 
     // Friendly fallback response on server error with accurate HTTP status code

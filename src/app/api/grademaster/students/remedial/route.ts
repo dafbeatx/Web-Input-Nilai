@@ -10,7 +10,7 @@ interface RemedialCacheEntry<T> {
   timestamp: number;
 }
 const sessionMetaCache = new Map<string, RemedialCacheEntry<{ kkm: number; remedialQuestions: string[]; remedialAnswerKeys: string[] }>>();
-const siblingsCache = new Map<string, RemedialCacheEntry<any[]>>();
+const siblingsCache = new Map<string, RemedialCacheEntry<{ id: string; name: string; final_score: number | null; original_score: number | null; remedial_status: string | null }[]>>();
 const REMEDIAL_CACHE_TTL_MS = 15000; // 15 seconds cache to drastically reduce egress
 
 export async function GET(req: NextRequest) {
@@ -93,8 +93,8 @@ export async function GET(req: NextRequest) {
           .single();
         const freshMeta = {
           kkm: session?.kkm || 70,
-          remedialQuestions: (session?.scoring_config as any)?.remedialQuestions || [],
-          remedialAnswerKeys: (session?.scoring_config as any)?.remedialAnswerKeys || [],
+          remedialQuestions: (session?.scoring_config as Record<string, unknown>)?.remedialQuestions as string[] || [],
+          remedialAnswerKeys: (session?.scoring_config as Record<string, unknown>)?.remedialAnswerKeys as string[] || [],
         };
         cachedMeta = { data: freshMeta, timestamp: nowTimestamp };
         sessionMetaCache.set(sessionId, cachedMeta);
@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
     }
     const siblingStudents = cachedSiblings.data;
 
-    const isCandidate = (s: any) => {
+    const isCandidate = (s: { original_score: number | null; final_score: number | null }) => {
       const orig = s.original_score !== null && s.original_score !== undefined ? Number(s.original_score) : 0;
       const fin = s.final_score !== null && s.final_score !== undefined ? Number(s.final_score) : 0;
       const baseScore = (orig > 0) ? orig : fin;
@@ -175,13 +175,30 @@ export async function GET(req: NextRequest) {
     });
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     return response;
-  } catch (err: unknown) {
+  } catch {
     return NextResponse.json({ error: 'Gagal mengambil status' }, { status: 500 });
   }
 }
 
+interface RemedialRequestBody {
+  sessionId?: string;
+  studentId?: string;
+  studentName?: string;
+  status?: string;
+  location?: string;
+  answers?: string[];
+  note?: string;
+  elapsedTimeMs?: number;
+  clientCheatingFlags?: string[];
+  photo?: string;
+  examMode?: string;
+  cameraStatus?: string;
+  riskLevel?: string;
+  isPenaltyApplied?: boolean;
+}
+
 export async function POST(req: NextRequest) {
-  let body: Record<string, any> | null = null;
+  let body: RemedialRequestBody | null = null;
   try {
       const supabase = supabaseAdmin;
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
@@ -189,7 +206,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Terlalu banyak percobaan' }, { status: 429 });
     }
 
-    body = await req.json().catch(() => null);
+    body = (await req.json().catch(() => null)) as RemedialRequestBody | null;
     
     if (!body) {
       console.error('Remedial error: Invalid JSON payload');
@@ -207,13 +224,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Since old API used name mainly, let's first get ID if we only have name
-    let finalStudentId = studentId;
+    let finalStudentId: string = studentId || '';
     if (!finalStudentId) {
       const { data: student } = await supabase
       .from('gm_students')
       .select('id')
       .eq('session_id', sessionId)
-      .ilike('name', studentName.trim())
+      .ilike('name', (studentName || '').trim())
       .single();
         
       if (!student) return NextResponse.json({ error: 'RESET_REQUIRED', message: 'Siswa tidak ditemukan' }, { status: 400 });
@@ -223,7 +240,7 @@ export async function POST(req: NextRequest) {
     const data = (await submitRemedial(
        sessionId, 
        finalStudentId, 
-       studentName, 
+       studentName || '', 
        status, 
        answers || [], 
        note || '', 
@@ -235,11 +252,11 @@ export async function POST(req: NextRequest) {
        cameraStatus,
        riskLevel,
        isPenaltyApplied || false
-     )) as any;
+     )) as Record<string, unknown>;
 
     if (status === 'INITIATED') {
       import('@/lib/grademaster/services/push-notification.service').then(m => {
-        m.notifyClassmatesRemedialStarted(sessionId, studentName || data.name || '');
+        m.notifyClassmatesRemedialStarted(sessionId, studentName || (typeof data.name === 'string' ? data.name : ''));
       }).catch(err => {
         console.error('[Remedial API] Classmate notification trigger failed:', err);
       });
@@ -289,8 +306,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-      const supabase = supabaseAdmin;
-    const { searchParams } = new URL(req.url);
+      const { searchParams } = new URL(req.url);
     const studentId = searchParams.get('studentId');
 
     if (!studentId) {
