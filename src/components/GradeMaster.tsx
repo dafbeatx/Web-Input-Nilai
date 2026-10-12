@@ -35,7 +35,7 @@ import RemedialManagementLayer from "@/components/grademaster/RemedialManagement
 import DataCenterLayer from "@/components/grademaster/DataCenterLayer";
 import StudentAccountsLayer from "./grademaster/StudentAccountsLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
-import { subscribeUser, checkSubscriptionStatus } from "@/lib/grademaster/pushHelper";
+import { subscribeUser, checkSubscriptionStatus, detectBrowserEnvironment } from "@/lib/grademaster/pushHelper";
 
 const safeLocalStorage = {
   getItem(key: string): string | null {
@@ -449,6 +449,12 @@ export default function GradeMaster() {
 
   // Check and handle mandatory push notification permission for Google-authenticated students
   const checkPushPermission = useCallback(async () => {
+    // If student already skipped or dismissed in this browser session, don't block them
+    if (typeof window !== 'undefined' && sessionStorage.getItem('gm_push_skipped') === 'true') {
+      setShowPushPrompt(false);
+      return;
+    }
+
     if (isStudent && studentData && studentData.id && studentData.isGoogleLinked !== false) {
       const status = await checkSubscriptionStatus();
       setPushStatus(status);
@@ -471,24 +477,56 @@ export default function GradeMaster() {
   const handleActivatePush = async () => {
     if (!studentData?.id) return;
     setModalLoading(true);
-    const success = await subscribeUser(studentData.id);
+    const result = await subscribeUser(studentData.id);
     
     // Refresh permission status
     const status = await checkSubscriptionStatus();
     setPushStatus(status);
     setModalLoading(false);
     
-    if (success || status === 'GRANTED') {
+    if (result.success || status === 'GRANTED') {
       setToast({ message: "Notifikasi berhasil diaktifkan!", type: "success" });
       setShowPushPrompt(false);
     } else {
-      if (status === 'DENIED') {
-        setToast({ message: "Izin notifikasi diblokir browser. Harap buka blokir lewat URL bar.", type: "error" });
+      if (result.status === 'DENIED' || status === 'DENIED') {
+        setToast({ 
+          message: result.message || "Izin notifikasi diblokir browser. Buka izin lewat bilah URL browser.", 
+          type: "error" 
+        });
       } else {
-        setToast({ message: "Gagal mendaftarkan notifikasi. Silakan coba lagi.", type: "error" });
+        setToast({ 
+          message: result.message || "Gagal mendaftarkan notifikasi. Silakan coba lagi.", 
+          type: "error" 
+        });
       }
     }
   };
+
+  const handleSkipPush = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('gm_push_skipped', 'true');
+    }
+    setShowPushPrompt(false);
+    setToast({ 
+      message: "Notifikasi dilewati. Anda dapat melanjutkan ujian dan melihat nilai.", 
+      type: "success" 
+    });
+  };
+
+  const browserEnv = React.useMemo(() => {
+    if (typeof window === 'undefined') {
+      return {
+        name: 'Browser',
+        isIOS: false,
+        isAndroid: false,
+        isStandalone: false,
+        isInAppBrowser: false,
+        isSecure: true,
+        supportsPush: true,
+      };
+    }
+    return detectBrowserEnvironment();
+  }, []);
 
   const penalizedStudents = React.useMemo(() => {
     return gradedStudents.map(s => ({
@@ -1458,10 +1496,15 @@ export default function GradeMaster() {
         onUpdateAdmin={handleUpdateAdmin}
       />
 
-      {/* Mandatory Push Notification Modal Overlay */}
+      {/* Push Notification Modal Overlay */}
       {showPushPrompt && (
-        <div className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#1c1c1e] border border-white/10 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center flex flex-col items-center gap-6 animate-in fade-in zoom-in-95 duration-300">
+        <div 
+          className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="push-modal-title"
+        >
+          <div className="bg-[#1c1c1e] border border-white/10 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center flex flex-col items-center gap-5 sm:gap-6 animate-in fade-in zoom-in-95 duration-300 my-auto">
             {/* Bell Ringing Anim */}
             <div className="relative">
               <div className="absolute inset-0 rounded-full bg-indigo-500/20 blur-xl animate-pulse" />
@@ -1471,49 +1514,111 @@ export default function GradeMaster() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-extrabold text-white tracking-tight">Aktifkan Notifikasi Remedial</h2>
-              <p className="text-sm text-gray-400 leading-relaxed">
-                Untuk memastikan Anda tidak melewatkan info nilai terbaru, jadwal, dan batas waktu remedial, Anda wajib mengizinkan notifikasi push di HP/Browser Anda.
+              <h2 id="push-modal-title" className="text-xl font-bold text-white tracking-tight">
+                Aktifkan Notifikasi Remedial
+              </h2>
+              <p className="text-sm text-neutral-300 leading-relaxed">
+                Dapatkan info batas waktu remedial, pembaruan nilai, dan jadwal ujian langsung di perangkat Anda.
               </p>
             </div>
 
+            {/* In-App Browser Warning (e.g. WhatsApp / Instagram) */}
+            {browserEnv.isInAppBrowser && (
+              <div className="w-full bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 text-left flex items-start gap-2.5">
+                <AlertCircle size={18} className="text-amber-400 shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-200/90 leading-relaxed">
+                  Anda membuka via browser internal <strong>{browserEnv.inAppAppName || 'aplikasi'}</strong>. Jika notifikasi gagal, silakan buka via <strong>Google Chrome</strong> atau lewati langkah ini.
+                </div>
+              </div>
+            )}
+
+            {/* iOS Safari Non-PWA Notice */}
+            {browserEnv.isIOS && !browserEnv.isStandalone && (
+              <div className="w-full bg-sky-500/10 border border-sky-500/30 rounded-2xl p-3.5 text-left flex items-start gap-2.5">
+                <AlertCircle size={18} className="text-sky-400 shrink-0 mt-0.5" />
+                <div className="text-xs text-sky-200/90 leading-relaxed">
+                  Pengguna iPhone/iPad: Web Push membutuhkan web ditambahkan ke Layar Utama (Add to Home Screen). Anda dapat melewatinya sekarang.
+                </div>
+              </div>
+            )}
+
             {pushStatus === 'DENIED' ? (
-              <div className="w-full flex flex-col gap-4">
-                <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 text-left flex flex-col gap-2">
-                  <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
+              <div className="w-full flex flex-col gap-3">
+                <div className="bg-rose-950/40 border border-rose-500/30 rounded-2xl p-4 text-left flex flex-col gap-2">
+                  <div className="flex items-center gap-2 text-rose-300 font-semibold text-sm">
                     <AlertCircle size={16} />
-                    <span>Akses Notifikasi Diblokir</span>
+                    <span>Akses Notifikasi Diblokir ({browserEnv.name})</span>
                   </div>
-                  <p className="text-xs text-rose-300/80 leading-relaxed">
-                    Sistem mendeteksi izin notifikasi diblokir oleh browser Anda. Harap ikuti langkah berikut:
+                  <p className="text-xs text-rose-200/90 leading-relaxed">
+                    Browser Anda saat ini memblokir notifikasi. Untuk mengaktifkannya:
                   </p>
-                  <ol className="text-xs text-rose-300/80 list-decimal pl-4 flex flex-col gap-1 leading-normal">
-                    <li>Klik <strong>ikon gembok</strong> di sebelah kiri bilah URL browser Anda.</li>
-                    <li>Ubah izin <strong>Notifications</strong> menjadi <strong>Allow (Izinkan)</strong>.</li>
-                    <li>Setelah itu, klik tombol di bawah untuk memeriksa ulang izin.</li>
+                  <ol className="text-xs text-rose-200/80 list-decimal pl-4 flex flex-col gap-1.5 leading-normal">
+                    {browserEnv.name === 'Samsung Internet' ? (
+                      <>
+                        <li>Buka menu garis tiga <strong>(≡)</strong> di kanan bawah browser.</li>
+                        <li>Pilih <strong>Pengaturan</strong> &gt; <strong>Situs dan unduhan</strong> &gt; <strong>Izin situs</strong>.</li>
+                        <li>Pilih <strong>Notifikasi</strong> dan ubah menjadi <strong>Izinkan</strong>.</li>
+                      </>
+                    ) : browserEnv.name === 'Mozilla Firefox' ? (
+                      <>
+                        <li>Klik <strong>ikon perisai/gembok</strong> di sebelah kiri bilah URL.</li>
+                        <li>Cari bagian <strong>Izin (Permissions)</strong> &gt; <strong>Notifikasi</strong>.</li>
+                        <li>Ubah pilihan menjadi <strong>Izinkan</strong>.</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>Klik <strong>ikon setelan/gembok</strong> di sebelah bilah URL browser.</li>
+                        <li>Pilih <strong>Izin Situs</strong> atau <strong>Notifikasi</strong>.</li>
+                        <li>Ubah opsi menjadi <strong>Izinkan (Allow)</strong>.</li>
+                      </>
+                    )}
                   </ol>
                 </div>
 
-                <button
-                  onClick={checkPushPermission}
-                  disabled={modalLoading}
-                  className="w-full py-3.5 rounded-2xl font-bold bg-white text-black hover:bg-gray-200 transition-colors shadow-lg active:scale-[0.98] disabled:opacity-50"
-                >
-                  {modalLoading ? "Memeriksa..." : "Saya Sudah Mengubah Izin"}
-                </button>
+                <div className="flex flex-col gap-2 w-full pt-1">
+                  <button
+                    type="button"
+                    onClick={checkPushPermission}
+                    disabled={modalLoading}
+                    className="w-full min-h-[44px] py-3 px-4 rounded-2xl font-semibold bg-white text-black hover:bg-neutral-200 transition-colors shadow-lg active:scale-[0.98] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  >
+                    {modalLoading ? "Memeriksa..." : "Periksa Ulang Izin"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSkipPush}
+                    disabled={modalLoading}
+                    className="w-full min-h-[44px] py-2.5 px-4 rounded-2xl font-medium text-neutral-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors active:scale-[0.98] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400"
+                  >
+                    Lanjutkan Tanpa Notifikasi
+                  </button>
+                </div>
               </div>
             ) : (
-              <button
-                onClick={handleActivatePush}
-                disabled={modalLoading}
-                className="w-full py-3.5 rounded-2xl font-bold bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {modalLoading ? (
-                  <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                ) : (
-                  "Aktifkan & Lanjutkan"
-                )}
-              </button>
+              <div className="flex flex-col gap-2 w-full">
+                <button
+                  type="button"
+                  onClick={handleActivatePush}
+                  disabled={modalLoading}
+                  className="w-full min-h-[44px] py-3.5 px-4 rounded-2xl font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                >
+                  {modalLoading ? (
+                    <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  ) : (
+                    "Aktifkan Notifikasi"
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSkipPush}
+                  disabled={modalLoading}
+                  className="w-full min-h-[44px] py-2.5 px-4 rounded-2xl font-medium text-neutral-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors active:scale-[0.98] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400"
+                >
+                  Lanjutkan Tanpa Notifikasi
+                </button>
+              </div>
             )}
           </div>
         </div>
