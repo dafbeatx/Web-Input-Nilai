@@ -33,6 +33,18 @@ export async function createStudentSession(accountId: string, userAgent?: string
   return token;
 }
 
+interface StudentAccountRecord {
+  id: string;
+  student_name: string;
+  class_name: string;
+  academic_year?: string;
+  username: string;
+  profile_photo_url?: string | null;
+  google_email?: string | null;
+  study_streak?: number;
+  last_active_date?: string | null;
+}
+
 export async function getStudentSession(explicitToken?: string) {
   const cookieStore = await cookies();
   const token = explicitToken || cookieStore.get(SESSION_COOKIE)?.value;
@@ -61,7 +73,7 @@ export async function getStudentSession(explicitToken?: string) {
 
   if (error || !data) return null;
 
-  const accountData = data.gm_student_accounts as any;
+  const accountData = data.gm_student_accounts as unknown as StudentAccountRecord;
 
   // Sliding session window: extend expiration so active students stay logged in indefinitely
   try {
