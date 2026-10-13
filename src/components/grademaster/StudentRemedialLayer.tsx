@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ToastType } from '@/lib/grademaster/types';
-import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, CameraOff, Clock, CheckCircle2, User, Star, ShieldCheck, ArrowRight, Cpu, MonitorOff, Play, Monitor, Activity, AppWindow, Wifi, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, CameraOff, Clock, CheckCircle2, User, Star, ShieldCheck, ArrowRight, Cpu, MonitorOff, Play, Activity, AppWindow, Wifi, RefreshCw } from 'lucide-react';
 import ProctoringCamera from './ProctoringCamera';
 import { saveRemedialSession, loadRemedialSession, clearRemedialSession } from '@/lib/grademaster/session';
 import { assessClientRisk } from '@/lib/grademaster/services/risk-engine.service';
@@ -619,7 +619,28 @@ export default function StudentRemedialLayer({
   };
 
   const [agreedRules, setAgreedRules] = useState(false);
-    // ── ADVANCED MONITORING (Pulse & Surveillance) ──
+  const [rulesCountdown, setRulesCountdown] = useState<number>(20);
+  const [isRulesTimerCompleted, setIsRulesTimerCompleted] = useState<boolean>(false);
+
+  // 20-second mandatory reading countdown for RULES step
+  useEffect(() => {
+    if (step !== 'RULES' || isRulesTimerCompleted) return;
+
+    const interval = setInterval(() => {
+      setRulesCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setIsRulesTimerCompleted(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [step, isRulesTimerCompleted]);
+
+  // ── ADVANCED MONITORING (Pulse & Surveillance) ──
   const heartbeatTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const trackEvent = useCallback(async (type: string, severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL', points: number, metadata: Record<string, unknown> = {}) => {
@@ -2730,64 +2751,178 @@ export default function StudentRemedialLayer({
     );
   }
 
-  // RENDER: RULES SCREEN (Pre-exam instruction popup)
+  // RENDER: RULES SCREEN (Pre-exam instruction popup with 20s reading countdown)
   if (step === 'RULES') {
-    return (
-      <div className="fixed inset-0 z-[100] bg-transparent overflow-y-auto">
-        <div className="flex min-h-full flex-col items-center justify-center p-4">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#3b82f615,transparent)]"></div>
-        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-30"></div>
-        
-        <div className="w-full max-w-xl relative bg-surface premium-shadow backdrop-blur-2xl border border-outline-variant rounded-2xl md:rounded-[2.5rem] premium-shadow p-5 sm:p-6 md:p-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-           <header className="text-center mb-6 md:mb-8">
-              <div className="w-16 h-16 md:w-20 md:h-20 bg-primary/20 rounded-2xl md:rounded-[2rem] border border-primary/30 flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-2xl shadow-primary/20">
-                 <ShieldCheck size={36} className="text-primary md:w-10 md:h-10" />
-              </div>
-              <h2 className="text-xl md:text-3xl font-black text-on-surface tracking-tight uppercase leading-tight font-outfit">Protokol Keamanan <br /><span className="text-primary italic">GradeMaster OS</span></h2>
-              <div className="flex justify-center gap-2 mt-3 md:mt-4">
-                 <Badge color="indigo">{subject}</Badge>
-                 <Badge color="emerald">{examType}</Badge>
-              </div>
-           </header>
+    const ringCircumference = 125.66;
+    const ringOffset = ringCircumference * (1 - rulesCountdown / 20);
 
-           <div className="space-y-3 md:space-y-4 mb-6 md:mb-8 max-h-[220px] md:max-h-[320px] overflow-y-auto pr-2 custom-scrollbar focus:outline-none">
+    return (
+      <div className="fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-xl overflow-y-auto">
+        <div className="min-h-full flex flex-col items-center justify-center p-3 sm:p-5 md:p-8 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-[calc(2.5rem+env(safe-area-inset-bottom,0px))]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#3b82f615,transparent)] pointer-events-none"></div>
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-30 pointer-events-none"></div>
+          
+          <div className="w-full max-w-xl relative bg-surface border border-outline-variant rounded-2xl md:rounded-[2.5rem] p-4 sm:p-6 md:p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-6 duration-500 overflow-hidden">
+            
+            {/* Header & 20s Circular Countdown Timer */}
+            <header className="flex flex-col items-center text-center mb-4 sm:mb-6">
+              {/* Circular Animated Timer Ring */}
+              <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center mb-3">
+                <svg className="w-full h-full -rotate-90" viewBox="0 0 48 48">
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="20"
+                    strokeWidth="3.5"
+                    className="text-surface-variant stroke-current fill-none"
+                  />
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="20"
+                    strokeWidth="3.5"
+                    strokeDasharray={ringCircumference}
+                    strokeDashoffset={ringOffset}
+                    strokeLinecap="round"
+                    className={`transition-all duration-1000 ease-linear fill-none ${
+                      rulesCountdown > 0 ? 'text-amber-400 stroke-current' : 'text-emerald-400 stroke-current'
+                    }`}
+                  />
+                </svg>
+
+                <div className="absolute inset-0 flex flex-col items-center justify-center select-none">
+                  {rulesCountdown > 0 ? (
+                    <>
+                      <span className="text-base sm:text-lg font-black font-outfit text-amber-400 tabular-nums leading-none">
+                        {rulesCountdown}
+                      </span>
+                      <span className="text-[8px] font-black uppercase tracking-wider text-amber-400/80 mt-0.5">
+                        Detik
+                      </span>
+                    </>
+                  ) : (
+                    <CheckCircle2 size={24} className="text-emerald-400 animate-in zoom-in duration-300" />
+                  )}
+                </div>
+              </div>
+
+              {/* Status Badge */}
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-2 border text-[9px] sm:text-[10px] font-black uppercase tracking-wider ${
+                rulesCountdown > 0 
+                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/25' 
+                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
+              }`}>
+                {rulesCountdown > 0 ? (
+                  <>
+                    <Clock size={12} className="animate-spin" />
+                    <span>Wajib Membaca Aturan ({rulesCountdown}s)</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={12} />
+                    <span>Aturan Selesai Dibaca • Siap Melanjutkan</span>
+                  </>
+                )}
+              </div>
+
+              <h2 className="text-lg sm:text-2xl font-black text-on-surface tracking-tight uppercase leading-tight font-outfit">
+                Protokol Pengawasan <br className="hidden xs:inline" />
+                <span className="text-primary italic">GradeMaster OS</span>
+              </h2>
+
+              <div className="flex justify-center gap-2 mt-2">
+                <Badge color="indigo">{subject}</Badge>
+                <Badge color="emerald">{examType}</Badge>
+              </div>
+            </header>
+
+            {/* Peringatan Khusus: Pengawasan Otomatis oleh Komputer / AI */}
+            <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-rose-500/10 border border-rose-500/25 mb-4 sm:mb-5 text-left">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle size={18} className="text-rose-400 shrink-0" />
+                <h3 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-rose-400 font-outfit">
+                  Penting: Pengawasan Otomatis Sistem Komputer (AI)
+                </h3>
+              </div>
+              <p className="text-[10px] sm:text-[11px] font-bold text-rose-200/90 leading-relaxed mb-2.5">
+                Ujian ini diawasi sepenuhnya secara otomatis oleh sistem komputer dan kecerdasan buatan (AI), <span className="underline decoration-rose-400 font-black">bukan oleh guru secara manual</span>. Guru tidak memantau layar Anda di balik layar.
+              </p>
+              <div className="space-y-1.5 text-[9px] sm:text-[10px] font-bold text-rose-200/80">
+                <div className="flex items-start gap-1.5">
+                  <span className="text-rose-400 font-black shrink-0">•</span>
+                  <span><strong className="text-rose-200">Sanksi Blokir Otomatis:</strong> Berpindah tab, split-screen, membuka aplikasi lain, atau mematikan layar langsung diputus & dikunci oleh server tanpa toleransi.</span>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <span className="text-rose-400 font-black shrink-0">•</span>
+                  <span><strong className="text-rose-200">Keputusan Sistem Bersifat Mutlak:</strong> Guru tidak dapat membatalkan atau mengubah diskualifikasi jika sesi Anda telah diblokir oleh AI.</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Daftar Aturan Utama (Mobile Friendly - Tanpa Scroll Trap) */}
+            <div className="space-y-2 sm:space-y-2.5 mb-4 sm:mb-5 text-left">
               {[
-                { icon: <MonitorOff size={18}/>, title: "Layar Penuh", desc: "Sistem akan mendeteksi aktifitas pemisahan layar atau pergantian tab secara instan." },
-                { icon: <Camera size={18}/>, title: "Monitoring Visual", desc: "Akses kamera diperlukan untuk verifikasi identitas dan pengawasan berkelanjutan." },
-                { icon: <Monitor size={18}/>, title: "Cek Screen Overlay", desc: "Terdeteksinya aplikasi melayang atau screen recorder akan mengunci sesi Anda." },
-                { icon: <Activity size={18}/>, title: "Koneksi Stabil", desc: "Setiap aksi disinkronisasi setiap detik. Pastikan internet Anda stabil." },
-                { icon: <AppWindow size={18}/>, title: "Deteksi Multi-Aplikasi", desc: "Menutup browser atau berpindah aplikasi akan dianggap pelanggaran berat." }
+                { icon: <MonitorOff size={16} />, title: "Satu Layar Penuh", desc: "Dilarang membagi layar (split screen), membuka jendela lain, atau berpindah tab." },
+                { icon: <Camera size={16} />, title: "Monitoring Visual", desc: examMode === 'LIMITED' ? "Mode Terbatas Aktif: Kamera dilewati atas izin khusus Guru/Admin." : "Wajah harus tetap berada di jangkauan kamera selama sesi pengerjaan." },
+                { icon: <Activity size={16} />, title: "Sinkronisasi Real-Time", desc: "Jawaban tersimpan otomatis. Jangan menutup browser sebelum Anda menekan tombol submit." }
               ].map((rule, idx) => (
-                <div key={idx} className="flex gap-4 p-4 rounded-2xl bg-surface-variant border border-outline-variant hover:bg-surface-container-highest transition-all group">
-                   <div className="w-10 h-10 shrink-0 bg-primary/10 text-primary rounded-xl flex items-center justify-center border border-primary/20 group-hover:scale-110 transition-transform">
-                      {rule.icon}
-                   </div>
-                   <div>
-                      <h4 className="text-[11px] font-black uppercase tracking-widest text-on-surface mb-1">{rule.title}</h4>
-                      <p className="text-[10px] md:text-xs font-bold text-on-surface-variant leading-relaxed text-left">{rule.desc}</p>
-                   </div>
+                <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-surface-variant border border-outline-variant">
+                  <div className="w-8 h-8 shrink-0 bg-primary/10 text-primary rounded-lg flex items-center justify-center border border-primary/20 mt-0.5">
+                    {rule.icon}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-on-surface mb-0.5">{rule.title}</h4>
+                    <p className="text-[9px] sm:text-[10px] font-bold text-on-surface-variant leading-relaxed break-words">{rule.desc}</p>
+                  </div>
                 </div>
               ))}
-           </div>
+            </div>
 
-           <label className="flex items-center gap-3 p-5 bg-primary/5 border border-primary/10 rounded-2xl mb-8 cursor-pointer select-none hover:bg-primary/10 transition-all">
-             <input
-               type="checkbox"
-               checked={agreedRules}
-               onChange={() => setAgreedRules(!agreedRules)}
-               className="w-6 h-6 rounded-lg border-2 border-primary/30 bg-slate-900 text-primary focus:ring-primary/20 accent-primary"
-             />
-             <span className="text-[11px] md:text-xs font-black text-primary uppercase tracking-widest text-left">Saya siap mengikuti ujian dengan jujur</span>
-           </label>
+            {/* Checkbox Persetujuan (Target Sentuh Ramah Mobile) */}
+            <label className={`flex items-center gap-3 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all select-none min-h-[48px] mb-4 sm:mb-5 ${
+              rulesCountdown > 0 
+                ? 'bg-surface-variant/40 border-outline-variant/50 opacity-60 cursor-not-allowed'
+                : agreedRules
+                ? 'bg-primary/10 border-primary/30 cursor-pointer shadow-sm'
+                : 'bg-surface-variant border-outline-variant cursor-pointer hover:border-primary/40'
+            }`}>
+              <input
+                type="checkbox"
+                checked={agreedRules}
+                disabled={rulesCountdown > 0}
+                onChange={() => setAgreedRules(!agreedRules)}
+                className="w-5 h-5 rounded-lg border-2 border-primary/40 bg-slate-900 text-primary focus:ring-primary/20 accent-primary disabled:opacity-50"
+              />
+              <span className="text-[10px] sm:text-xs font-black text-on-surface uppercase tracking-wider text-left leading-snug">
+                Saya telah membaca aturan dan siap ujian dengan jujur
+              </span>
+            </label>
 
-           <button 
-             onClick={() => setStep('INFO')}
-             disabled={!agreedRules}
-             className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 group border border-outline-variant disabled:opacity-30 disabled:grayscale disabled:pointer-events-none"
-           >
-             Mulai Verifikasi Sistem <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-           </button>
-        </div>
+            {/* Tombol Lanjut */}
+            <button 
+              onClick={() => setStep('INFO')}
+              disabled={rulesCountdown > 0 || !agreedRules}
+              className={`w-full py-3.5 sm:py-4 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border min-h-[48px] group ${
+                rulesCountdown > 0
+                  ? 'bg-surface-variant text-on-surface-variant border-outline-variant opacity-70 cursor-not-allowed'
+                  : !agreedRules
+                  ? 'bg-primary/30 text-white/50 border-outline-variant cursor-not-allowed'
+                  : 'bg-primary text-white border-outline-variant shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95'
+              }`}
+            >
+              {rulesCountdown > 0 ? (
+                <>
+                  <Clock size={16} className="animate-spin text-amber-400" />
+                  <span>Harap Baca Aturan ({rulesCountdown}s)</span>
+                </>
+              ) : (
+                <>
+                  <span>Mulai Verifikasi Sistem</span>
+                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     );
