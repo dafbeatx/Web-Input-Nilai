@@ -421,6 +421,21 @@ export async function handleAdminCallback(chatId: number, callbackData: string, 
         return;
       }
 
+      if (type === 'setmode') {
+        const newMode = parts[3];
+        const studentId = targetId;
+        await supabase.from('gm_students').update({
+          exam_mode: newMode,
+          camera_status: newMode === 'LIMITED' ? 'LIMITED' : 'ACTIVE',
+          updated_at: new Date().toISOString()
+        }).eq('id', studentId);
+
+        await editOrSend(chatId, messageId, `✅ Mode ujian diubah menjadi <b>${newMode === 'LIMITED' ? 'Mode Terbatas (Tanpa Kamera)' : 'Mode Ketat (Kamera)'}</b>.`, [
+          [{ text: '🔍 Cek Siswa', callback_data: `nav:stu:${compressUUID(studentId)}:students` }]
+        ]);
+        return;
+      }
+
       if (type === 'rstexm') {
         await editOrSend(chatId, messageId, '⚠️ <b>Yakin mereset ujian siswa ini?</b>\nData jawaban dan skor remedial akan hilang.', [
           [{ text: '✅ YA, RESET', callback_data: `act:rstexm_ok:${compressUUID(targetId)}` }],
@@ -733,7 +748,7 @@ async function renderStudentList(chatId: number, messageId: number | undefined, 
 }
 
 async function renderStudentDetails(chatId: number, messageId: number | undefined, studentId: string, backCategory: string) {
-  const { data: s } = await supabase.from('gm_students').select('id, session_id, name, final_score, remedial_status, violation_count, is_cheated, cheating_flags, is_blocked, remedial_location').eq('id', studentId).single();
+  const { data: s } = await supabase.from('gm_students').select('id, session_id, name, final_score, remedial_status, violation_count, is_cheated, cheating_flags, is_blocked, remedial_location, exam_mode').eq('id', studentId).single();
   if (!s) return;
 
   // Fetch Heartbeat Status
@@ -766,11 +781,14 @@ async function renderStudentDetails(chatId: number, messageId: number | undefine
     }
   }
 
+  const isLimited = s.exam_mode === 'LIMITED';
+
   const msg = `👤 <b>${s.name}</b>\n\n` +
     `📡 Status Live: <b>${statusIcon}</b>\n` +
     `💓 Pulse: <code>${pulseDetail}</code>\n\n` +
     `📈 Nilai Final: <b>${s.final_score}</b>\n` +
     `📌 Status: <b>${s.remedial_status || 'NONE'}</b>\n` +
+    `🛡️ Mode Ujian: <b>${isLimited ? 'LIMITED (Mode Terbatas)' : 'STRICT (Kamera Wajib)'}</b>\n` +
     `🚨 Curang: ${s.is_cheated ? 'YA' : 'TIDAK'} (${s.violation_count}⚠️)\n` +
     `🚫 Diblokir: ${s.is_blocked ? 'YA' : 'TIDAK'}\n` +
     `🗺 Lokasi: ${s.remedial_location || '-'}\n` +
@@ -781,6 +799,10 @@ async function renderStudentDetails(chatId: number, messageId: number | undefine
 
   const keyboard = [
     [{ text: '✏️ Ubah Nilai', callback_data: `act:setnil:${cmpId}` }, { text: '🔄 Reset Ujian', callback_data: `act:rstexm:${cmpId}` }],
+    [{ 
+      text: isLimited ? '📷 Kembalikan Mode Kamera' : '🛡️ Jadikan Mode Terbatas', 
+      callback_data: `act:setmode:${cmpId}:${isLimited ? 'STRICT' : 'LIMITED'}` 
+    }],
     [{ text: '✅ Set Lulus', callback_data: `act:setsts:${cmpId}:COMPLETED` }, { text: '🚨 Set Curang', callback_data: `act:setsts:${cmpId}:CHEATED` }],
     [{ text: '🚫 Blokir', callback_data: `act:setsts:${cmpId}:BLOCKED` }, { text: '🔄 Bersihkan', callback_data: `act:setsts:${cmpId}:NONE` }],
     [{ text: '📝 Custom Perilaku', callback_data: `act:custbeh:${cmpId}` }],

@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
     let queryResult = await supabase
       .from('gm_students')
-      .select('id, name, final_score, remedial_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed, violation_count, is_blocked, remedial_extended_time, remedial_answers, essay_auto_details, remedial_score, original_score')
+      .select('id, name, final_score, remedial_status, exam_mode, camera_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed, violation_count, is_blocked, remedial_extended_time, remedial_answers, essay_auto_details, remedial_score, original_score')
       .eq('session_id', sessionId)
       .ilike('name', studentName.trim())
       .eq('is_deleted', false)
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
       console.warn('[Remedial GET API] Column remedial_extended_time is missing, retrying query without it.');
       queryResult = await supabase
         .from('gm_students')
-        .select('id, name, final_score, remedial_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed, violation_count, is_blocked, remedial_answers, essay_auto_details, remedial_score, original_score')
+        .select('id, name, final_score, remedial_status, exam_mode, camera_status, cheating_flags, essay_score_manual, essay_score_auto, teacher_reviewed, violation_count, is_blocked, remedial_answers, essay_auto_details, remedial_score, original_score')
         .eq('session_id', sessionId)
         .ilike('name', studentName.trim())
         .eq('is_deleted', false)
@@ -155,6 +155,8 @@ export async function GET(req: NextRequest) {
     const response = NextResponse.json({ 
       status: currentStatus,
       finalScore: student.final_score,
+      examMode: student.exam_mode || 'STRICT',
+      cameraStatus: student.camera_status || 'ACTIVE',
       cheatingFlags: student.cheating_flags,
       teacherReviewed: student.teacher_reviewed,
       violationCount: student.violation_count || 0,

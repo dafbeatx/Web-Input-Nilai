@@ -27,7 +27,7 @@ async function withRetry<T>(
   context: string,
   maxRetries = 3
 ): Promise<T> {
-  let lastError: any = null;
+  let lastError: unknown = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -250,7 +250,7 @@ export async function submitRemedial(
   // ── COMPLETED / CHEATED / TIMEOUT: Finalize attempt ──
 
   // Find active attempt with auto-recovery
-  let attempt = await findActiveAttempt(sessionId, studentId, studentName);
+  const attempt = await findActiveAttempt(sessionId, studentId, studentName);
 
   const answerKeys: string[] = attempt.remedial_answer_keys || session.scoring_config?.remedialAnswerKeys || [];
 
@@ -299,7 +299,7 @@ export async function submitRemedial(
 
     const serverRisk = assessServerRisk(
       answers,
-      (allStudents || []).map((s: any) => ({
+      (allStudents || []).map((s: { id: string; name: string; remedial_answers?: string[] }) => ({
         id: s.id,
         name: s.name,
         remedialAnswers: s.remedial_answers || [],
@@ -564,7 +564,7 @@ export async function submitRemedial(
     .eq('is_deleted', false);
 
   const kkmScore = session.kkm || 70;
-  const isCandidate = (s: any) => {
+  const isCandidate = (s: { original_score?: number | null; final_score?: number | null }) => {
     const orig = s.original_score !== null && s.original_score !== undefined ? Number(s.original_score) : 0;
     const fin = s.final_score !== null && s.final_score !== undefined ? Number(s.final_score) : 0;
     const baseScore = (orig > 0) ? orig : fin;
@@ -589,7 +589,7 @@ export async function submitRemedial(
     studentUpdate.final_score_locked = oldScore;
     
     // Add warning flag
-    let flags = studentUpdate.cheating_flags as string[] || [];
+    const flags = (studentUpdate.cheating_flags as string[]) || [];
     if (!flags.includes('Nilai remedial ditahan sementara menunggu teman sekelas selesai')) {
       flags.push('Nilai remedial ditahan sementara menunggu teman sekelas selesai');
     }
@@ -600,7 +600,7 @@ export async function submitRemedial(
     studentUpdate.final_score_locked = finalScore;
 
     // Remove warning flag from current student if present
-    let flags = studentUpdate.cheating_flags as string[] || [];
+    const flags = (studentUpdate.cheating_flags as string[]) || [];
     studentUpdate.cheating_flags = flags.filter((f: string) => !f.includes('Nilai remedial ditahan'));
 
     // Release finished sibling students' scores
@@ -637,7 +637,7 @@ export async function submitRemedial(
     }
   }
 
-  const result = await withRetry(async () => {
+  await withRetry(async () => {
     try {
       const { data, error } = await supabase.rpc('finalize_remedial_attempt', {
         p_attempt_id: attempt.id,
@@ -648,8 +648,9 @@ export async function submitRemedial(
 
       if (error) throw error;
       return data;
-    } catch (err: any) {
-      if (err.message && err.message.includes('column') && err.message.includes('does not exist')) {
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      if (errorMsg.includes('column') && errorMsg.includes('does not exist')) {
         console.warn(`[Safe Update Fallback] Menghapus kolom opsional yang belum dimigrasi di tabel gm_students.`);
         
         // Remove columns that might not exist in an older schema
@@ -680,7 +681,7 @@ export async function submitRemedial(
     ...studentUpdate,
     newFinalScore: studentUpdate.final_score,
     attempt_id: attempt.id,
-    attempt_token: (attempt as any).attempt_token || null,
+    attempt_token: (attempt as { attempt_token?: string | null }).attempt_token || null,
     subject: session.subject,
     class_name: session.class_name,
     remedialAnswerKeys: answerKeys,
@@ -806,8 +807,9 @@ async function findActiveAttempt(
 export async function reviewRemedial(
   studentId: string,
   essayScoreManual: number,
-  sessionKkm: number
+  sessionKkm?: number
 ) {
+  void sessionKkm;
   const { data: student, error: fetchErr } = await supabase
     .from('gm_students')
     .select('is_cheated, essay_score_auto')
@@ -881,7 +883,7 @@ export async function finalizeRemedial(
     .eq('session_id', student.session_id)
     .eq('is_deleted', false);
 
-  const isCandidate = (s: any) => {
+  const isCandidate = (s: { original_score?: number | null; final_score?: number | null }) => {
     const orig = s.original_score !== null && s.original_score !== undefined ? Number(s.original_score) : 0;
     const fin = s.final_score !== null && s.final_score !== undefined ? Number(s.final_score) : 0;
     const baseScore = (orig > 0) ? orig : fin;
@@ -898,7 +900,7 @@ export async function finalizeRemedial(
   const isHeldBack = pendingRemedialSiblings.length > 0 && !student.is_cheated;
 
   let finalUpdateScore = finalScore;
-  let finalFlags = (student as any).cheating_flags || [];
+  let finalFlags: string[] = (student.cheating_flags as string[]) || [];
 
   if (isHeldBack) {
     console.log(`[Remedial Holdback] Score for ${student.name} is held back because there are other pending remedial students.`);
@@ -1022,6 +1024,28 @@ export async function resetRemedial(studentId: string) {
 
   if (error) throw error;
   return true;
+}
+
+export async function setStudentExamMode(studentId: string, examMode: 'STRICT' | 'LIMITED') {
+  const { data: student, error: fetchErr } = await supabase
+    .from('gm_students')
+    .select('id, name')
+    .eq('id', studentId)
+    .single();
+
+  if (fetchErr || !student) throw new Error(`Siswa tidak ditemukan (id: ${studentId})`);
+
+  const { error } = await supabase
+    .from('gm_students')
+    .update({
+      exam_mode: examMode,
+      camera_status: examMode === 'LIMITED' ? 'LIMITED' : 'ACTIVE',
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', studentId);
+
+  if (error) throw error;
+  return { success: true, studentId, studentName: student.name, examMode };
 }
 
 export async function getRemainingStudents(sessionId: string) {
@@ -1153,11 +1177,11 @@ export async function extendRemedialTime(studentId: string, minutes: number) {
     throw new Error('Siswa tidak ditemukan');
   }
 
-  const currentExtended = (student as any).remedial_extended_time || 0;
+  const currentExtended = (student as { remedial_extended_time?: number }).remedial_extended_time || 0;
   const newExtended = currentExtended + minutes;
 
   // 2. Update student status and extended time
-  const updatePayload: Record<string, any> = {
+  const updatePayload: Record<string, unknown> = {
     remedial_status: 'ACTIVE',
     is_cheated: false,
     teacher_reviewed: false,

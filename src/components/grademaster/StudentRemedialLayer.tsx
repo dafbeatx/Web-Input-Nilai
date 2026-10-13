@@ -275,7 +275,7 @@ export default function StudentRemedialLayer({
   const [cameraRetryCount, setCameraRetryCount] = useState(0);
   const [cameraErrorDetail, setCameraErrorDetail] = useState<string | null>(null);
   const [examMode, setExamMode] = useState<'STRICT' | 'LIMITED'>('STRICT');
-  const [cameraStatus, setCameraStatus] = useState<'ACTIVE' | 'FAILED'>('ACTIVE');
+  const [cameraStatus, setCameraStatus] = useState<'ACTIVE' | 'FAILED' | 'LIMITED'>('ACTIVE');
   const [isCameraActive, setIsCameraActive] = useState(true);
   const [faceStatus, setFaceStatus] = useState<'calibrating' | 'detected' | 'not_detected'>('calibrating');
   const MAX_CAMERA_RETRIES = 5;
@@ -1264,6 +1264,38 @@ export default function StudentRemedialLayer({
     trackVisit();
   }, [className, sessionId, studentName, subject]);
 
+  // Synchronize exam mode & status from server on mount (prevents stale EXAM traps)
+  useEffect(() => {
+    if (!sessionId || !studentName) return;
+    const fetchStudentModeAndStatus = async () => {
+      try {
+        const res = await fetch(`/api/grademaster/students/remedial?sessionId=${sessionId}&studentName=${encodeURIComponent(studentName)}`, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.examMode) {
+            setExamMode(data.examMode);
+            if (data.examMode === 'LIMITED') {
+              setCameraOk(true);
+              setCameraStatus('LIMITED');
+            }
+          }
+          // If server says remedial is null or NONE, clear any stale local EXAM step
+          if (data.status === null || data.status === 'NONE') {
+            const currentSaved = loadRemedialSession();
+            if (currentSaved && currentSaved.step === 'EXAM') {
+              console.warn('[Remedial] Stale local EXAM step detected while server status is null/NONE. Resetting to RULES.');
+              clearRemedialSession();
+              setStep('RULES');
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[Remedial] Failed to sync mode/status from server:', err);
+      }
+    };
+    fetchStudentModeAndStatus();
+  }, [sessionId, studentName]);
+
   // Restore session on mount (localStorage)
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1442,6 +1474,15 @@ export default function StudentRemedialLayer({
             return;
           }
 
+          // Handle exam mode updates from teacher dynamically
+          if (data.examMode) {
+            setExamMode(data.examMode);
+            if (data.examMode === 'LIMITED') {
+              setCameraOk(true);
+              setCameraStatus('LIMITED');
+            }
+          }
+
           // Handle teacher extending the time dynamically
           if (data.remedialExtendedTime !== undefined) {
             const newExtendedSeconds = (data.remedialExtendedTime || 0) * 60;
@@ -1592,7 +1633,7 @@ export default function StudentRemedialLayer({
 
   // ── AI Proctoring Analyzer — Periodic Snapshot Analysis (30s) ──
   useEffect(() => {
-    if (step !== 'EXAM' || !attemptId) {
+    if (step !== 'EXAM' || !attemptId || examMode === 'LIMITED') {
       if (aiProctorIntervalRef.current) {
         clearInterval(aiProctorIntervalRef.current);
         aiProctorIntervalRef.current = null;
@@ -1705,7 +1746,7 @@ export default function StudentRemedialLayer({
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, attemptId, isSubmitting]);
+  }, [step, attemptId, isSubmitting, examMode]);
 
   // ── Session Health Monitoring ──
   const healthCheckAttemptedRef = useRef(false);
@@ -2297,6 +2338,7 @@ export default function StudentRemedialLayer({
 
     // Helper: retry capture with short delay between attempts
     const captureWithRetry = async (maxAttempts = 3, delayMs = 500): Promise<string | undefined> => {
+      if (examMode === 'LIMITED') return undefined;
       for (let i = 0; i < maxAttempts; i++) {
         const snap = capturePhoto();
         if (snap) return snap;
@@ -2311,9 +2353,9 @@ export default function StudentRemedialLayer({
     if (!hasSentStartNotifRef.current) {
       hasSentStartNotifRef.current = true;
       setTimeout(async () => {
-        const snap = await captureWithRetry(4, 800);
+        const snap = examMode !== 'LIMITED' ? await captureWithRetry(4, 800) : undefined;
         const compressed = snap ? await compressImage(snap) : undefined;
-        sendTelegramNotify('START', compressed);
+        sendTelegramNotify('START', compressed, examMode === 'LIMITED' ? 'Mode Terbatas (Izin Admin/Guru: Tanpa Kamera)' : undefined);
         
         const net = getNetworkInfo();
         if (net.includes('2g') || net.includes('3g')) {
@@ -2321,6 +2363,9 @@ export default function StudentRemedialLayer({
         }
       }, 2500);
     }
+
+    // Mode Terbatas: tidak perlu menjalankan siklus auto-snap kamera berkala
+    if (examMode === 'LIMITED') return;
 
     // Auto-Snap for Proctoring (Telegram)
     // Using recursive setTimeout instead of setInterval to prevent overlap and backlog issues
@@ -2374,7 +2419,7 @@ export default function StudentRemedialLayer({
       isProctoringActive = false;
       clearTimeout(proctorTimerId);
     };
-  }, [step, isSubmitting, capturePhoto, sendTelegramNotify]);
+  }, [step, isSubmitting, capturePhoto, sendTelegramNotify, examMode]);
 
   // ── MONITORING SETUP (Heartbeat & Event Listeners) ──
   useEffect(() => {
@@ -2787,42 +2832,83 @@ export default function StudentRemedialLayer({
           </div>
 
           <div className="space-y-4 mb-8">
-            <div className={`p-4 rounded-2xl border transition-all flex items-center gap-4 ${checkingPerms ? 'bg-amber-500/5 border-amber-500/20' : cameraOk ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-surface-variant border-outline-variant'}`}>
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${checkingPerms ? 'bg-amber-500/20 text-amber-400 border-amber-500/20' : cameraOk ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20' : 'bg-surface-variant text-slate-600 border-outline-variant'}`}>
-                <Camera size={18} />
+            <div className={`p-4 rounded-2xl border transition-all flex items-center gap-4 ${
+              examMode === 'LIMITED'
+                ? 'bg-emerald-500/5 border-emerald-500/20'
+                : checkingPerms 
+                ? 'bg-amber-500/5 border-amber-500/20' 
+                : cameraOk 
+                ? 'bg-emerald-500/5 border-emerald-500/20' 
+                : 'bg-surface-variant border-outline-variant'
+            }`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                examMode === 'LIMITED'
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20'
+                  : checkingPerms 
+                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/20' 
+                  : cameraOk 
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20' 
+                  : 'bg-surface-variant text-slate-600 border-outline-variant'
+              }`}>
+                {examMode === 'LIMITED' ? <ShieldCheck size={18} /> : <Camera size={18} />}
               </div>
-              <div className="flex-1">
-                <p className="text-[10px] font-black uppercase tracking-wider text-on-surface-variant mb-0.5">Sensor Kamera</p>
-                <p className={`text-[11px] font-black uppercase ${checkingPerms ? 'text-amber-400 animate-pulse' : cameraOk ? 'text-emerald-400' : 'text-on-surface-variant'}`}>
-                  {checkingPerms ? 'Mengevaluasi...' : cameraOk ? 'Terhubung' : 'Terputus'}
+              <div className="flex-1 text-left">
+                <p className="text-[10px] font-black uppercase tracking-wider text-on-surface-variant mb-0.5">
+                  {examMode === 'LIMITED' ? 'Mode Pengerjaan' : 'Sensor Kamera'}
+                </p>
+                <p className={`text-[11px] font-black uppercase ${
+                  examMode === 'LIMITED'
+                    ? 'text-emerald-400'
+                    : checkingPerms 
+                    ? 'text-amber-400 animate-pulse' 
+                    : cameraOk 
+                    ? 'text-emerald-400' 
+                    : 'text-on-surface-variant'
+                }`}>
+                  {examMode === 'LIMITED'
+                    ? 'Mode Terbatas (Izin Guru)'
+                    : checkingPerms 
+                    ? 'Mengevaluasi...' 
+                    : cameraOk 
+                    ? 'Terhubung' 
+                    : 'Terputus'}
                 </p>
               </div>
-              {!cameraOk && !checkingPerms && (
+              {examMode !== 'LIMITED' && !cameraOk && !checkingPerms && (
                 <button onClick={checkPermissions} className="px-4 py-2 bg-primary text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">Aktifkan</button>
               )}
             </div>
           </div>
 
-          {cameraErrorDetail && !cameraOk && (
-            <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex flex-col gap-3 animate-in fade-in">
+          {examMode === 'LIMITED' && (
+            <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 animate-in fade-in text-left">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                <ShieldCheck size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-wider mb-0.5">Mode Terbatas Aktif (Hak Admin)</p>
+                <p className="text-[10px] text-emerald-200/80 font-bold leading-relaxed">
+                  Guru/Admin telah mengizinkan Anda mengerjakan remedial tanpa kamera.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {cameraErrorDetail && !cameraOk && examMode !== 'LIMITED' && (
+            <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex flex-col gap-3 animate-in fade-in text-left">
               <div className="flex gap-3">
                 <AlertTriangle className="text-rose-400 shrink-0 mt-0.5" size={16} />
                 <div>
-                  <p className="text-[10px] font-black text-rose-400 uppercase tracking-wider mb-1">Akses Kamera Ditolak / Bermasalah</p>
+                  <p className="text-[10px] font-black text-rose-400 uppercase tracking-wider mb-1">Akses Kamera Gagal / Terblokir</p>
                   <p className="text-[10px] text-rose-300/80 font-bold leading-relaxed whitespace-pre-line">{cameraErrorDetail}</p>
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  setExamMode('LIMITED');
-                  setCameraOk(true);
-                  setToast({ message: "Beralih ke Mode Terbatas. Kamera dinonaktifkan.", type: "success" });
-                }}
-                disabled={isSubmitting}
-                className="mt-2 w-full py-2.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Lanjut Mode Terbatas
-              </button>
+              <div className="mt-1 pt-2 border-t border-rose-500/20 flex items-start gap-2">
+                <span className="material-symbols-outlined text-xs text-amber-400 mt-0.5 shrink-0">admin_panel_settings</span>
+                <p className="text-[10px] text-on-surface-variant font-bold leading-tight">
+                  Kamera diwajibkan untuk sesi ini. Jika perangkat berkendala teknis, hubungi Guru/Proktor agar dapat mengaktifkan <span className="text-amber-400 font-black">Mode Terbatas</span> melalui panel Guru.
+                </p>
+              </div>
             </div>
           )}
 
@@ -3737,16 +3823,19 @@ export default function StudentRemedialLayer({
             {/* Camera + Face Status Row */}
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full animate-pulse ${
+                examMode === 'LIMITED' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]' :
                 faceStatus === 'calibrating' ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.7)]' :
                 faceStatus === 'not_detected' ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.7)]' :
                 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]'
               }`} />
               <span className={`text-[10px] font-black tracking-widest font-outfit ${
+                examMode === 'LIMITED' ? 'text-emerald-400' :
                 faceStatus === 'calibrating' ? 'text-blue-400' :
                 faceStatus === 'not_detected' ? 'text-amber-400' :
                 'text-emerald-400'
               }`}>
-                {faceStatus === 'calibrating' ? 'Kamera aktif · Kalibrasi...' :
+                {examMode === 'LIMITED' ? 'Mode Terbatas Aktif' :
+                 faceStatus === 'calibrating' ? 'Kamera aktif · Kalibrasi...' :
                  faceStatus === 'not_detected' ? 'Kamera aktif · Wajah tidak terlihat' :
                  'Kamera aktif · Mata terdeteksi'}
               </span>
@@ -3777,13 +3866,21 @@ export default function StudentRemedialLayer({
           {/* Desktop/Camera View Wrapper: visible on desktop, kept alive off-screen with real dimensions for mobile WebKit */}
           <div className="pointer-events-none transition-all duration-500 overflow-hidden absolute md:static -top-[9999px] left-0 w-32 h-24 opacity-[0.01] md:top-auto md:w-full md:h-full md:opacity-100">
             <div className="w-full h-full pointer-events-auto">
-              <ProctoringCamera 
-                ref={videoRef} 
-                onViolation={handleCameraViolation} 
-                onCameraError={handleCameraErrorDuringExam}
-                onCameraReady={handleCameraReadyDuringExam}
-                onFaceStatus={setFaceStatus}
-              />
+              {examMode !== 'LIMITED' ? (
+                <ProctoringCamera 
+                  ref={videoRef} 
+                  onViolation={handleCameraViolation} 
+                  onCameraError={handleCameraErrorDuringExam}
+                  onCameraReady={handleCameraReadyDuringExam}
+                  onFaceStatus={setFaceStatus}
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center text-center p-3 bg-slate-900 border border-emerald-500/20 rounded-2xl select-none">
+                  <ShieldCheck size={28} className="text-emerald-400 mb-1" />
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">Mode Terbatas</span>
+                  <span className="text-[8px] font-bold text-slate-400">Izin Guru • Tanpa Kamera</span>
+                </div>
+              )}
             </div>
             
             {/* Desktop-only overlays */}

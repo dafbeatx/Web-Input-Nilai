@@ -47,9 +47,9 @@ export async function subscribeUser(studentAccountId: string): Promise<boolean> 
     }
 
     // 3. Subscribe to the push service
-    const subscribeOptions = {
+    const subscribeOptions: PushSubscriptionOptionsInit = {
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as any,
+      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as unknown as BufferSource,
     };
 
     const subscription = await registration.pushManager.subscribe(subscribeOptions);

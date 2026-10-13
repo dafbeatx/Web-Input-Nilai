@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
 
       // Fallback: If unique constraint on (session_id, student_id) is not active yet, update or insert one by one
       console.warn('[OralExams Upsert Fallback] Attempting sequential record upsert:', upsertError.message);
-      const results: any[] = [];
+      const results: OralExamRecord[] = [];
       for (const rec of processedRecords) {
         const { data: existing } = await supabaseAdmin
           .from('gm_oral_exams')

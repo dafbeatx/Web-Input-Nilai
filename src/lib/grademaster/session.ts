@@ -18,7 +18,7 @@ export interface RemedialSession {
   remedialQuestions?: string[];
   remedialTimer?: number;
   examMode?: 'STRICT' | 'LIMITED';
-  cameraStatus?: 'ACTIVE' | 'FAILED';
+  cameraStatus?: 'ACTIVE' | 'FAILED' | 'LIMITED';
   extendedTime?: number;
   lastUpdated?: number;
   kkm?: number;

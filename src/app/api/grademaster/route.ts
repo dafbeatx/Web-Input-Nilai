@@ -419,8 +419,8 @@ export async function POST(req: NextRequest) {
     }
 
     const studentColumns = isReadOnly
-      ? 'id, name, correct, wrong, mcq_score, essay_score, final_score, csi, lps, remedial_status, original_score, remedial_score, final_score_locked, remedial_attempts, essay_score_auto, essay_score_manual, essay_score_final'
-      : 'id, name, mcq_answers, essay_scores, correct, wrong, mcq_score, essay_score, final_score, csi, lps, remedial_status, remedial_location, remedial_photo, remedial_answers, remedial_note, original_score, remedial_score, final_score_locked, is_cheated, teacher_reviewed, cheating_flags, remedial_attempts, essay_score_auto, essay_score_manual, essay_score_final, essay_auto_details';
+      ? 'id, name, correct, wrong, mcq_score, essay_score, final_score, csi, lps, remedial_status, original_score, remedial_score, final_score_locked, remedial_attempts, essay_score_auto, essay_score_manual, essay_score_final, exam_mode, camera_status'
+      : 'id, name, mcq_answers, essay_scores, correct, wrong, mcq_score, essay_score, final_score, csi, lps, remedial_status, remedial_location, remedial_photo, remedial_answers, remedial_note, original_score, remedial_score, final_score_locked, is_cheated, teacher_reviewed, cheating_flags, remedial_attempts, essay_score_auto, essay_score_manual, essay_score_final, essay_auto_details, exam_mode, camera_status';
 
     interface DBStudentRow {
       id: string;
@@ -450,6 +450,8 @@ export async function POST(req: NextRequest) {
       essay_score_manual?: number | null;
       essay_score_final?: number | null;
       essay_auto_details?: { similarity: number; score: number }[];
+      exam_mode?: 'STRICT' | 'LIMITED';
+      camera_status?: string;
     }
 
     interface StudentQueryBuilder {
@@ -521,6 +523,8 @@ export async function POST(req: NextRequest) {
         essayScoreManual: (s.essay_score_manual !== null && s.essay_score_manual !== undefined) ? Number(s.essay_score_manual) : undefined,
         essayScoreFinal: (s.essay_score_final !== null && s.essay_score_final !== undefined) ? Number(s.essay_score_final) : undefined,
         essayAutoDetails: isReadOnly ? undefined : s.essay_auto_details,
+        examMode: s.exam_mode || 'STRICT',
+        cameraStatus: s.camera_status || 'ACTIVE',
       };
     });
 

@@ -108,6 +108,8 @@ export default function RemedialDashboardLayer({
   const [reviewingStudentId, setReviewingStudentId] = useState<string | null>(null);
   const [finalizingStudentId, setFinalizingStudentId] = useState<string | null>(null);
   const [resettingStudentId, setResettingStudentId] = useState<string | null>(null);
+  const [togglingModeStudentId, setTogglingModeStudentId] = useState<string | null>(null);
+  const [studentModes, setStudentModes] = useState<Record<string, 'STRICT' | 'LIMITED'>>({});
   const [loadingSecurityAnalysis, setLoadingSecurityAnalysis] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [openEditorOnLoad, setOpenEditorOnLoad] = useState(false);
@@ -311,6 +313,37 @@ export default function RemedialDashboardLayer({
       alert('Gagal mereset data remedial. Silakan coba lagi.');
     } finally {
       setResettingStudentId(null);
+    }
+  };
+
+  const handleToggleExamMode = async (e: React.MouseEvent, id: string, name: string, currentMode?: string) => {
+    e.stopPropagation();
+    const activeMode = studentModes[id] || currentMode || 'STRICT';
+    const targetMode = activeMode === 'LIMITED' ? 'STRICT' : 'LIMITED';
+    const confirmMsg = targetMode === 'LIMITED'
+      ? `Aktifkan Mode Terbatas untuk siswa "${name}"?\nSiswa diizinkan mengerjakan remedial tanpa deteksi kamera.`
+      : `Kembalikan ke Mode Kamera (Ketat) untuk siswa "${name}"?\nSiswa wajib mengaktifkan kamera saat remedial.`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setTogglingModeStudentId(id);
+    try {
+      const res = await fetch('/api/grademaster/students/remedial/mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: id, examMode: targetMode })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Gagal mengubah mode ujian');
+      }
+      setStudentModes(prev => ({ ...prev, [id]: targetMode }));
+      if (onRefresh) onRefresh();
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      alert(errMsg || 'Gagal mengubah mode ujian.');
+    } finally {
+      setTogglingModeStudentId(null);
     }
   };
 
@@ -707,6 +740,28 @@ export default function RemedialDashboardLayer({
                               </span>
                            </button>
                          )}
+
+                         <button 
+                           onClick={(e) => handleToggleExamMode(e, student.id, student.name, student.examMode)}
+                           disabled={!isAdmin || togglingModeStudentId === student.id}
+                           className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all disabled:opacity-30 active:scale-95 ${
+                             (studentModes[student.id] || student.examMode) === 'LIMITED'
+                               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                               : 'bg-surface-container-high border-outline-variant/30 text-on-surface-variant hover:text-white'
+                           }`}
+                           title={(studentModes[student.id] || student.examMode) === 'LIMITED' ? 'Mode Terbatas Aktif (Klik untuk kembalikan ke Mode Kamera)' : 'Mode Kamera Wajib (Klik untuk aktifkan Mode Terbatas)'}
+                         >
+                            <span className="material-symbols-outlined text-[13px]">
+                              {(studentModes[student.id] || student.examMode) === 'LIMITED' ? 'no_photography' : 'videocam'}
+                            </span>
+                            <span className="text-[9px] font-black uppercase tracking-widest leading-none">
+                              {togglingModeStudentId === student.id 
+                                ? "Menyimpan..." 
+                                : (studentModes[student.id] || student.examMode) === 'LIMITED' 
+                                ? "Mode Terbatas" 
+                                : "Kamera Wajib"}
+                            </span>
+                         </button>
 
                          <button 
                           onClick={(e) => handleResetRemedial(e, student.id, student.name)}

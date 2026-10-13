@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { sessionId, id, name, mcqAnswers, essayScores, mcqScore, essayScore, finalScore, csi, lps, correct, wrong, answerKey } = body;
+    const { sessionId, name, mcqAnswers, essayScores, mcqScore, essayScore, finalScore, csi, lps, correct, wrong, answerKey } = body;
 
     if (!sessionId || !name) {
       return NextResponse.json({ error: 'Session ID dan nama siswa wajib diisi' }, { status: 400 });
@@ -156,7 +156,38 @@ export async function GET(req: NextRequest) {
 
     const config = sessionData?.scoring_config || { pgWeight: 0.7, essayWeight: 0.3 };
 
-    const students = (data || []).map((s: any) => {
+    interface StudentRow {
+      id: string;
+      name: string;
+      mcq_answers?: Record<number, string>;
+      essay_scores?: number[];
+      correct?: number;
+      wrong?: number;
+      mcq_score?: number;
+      essay_score?: number;
+      final_score?: number;
+      csi?: number;
+      lps?: number;
+      remedial_status?: string;
+      remedial_location?: string;
+      remedial_answers?: string[];
+      remedial_note?: string;
+      original_score?: number;
+      remedial_score?: number;
+      final_score_locked?: number;
+      is_cheated?: boolean;
+      teacher_reviewed?: boolean;
+      cheating_flags?: string[];
+      remedial_attempts?: number;
+      essay_score_auto?: number;
+      essay_score_manual?: number;
+      essay_score_final?: number;
+      essay_auto_details?: { similarity: number; score: number }[];
+      exam_mode?: 'STRICT' | 'LIMITED';
+      camera_status?: string;
+    }
+
+    const students = (data || []).map((s: StudentRow) => {
       let finalScore = Number(s.final_score);
       const mcqScore = Number(s.mcq_score);
       const essayScore = Number(s.essay_score);
@@ -195,6 +226,8 @@ export async function GET(req: NextRequest) {
       essayScoreManual: s.essay_score_manual,
       essayScoreFinal: s.essay_score_final,
       essayAutoDetails: s.essay_auto_details,
+      examMode: s.exam_mode || 'STRICT',
+      cameraStatus: s.camera_status || 'ACTIVE',
       };
     });
 

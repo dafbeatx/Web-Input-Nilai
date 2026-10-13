@@ -101,6 +101,8 @@ export interface GradedStudent {
   essayScoreFinal?: number;
   essayAutoDetails?: { similarity: number; score: number }[];
   remedialExtendedTime?: number;
+  examMode?: 'STRICT' | 'LIMITED';
+  cameraStatus?: string;
 }
 
 export interface SessionData {
