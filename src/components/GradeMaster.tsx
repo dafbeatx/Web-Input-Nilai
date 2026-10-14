@@ -36,6 +36,7 @@ import DataCenterLayer from "@/components/grademaster/DataCenterLayer";
 import StudentAccountsLayer from "./grademaster/StudentAccountsLayer";
 import OralExamsLayer from "./grademaster/OralExamsLayer";
 import GamesLayer from "./grademaster/GamesLayer";
+import GameManagementLayer from "./grademaster/GameManagementLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 import { subscribeUser, checkSubscriptionStatus } from "@/lib/grademaster/pushHelper";
 
@@ -1401,6 +1402,13 @@ export default function GradeMaster() {
           onBack={() => setLayer("home")}
           setToast={setToast}
           initialClass={studentClass}
+        />
+      )}
+
+      {layer === "game_management" && isAdmin && (
+        <GameManagementLayer
+          onBack={() => setLayer("home")}
+          setToast={setToast}
         />
       )}
 

@@ -202,6 +202,14 @@ export default function Navbar() {
                     <Mic size={18} /> Ujian Lisan
                   </button>
                   <button
+                    onClick={() => onNavigate('game_management')}
+                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                      layer === 'game_management' ? 'bg-amber-600 text-white shadow-md shadow-amber-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                    }`}
+                  >
+                    <Gamepad2 size={18} /> Manajemen Game
+                  </button>
+                  <button
                     onClick={() => onNavigate('lesson_management')}
                     className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
                       layer === 'lesson_management' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
@@ -535,6 +543,19 @@ export default function Navbar() {
                     <div>
                       <span className="text-[11px] font-bold text-on-surface block leading-tight">Ujian Lisan</span>
                       <span className="text-[9px] font-medium text-on-surface-variant">Penilaian BTQ, Hafalan & Bahasa</span>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => { onNavigate('game_management'); setIsMobileMenuOpen(false); }} 
+                    className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center">
+                      <Gamepad2 size={18} className="text-amber-500" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-on-surface block leading-tight">Manajemen Game</span>
+                      <span className="text-[9px] font-medium text-on-surface-variant">Bank soal catur & kuis duel</span>
                     </div>
                   </button>
 

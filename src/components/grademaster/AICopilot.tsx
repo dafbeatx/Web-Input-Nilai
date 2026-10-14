@@ -200,7 +200,8 @@ export default function AICopilot() {
       remedial_management: "Kelola Soal Remedial",
       data_center: "Pusat Data Terpadu",
       oral_exams: "Penilaian Ujian Lisan",
-      games: "Zona Games Edukasi"
+      games: "Zona Games Edukasi",
+      game_management: "Manajemen Game & Bank Soal"
     };
 
     setMessages(prev => [
