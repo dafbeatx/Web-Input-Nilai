@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   ArrowLeft, RotateCcw, Volume2, VolumeX, 
-  Trophy, Sparkles, HelpCircle, CheckCircle2, 
-  XCircle, Clock, Zap, BookOpen, Bot, Users
+  Trophy, Sparkles, CheckCircle2, 
+  XCircle, Clock, Zap, Bot, Users
 } from 'lucide-react';
 import { 
   GameQuestion, 
@@ -247,23 +247,6 @@ export default function ChessGame({ initialSubject = 'Matematika', onBack }: Che
 
   const [duelTimeLeft, setDuelTimeLeft] = useState(30);
 
-  // Timer countdown for duel
-  useEffect(() => {
-    if (!activeDuel || activeDuel.answered) return;
-    const interval = setInterval(() => {
-      setDuelTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          handleAnswerSelect(-1); // Timeout penalty
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [activeDuel]);
-
   // Compute standard legal moves for a given piece on board
   const getLegalMoves = useCallback((pos: Position, currentBoard: BoardState): Position[] => {
     const piece = currentBoard[pos.r][pos.c];
@@ -406,7 +389,7 @@ export default function ChessGame({ initialSubject = 'Matematika', onBack }: Che
   }, [soundEnabled]);
 
   // Trigger duel when a capture happens
-  const initiateDuel = (move: Move) => {
+  const initiateDuel = useCallback((move: Move) => {
     const question = GameQuestionsService.getRandomQuestionForDuel(selectedSubject);
     setDuelTimeLeft(30);
     setActiveDuel({
@@ -416,10 +399,10 @@ export default function ChessGame({ initialSubject = 'Matematika', onBack }: Che
       isCorrect: null,
       selectedOption: null
     });
-  };
+  }, [selectedSubject]);
 
   // Handle player answer in duel modal
-  const handleAnswerSelect = (optionIdx: number) => {
+  const handleAnswerSelect = useCallback((optionIdx: number) => {
     if (!activeDuel || activeDuel.answered) return;
 
     const isCorrect = optionIdx === activeDuel.question.correct_index;
@@ -453,7 +436,24 @@ export default function ChessGame({ initialSubject = 'Matematika', onBack }: Che
         setCurrentTurn(prev => (prev === 'w' ? 'b' : 'w'));
       }, 2500);
     }
-  };
+  }, [activeDuel, soundEnabled, applyMove]);
+
+  // Timer countdown for duel
+  useEffect(() => {
+    if (!activeDuel || activeDuel.answered) return;
+    const interval = setInterval(() => {
+      setDuelTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          handleAnswerSelect(-1); // Timeout penalty
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeDuel, handleAnswerSelect]);
 
   // Bot Turn (AI)
   useEffect(() => {
@@ -499,7 +499,7 @@ export default function ChessGame({ initialSubject = 'Matematika', onBack }: Che
     }, 800);
 
     return () => clearTimeout(timer);
-  }, [currentTurn, gameMode, winner, activeDuel, board, getLegalMoves, applyMove]);
+  }, [currentTurn, gameMode, winner, activeDuel, board, getLegalMoves, applyMove, initiateDuel]);
 
   // Click on Board Square
   const handleSquareClick = (r: number, c: number) => {
