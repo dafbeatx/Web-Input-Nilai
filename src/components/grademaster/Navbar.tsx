@@ -17,15 +17,19 @@ import {
   User,
   BookOpen,
   Database,
-  Mic
+  Mic,
+  Gamepad2
 } from 'lucide-react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Layer } from '@/lib/grademaster/types';
 import NeonGraduationCap from '@/components/grademaster/ui/NeonGraduationCap';
 import Image from 'next/image';
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const { 
     isAdmin, 
@@ -73,13 +77,22 @@ export default function Navbar() {
 
   const onOpenSettings = () => setModal("adminSettings");
 
+  const handleNavigate = (targetLayer: Layer) => {
+    if (pathname !== '/') {
+      router.push(`/#${targetLayer}`);
+    } else {
+      onNavigate(targetLayer);
+    }
+  };
+
   const isActive = (target: string) => {
-    if (target === 'exam') return ['home', 'setup', 'dashboard', 'grading'].includes(layer);
-    if (target === 'behavior') return layer === 'behavior';
-    if (target === 'attendance') return layer === 'attendance';
-    if (target === 'remedial') return layer === 'remedial_dashboard';
-    if (target === 'data_center') return layer === 'data_center';
-    if (target === 'student_lesson') return layer === 'student_lesson';
+    if (target === 'games') return pathname === '/games';
+    if (target === 'exam') return ['home', 'setup', 'dashboard', 'grading'].includes(layer) && pathname === '/';
+    if (target === 'behavior') return (layer === 'behavior' && pathname === '/') || pathname === '/behavior';
+    if (target === 'attendance') return layer === 'attendance' && pathname === '/';
+    if (target === 'remedial') return layer === 'remedial_dashboard' && pathname === '/';
+    if (target === 'data_center') return layer === 'data_center' && pathname === '/';
+    if (target === 'student_lesson') return layer === 'student_lesson' && pathname === '/';
     return false;
   };
 
@@ -128,42 +141,51 @@ export default function Navbar() {
           {/* Navigation Items */}
           <div className="flex flex-col gap-2.5 flex-1 overflow-y-auto pr-1 custom-scrollbar">
             <button
-                onClick={() => onNavigate('home')}
-                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                onClick={() => handleNavigate('home')}
+                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] ${
                   isActive('exam') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                 }`}
             >
                 <Home size={18} /> Beranda
             </button>
             <button
-                onClick={() => onNavigate('behavior')}
-                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                onClick={() => handleNavigate('behavior')}
+                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] ${
                   isActive('behavior') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                 }`}
             >
                 <ShieldCheck size={18} /> Sikap
             </button>
             <button
-                onClick={() => onNavigate('attendance')}
-                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                onClick={() => handleNavigate('attendance')}
+                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] ${
                   isActive('attendance') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                 }`}
             >
                 <Calendar size={18} /> Kehadiran
             </button>
-
             {(isStudent || isParent) && (
                 <>
                   <div className="my-2 border-t border-slate-200/60"></div>
                   <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider px-3 mb-1">Portal Siswa</span>
                   <button
-                    onClick={() => onNavigate('student_lesson')}
+                    onClick={() => handleNavigate('student_lesson')}
                     className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] ${
                       isActive('student_lesson') ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                     }`}
                   >
                     <BookOpen size={18} /> Pelajaran Saya
                   </button>
+                  {isStudent && (
+                    <Link
+                      href="/games"
+                      className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] ${
+                        isActive('games') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                      }`}
+                    >
+                      <Gamepad2 size={18} /> Games
+                    </Link>
+                  )}
                 </>
             )}
 
@@ -361,7 +383,7 @@ export default function Navbar() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════
-          MOBILE BOTTOM NAVIGATION — Floating Pill Bar
+          MOBILE BOTTOM NAVIGATION (Floating Pill Bar)
        ═══════════════════════════════════════════════════════════ */}
       <nav 
         id="mobile-bottom-nav" 
@@ -369,12 +391,12 @@ export default function Navbar() {
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* Floating container */}
-        <div className="mx-4 mb-2 bg-white/90 backdrop-blur-2xl rounded-2xl border border-surface-container-high/50 shadow-[0_-4px_30px_rgba(0,0,0,0.06)] px-2 py-1.5">
+        <div className="mx-4 mb-2 bg-white/90 backdrop-blur-2xl rounded-2xl border border-surface-container-high/50 shadow-[0_-4px_30px_rgba(0,0,0,0.06)] px-1.5 py-1.5">
           <div className="flex items-center justify-around">
             {/* Beranda */}
             <button 
-              onClick={() => onNavigate('home')}
-              className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
+              onClick={() => handleNavigate('home')}
+              className={`flex flex-col items-center justify-center py-2 px-1.5 sm:px-3 rounded-xl transition-all duration-300 min-h-[44px] min-w-[44px] ${
                 isActive('exam') 
                   ? 'bg-primary-container/20 text-on-primary-fixed' 
                   : 'text-on-surface-variant/60 hover:text-on-surface-variant'
@@ -386,8 +408,8 @@ export default function Navbar() {
             
             {/* Sikap */}
             <button 
-              onClick={() => onNavigate('behavior')}
-              className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
+              onClick={() => handleNavigate('behavior')}
+              className={`flex flex-col items-center justify-center py-2 px-1.5 sm:px-3 rounded-xl transition-all duration-300 min-h-[44px] min-w-[44px] ${
                 isActive('behavior') 
                   ? 'bg-primary-container/20 text-on-primary-fixed' 
                   : 'text-on-surface-variant/60 hover:text-on-surface-variant'
@@ -399,8 +421,8 @@ export default function Navbar() {
 
             {/* Kehadiran */}
             <button 
-              onClick={() => onNavigate('attendance')}
-              className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
+              onClick={() => handleNavigate('attendance')}
+              className={`flex flex-col items-center justify-center py-2 px-1.5 sm:px-3 rounded-xl transition-all duration-300 min-h-[44px] min-w-[44px] ${
                 isActive('attendance') 
                   ? 'bg-primary-container/20 text-on-primary-fixed' 
                   : 'text-on-surface-variant/60 hover:text-on-surface-variant'
@@ -410,12 +432,11 @@ export default function Navbar() {
               <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('attendance') ? 'opacity-100' : 'opacity-70'}`}>Absen</span>
             </button>
 
-
             {/* Pelajaran Saya (Mobile Bottom Item) */}
             {(isStudent || isParent) && (
               <button 
-                onClick={() => onNavigate('student_lesson')}
-                className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
+                onClick={() => handleNavigate('student_lesson')}
+                className={`flex flex-col items-center justify-center py-2 px-1.5 sm:px-3 rounded-xl transition-all duration-300 min-h-[44px] min-w-[44px] ${
                   isActive('student_lesson') 
                     ? 'bg-primary-container/20 text-on-primary-fixed' 
                     : 'text-on-surface-variant/60 hover:text-on-surface-variant'
@@ -426,10 +447,25 @@ export default function Navbar() {
               </button>
             )}
 
+            {/* Games (Hanya di mode siswa) */}
+            {isStudent && (
+              <Link 
+                href="/games"
+                className={`flex flex-col items-center justify-center py-2 px-1.5 sm:px-3 rounded-xl transition-all duration-300 min-h-[44px] min-w-[44px] ${
+                  isActive('games') 
+                    ? 'bg-primary-container/20 text-on-primary-fixed' 
+                    : 'text-on-surface-variant/60 hover:text-on-surface-variant'
+                }`}
+              >
+                <Gamepad2 size={20} strokeWidth={isActive('games') ? 2.5 : 1.8} />
+                <span className={`text-[9px] font-bold mt-0.5 tracking-wide transition-all ${isActive('games') ? 'opacity-100' : 'opacity-70'}`}>Games</span>
+              </Link>
+            )}
+
             {/* More Menu / Profile */}
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ${
+              className={`flex flex-col items-center justify-center py-2 px-1.5 sm:px-3 rounded-xl transition-all duration-300 min-h-[44px] min-w-[44px] ${
                 isMobileMenuOpen 
                   ? 'bg-surface-container text-on-surface' 
                   : 'text-on-surface-variant/60 hover:text-on-surface-variant'
@@ -554,7 +590,6 @@ export default function Navbar() {
                     </div>
                   </button>
 
-                  
                   <button 
                     onClick={() => { onOpenSettings(); setIsMobileMenuOpen(false); }} 
                     className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container"
@@ -625,6 +660,22 @@ export default function Navbar() {
                       <span className="text-[9px] font-medium text-on-surface-variant">Lihat materi & kuis harian</span>
                     </div>
                   </button>
+
+                  {isStudent && (
+                    <Link 
+                      href="/games"
+                      onClick={() => setIsMobileMenuOpen(false)} 
+                      className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container min-h-[44px]"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-purple-500/15 flex items-center justify-center">
+                        <Gamepad2 size={18} className="text-purple-600" />
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-bold text-on-surface block leading-tight">Games</span>
+                        <span className="text-[9px] font-medium text-on-surface-variant">Zona edukasi & permainan interaktif</span>
+                      </div>
+                    </Link>
+                  )}
 
                   {!isParent && (
                     <button 

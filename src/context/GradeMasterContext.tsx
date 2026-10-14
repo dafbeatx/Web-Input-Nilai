@@ -128,7 +128,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
         'home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 
         'remedial_dashboard', 'login', 'attendance', 'student_accounts', 
         'student_login', 'student_claim', 'teacher_claim', 'lesson_management', 
-        'remedial_management', 'data_center', 'student_profile', 'student_lesson', 'oral_exams'
+        'remedial_management', 'data_center', 'student_profile', 'student_lesson', 'oral_exams', 'games'
       ];
       if (validLayers.includes(hash)) {
         return hash;
@@ -178,7 +178,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
       'home', 'setup', 'dashboard', 'grading', 'remedial', 'behavior', 
       'remedial_dashboard', 'login', 'attendance', 'student_accounts', 
       'student_login', 'student_claim', 'teacher_claim', 'lesson_management', 
-      'remedial_management', 'data_center', 'student_profile', 'student_lesson', 'oral_exams'
+      'remedial_management', 'data_center', 'student_profile', 'student_lesson', 'oral_exams', 'games'
     ];
 
     const savedClass = safeLocalStorage.getItem('gm_studentClass');
@@ -730,7 +730,7 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
   // Navigate and apply Auth guards dynamically
   const navigate = (newLayer: Layer, bypassGuards: boolean = false) => {
     const adminOnlyLayers = ['setup', 'dashboard', 'grading', 'student_accounts', 'lesson_management', 'remedial_management', 'data_center', 'oral_exams'];
-    const protectedLayers = ['remedial', 'student_lesson', 'student_profile'];
+    const protectedLayers = ['remedial', 'student_lesson', 'student_profile', 'games'];
     const authLayers = ['login', 'student_login'];
 
     const isIframe = typeof window !== 'undefined' && window.self !== window.top;

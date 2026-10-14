@@ -35,6 +35,7 @@ import RemedialManagementLayer from "@/components/grademaster/RemedialManagement
 import DataCenterLayer from "@/components/grademaster/DataCenterLayer";
 import StudentAccountsLayer from "./grademaster/StudentAccountsLayer";
 import OralExamsLayer from "./grademaster/OralExamsLayer";
+import GamesLayer from "./grademaster/GamesLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 import { subscribeUser, checkSubscriptionStatus } from "@/lib/grademaster/pushHelper";
 
@@ -1349,6 +1350,12 @@ export default function GradeMaster() {
           semester={semester}
           isTab={false}
           studentClassOverride={studentData?.class_name || studentClass}
+        />
+      )}
+
+      {layer === "games" && (
+        <GamesLayer
+          onBack={() => setLayer("home")}
         />
       )}
 
