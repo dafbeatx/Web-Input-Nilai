@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { calculateOralPredicate, calculateChecklistScore, OralExamRecord } from '@/lib/grademaster/types';
 
-function getCorsHeaders(req?: NextRequest) {
+function getCorsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
@@ -10,17 +10,17 @@ function getCorsHeaders(req?: NextRequest) {
   };
 }
 
-export async function OPTIONS(req: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
-    headers: getCorsHeaders(req),
+    headers: getCorsHeaders(),
   });
 }
 
-function jsonResponse(data: unknown, status = 200, req?: NextRequest) {
+function jsonResponse(data: unknown, status = 200, _req?: NextRequest) {
   return NextResponse.json(data, {
     status,
-    headers: getCorsHeaders(req),
+    headers: getCorsHeaders(),
   });
 }
 
