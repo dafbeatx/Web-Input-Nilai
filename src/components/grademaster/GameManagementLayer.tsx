@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  ArrowLeft, Plus, Search, Filter, Trash2, 
-  Pencil, CheckCircle2, RotateCcw, HelpCircle, 
-  Sparkles, BookOpen, Gamepad2, Save, X, Eye
+  ArrowLeft, Plus, Search, Trash2, 
+  Pencil, CheckCircle2, RotateCcw, 
+  Gamepad2, Save, X, Eye
 } from 'lucide-react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import { 
@@ -43,21 +43,26 @@ export default function GameManagementLayer({ onBack, setToast: setToastProp }: 
   // Preview Question Modal
   const [previewQuestion, setPreviewQuestion] = useState<GameQuestion | null>(null);
 
-  // Load questions on mount
-  const loadQuestions = async () => {
-    setIsLoading(true);
-    try {
-      const data = await GameQuestionsService.fetchQuestions();
-      setQuestions(data);
-    } catch (e) {
-      console.warn('Failed loading questions:', e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Load questions on mount asynchronously without synchronous setState
   useEffect(() => {
-    loadQuestions();
+    let isMounted = true;
+    GameQuestionsService.fetchQuestions()
+      .then((data) => {
+        if (isMounted) {
+          setQuestions(data);
+          setIsLoading(false);
+        }
+      })
+      .catch((e) => {
+        console.warn('Failed loading questions:', e);
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Filtered list
