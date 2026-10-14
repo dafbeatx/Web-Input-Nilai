@@ -12,7 +12,8 @@ import {
   Activity, DownloadCloud, User,
   Settings, LogOut, Share2, Trophy, TrendingUp,
   Home, BookOpen, Upload, GraduationCap, Bug, ArrowRight, Info, Scroll,
-  Smartphone, Laptop, RefreshCw, Mic, CheckCircle2, XCircle, ChevronDown, ChevronUp, Award
+  Smartphone, Laptop, RefreshCw, Mic, CheckCircle2, XCircle, ChevronDown, ChevronUp, Award,
+  Gamepad2
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, Tooltip, 
@@ -31,6 +32,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import StudentLessonLayer from './StudentLessonLayer';
+import GamesLayer from './GamesLayer';
 
 interface BehaviorLog {
   id: string;
@@ -96,7 +98,7 @@ export default function StudentProfileLayer({
   const { isParent } = useGradeMaster();
   const [totalPoints, setTotalPoints] = useState(initialPoints);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(avatarUrl);
-  const [activeTab, setActiveTab] = useState<'HOME' | 'GRADES' | 'LESSON' | 'ATTENDANCE' | 'ACCOUNT'>('HOME');
+  const [activeTab, setActiveTab] = useState<'HOME' | 'GRADES' | 'LESSON' | 'ATTENDANCE' | 'ACCOUNT' | 'GAMES'>('HOME');
   const [activeClass, setActiveClass] = useState(className);
   const [activeYear, setActiveYear] = useState(academicYear);
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
@@ -1676,6 +1678,7 @@ export default function StudentProfileLayer({
                 {activeTab === 'LESSON' && (isParent ? "Pelajaran Ananda" : "Pelajaran Saya")}
                 {activeTab === 'ATTENDANCE' && "Kehadiran Siswa"}
                 {activeTab === 'ACCOUNT' && (isParent ? "Data Ananda & Rapor" : "Berkas & Profil")}
+                {activeTab === 'GAMES' && "Games Edukasi"}
               </h2>
             </div>
           )}
@@ -1719,7 +1722,11 @@ export default function StudentProfileLayer({
         </header>
 
         {/* Main Content Area */}
-        {activeTab !== 'LESSON' ? (
+        {activeTab === 'GAMES' ? (
+          <div className="flex-1 overflow-y-auto no-scrollbar pt-safe">
+            <GamesLayer onBack={() => setActiveTab('HOME')} />
+          </div>
+        ) : activeTab !== 'LESSON' ? (
           <main className="flex-1 overflow-y-auto px-3.5 py-3 space-y-3.5 no-scrollbar pb-28">
             
                {activeTab === 'HOME' && (
@@ -3484,13 +3491,26 @@ export default function StudentProfileLayer({
           <button 
             type="button"
             onClick={() => setActiveTab('LESSON')}
-            className={`flex flex-col items-center justify-center gap-0.5 min-h-[46px] min-w-[50px] px-2 py-1 rounded-xl transition-all ${
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[46px] min-w-[46px] px-1.5 py-1 rounded-xl transition-all ${
               activeTab === 'LESSON' ? 'text-indigo-600 font-bold bg-indigo-50/60' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <GraduationCap size={19} className={activeTab === 'LESSON' ? 'scale-105 stroke-[2.5]' : ''} />
             <span className="text-[10px] font-bold tracking-tight">Pelajaran</span>
           </button>
+
+          {!isParent && (
+            <button 
+              type="button"
+              onClick={() => setActiveTab('GAMES')}
+              className={`flex flex-col items-center justify-center gap-0.5 min-h-[46px] min-w-[46px] px-1.5 py-1 rounded-xl transition-all ${
+                activeTab === 'GAMES' ? 'text-indigo-600 font-bold bg-indigo-50/60' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Gamepad2 size={19} className={activeTab === 'GAMES' ? 'scale-105 stroke-[2.5]' : ''} />
+              <span className="text-[10px] font-bold tracking-tight">Games</span>
+            </button>
+          )}
 
           <button 
             type="button"

@@ -21,7 +21,7 @@ export default function GamesLayer({ onBack }: GamesLayerProps) {
   };
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center px-4 mobile-shell-padding">
+    <div className="min-h-[calc(100dvh-8rem)] py-6 flex flex-col items-center justify-center px-4">
       <div className="max-w-md w-full bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/50 text-center animate-in fade-in zoom-in-95 duration-300">
         <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 mx-auto flex items-center justify-center shadow-inner mb-5">
           <Gamepad2 size={32} strokeWidth={2.2} />
