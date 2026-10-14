@@ -2,6 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { calculateOralPredicate, calculateChecklistScore, OralExamRecord } from '@/lib/grademaster/types';
 
+function getCorsHeaders(req?: NextRequest) {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-sync-key, x-api-key',
+  };
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: getCorsHeaders(req),
+  });
+}
+
+function jsonResponse(data: unknown, status = 200, req?: NextRequest) {
+  return NextResponse.json(data, {
+    status,
+    headers: getCorsHeaders(req),
+  });
+}
+
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
@@ -42,25 +64,25 @@ export async function GET(req: NextRequest) {
       // If table does not exist yet in Supabase, return graceful empty list with warning
       if (error.code === '42P01' || error.message?.includes('does not exist') || error.message?.includes('schema cache')) {
         console.warn('[OralExams API] gm_oral_exams table not created yet in Supabase. Returning empty list.');
-        return NextResponse.json({
+        return jsonResponse({
           success: true,
           data: [],
           tableNotMigrated: true,
           message: 'Tabel gm_oral_exams belum dibuat di database. Jalankan file sql/create_gm_oral_exams_table.sql di Supabase SQL Editor.'
-        });
+        }, 200, req);
       }
       throw error;
     }
 
-    return NextResponse.json({
+    return jsonResponse({
       success: true,
       data: data || [],
       count: data?.length || 0
-    });
+    }, 200, req);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Gagal mengambil data ujian lisan';
     console.error('[OralExams GET error]:', err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonResponse({ error: message }, 500, req);
   }
 }
 
@@ -74,7 +96,7 @@ export async function POST(req: NextRequest) {
         : [];
 
     if (rawRecords.length === 0) {
-      return NextResponse.json({ error: 'Data ujian lisan tidak boleh kosong' }, { status: 400 });
+      return jsonResponse({ error: 'Data ujian lisan tidak boleh kosong' }, 400, req);
     }
 
     // Process and sanitize each record
@@ -149,13 +171,13 @@ export async function POST(req: NextRequest) {
     // Validate essential keys
     for (const rec of processedRecords) {
       if (!rec.session_id) {
-        return NextResponse.json({ error: 'ID sesi pengujian (session_id) wajib diisi' }, { status: 400 });
+        return jsonResponse({ error: 'Session ID wajib diisi' }, 400, req);
       }
       if (!rec.student_id || !rec.student_name) {
-        return NextResponse.json({ error: 'Identitas siswa wajib diisi' }, { status: 400 });
+        return jsonResponse({ error: 'Identitas siswa wajib diisi' }, 400, req);
       }
       if (!rec.class_name) {
-        return NextResponse.json({ error: 'Kelas wajib diisi' }, { status: 400 });
+        return jsonResponse({ error: 'Kelas wajib diisi' }, 400, req);
       }
     }
 
@@ -168,9 +190,9 @@ export async function POST(req: NextRequest) {
     if (upsertError) {
       // If table does not exist
       if (upsertError.code === '42P01' || upsertError.message?.includes('does not exist') || upsertError.message?.includes('schema cache')) {
-        return NextResponse.json({
+        return jsonResponse({
           error: 'Tabel gm_oral_exams belum ada di database. Silakan jalankan sql/create_gm_oral_exams_table.sql di Supabase SQL Editor terlebih dahulu.'
-        }, { status: 500 });
+        }, 500, req);
       }
 
       // Fallback: If unique constraint on (session_id, student_id) is not active yet, update or insert one by one
@@ -204,24 +226,24 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      return NextResponse.json({
+      return jsonResponse({
         success: true,
         message: `Berhasil menyimpan ${results.length} data ujian lisan`,
         count: results.length,
         data: results
-      });
+      }, 200, req);
     }
 
-    return NextResponse.json({
+    return jsonResponse({
       success: true,
       message: `Berhasil menyimpan ${upsertData?.length || processedRecords.length} data ujian lisan`,
       count: upsertData?.length || processedRecords.length,
       data: upsertData
-    });
+    }, 200, req);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Gagal menyimpan nilai ujian lisan';
     console.error('[OralExams POST error]:', err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonResponse({ error: message }, 500, req);
   }
 }
 
@@ -232,7 +254,7 @@ export async function DELETE(req: NextRequest) {
     const sessionId = searchParams.get('session_id');
 
     if (!id && !sessionId) {
-      return NextResponse.json({ error: 'Parameter id atau session_id wajib disertakan untuk menghapus' }, { status: 400 });
+      return jsonResponse({ error: 'Parameter id atau session_id wajib disertakan untuk menghapus' }, 400, req);
     }
 
     let query = supabaseAdmin.from('gm_oral_exams').delete();
@@ -246,13 +268,13 @@ export async function DELETE(req: NextRequest) {
     const { error } = await query;
     if (error) throw error;
 
-    return NextResponse.json({
+    return jsonResponse({
       success: true,
       message: 'Data ujian lisan berhasil dihapus'
-    });
+    }, 200, req);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Gagal menghapus data ujian lisan';
     console.error('[OralExams DELETE error]:', err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonResponse({ error: message }, 500, req);
   }
 }
