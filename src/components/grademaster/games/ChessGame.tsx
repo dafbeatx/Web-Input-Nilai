@@ -553,9 +553,9 @@ export default function ChessGame({ initialSubject = 'Matematika', onBack }: Che
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto flex flex-col items-center">
+    <div className="w-full max-w-xl mx-auto flex flex-col items-center space-y-3">
       {/* Top Header Bar */}
-      <div className="w-full flex items-center justify-between gap-2 mb-4 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-2xl p-3 shadow-sm">
+      <div className="w-full flex items-center justify-between gap-2 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-3 shadow-sm">
         <div className="flex items-center gap-2">
           <button
             onClick={onBack}
@@ -667,7 +667,7 @@ export default function ChessGame({ initialSubject = 'Matematika', onBack }: Che
         </div>
 
         {/* 2D CHESS BOARD (8x8) */}
-        <div className="relative w-full max-w-[420px] aspect-square rounded-2xl overflow-hidden border-4 border-slate-800 shadow-2xl bg-slate-900 select-none">
+        <div className="relative w-full max-w-[360px] aspect-square rounded-2xl overflow-hidden border-2 border-slate-800 shadow-xl bg-slate-900 select-none">
           <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
             {board.map((row, r) =>
               row.map((piece, c) => {
@@ -682,18 +682,17 @@ export default function ChessGame({ initialSubject = 'Matematika', onBack }: Che
                     type="button"
                     onClick={() => handleSquareClick(r, c)}
                     className={`relative flex items-center justify-center transition-all ${
-                      isLight ? 'bg-[#F1F5F9]' : 'bg-[#64748B]'
+                      isLight ? 'bg-[#EEEED2]' : 'bg-[#769656]'
                     } ${isSelected ? '!bg-amber-300 ring-2 ring-amber-500 z-10' : ''}`}
-                    style={{ minHeight: '44px' }}
                   >
                     {/* Square coordinate tags on edges */}
                     {c === 0 && (
-                      <span className={`absolute top-0.5 left-1 text-[8px] font-bold ${isLight ? 'text-slate-400' : 'text-slate-200'}`}>
+                      <span className={`absolute top-0.5 left-1 text-[8px] font-bold ${isLight ? 'text-[#769656]' : 'text-[#EEEED2]'}`}>
                         {8 - r}
                       </span>
                     )}
                     {r === 7 && (
-                      <span className={`absolute bottom-0.5 right-1 text-[8px] font-bold ${isLight ? 'text-slate-400' : 'text-slate-200'}`}>
+                      <span className={`absolute bottom-0.5 right-1 text-[8px] font-bold ${isLight ? 'text-[#769656]' : 'text-[#EEEED2]'}`}>
                         {String.fromCharCode(97 + c)}
                       </span>
                     )}
@@ -703,10 +702,10 @@ export default function ChessGame({ initialSubject = 'Matematika', onBack }: Che
 
                     {/* Move Indicators */}
                     {isValidMove && !isCapture && (
-                      <div className="w-3.5 h-3.5 rounded-full bg-emerald-500/70 shadow-sm pointer-events-none animate-pulse" />
+                      <div className="w-3.5 h-3.5 rounded-full bg-emerald-500/80 shadow-sm pointer-events-none animate-pulse" />
                     )}
                     {isCapture && (
-                      <div className="absolute inset-0 rounded-sm border-4 border-rose-500 bg-rose-500/25 pointer-events-none animate-pulse" />
+                      <div className="absolute inset-0 rounded-sm border-2 border-rose-500 bg-rose-500/30 pointer-events-none animate-pulse" />
                     )}
                   </button>
                 );
@@ -729,8 +728,8 @@ export default function ChessGame({ initialSubject = 'Matematika', onBack }: Che
           DUEL MODAL: QUESTION CHALLENGE UPON PIECE CAPTURE
       ═══════════════════════════════════════════════════════════ */}
       {activeDuel && (
-        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-7 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-2xl p-5 sm:p-6 text-center animate-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div className="flex items-center gap-2">
@@ -838,7 +837,7 @@ export default function ChessGame({ initialSubject = 'Matematika', onBack }: Che
           GAME OVER / WINNER MODAL
       ═══════════════════════════════════════════════════════════ */}
       {winner && (
-        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
           <div className="w-full max-w-sm bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 text-center animate-in zoom-in-95 duration-200">
             <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-500 mx-auto flex items-center justify-center mb-4 shadow-inner">
               <Trophy size={32} />

@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { 
-  Gamepad2, ArrowLeft, Sparkles, Play, 
-  Trophy, BookOpen, Clock, Star, Flame, ShieldAlert 
+  Gamepad2, ArrowLeft, Play, 
+  Trophy, BookOpen, Clock, Zap, 
+  CheckCircle2, Sparkles, Shield, Users, Bot
 } from "lucide-react";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 import ChessGame from "./games/ChessGame";
@@ -14,60 +14,31 @@ interface GamesLayerProps {
   onBack?: () => void;
 }
 
-interface GameItem {
-  id: string;
-  title: string;
-  subtitle: string;
-  category: string;
-  thumbnail: string;
-  isAvailable: boolean;
-  badge: string;
-  badgeColor: string;
-  description: string;
-  players: string;
-}
-
-const AVAILABLE_GAMES: GameItem[] = [
-  {
-    id: 'chess',
-    title: 'Catur Pintar',
-    subtitle: 'Battle of Minds 2D',
-    category: 'Strategi & Kuis',
-    thumbnail: '/games/chess_thumbnail.jpg',
-    isAvailable: true,
-    badge: 'Terpopuler',
-    badgeColor: 'bg-amber-500 text-white',
-    description: 'Game catur 2D interaktif. Setiap pion atau perwira yang dimakan memicu duel kuis mata pelajaran pilihanmu!',
-    players: '1 - 2 Pemain'
-  },
+const UPCOMING_GAMES = [
   {
     id: 'quick_quiz',
     title: 'Kuis Kilat Otak',
-    subtitle: 'Speed Run Quiz',
+    subtitle: 'Speed Run Quiz 10 Soal',
     category: 'Cepat Tepat',
-    thumbnail: '/games/chess_thumbnail.jpg', // Placeholder fallback
-    isAvailable: false,
-    badge: 'Segera Hadir',
-    badgeColor: 'bg-slate-200 text-slate-600',
-    description: 'Jawab 10 soal secepat mungkin untuk mengumpulkan streak poin dan medali kehormatan.',
-    players: 'Solo Run'
+    icon: Zap,
+    iconColor: 'text-amber-500 bg-amber-50 border-amber-200',
+    description: 'Jawab 10 soal secepat mungkin untuk mengumpulkan streak poin.',
+    status: 'Segera Hadir'
   },
   {
     id: 'word_puzzle',
     title: 'Susun Kata Cermat',
     subtitle: 'Vocabulary Quest',
-    category: 'Bahasa & Logika',
-    thumbnail: '/games/chess_thumbnail.jpg', // Placeholder fallback
-    isAvailable: false,
-    badge: 'Segera Hadir',
-    badgeColor: 'bg-slate-200 text-slate-600',
-    description: 'Tebak dan susun istilah penting mata pelajaran dalam teka-teki interaktif berwaktu.',
-    players: 'Solo Run'
+    category: 'Bahasa & Istilah',
+    icon: BookOpen,
+    iconColor: 'text-sky-500 bg-sky-50 border-sky-200',
+    description: 'Tebak dan susun istilah penting materi pelajaran berwaktu.',
+    status: 'Segera Hadir'
   }
 ];
 
 export default function GamesLayer({ onBack }: GamesLayerProps) {
-  const { isStudent, studentData, isAuthLoading, setLayer } = useGradeMaster();
+  const { studentData, setLayer } = useGradeMaster();
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
 
   const handleBackNavigation = () => {
@@ -85,168 +56,228 @@ export default function GamesLayer({ onBack }: GamesLayerProps) {
   // If a game is active, render its screen
   if (activeGameId === 'chess') {
     return (
-      <div className="w-full min-h-[calc(100dvh-8rem)] py-4 px-3 sm:px-4">
+      <div className="w-full min-h-[calc(100dvh-5rem)] py-2 px-2 sm:px-4">
         <ChessGame onBack={() => setActiveGameId(null)} />
       </div>
     );
   }
 
   return (
-    <div className="w-full min-h-[calc(100dvh-8rem)] py-5 px-3.5 sm:px-6 max-w-5xl mx-auto text-left">
-      {/* Top Banner & Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-slate-800 relative overflow-hidden">
-        <div className="relative z-10 max-w-xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-amber-300 border border-white/15 text-[11px] font-bold mb-2.5">
-            <Flame size={14} className="text-amber-400" />
-            <span>Zona Belajar Asyik & Gamifikasi</span>
+    <div className="w-full max-w-2xl mx-auto px-3.5 py-3 space-y-4 text-left pb-28">
+      {/* Top Banner (Compact & Integrated with Student Portal Style) */}
+      <div className="relative bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-4 sm:p-5 overflow-hidden flex items-center justify-between gap-3 shadow-sm border border-slate-800">
+        <div className="min-w-0 z-10 flex-1">
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full text-[9.5px] font-black uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Zona Gamifikasi
+            </span>
+            <span className="text-[10px] text-slate-300 font-semibold truncate">
+              {studentData?.name ? `Siswa: ${studentData.name.split(' ')[0]}` : 'GradeMaster Arena'}
+            </span>
           </div>
 
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white font-outfit">
-            Pusat Game Edukasi Siswa
+          <h1 className="text-white font-black text-base sm:text-lg leading-tight font-outfit truncate">
+            Arena Game Edukasi Siswa
           </h1>
 
-          <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed">
-            Asah kecerdasan logika dan kemampuan akademikmu lewat permainan seru. Setiap langkah menguji pengetahuanmu!
+          <p className="text-slate-300 text-[11px] font-medium mt-1 leading-relaxed line-clamp-2">
+            Asah strategi logika dan uji wawasan akademik. Setiap bidak dimakan memicu duel kuis!
           </p>
-
-          {studentData?.name && (
-            <p className="text-xs text-indigo-300 font-bold mt-2">
-              Pemain: <span className="text-white">{studentData.name}</span> {studentData.class_name ? `(Kelas ${studentData.class_name})` : ''}
-            </p>
-          )}
         </div>
 
-        <div className="relative z-10 flex sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0">
-          <div className="px-3.5 py-2 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center gap-2">
-            <Trophy size={18} className="text-amber-400" />
+        <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 relative select-none pointer-events-none">
+          <img 
+            src="/mascot_hijab_idle.png" 
+            alt="Maskot" 
+            className="w-full h-full object-contain" 
+          />
+        </div>
+      </div>
+
+      {/* Featured Game Hero Card: Catur Pintar 2D */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+              <Gamepad2 size={18} />
+            </div>
             <div>
-              <span className="text-[10px] text-slate-300 font-medium block leading-none">Status</span>
-              <span className="text-xs font-black text-white">Gamifikasi Aktif</span>
+              <h2 className="text-xs font-black text-slate-900 uppercase tracking-wide font-outfit">
+                Game Utama Tersedia
+              </h2>
+              <p className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">
+                Siap Dimainkan Sekarang
+              </p>
             </div>
           </div>
 
+          <span className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] font-black uppercase tracking-wider rounded-lg flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+            Aktif
+          </span>
+        </div>
+
+        {/* Thumbnail Card Preview */}
+        <div className="relative w-full aspect-[16/10] sm:aspect-[2/1] rounded-xl overflow-hidden bg-slate-900 shadow-sm border border-slate-200/70 group">
+          <Image
+            src="/games/chess_thumbnail.jpg"
+            alt="Catur Pintar 2D"
+            fill
+            sizes="(max-width: 768px) 100vw, 640px"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent" />
+
+          {/* Badges on Thumbnail */}
+          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+            <span className="px-2.5 py-1 rounded-full bg-amber-500 text-white text-[9.5px] font-black uppercase tracking-wider shadow-md flex items-center gap-1">
+              <Trophy size={11} className="fill-white" />
+              Terpopuler
+            </span>
+          </div>
+
+          <div className="absolute top-2.5 right-2.5">
+            <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[9.5px] font-bold border border-white/20">
+              1 - 2 Pemain
+            </span>
+          </div>
+
+          {/* Bottom Title on Thumbnail */}
+          <div className="absolute bottom-2.5 left-2.5 right-2.5">
+            <span className="px-2 py-0.5 rounded-md bg-indigo-600/90 text-white text-[9px] font-extrabold uppercase tracking-wider mb-1 inline-block">
+              2D Strategic Chess
+            </span>
+            <h3 className="text-white font-black text-sm sm:text-base leading-tight font-outfit drop-shadow">
+              Catur Pintar: Duel Pelajaran
+            </h3>
+          </div>
+        </div>
+
+        {/* Game Details & Subject Pills */}
+        <div className="space-y-2">
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Mainkan catur 2D interaktif melawan <strong>Guru AI</strong> atau teman. Setiap kali bidak dimakan, muncul kuis berwaktu 30 detik untuk menentukan keberhasilan eksekusi bidak!
+          </p>
+
+          <div>
+            <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+              Pilihan Mata Pelajaran Soal:
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {['Matematika', 'IPA', 'B. Indonesia', 'B. Inggris', 'Agama Islam', 'Wawasan Umum'].map(s => (
+                <span
+                  key={s}
+                  className="px-2 py-0.5 rounded-lg bg-slate-100 border border-slate-200/80 text-slate-700 text-[10px] font-bold"
+                >
+                  {s}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Key Features */}
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className="flex items-center gap-1.5 p-2 rounded-xl bg-slate-50 border border-slate-100">
+              <Bot size={15} className="text-indigo-600 shrink-0" />
+              <span className="text-[10px] font-bold text-slate-700 truncate">Mode Bot Guru AI</span>
+            </div>
+            <div className="flex items-center gap-1.5 p-2 rounded-xl bg-slate-50 border border-slate-100">
+              <Zap size={15} className="text-amber-500 shrink-0" />
+              <span className="text-[10px] font-bold text-slate-700 truncate">Duel Kuis 30 Detik</span>
+            </div>
+          </div>
+
+          {/* Big Action Button */}
           <button
-            onClick={handleBackNavigation}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/10"
+            type="button"
+            onClick={() => setActiveGameId('chess')}
+            className="w-full mt-2 py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 transition-all min-h-[48px]"
           >
-            <ArrowLeft size={14} />
-            <span>Kembali</span>
+            <Play size={16} className="fill-white" />
+            <span>Mulai Main Catur Pintar</span>
           </button>
         </div>
       </div>
 
-      {/* Game Cards Grid (Square Thumbnail Cards) */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4 px-1">
-          <div>
-            <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <Gamepad2 size={20} className="text-indigo-600" />
-              <span>Daftar Permainan</span>
-            </h2>
-            <p className="text-xs text-slate-500 font-medium">
-              Pilih permainan untuk mulai bermain dan mengasah wawasan
-            </p>
+      {/* Cara Bermain Section */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm space-y-2.5">
+        <h3 className="text-xs font-black text-slate-800 uppercase tracking-wide font-outfit flex items-center gap-1.5">
+          <Sparkles size={14} className="text-amber-500" />
+          <span>Cara Bermain Catur Pintar</span>
+        </h3>
+
+        <div className="grid grid-cols-3 gap-2">
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-center">
+            <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-black inline-flex items-center justify-center mb-1">
+              1
+            </span>
+            <p className="text-[10px] font-extrabold text-slate-800">Pilih Mapel</p>
+            <p className="text-[8.5px] text-slate-500 leading-tight mt-0.5">Tentukan mata pelajaran yang ingin kamu latih</p>
+          </div>
+
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-center">
+            <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-black inline-flex items-center justify-center mb-1">
+              2
+            </span>
+            <p className="text-[10px] font-extrabold text-slate-800">Makan Bidak</p>
+            <p className="text-[8.5px] text-slate-500 leading-tight mt-0.5">Atur langkah taktik catur untuk menyerang pion lawan</p>
+          </div>
+
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-center">
+            <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-black inline-flex items-center justify-center mb-1">
+              3
+            </span>
+            <p className="text-[10px] font-extrabold text-slate-800">Jawab Soal</p>
+            <p className="text-[8.5px] text-slate-500 leading-tight mt-0.5">Jawab benar dalam 30s untuk memenangkan bidak</p>
           </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {AVAILABLE_GAMES.map(game => (
-            <div
-              key={game.id}
-              className={`group bg-white rounded-3xl border transition-all duration-300 flex flex-col overflow-hidden ${
-                game.isAvailable
-                  ? 'border-slate-200/90 hover:border-indigo-500 hover:shadow-xl hover:shadow-indigo-500/10 hover:-translate-y-1'
-                  : 'border-slate-200/60 opacity-80'
-              }`}
-            >
-              {/* Square Thumbnail Container (Aspect Ratio 1:1) */}
-              <div className="relative w-full aspect-square bg-slate-900 overflow-hidden flex items-center justify-center">
-                <Image
-                  src={game.thumbnail}
-                  alt={game.title}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                  className={`object-cover transition-transform duration-500 ${
-                    game.isAvailable ? 'group-hover:scale-105' : 'grayscale opacity-60'
-                  }`}
-                  priority={game.id === 'chess'}
-                />
+      {/* Segera Hadir Section (Compact List, Not Broken Grid) */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm space-y-2.5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-black text-slate-800 uppercase tracking-wide font-outfit flex items-center gap-1.5">
+            <Clock size={14} className="text-slate-400" />
+            <span>Permainan Lainnya (Segera Hadir)</span>
+          </h3>
+          <span className="text-[9px] font-bold text-slate-400">Dalam Pengembangan</span>
+        </div>
 
-                {/* Badge Overlay */}
-                <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm ${game.badgeColor}`}>
-                    {game.badge}
-                  </span>
-                </div>
-
-                {/* Category Pill */}
-                <div className="absolute bottom-3 left-3 z-10">
-                  <span className="px-2.5 py-1 rounded-xl bg-slate-950/75 backdrop-blur-md text-white text-[10px] font-bold border border-white/20">
-                    {game.category}
-                  </span>
-                </div>
-
-                {/* Quick Play Floating Overlay on Hover for Available Games */}
-                {game.isAvailable && (
-                  <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20">
-                    <button
-                      type="button"
-                      onClick={() => setActiveGameId(game.id)}
-                      className="px-5 py-2.5 rounded-full bg-white text-slate-900 font-black text-xs shadow-xl flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
-                    >
-                      <Play size={14} className="fill-slate-900 text-slate-900" />
-                      <span>Mainkan Sekarang</span>
-                    </button>
+        <div className="space-y-2">
+          {UPCOMING_GAMES.map(g => {
+            const Icon = g.icon;
+            return (
+              <div
+                key={g.id}
+                className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between gap-3 opacity-80"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${g.iconColor}`}>
+                    <Icon size={18} />
                   </div>
-                )}
-              </div>
-
-              {/* Card Body */}
-              <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-baseline justify-between gap-2 mb-1">
-                    <h3 className="text-base font-black text-slate-900 tracking-tight group-hover:text-indigo-600 transition-colors">
-                      {game.title}
-                    </h3>
-                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                      {game.players}
-                    </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="text-xs font-black text-slate-800 font-outfit truncate">
+                        {g.title}
+                      </h4>
+                      <span className="px-1.5 py-0.2 bg-slate-200 text-slate-600 rounded text-[8.5px] font-extrabold">
+                        {g.category}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 truncate">
+                      {g.description}
+                    </p>
                   </div>
-
-                  <p className="text-[11px] font-bold text-indigo-600 mb-2">
-                    {game.subtitle}
-                  </p>
-
-                  <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
-                    {game.description}
-                  </p>
                 </div>
 
-                {/* Action Button */}
-                <div className="mt-4 pt-3 border-t border-slate-100">
-                  {game.isAvailable ? (
-                    <button
-                      type="button"
-                      onClick={() => setActiveGameId(game.id)}
-                      className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/20 active:scale-95 flex items-center justify-center gap-2 min-h-[44px]"
-                    >
-                      <Play size={15} className="fill-white" />
-                      <span>Mulai Main Catur</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled
-                      className="w-full py-2.5 px-4 rounded-xl bg-slate-100 text-slate-400 text-xs font-bold cursor-not-allowed flex items-center justify-center gap-1.5 min-h-[44px]"
-                    >
-                      <Clock size={14} />
-                      <span>Sedang Disiapkan</span>
-                    </button>
-                  )}
-                </div>
+                <span className="px-2.5 py-1 rounded-lg bg-slate-200/80 text-slate-600 text-[9px] font-black uppercase tracking-wider shrink-0">
+                  {g.status}
+                </span>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
