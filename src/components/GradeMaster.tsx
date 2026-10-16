@@ -450,19 +450,14 @@ export default function GradeMaster() {
     }
   }, [layer, isAdmin, isStudent, adminUser, studentData, isAuthLoading]);
 
-  // Check and handle mandatory push notification permission for Google-authenticated students
+  // Push notification permission check (opsional dan tidak memblokir siswa)
   const checkPushPermission = useCallback(async () => {
     if (isStudent && studentData && studentData.id && studentData.isGoogleLinked !== false) {
       const status = await checkSubscriptionStatus();
       setPushStatus(status);
-      if (status !== 'GRANTED' && status !== 'UNSUPPORTED') {
-        setShowPushPrompt(true);
-      } else {
-        setShowPushPrompt(false);
-      }
-    } else {
-      setShowPushPrompt(false);
     }
+    // Tidak mewajibkan notifikasi agar siswa tidak terkendala akses
+    setShowPushPrompt(false);
   }, [isStudent, studentData]);
 
   useEffect(() => {
@@ -1436,14 +1431,14 @@ export default function GradeMaster() {
           }}
           onSuccess={async (data) => {
             // Set student state immediately and navigate directly.
-            // DO NOT call checkAdmin() here — it resets all state (setIsStudent(false), 
+            // DO NOT call checkAdmin() here: it resets all state (setIsStudent(false), 
             // setStudentData(null)) causing the component to unmount and loop back.
             setIsStudent(true);
             const linkedStudent = { ...data, isGoogleLinked: true };
             setStudentData(linkedStudent);
             if (data.class_name) setStudentClass(data.class_name);
 
-            // Navigate directly — we know the claim succeeded
+            // Navigate directly: we know the claim succeeded
             setLayer('student_profile', true);
 
             // Background refresh: re-fetch full student data (behavior_id, total_points, streak, etc.)
@@ -1536,10 +1531,18 @@ export default function GradeMaster() {
                 {modalLoading ? (
                   <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
                 ) : (
-                  "Aktifkan & Lanjutkan"
+                  "Aktifkan Notifikasi"
                 )}
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => setShowPushPrompt(false)}
+              className="text-xs font-semibold text-gray-400 hover:text-white transition-colors py-2 px-4 rounded-xl cursor-pointer"
+            >
+              Lewati / Nanti Saja
+            </button>
           </div>
         </div>
       )}

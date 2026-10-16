@@ -10,7 +10,9 @@ import {
   Check,
   Loader2,
   AlertCircle,
-  Sparkles
+  Eye,
+  EyeOff,
+  UserCheck
 } from 'lucide-react';
 import { ToastType } from '@/lib/grademaster/types';
 
@@ -35,6 +37,20 @@ interface StudentItem {
   username?: string;
 }
 
+function getPreviewUsername(name: string, className: string): string {
+  const cleanName = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '.');
+
+  const classSuffix = className
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+
+  return `${cleanName}.${classSuffix}`;
+}
+
 export default function StudentAccountGenerateModal({
   isOpen,
   onClose,
@@ -46,10 +62,12 @@ export default function StudentAccountGenerateModal({
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [selectedStudentName, setSelectedStudentName] = useState('');
   const [studentSearch, setStudentSearch] = useState('');
+  const [customPassword, setCustomPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const [createdAccount, setCreatedAccount] = useState<{
@@ -66,6 +84,8 @@ export default function StudentAccountGenerateModal({
     setStudents([]);
     setSelectedStudentName('');
     setStudentSearch('');
+    setCustomPassword('');
+    setShowPassword(false);
     setErrorMessage('');
     setCreatedAccount(null);
     setCopiedField(null);
@@ -114,6 +134,7 @@ export default function StudentAccountGenerateModal({
     setErrorMessage('');
     setSelectedStudentName('');
     setStudentSearch('');
+    setCustomPassword('');
     try {
       const res = await fetch(
         `/api/student/generate-account?action=students&class=${encodeURIComponent(className)}`
@@ -155,12 +176,22 @@ export default function StudentAccountGenerateModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, handleClose]);
 
-  // Handle generate akun
-  const handleGenerate = async (e: React.FormEvent) => {
+  // Handle pendaftaran akun siswa
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedClass || !selectedStudentName || isGenerating) return;
+    if (!selectedClass || !selectedStudentName || isSubmitting) return;
 
-    setIsGenerating(true);
+    if (!customPassword.trim()) {
+      setErrorMessage('Kata sandi wajib diisi agar akun Anda aman');
+      return;
+    }
+
+    if (customPassword.trim().length < 4) {
+      setErrorMessage('Kata sandi minimal 4 karakter');
+      return;
+    }
+
+    setIsSubmitting(true);
     setErrorMessage('');
 
     try {
@@ -169,14 +200,15 @@ export default function StudentAccountGenerateModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           class_name: selectedClass,
-          student_name: selectedStudentName
+          student_name: selectedStudentName,
+          password: customPassword.trim()
         })
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Gagal membuat akun siswa');
+        throw new Error(data.error || 'Gagal mendaftarkan akun siswa');
       }
 
       setCreatedAccount({
@@ -187,14 +219,14 @@ export default function StudentAccountGenerateModal({
       });
 
       setToast({
-        message: `Akun untuk ${data.account.student_name} berhasil dibuat!`,
+        message: `Pendaftaran berhasil! Akun untuk ${data.account.student_name} siap digunakan.`,
         type: 'success'
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Gagal membuat akun siswa';
+      const msg = err instanceof Error ? err.message : 'Gagal mendaftarkan akun siswa';
       setErrorMessage(msg);
     } finally {
-      setIsGenerating(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -223,48 +255,51 @@ export default function StudentAccountGenerateModal({
   );
 
   const eligibleCount = students.filter((s) => !s.has_account).length;
+  const previewUsername = selectedStudentName && selectedClass 
+    ? getPreviewUsername(selectedStudentName, selectedClass) 
+    : '';
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) handleClose();
       }}
     >
-      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200">
         
         {/* Header Modal */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/70">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 border-b border-slate-100 bg-slate-50/70 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
               <UserPlus size={18} />
             </div>
-            <div>
-              <h2 id="modal-title" className="text-sm font-bold text-slate-900 font-outfit">
-                Buat Akun Siswa Mandiri
+            <div className="min-w-0">
+              <h2 id="modal-title" className="text-sm font-bold text-slate-900 font-outfit truncate">
+                Daftar Akun Siswa
               </h2>
-              <p className="text-[11px] text-slate-500 font-medium">
-                Dapatkan username dan kata sandi resmi untuk portal nilai
+              <p className="text-[11px] text-slate-500 font-medium truncate">
+                Username otomatis disediakan, kata sandi bebas ditentukan sendiri
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={handleClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
-            aria-label="Tutup jendela modal"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer shrink-0"
+            aria-label="Tutup jendela pendaftaran"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Isi Modal */}
-        <div className="p-5 overflow-y-auto space-y-4">
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-4">
           
-          {/* Tampilan Ketika Akun Baru Saja Berhasil Dibuat */}
+          {/* Tampilan Konfirmasi Setelah Berhasil Mendaftar */}
           {createdAccount ? (
             <div className="space-y-4 text-center animate-in fade-in zoom-in-95 duration-300">
               <div className="w-14 h-14 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
@@ -273,27 +308,27 @@ export default function StudentAccountGenerateModal({
 
               <div>
                 <h3 className="text-base font-bold text-slate-900 font-outfit">
-                  Akun Siswa Berhasil Dibuat!
+                  Pendaftaran Akun Berhasil!
                 </h3>
                 <p className="text-xs text-slate-600 mt-1">
-                  Hai <strong className="text-slate-900">{createdAccount.student_name}</strong> (Kelas {createdAccount.class_name}), berikut adalah akses login Anda:
+                  Akun atas nama <strong className="text-slate-900">{createdAccount.student_name}</strong> (Kelas {createdAccount.class_name}) telah aktif.
                 </p>
               </div>
 
-              {/* Kartu Kredensial */}
+              {/* Kartu Rincian Akun */}
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-left space-y-3">
                 <div>
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                    Username
+                    Username Resmi (Otomatis)
                   </span>
                   <div className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2 min-h-[44px]">
-                    <span className="font-mono text-sm font-bold text-slate-900 select-all">
+                    <span className="font-mono text-sm font-bold text-slate-900 select-all truncate">
                       {createdAccount.username}
                     </span>
                     <button
                       type="button"
                       onClick={() => copyToClipboard(createdAccount.username, 'username')}
-                      className="px-2.5 py-1.5 rounded-md text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer min-h-[36px]"
+                      className="px-2.5 py-1.5 rounded-md text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer min-h-[36px] shrink-0"
                     >
                       {copiedField === 'username' ? (
                         <>
@@ -312,16 +347,16 @@ export default function StudentAccountGenerateModal({
 
                 <div>
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                    Kata Sandi
+                    Kata Sandi Anda
                   </span>
                   <div className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2 min-h-[44px]">
-                    <span className="font-mono text-sm font-bold text-indigo-700 select-all">
+                    <span className="font-mono text-sm font-bold text-indigo-700 select-all truncate">
                       {createdAccount.password}
                     </span>
                     <button
                       type="button"
                       onClick={() => copyToClipboard(createdAccount.password, 'password')}
-                      className="px-2.5 py-1.5 rounded-md text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 flex items-center gap-1.5 transition-colors cursor-pointer min-h-[36px]"
+                      className="px-2.5 py-1.5 rounded-md text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 flex items-center gap-1.5 transition-colors cursor-pointer min-h-[36px] shrink-0"
                     >
                       {copiedField === 'password' ? (
                         <>
@@ -337,14 +372,6 @@ export default function StudentAccountGenerateModal({
                     </button>
                   </div>
                 </div>
-              </div>
-
-              {/* Peringatan Keamanan */}
-              <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-left flex items-start gap-2.5">
-                <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-amber-900 leading-relaxed font-medium">
-                  <strong>Penting:</strong> Harap catat atau salin kata sandi di atas sekarang. Kata sandi ini digunakan untuk masuk ke portal nilai dan remedial Anda.
-                </p>
               </div>
 
               {/* Tombol Aksi Selesai */}
@@ -363,7 +390,7 @@ export default function StudentAccountGenerateModal({
                   className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer min-h-[44px]"
                 >
                   <KeyRound size={16} />
-                  <span>Gunakan & Masuk ke Portal</span>
+                  <span>Gunakan Akun & Masuk Sekarang</span>
                 </button>
                 <button
                   type="button"
@@ -375,10 +402,10 @@ export default function StudentAccountGenerateModal({
               </div>
             </div>
           ) : (
-            /* Form Pemilihan Kelas dan Siswa */
-            <form onSubmit={handleGenerate} className="space-y-4">
+            /* Form Pendaftaran Siswa */
+            <form onSubmit={handleRegister} className="space-y-4">
               
-              {/* Pesan Error Jika Ada */}
+              {/* Pesan Peringatan atau Error */}
               {errorMessage && (
                 <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-semibold flex items-start gap-2 animate-in fade-in duration-150">
                   <AlertCircle size={16} className="shrink-0 mt-0.5" />
@@ -386,7 +413,7 @@ export default function StudentAccountGenerateModal({
                 </div>
               )}
 
-              {/* Pilihan Kelas */}
+              {/* Langkah 1: Pilihan Kelas */}
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1.5">
                   1. Pilih Kelas Anda
@@ -414,21 +441,21 @@ export default function StudentAccountGenerateModal({
                 )}
               </div>
 
-              {/* Pilihan Nama Siswa */}
+              {/* Langkah 2: Pilihan Nama Siswa */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-bold text-slate-700">
-                    2. Pilih Nama Lengkap Anda
+                    2. Cari & Klik Nama Anda
                   </label>
                   {!isLoadingStudents && students.length > 0 && (
                     <span className="text-[11px] font-semibold text-slate-500">
-                      {eligibleCount} siswa belum punya akun
+                      {eligibleCount} siswa belum daftar
                     </span>
                   )}
                 </div>
 
                 {isLoadingStudents ? (
-                  <div className="h-32 bg-slate-100 animate-pulse rounded-xl flex flex-col items-center justify-center gap-2 text-xs text-slate-400">
+                  <div className="h-28 bg-slate-100 animate-pulse rounded-xl flex flex-col items-center justify-center gap-2 text-xs text-slate-400">
                     <Loader2 size={18} className="animate-spin text-indigo-600" />
                     <span>Memuat daftar siswa kelas {selectedClass}...</span>
                   </div>
@@ -439,12 +466,12 @@ export default function StudentAccountGenerateModal({
                       type="text"
                       value={studentSearch}
                       onChange={(e) => setStudentSearch(e.target.value)}
-                      placeholder="Cari nama Anda di daftar..."
+                      placeholder="Ketik nama Anda untuk mencari..."
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all min-h-[40px]"
                     />
 
                     {/* Daftar Nama Siswa */}
-                    <div className="border border-slate-200 rounded-xl max-h-48 overflow-y-auto divide-y divide-slate-100 bg-white">
+                    <div className="border border-slate-200 rounded-xl max-h-40 overflow-y-auto divide-y divide-slate-100 bg-white">
                       {filteredStudents.length > 0 ? (
                         filteredStudents.map((s) => {
                           const isSelected = selectedStudentName === s.student_name;
@@ -453,7 +480,10 @@ export default function StudentAccountGenerateModal({
                               key={s.id}
                               type="button"
                               disabled={s.has_account}
-                              onClick={() => setSelectedStudentName(s.student_name)}
+                              onClick={() => {
+                                setSelectedStudentName(s.student_name);
+                                setErrorMessage('');
+                              }}
                               className={`w-full px-3.5 py-2.5 text-left flex items-center justify-between text-xs transition-colors min-h-[44px] cursor-pointer ${
                                 s.has_account
                                   ? 'bg-slate-50/70 text-slate-400 cursor-not-allowed'
@@ -466,7 +496,7 @@ export default function StudentAccountGenerateModal({
                                 <span className="block truncate">{s.student_name}</span>
                                 {s.has_account && (
                                   <span className="text-[10px] text-slate-400 font-mono">
-                                    Username: {s.username || 'terdaftar'}
+                                    Sudah terdaftar: {s.username}
                                   </span>
                                 )}
                               </div>
@@ -489,46 +519,86 @@ export default function StudentAccountGenerateModal({
                           );
                         })
                       ) : (
-                        <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                        <div className="p-3 text-center text-xs text-slate-400 font-medium">
                           Nama tidak ditemukan dalam pencarian.
                         </div>
                       )}
                     </div>
-
-                    {eligibleCount === 0 && (
-                      <p className="text-[11px] text-emerald-600 font-medium bg-emerald-50 border border-emerald-100 rounded-lg p-2.5 text-center">
-                        Semua siswa di Kelas {selectedClass} sudah memiliki akun. Silakan langsung masuk.
-                      </p>
-                    )}
                   </div>
                 ) : (
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center text-xs text-slate-500">
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center text-xs text-slate-500">
                     Belum ada data siswa di kelas ini.
                   </div>
                 )}
               </div>
 
-              {/* Info Panduan */}
-              <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-slate-600 text-[11px] leading-relaxed">
-                Sistem akan secara otomatis membuat username dengan format nama dan kelas serta kata sandi acak yang aman.
-              </div>
+              {/* Tampilan Username Otomatis & Input Password (Hanya muncul jika nama siswa sudah dipilih) */}
+              {selectedStudentName && (
+                <div className="space-y-3 pt-2 border-t border-slate-100 animate-in fade-in duration-200">
+                  
+                  {/* Kartu Username Otomatis */}
+                  <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <span className="text-[10.5px] font-bold text-indigo-800 uppercase tracking-wider block">
+                        Username Resmi Anda (Otomatis)
+                      </span>
+                      <span className="text-xs font-mono font-bold text-indigo-950 block truncate mt-0.5">
+                        {previewUsername}
+                      </span>
+                    </div>
+                    <span className="px-2 py-1 bg-white border border-indigo-200 text-indigo-700 text-[10px] font-bold rounded-md shrink-0">
+                      Disediakan
+                    </span>
+                  </div>
 
-              {/* Tombol Submit Generate */}
+                  {/* Input Password Bebas Pilihan Siswa */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      3. Tentukan Kata Sandi Anda Sendiri
+                    </label>
+                    <p className="text-[11px] text-slate-500 font-medium mb-1.5 leading-snug">
+                      Kata sandi bebas Anda tentukan sendiri agar mudah diingat (minimal 4 karakter).
+                    </p>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={customPassword}
+                        onChange={(e) => setCustomPassword(e.target.value)}
+                        placeholder="Tulis kata sandi baru Anda..."
+                        autoComplete="new-password"
+                        required
+                        className="w-full pl-3.5 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all min-h-[44px]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 min-h-[32px] min-w-[32px] flex items-center justify-center cursor-pointer"
+                        aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+              {/* Tombol Submit Pendaftaran */}
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={!selectedStudentName || isGenerating}
+                  disabled={!selectedStudentName || !customPassword.trim() || isSubmitting}
                   className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-h-[46px]"
                 >
-                  {isGenerating ? (
+                  {isSubmitting ? (
                     <>
                       <Loader2 size={18} className="animate-spin text-slate-300" />
-                      <span>Memproses Akun...</span>
+                      <span>Mendaftarkan Akun...</span>
                     </>
                   ) : (
                     <>
-                      <Sparkles size={16} className="text-amber-300" />
-                      <span>Generate Akun & Kata Sandi</span>
+                      <UserCheck size={16} className="text-emerald-400" />
+                      <span>Daftar & Masuk ke Portal</span>
                     </>
                   )}
                 </button>

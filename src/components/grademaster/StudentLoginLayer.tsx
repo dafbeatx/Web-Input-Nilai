@@ -526,7 +526,7 @@ export default function StudentLoginLayer({
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed px-1">
               {!isParentMode 
-                ? 'Gunakan akun yang telah dibuat oleh Bapak/Ibu Guru atau masuk via Google.' 
+                ? 'Masukkan username dan kata sandi Anda atau masuk via Google.' 
                 : 'Cari nama ananda untuk memantau capaian belajar, presensi, dan sikap.'}
             </p>
           </div>
@@ -542,12 +542,12 @@ export default function StudentLoginLayer({
           <div className="w-full space-y-4">
             {!isParentMode ? (
               <div className="w-full space-y-4">
-                {/* Form Login: Akun Siswa dari Guru */}
+                {/* Form Login: Akun Siswa */}
                 <form onSubmit={handleAdminLogin} className="w-full space-y-3.5 text-left">
                   <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-center gap-2.5">
                     <KeyRound size={16} className="text-indigo-600 shrink-0" />
                     <span className="text-xs font-semibold text-indigo-950">
-                      Opsi 1: Akun Siswa yang Dibuat Guru / Sekolah
+                      Opsi 1: Masuk dengan Akun Siswa
                     </span>
                   </div>
 
@@ -646,7 +646,7 @@ export default function StudentLoginLayer({
                     ) : (
                       <>
                         <KeyRound size={16} />
-                        <span>Masuk dengan Akun dari Guru</span>
+                        <span>Masuk ke Portal Siswa</span>
                       </>
                     )}
                   </button>
@@ -707,16 +707,16 @@ export default function StudentLoginLayer({
                   <span className="text-[11px] text-slate-500 font-medium">Khusus Siswa Terdaftar</span>
                 </div>
 
-                {/* Bagian Buat Akun Siswa Mandiri: Hanya ditampilkan jika belum ada sesi login aktif */}
+                {/* Bagian Daftar Akun Siswa Mandiri: Hanya ditampilkan jika belum ada sesi login aktif */}
                 {!isSessionActive && (
                   <div className="pt-3 border-t border-slate-100 w-full animate-in fade-in duration-200">
                     <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
                       <div className="text-left w-full sm:w-auto">
                         <span className="text-xs font-bold text-slate-800 block">
-                          Belum punya akun siswa?
+                          Siswa Baru? Belum Punya Akun?
                         </span>
                         <span className="text-[11px] text-slate-500 font-medium block">
-                          Pilih nama Anda di kelas untuk membuat akun dan kata sandi
+                          Daftar dengan memilih nama Anda di kelas dan buat kata sandi sendiri
                         </span>
                       </div>
                       <button
@@ -725,7 +725,7 @@ export default function StudentLoginLayer({
                         className="w-full sm:w-auto px-3.5 py-2.5 bg-white hover:bg-slate-100 active:bg-slate-200 border border-slate-300 text-slate-900 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 shrink-0 min-h-[44px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1"
                       >
                         <UserPlus size={15} className="text-indigo-600" />
-                        <span>Buat Akun Siswa</span>
+                        <span>Daftar Akun Siswa</span>
                       </button>
                     </div>
                   </div>
@@ -815,7 +815,7 @@ export default function StudentLoginLayer({
           setAdminPassword(password);
           setSavedStudentName(studentName);
           setToast({
-            message: `Akun untuk ${studentName} berhasil dibuat. Kredensial telah diisi otomatis.`,
+            message: `Pendaftaran berhasil untuk ${studentName}! Kredensial telah terisi otomatis.`,
             type: 'success'
           });
         }}

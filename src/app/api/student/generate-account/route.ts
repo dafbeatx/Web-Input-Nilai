@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Format data tidak valid' }, { status: 400 });
     }
 
-    const { student_name, class_name, academic_year } = body;
+    const { student_name, class_name, academic_year, password } = body;
 
     if (!student_name || !student_name.trim()) {
       return NextResponse.json({ error: 'Nama siswa wajib dipilih' }, { status: 400 });
@@ -136,6 +136,20 @@ export async function POST(req: NextRequest) {
 
     const trimmedName = student_name.trim();
     const trimmedClass = class_name.trim();
+
+    // Validasi kata sandi pilihan siswa jika diisi
+    let plainPassword = '';
+    if (typeof password === 'string' && password.trim().length > 0) {
+      if (password.trim().length < 4) {
+        return NextResponse.json(
+          { error: 'Kata sandi minimal 4 karakter' },
+          { status: 400 }
+        );
+      }
+      plainPassword = password.trim();
+    } else {
+      plainPassword = generatePassword();
+    }
 
     // 1. Verifikasi apakah siswa memang terdaftar di gm_behaviors
     const { data: behaviorMatch, error: checkBehaviorErr } = await supabaseAdmin
@@ -196,8 +210,7 @@ export async function POST(req: NextRequest) {
       counter++;
     }
 
-    // 4. Generate kata sandi acak dan hash
-    const plainPassword = generatePassword();
+    // 4. Hash kata sandi
     const hashedPassword = await hashPassword(plainPassword);
     const resolvedYear = behaviorMatch.academic_year || academic_year || '2025/2026';
 

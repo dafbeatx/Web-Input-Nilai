@@ -233,17 +233,17 @@ export default function DeploymentGuard() {
 
   if (updateStatus === "updating") {
     return (
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999] px-5 py-3 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-sky-400/40 text-white shadow-2xl flex items-center gap-3.5 animate-in fade-in slide-in-from-top-4 duration-300">
-        <div className="relative flex items-center justify-center w-5 h-5">
+      <div className="fixed top-6 sm:top-5 left-1/2 -translate-x-1/2 z-[99999] w-[calc(100vw-1.5rem)] max-w-sm sm:max-w-md p-3.5 sm:px-4 sm:py-3 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-sky-400/40 text-white shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="relative flex items-center justify-center w-5 h-5 shrink-0">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
           <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-500"></span>
         </div>
-        <div className="flex flex-col">
-          <span className="text-xs font-semibold tracking-wider text-sky-400 uppercase">
+        <div className="flex flex-col min-w-0 flex-1">
+          <span className="text-[11px] font-bold tracking-wider text-sky-400 uppercase truncate">
             Pembaruan Sistem
           </span>
-          <span className="text-sm font-medium text-slate-100">
-            Versi terbaru dari pengembang sedang dimuat ulang...
+          <span className="text-xs sm:text-sm font-medium text-slate-100 leading-snug">
+            Versi terbaru sedang dimuat ulang...
           </span>
         </div>
       </div>
@@ -252,12 +252,12 @@ export default function DeploymentGuard() {
 
   if (updateStatus === "deferred") {
     return (
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999] max-w-md w-[92vw] px-4 py-3 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-amber-400/40 text-white shadow-2xl flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
-        <div className="flex items-center gap-3">
+      <div className="fixed top-6 sm:top-5 left-1/2 -translate-x-1/2 z-[99999] w-[calc(100vw-1.5rem)] max-w-sm sm:max-w-md p-3.5 sm:px-4 sm:py-3 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-amber-400/40 text-white shadow-2xl flex items-center justify-between gap-2.5 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
-          <div className="text-xs">
-            <p className="font-semibold text-amber-300">Pembaruan Tersedia</p>
-            <p className="text-slate-300 text-[11px]">
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-amber-300 text-xs truncate">Pembaruan Tersedia</p>
+            <p className="text-slate-300 text-[11px] leading-tight line-clamp-2">
               Sistem akan memuat ulang setelah Anda menyelesaikan ujian.
             </p>
           </div>
@@ -265,7 +265,7 @@ export default function DeploymentGuard() {
         <button
           type="button"
           onClick={() => executeReload(deferredVersion || undefined)}
-          className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold text-xs transition-all active:scale-95 shrink-0"
+          className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-all active:scale-95 shrink-0 min-h-[40px] flex items-center justify-center cursor-pointer shadow-xs"
         >
           Perbarui
         </button>
