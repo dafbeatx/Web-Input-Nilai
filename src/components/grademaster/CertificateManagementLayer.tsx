@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import {
   ArrowLeft,
   Award,
@@ -522,9 +523,12 @@ export default function CertificateManagementLayer({
 
               {/* Exact Canva Template Preview with Live Name Overlay */}
               <div className="relative w-full aspect-[2000/1414] rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white select-none">
-                <img
+                <Image
                   src="/sertifikat-ldks.png"
                   alt="Desain Sertifikat LDKS"
+                  width={2000}
+                  height={1414}
+                  priority
                   className="w-full h-full object-contain pointer-events-none"
                 />
                 {/* Live Overlaid Student Name directly on top of the Canva line */}

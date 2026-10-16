@@ -2597,7 +2597,7 @@ export default function StudentProfileLayer({
                                       <div>
                                         <div className="flex items-center justify-between">
                                           <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
-                                            BTQ (Tilawah Al-Qur'an)
+                                            BTQ (Tilawah Al-Qur&apos;an)
                                           </span>
                                           <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${getPredColor(record.btq_predicate)}`}>
                                             {getPredLabel(record.btq_predicate)}
@@ -2628,7 +2628,7 @@ export default function StudentProfileLayer({
                                       <div>
                                         <div className="flex items-center justify-between">
                                           <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
-                                            Tahfidz (Hafalan Al-Qur'an)
+                                            Tahfidz (Hafalan Al-Qur&apos;an)
                                           </span>
                                           <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${getPredColor(record.hafalan_predicate)}`}>
                                             {getPredLabel(record.hafalan_predicate)}
@@ -2809,7 +2809,7 @@ export default function StudentProfileLayer({
                                     <Info size={12} /> Catatan & Evaluasi Penguji
                                   </p>
                                   <p className="text-xs text-amber-950 font-medium mt-1 leading-relaxed italic">
-                                    "{record.notes || 'Ananda telah menyelesaikan ujian lisan dengan baik dan tertib.'}"
+                                    &quot;{record.notes || 'Ananda telah menyelesaikan ujian lisan dengan baik dan tertib.'}&quot;
                                   </p>
                                 </div>
 
