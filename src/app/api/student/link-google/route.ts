@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
         const insertPayload = {
           student_name,
           class_name,
-          academic_year: '2025/2026',
+          academic_year: '2026/2027',
           username: username,
           password_hash: 'google_sso_auto',
           google_email: email

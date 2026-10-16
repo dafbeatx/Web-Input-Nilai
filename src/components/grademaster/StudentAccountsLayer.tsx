@@ -21,7 +21,7 @@ export default function StudentAccountsLayer({
   onBack,
   setToast,
   activeClass = '',
-  activeYear = '2025/2026',
+  activeYear = '2026/2027',
   onPromoteSuccess
 }: StudentAccountsLayerProps) {
   const [accounts, setAccounts] = useState<StudentAccount[]>([]);
@@ -385,9 +385,9 @@ export default function StudentAccountsLayer({
             }}
             className="w-full bg-surface-variant border border-outline-variant rounded-xl p-3 text-sm font-bold text-on-surface focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all appearance-none cursor-pointer"
           >
-            <option value="2024/2025">2024/2025</option>
-            <option value="2025/2026">2025/2026</option>
             <option value="2026/2027">2026/2027</option>
+            <option value="2025/2026">2025/2026</option>
+            <option value="2024/2025">2024/2025</option>
             <option value="2027/2028">2027/2028</option>
           </select>
         </div>

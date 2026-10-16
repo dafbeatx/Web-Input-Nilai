@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     const supabase = await createClient();
     const { searchParams } = new URL(req.url);
     const className = searchParams.get('class');
-    const academicYear = searchParams.get('year') || '2025/2026';
+    const academicYear = searchParams.get('year') || '2026/2027';
     const mode = searchParams.get('mode');
 
     // Special mode for login check (does not require admin session)
@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { className, academicYear = '2025/2026' } = body;
+    const { className, academicYear = '2026/2027' } = body;
 
     if (!className) {
       return NextResponse.json({ error: 'Nama kelas wajib diisi' }, { status: 400 });

@@ -42,11 +42,11 @@ export default function BehaviorLayer({
   setToast, 
   isAdmin = false, 
   activeClass = '', 
-  activeYear = '2025/2026'
+  activeYear = '2026/2027'
 }: BehaviorLayerProps) {
   const { setLayer, adminUser, studentData, setAcademicYear: setGlobalAcademicYear } = useGradeMaster();
   const [className, setClassName] = useState(activeClass || '');
-  const [academicYear, setAcademicYear] = useState(activeYear || '2025/2026');
+  const [academicYear, setAcademicYear] = useState(activeYear || '2026/2027');
   const [students, setStudents] = useState<BehaviorStudent[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

@@ -67,11 +67,11 @@ export default function AttendanceLayer({
   setToast, 
   isAdmin = false, 
   activeClass = '', 
-  activeYear = '2025/2026' 
+  activeYear = '2026/2027' 
 }: AttendanceLayerProps) {
   const { setLayer, adminUser, studentData, setAcademicYear: setGlobalAcademicYear } = useGradeMaster();
   const [className, setClassName] = useState(activeClass || '');
-  const [academicYear, setAcademicYear] = useState(activeYear || '2025/2026');
+  const [academicYear, setAcademicYear] = useState(activeYear || '2026/2027');
   const [subject, setSubject] = useState('Informatika');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   

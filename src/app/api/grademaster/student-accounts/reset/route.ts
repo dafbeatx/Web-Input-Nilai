@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
     const {
       scope = 'class',
       className,
-      academicYear = '2025/2026',
+      academicYear = '2026/2027',
       resetGoogle = true,
     } = body;
 

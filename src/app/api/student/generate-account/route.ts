@@ -27,17 +27,31 @@ function generatePassword(): string {
   return password;
 }
 
+const DEFAULT_ACADEMIC_YEAR = '2026/2027';
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const action = searchParams.get('action') || 'classes';
+    const targetYear = searchParams.get('year') || DEFAULT_ACADEMIC_YEAR;
 
     if (action === 'classes') {
-      // Ambil daftar kelas yang tersedia dari gm_behaviors
-      const { data, error } = await supabaseAdmin
+      // Ambil daftar kelas yang tersedia untuk tahun ajaran aktif dari gm_behaviors
+      let { data, error } = await supabaseAdmin
         .from('gm_behaviors')
         .select('class_name')
+        .eq('academic_year', targetYear)
         .not('class_name', 'is', null);
+
+      // Fallback jika belum ada data di tahun ajaran ini
+      if (!data || data.length === 0) {
+        const fallback = await supabaseAdmin
+          .from('gm_behaviors')
+          .select('class_name')
+          .not('class_name', 'is', null);
+        data = fallback.data;
+        error = fallback.error;
+      }
 
       if (error) {
         console.error('[Generate Account API] Gagal mengambil kelas:', error);
@@ -56,19 +70,50 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Parameter class wajib diisi' }, { status: 400 });
       }
 
-      // Ambil seluruh siswa terdaftar di kelas tersebut dari gm_behaviors
-      const { data: behaviorStudents, error: behaviorError } = await supabaseAdmin
+      // 1. Ambil siswa terdaftar di kelas untuk tahun ajaran aktif dari gm_behaviors
+      let { data: behaviorStudents, error: behaviorError } = await supabaseAdmin
         .from('gm_behaviors')
         .select('id, student_name, class_name, academic_year')
         .ilike('class_name', className.trim())
+        .eq('academic_year', targetYear)
         .order('student_name', { ascending: true });
+
+      // Fallback: Jika tidak ada data spesifik tahun ini, cari tanpa filter tahun
+      if (!behaviorStudents || behaviorStudents.length === 0) {
+        const fallback = await supabaseAdmin
+          .from('gm_behaviors')
+          .select('id, student_name, class_name, academic_year')
+          .ilike('class_name', className.trim())
+          .order('student_name', { ascending: true });
+        behaviorStudents = fallback.data;
+        behaviorError = fallback.error;
+      }
 
       if (behaviorError) {
         console.error('[Generate Account API] Gagal mengambil siswa:', behaviorError);
         return NextResponse.json({ error: 'Gagal memuat daftar siswa' }, { status: 500 });
       }
 
-      // Ambil akun yang sudah ada untuk kelas ini dari gm_student_accounts
+      // 2. Strict Deduplication: Setiap nama siswa HANYA BOLEH MUNCUL SATU KALI
+      const uniqueStudentMap = new Map<string, { id: string; student_name: string; class_name: string; academic_year: string }>();
+      for (const s of behaviorStudents || []) {
+        if (!s.student_name) continue;
+        const normKey = s.student_name.trim().toUpperCase();
+        // Prioritaskan baris yang cocok dengan target tahun ajaran
+        if (!uniqueStudentMap.has(normKey) || s.academic_year === targetYear) {
+          uniqueStudentMap.set(normKey, {
+            ...s,
+            student_name: s.student_name.trim(),
+            academic_year: s.academic_year || targetYear
+          });
+        }
+      }
+
+      const deduplicatedStudents = Array.from(uniqueStudentMap.values()).sort((a, b) =>
+        a.student_name.localeCompare(b.student_name, undefined, { sensitivity: 'base' })
+      );
+
+      // 3. Ambil akun yang sudah ada untuk kelas ini dari gm_student_accounts
       const { data: existingAccounts, error: accountError } = await supabaseAdmin
         .from('gm_student_accounts')
         .select('student_name, username')
@@ -85,15 +130,15 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // Format response dengan informasi apakah siswa sudah punya akun atau belum
-      const studentList = (behaviorStudents || []).map((s: { id: string; student_name: string; class_name: string; academic_year?: string }) => {
-        const normName = s.student_name.trim().toLowerCase();
+      // Format response
+      const studentList = deduplicatedStudents.map((s) => {
+        const normName = s.student_name.toLowerCase();
         const hasAccount = existingMap.has(normName);
         return {
           id: s.id,
-          student_name: s.student_name.trim(),
+          student_name: s.student_name,
           class_name: s.class_name,
-          academic_year: s.academic_year || '2025/2026',
+          academic_year: s.academic_year || targetYear,
           has_account: hasAccount,
           username: hasAccount ? existingMap.get(normName) : undefined
         };
@@ -151,14 +196,29 @@ export async function POST(req: NextRequest) {
       plainPassword = generatePassword();
     }
 
-    // 1. Verifikasi apakah siswa memang terdaftar di gm_behaviors
-    const { data: behaviorMatch, error: checkBehaviorErr } = await supabaseAdmin
+    const targetYear = academic_year || DEFAULT_ACADEMIC_YEAR;
+
+    // 1. Verifikasi apakah siswa memang terdaftar di gm_behaviors untuk tahun ajaran aktif
+    let { data: behaviorMatch, error: checkBehaviorErr } = await supabaseAdmin
       .from('gm_behaviors')
       .select('id, student_name, class_name, academic_year')
       .ilike('student_name', trimmedName)
       .ilike('class_name', trimmedClass)
+      .eq('academic_year', targetYear)
       .limit(1)
       .maybeSingle();
+
+    if (!behaviorMatch) {
+      const fallback = await supabaseAdmin
+        .from('gm_behaviors')
+        .select('id, student_name, class_name, academic_year')
+        .ilike('student_name', trimmedName)
+        .ilike('class_name', trimmedClass)
+        .limit(1)
+        .maybeSingle();
+      behaviorMatch = fallback.data;
+      checkBehaviorErr = fallback.error;
+    }
 
     if (checkBehaviorErr || !behaviorMatch) {
       return NextResponse.json(
@@ -212,7 +272,7 @@ export async function POST(req: NextRequest) {
 
     // 4. Hash kata sandi
     const hashedPassword = await hashPassword(plainPassword);
-    const resolvedYear = behaviorMatch.academic_year || academic_year || '2025/2026';
+    const resolvedYear = targetYear || behaviorMatch.academic_year || DEFAULT_ACADEMIC_YEAR;
 
     // 5. Simpan ke database gm_student_accounts
     const insertPayload = {

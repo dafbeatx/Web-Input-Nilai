@@ -101,7 +101,7 @@ export default function StudentAccountGenerateModal({
       setIsLoadingClasses(true);
       setErrorMessage('');
       try {
-        const res = await fetch('/api/student/generate-account?action=classes');
+        const res = await fetch('/api/student/generate-account?action=classes&year=2026/2027');
         const data = await res.json();
         if (res.ok && isMounted) {
           setClasses(data.classes || []);
@@ -127,7 +127,7 @@ export default function StudentAccountGenerateModal({
     };
   }, [isOpen]);
 
-  // Ambil daftar siswa ketika kelas dipilih
+  // Ambil daftar siswa ketika kelas dipilih untuk tahun ajaran aktif 2026/2027
   const fetchStudents = useCallback(async (className: string) => {
     if (!className) return;
     setIsLoadingStudents(true);
@@ -137,11 +137,21 @@ export default function StudentAccountGenerateModal({
     setCustomPassword('');
     try {
       const res = await fetch(
-        `/api/student/generate-account?action=students&class=${encodeURIComponent(className)}`
+        `/api/student/generate-account?action=students&class=${encodeURIComponent(className)}&year=2026/2027`
       );
       const data = await res.json();
       if (res.ok) {
-        setStudents(data.students || []);
+        // Jaminan satu nama saja (deduplikasi ketat)
+        const seen = new Set<string>();
+        const uniqueList: StudentItem[] = [];
+        for (const s of (data.students || [])) {
+          const key = s.student_name.trim().toUpperCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            uniqueList.push(s);
+          }
+        }
+        setStudents(uniqueList);
       } else {
         setErrorMessage(data.error || 'Gagal memuat data siswa');
       }
@@ -201,6 +211,7 @@ export default function StudentAccountGenerateModal({
         body: JSON.stringify({
           class_name: selectedClass,
           student_name: selectedStudentName,
+          academic_year: '2026/2027',
           password: customPassword.trim()
         })
       });
