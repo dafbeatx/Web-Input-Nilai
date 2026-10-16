@@ -489,8 +489,8 @@ export async function GET(req: NextRequest) {
 
       if (certData && certData.is_published) {
         const clsUpper = (targetClassName || '').toUpperCase();
-        const isClassX = clsUpper.includes('X') || clsUpper.includes('10') || enrollmentHistory.some(e => e.class_name.toUpperCase().includes('X') || e.class_name.toUpperCase().includes('10'));
-        if (certData.target_class === 'ALL' || isClassX) {
+        const isSma = clsUpper.includes('SMA') || clsUpper.includes('10') || clsUpper.includes('11') || clsUpper.includes('12') || clsUpper.startsWith('X');
+        if (!isSma || certData.target_class === 'ALL') {
           isLdksPublished = true;
         }
       }

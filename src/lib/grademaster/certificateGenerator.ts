@@ -34,6 +34,35 @@ async function getCertificateBackgroundImage(): Promise<string | null> {
   return null;
 }
 
+export function formatCertificateStudentName(fullName: string, maxLength: number = 22): string {
+  const clean = (fullName || '').trim().replace(/\s+/g, ' ').toUpperCase();
+  if (!clean) return '';
+  if (clean.length <= maxLength) return clean;
+
+  const parts = clean.split(' ');
+  if (parts.length <= 1) return clean;
+
+  const words = [...parts];
+
+  // 1. If first word is MUHAMMAD, MOHAMMAD, etc., abbreviate to M.
+  if (['MUHAMMAD', 'MOHAMMAD', 'MUHAMAD', 'MOHAMAD', 'MOCHAMMAD', 'MOCHAMAD'].includes(words[0])) {
+    words[0] = 'M.';
+    const candidate = words.join(' ');
+    if (candidate.length <= maxLength) return candidate;
+  }
+
+  // 2. Abbreviate from the last word backwards towards the 2nd word
+  for (let i = words.length - 1; i >= 1; i--) {
+    if (words[i].length > 1 && !words[i].endsWith('.')) {
+      words[i] = words[i][0] + '.';
+      const candidate = words.join(' ');
+      if (candidate.length <= maxLength) return candidate;
+    }
+  }
+
+  return words.join(' ');
+}
+
 export async function generateLdksCertificatePdf(
   template: CertificateTemplate,
   student: StudentCertificateInfo
@@ -57,22 +86,23 @@ export async function generateLdksCertificatePdf(
     doc.addImage(bgImage, 'PNG', 0, 0, pageWidth, pageHeight);
 
     // Print ONLY Student Name right above the horizontal line
-    const studentName = (student.studentName || '').trim().toUpperCase();
+    // If name is too long, abbreviate intelligently so it fits cleanly
+    const studentName = formatCertificateStudentName(student.studentName || '', 22);
 
     doc.setFont('helvetica', 'bold');
-    let fontSize = 21;
+    let fontSize = 14;
     doc.setFontSize(fontSize);
     doc.setTextColor(15, 23, 42); // Deep slate-900 / dark charcoal
 
     const maxLineWidth = 98; // mm
     const textWidth = doc.getTextWidth(studentName);
     if (textWidth > maxLineWidth) {
-      fontSize = Math.max(12, Math.floor(fontSize * (maxLineWidth / textWidth)));
+      fontSize = Math.max(10, Math.floor(fontSize * (maxLineWidth / textWidth)));
       doc.setFontSize(fontSize);
     }
 
-    // Precise placement: X = 26mm, Y = 110.8mm (baseline sits right above line at 112.28mm)
-    doc.text(studentName, 26, 110.8);
+    // Precise placement: X = 26mm, Y = 111.0mm (baseline sits right above line at 112.28mm)
+    doc.text(studentName, 26, 111.0);
 
     return doc;
   }
