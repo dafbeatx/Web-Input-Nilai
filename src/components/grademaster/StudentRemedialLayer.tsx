@@ -2843,24 +2843,26 @@ export default function StudentRemedialLayer({
             </header>
 
             {/* Peringatan Khusus: Pengawasan Otomatis oleh Komputer / AI */}
-            <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-rose-500/10 border border-rose-500/25 mb-4 sm:mb-5 text-left">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle size={18} className="text-rose-400 shrink-0" />
-                <h3 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-rose-400 font-outfit">
+            <div className="p-4 sm:p-5 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border-2 border-rose-300 dark:border-rose-800/80 mb-4 sm:mb-6 text-left shadow-xs">
+              <div className="flex items-center gap-2.5 mb-2.5">
+                <div className="w-7 h-7 rounded-lg bg-rose-600 dark:bg-rose-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <AlertTriangle size={16} />
+                </div>
+                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wide text-rose-950 dark:text-rose-100 font-outfit">
                   Penting: Pengawasan Otomatis Sistem Komputer (AI)
                 </h3>
               </div>
-              <p className="text-[10px] sm:text-[11px] font-bold text-rose-200/90 leading-relaxed mb-2.5">
-                Ujian ini diawasi sepenuhnya secara otomatis oleh sistem komputer dan kecerdasan buatan (AI), <span className="underline decoration-rose-400 font-black">bukan oleh guru secara manual</span>. Guru tidak memantau layar Anda di balik layar.
+              <p className="text-xs sm:text-[13px] font-bold text-rose-950 dark:text-rose-100 leading-relaxed mb-3">
+                Ujian ini diawasi sepenuhnya secara otomatis oleh sistem komputer dan kecerdasan buatan (AI), <span className="underline decoration-rose-500 dark:decoration-rose-400 font-black text-rose-950 dark:text-white">bukan oleh guru secara manual</span>. Guru tidak memantau layar Anda di balik layar.
               </p>
-              <div className="space-y-1.5 text-[9px] sm:text-[10px] font-bold text-rose-200/80">
-                <div className="flex items-start gap-1.5">
-                  <span className="text-rose-400 font-black shrink-0">•</span>
-                  <span><strong className="text-rose-200">Sanksi Blokir Otomatis:</strong> Berpindah tab, split-screen, membuka aplikasi lain, atau mematikan layar langsung diputus & dikunci oleh server tanpa toleransi.</span>
+              <div className="space-y-2 text-xs sm:text-[12.5px] font-bold text-rose-950 dark:text-rose-100 bg-white/80 dark:bg-rose-900/40 p-3 sm:p-3.5 rounded-xl border border-rose-200 dark:border-rose-800/60 shadow-2xs">
+                <div className="flex items-start gap-2">
+                  <span className="text-rose-600 dark:text-rose-400 font-black shrink-0 mt-0.5">•</span>
+                  <span><strong className="text-rose-950 dark:text-white font-black">Sanksi Blokir Otomatis:</strong> Berpindah tab, split-screen, membuka aplikasi lain, atau mematikan layar langsung diputus dan dikunci oleh server tanpa toleransi.</span>
                 </div>
-                <div className="flex items-start gap-1.5">
-                  <span className="text-rose-400 font-black shrink-0">•</span>
-                  <span><strong className="text-rose-200">Keputusan Sistem Bersifat Mutlak:</strong> Guru tidak dapat membatalkan atau mengubah diskualifikasi jika sesi Anda telah diblokir oleh AI.</span>
+                <div className="flex items-start gap-2">
+                  <span className="text-rose-600 dark:text-rose-400 font-black shrink-0 mt-0.5">•</span>
+                  <span><strong className="text-rose-950 dark:text-white font-black">Keputusan Sistem Bersifat Mutlak:</strong> Guru tidak dapat membatalkan atau mengubah diskualifikasi jika sesi Anda telah diblokir oleh AI.</span>
                 </div>
               </div>
             </div>
@@ -3105,12 +3107,12 @@ export default function StudentRemedialLayer({
             ))}
           </div>
 
-          <div className="bg-rose-500/5 border border-rose-500/20 rounded-2xl p-5 mb-8 flex gap-4 items-center">
-            <div className="w-10 h-10 shrink-0 bg-rose-500/20 text-rose-400 rounded-xl flex items-center justify-center border border-rose-500/20">
+          <div className="bg-rose-50 dark:bg-rose-950/50 border-2 border-rose-300 dark:border-rose-800/80 rounded-2xl p-4 sm:p-5 mb-8 flex gap-3.5 items-center shadow-xs">
+            <div className="w-10 h-10 shrink-0 bg-rose-600 dark:bg-rose-500 text-white rounded-xl flex items-center justify-center shadow-xs">
                <AlertTriangle size={20} />
             </div>
-            <p className="text-[10px] md:text-xs text-rose-400 font-black leading-relaxed uppercase tracking-tight text-left">
-              Pelanggaran posisi wajah yang disengaja akan memicu diskualifikasi otomatis & nilai <span className="text-rose-500">NOL</span>.
+            <p className="text-xs sm:text-[13px] text-rose-950 dark:text-rose-100 font-black leading-relaxed uppercase tracking-tight text-left">
+              Pelanggaran posisi wajah yang disengaja akan memicu diskualifikasi otomatis dan nilai <span className="text-rose-600 dark:text-rose-400 font-black underline">NOL</span>.
             </p>
           </div>
 
@@ -3408,12 +3410,12 @@ export default function StudentRemedialLayer({
                   </div>
                   {finalScore !== null && finalScore < 70 && (
                      <>
-                       <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest bg-rose-500/10 py-2 rounded-full border border-rose-500/20 px-4 block mx-auto w-fit">⚠️ Belum Mencapai KKM (70)</p>
+                       <p className="text-xs font-black text-rose-950 dark:text-rose-100 uppercase tracking-wider bg-rose-100 dark:bg-rose-950/60 py-2 rounded-full border border-rose-300 dark:border-rose-800 px-4 block mx-auto w-fit shadow-xs">⚠️ Belum Mencapai KKM (70)</p>
                        
                        <div className="mt-8 text-left space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar focus:outline-none">
-                         <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
-                           <h4 className="text-[11px] font-black text-rose-400 uppercase tracking-wider mb-1 flex items-center gap-2">
-                             <AlertTriangle size={14} /> Analisis Koreksi Ujian
+                         <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/80 rounded-2xl">
+                           <h4 className="text-xs font-black text-rose-950 dark:text-rose-200 uppercase tracking-wider mb-1 flex items-center gap-2">
+                             <AlertTriangle size={14} className="text-rose-600 dark:text-rose-400" /> Analisis Koreksi Ujian
                            </h4>
                            <p className="text-[10px] text-on-surface-variant font-bold leading-normal uppercase">
                              Berikut adalah detail evaluasi per soal yang terindikasi kurang tepat untuk dipelajari kembali:
@@ -3621,8 +3623,8 @@ export default function StudentRemedialLayer({
               <span className="material-symbols-outlined text-[24px]">cloud_off</span>
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-rose-400 font-black text-xs uppercase tracking-widest font-outfit">Jawaban Disimpan Secara Lokal (Koneksi Terputus)</h4>
-              <p className="text-rose-200/80 text-[11px] font-bold mt-1 leading-relaxed uppercase tracking-wider">
+              <h4 className="text-rose-950 dark:text-rose-200 font-black text-xs sm:text-sm uppercase tracking-wider font-outfit">Jawaban Disimpan Secara Lokal (Koneksi Terputus)</h4>
+              <p className="text-rose-950 dark:text-rose-100 text-xs sm:text-[13px] font-bold mt-1 leading-relaxed uppercase tracking-wider">
                 Pengiriman ke server gagal setelah beberapa kali percobaan karena kendala jaringan. Jawaban Anda **TIDAK HILANG** dan telah dicadangkan di memori browser ini. **Jangan menutup browser Anda, segera laporkan ke proktor/guru untuk bantuan sinkronisasi manual.**
               </p>
             </div>
