@@ -5,7 +5,7 @@ import Image from 'next/image';
 import {
   ArrowLeft, Users, Download, Trash2, Shield, Loader2,
   UserPlus, ShieldCheck, Camera, AlertCircle,
-  KeyRound, TrendingUp
+  KeyRound, TrendingUp, RotateCcw, CheckCircle2, AlertTriangle
 } from 'lucide-react';
 import { ToastType, StudentAccount, isImageUrl } from '@/lib/grademaster/types';
 
@@ -38,6 +38,11 @@ export default function StudentAccountsLayer({
   const [promoteToClassSelect, setPromoteToClassSelect] = useState('');
   const [isPromoting, setIsPromoting] = useState(false);
   const [hasBehaviors, setHasBehaviors] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetScope, setResetScope] = useState<'class' | 'all'>('class');
+  const [resetGoogle, setResetGoogle] = useState(true);
+  const [resetConfirmationInput, setResetConfirmationInput] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -102,6 +107,37 @@ export default function StudentAccountsLayer({
       setToast({ message: 'Terjadi kesalahan saat memproses kenaikan kelas', type: 'error' });
     } finally {
       setIsPromoting(false);
+    }
+  };
+
+  const handleResetAccounts = async () => {
+    if (resetConfirmationInput.trim().toUpperCase() !== 'RESET' || isResetting) return;
+    setIsResetting(true);
+    try {
+      const res = await fetch('/api/grademaster/student-accounts/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scope: resetScope,
+          className: selectedClass,
+          academicYear: selectedYear,
+          resetGoogle,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setToast({ message: data.message || 'Akun siswa berhasil direset', type: 'success' });
+        setShowResetModal(false);
+        setResetConfirmationInput('');
+        fetchClasses();
+        fetchAccounts();
+      } else {
+        setToast({ message: data.error || 'Gagal mereset akun siswa', type: 'error' });
+      }
+    } catch {
+      setToast({ message: 'Terjadi kesalahan saat mereset akun siswa', type: 'error' });
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -315,10 +351,25 @@ export default function StudentAccountsLayer({
         >
           <ArrowLeft size={14} /> Beranda
         </button>
-        <h1 className="text-2xl md:text-3xl font-bold text-on-surface tracking-tight flex items-center gap-3 font-outfit">
-          <KeyRound className="text-primary" size={28} /> Manajemen Akun Siswa
-        </h1>
-        <p className="text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest mt-1.5">Buat, kelola, dan ekspor kredensial login siswa</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-on-surface tracking-tight flex items-center gap-3 font-outfit">
+              <KeyRound className="text-primary" size={28} /> Manajemen Akun Siswa
+            </h1>
+            <p className="text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest mt-1.5">Buat, kelola, dan ekspor kredensial login siswa</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setResetScope(selectedClass ? 'class' : 'all');
+              setResetConfirmationInput('');
+              setShowResetModal(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-rose-500/10 text-rose-600 border border-rose-500/20 hover:bg-rose-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] min-h-[44px] self-start sm:self-auto"
+          >
+            <RotateCcw size={16} /> Reset Akun Siswa
+          </button>
+        </div>
       </header>
 
       {/* Filters: Class and Academic Year */}
@@ -356,7 +407,7 @@ export default function StudentAccountsLayer({
 
       {/* Action Buttons */}
       {selectedClass && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-6">
           <button
             onClick={handleGenerate}
             disabled={isGenerating}
@@ -395,7 +446,18 @@ export default function StudentAccountsLayer({
             <TrendingUp size={16} />
             Kenaikan Kelas
           </button>
-          <div className="hidden md:flex items-center justify-center px-4 py-3 bg-surface border border-outline-variant rounded-xl text-xs font-bold text-on-surface-variant uppercase tracking-wider min-h-[44px]">
+          <button
+            onClick={() => {
+              setResetScope('class');
+              setResetConfirmationInput('');
+              setShowResetModal(true);
+            }}
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-rose-500/10 text-rose-600 border border-rose-500/20 hover:bg-rose-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] min-h-[44px]"
+          >
+            <RotateCcw size={16} />
+            Reset Akun
+          </button>
+          <div className="col-span-2 sm:col-span-1 md:col-span-1 flex items-center justify-center px-4 py-3 bg-surface border border-outline-variant rounded-xl text-xs font-bold text-on-surface-variant uppercase tracking-wider min-h-[44px]">
             <Users size={16} className="mr-2 text-primary" /> {accounts.length} Akun
           </div>
         </div>
@@ -598,6 +660,143 @@ export default function StudentAccountsLayer({
                 className="flex-1 py-3 bg-primary hover:bg-primary-dim disabled:opacity-50 rounded-xl text-xs font-bold uppercase tracking-wider text-white transition-all active:scale-[0.97] flex items-center justify-center gap-1.5 min-h-[44px]"
               >
                 {isPromoting ? <Loader2 size={14} className="animate-spin" /> : "Konfirmasi Naik"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Reset Akun Siswa */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-surface border border-outline-variant rounded-[2rem] p-6 max-w-lg w-full relative shadow-2xl animate-in zoom-in-95 duration-300 text-left">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
+                <RotateCcw size={22} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-on-surface font-outfit">
+                  Reset Akun Siswa
+                </h3>
+                <p className="text-xs text-on-surface-variant font-sans">
+                  Hapus kredensial login dan sesi siswa untuk pendaftaran ulang mandiri.
+                </p>
+              </div>
+            </div>
+
+            {/* Guaranteed Data Safety Banner */}
+            <div className="mb-4 p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-start gap-2.5">
+              <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+              <div className="text-xs text-emerald-800 leading-relaxed">
+                <span className="font-bold block text-emerald-900 mb-0.5">Data Nilai & Perilaku Dijamin Aman</span>
+                Nilai ujian (UTS/UAS), rekap remedial, kehadiran, dan poin perilaku siswa (behaviour) dijamin 100% utuh dan tidak akan hilang. Hanya kredensial login akun yang direset.
+              </div>
+            </div>
+
+            {/* Scope Selection */}
+            <div className="space-y-3 mb-4">
+              <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                Pilih Cakupan Reset
+              </label>
+
+              {selectedClass ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setResetScope('class')}
+                    className={`p-3 rounded-xl border text-left transition-all min-h-[44px] ${
+                      resetScope === 'class'
+                        ? 'border-primary bg-primary/5 text-on-surface font-bold shadow-sm'
+                        : 'border-outline-variant bg-surface-variant text-on-surface-variant hover:border-outline'
+                    }`}
+                  >
+                    <div className="text-xs font-bold text-on-surface">Kelas {selectedClass}</div>
+                    <div className="text-[11px] text-on-surface-variant mt-0.5">{accounts.length} akun siswa</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setResetScope('all')}
+                    className={`p-3 rounded-xl border text-left transition-all min-h-[44px] ${
+                      resetScope === 'all'
+                        ? 'border-rose-500 bg-rose-500/5 text-on-surface font-bold shadow-sm'
+                        : 'border-outline-variant bg-surface-variant text-on-surface-variant hover:border-outline'
+                    }`}
+                  >
+                    <div className="text-xs font-bold text-rose-600">Semua Kelas</div>
+                    <div className="text-[11px] text-on-surface-variant mt-0.5">Seluruh akun siswa di sistem</div>
+                  </button>
+                </div>
+              ) : (
+                <div className="p-3 bg-surface-variant border border-outline-variant rounded-xl text-xs font-bold text-on-surface">
+                  Semua Kelas (Seluruh Akun Siswa di Sistem)
+                </div>
+              )}
+            </div>
+
+            {/* Google Reset Option */}
+            <div className="mb-4 p-3 bg-surface-variant/70 border border-outline-variant rounded-xl flex items-start gap-3">
+              <input
+                id="reset-google-checkbox"
+                type="checkbox"
+                checked={resetGoogle}
+                onChange={(e) => setResetGoogle(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded text-rose-600 border-outline-variant focus:ring-rose-500 cursor-pointer"
+              />
+              <label htmlFor="reset-google-checkbox" className="text-xs cursor-pointer select-none">
+                <span className="font-bold text-on-surface block">Reset sesi login Google siswa</span>
+                <span className="text-on-surface-variant text-[11px] leading-relaxed block mt-0.5">
+                  Siswa yang login lewat Google akan direset tautannya sehingga dapat menautkan kembali atau membuat profil baru.
+                </span>
+              </label>
+            </div>
+
+            {/* Confirmation input */}
+            <div className="mb-5">
+              <label className="flex items-center gap-1.5 text-[11px] font-bold text-rose-600 uppercase tracking-wider mb-1.5">
+                <AlertTriangle size={14} /> Konfirmasi Keamanan
+              </label>
+              <p className="text-xs text-on-surface-variant mb-2">
+                Ketik kata <span className="font-mono font-bold text-rose-600 bg-rose-500/10 px-1.5 py-0.5 rounded">RESET</span> dengan huruf kapital untuk membuka tombol konfirmasi:
+              </p>
+              <input
+                type="text"
+                value={resetConfirmationInput}
+                onChange={(e) => setResetConfirmationInput(e.target.value)}
+                placeholder="Ketik RESET"
+                className="w-full bg-surface-variant border border-outline-variant rounded-xl p-3 text-sm font-mono font-bold text-on-surface tracking-wider outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all uppercase min-h-[44px]"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowResetModal(false);
+                  setResetConfirmationInput('');
+                }}
+                disabled={isResetting}
+                className="flex-1 py-3 bg-surface-variant border border-outline-variant hover:bg-surface-container-highest rounded-xl text-xs font-bold uppercase tracking-wider text-on-surface transition-all active:scale-[0.97] min-h-[44px] disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleResetAccounts}
+                disabled={resetConfirmationInput.trim() !== 'RESET' || isResetting}
+                className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 rounded-xl text-xs font-bold uppercase tracking-wider text-white transition-all active:scale-[0.97] flex items-center justify-center gap-1.5 min-h-[44px]"
+              >
+                {isResetting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Mereset...
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw size={16} />
+                    Ya, Reset Akun
+                  </>
+                )}
               </button>
             </div>
           </div>

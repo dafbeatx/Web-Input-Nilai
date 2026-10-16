@@ -461,17 +461,18 @@ export function GradeMasterProvider({ children }: { children: ReactNode }) {
               }
               console.log("[AuthInit] Student token verified for:", resolvedStudentData?.name);
             } else {
-              // Server explicitly returned unauthenticated
-              if (!savedStudent) {
-                setIsAdmin(false);
-                setAdminUser(null);
-                setIsStudent(false);
-                setIsParent(false);
-                setStudentData(null);
-                safeLocalStorage.removeItem('gm_isStudent');
-                safeLocalStorage.removeItem('gm_studentData');
-                safeLocalStorage.removeItem('gm_student_token');
-              }
+              // Server explicitly returned unauthenticated (account was deleted/reset or token invalidated)
+              activeStudent = false;
+              setIsAdmin(false);
+              setAdminUser(null);
+              setIsStudent(false);
+              setIsParent(false);
+              setStudentData(null);
+              safeLocalStorage.removeItem('gm_isStudent');
+              safeLocalStorage.removeItem('gm_studentData');
+              safeLocalStorage.removeItem('gm_student_token');
+              safeLocalStorage.removeItem('gm_saved_student_name');
+              safeLocalStorage.removeItem('gm_saved_username');
             }
           } catch (fetchErr) {
             console.warn("[AuthInit] /api/student/check network error, keeping cached student session:", fetchErr);

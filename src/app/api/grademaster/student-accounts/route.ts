@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { checkRateLimit } from '@/lib/grademaster/security';
 import { hashPassword } from '@/lib/grademaster/security';
@@ -259,7 +260,6 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const supabase = await createClient();
     const adminSession = await getAdminSession();
     if (!adminSession) {
       return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
@@ -272,7 +272,31 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Account ID wajib diisi' }, { status: 400 });
     }
 
-    const { error } = await supabase
+    // Look up account first to check if there is a linked google_email
+    const { data: account } = await supabaseAdmin
+      .from('gm_student_accounts')
+      .select('id, google_email')
+      .eq('id', accountId)
+      .maybeSingle();
+
+    if (account?.google_email) {
+      const email = account.google_email.toLowerCase().trim();
+      const adminDomains = ['@guru.smp.belajar.id', '@guru.belajar.id', '@smp.belajar.id', '@admin.belajar.id'];
+      const isWhitelisted = adminDomains.some(d => email.endsWith(d)) || email === 'dafbeatx@gmail.com';
+      if (!isWhitelisted) {
+        try {
+          const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+          const targetUser = usersData?.users?.find(u => u.email?.toLowerCase().trim() === email);
+          if (targetUser && targetUser.app_metadata?.role !== 'admin') {
+            await supabaseAdmin.auth.admin.deleteUser(targetUser.id);
+          }
+        } catch (e) {
+          console.warn('[DELETE Student Account] Could not delete Google auth user:', e);
+        }
+      }
+    }
+
+    const { error } = await supabaseAdmin
       .from('gm_student_accounts')
       .delete()
       .eq('id', accountId);
