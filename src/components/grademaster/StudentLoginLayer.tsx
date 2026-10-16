@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { Search, Loader2, CheckCircle2, KeyRound, User, Lock, Eye, EyeOff } from 'lucide-react';
+import { Search, Loader2, CheckCircle2, KeyRound, User, Lock, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 import { supabase } from '@/lib/supabase/client';
 import { ToastType, StudentAccount } from '@/lib/grademaster/types';
 import { Session } from '@supabase/supabase-js';
 import NeonGraduationCap from '@/components/grademaster/ui/NeonGraduationCap';
+import StudentAccountGenerateModal from './StudentAccountGenerateModal';
 
 interface StudentLoginLayerProps {
   onSuccess: (studentData: StudentAccount | null) => void;
@@ -28,6 +29,8 @@ function setParentStudentCookie(studentName: string) {
 export default function StudentLoginLayer({
   onSuccess,
   setToast,
+  isLoggedIn = false,
+  onLogout,
 }: StudentLoginLayerProps) {
   // Loading States
   const [isPageEntering, setIsPageEntering] = useState(true);
@@ -35,6 +38,23 @@ export default function StudentLoginLayer({
   const [isLoginInProgress, setIsLoginInProgress] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [userName, setUserName] = useState('');
+  
+  // State modal generate akun siswa
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+
+  // Deteksi sesi login aktif di browser
+  const [hasActiveSession, setHasActiveSession] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const isSavedStudent = localStorage.getItem('gm_isStudent') === 'true';
+      const savedToken = !!localStorage.getItem('gm_student_token');
+      const savedData = !!localStorage.getItem('gm_studentData');
+      return isSavedStudent || savedToken || savedData;
+    }
+    return false;
+  });
+
+  // Jika sudah ada sesi login aktif, jangan tampilkan bagian generate akun
+  const isSessionActive = Boolean(isLoggedIn || hasActiveSession);
   
   const [error, setError] = useState('');
 
@@ -205,6 +225,7 @@ export default function StudentLoginLayer({
           try {
             const parsed = JSON.parse(savedData);
             setUserName(parsed.name || parsed.username || 'Siswa');
+            setHasActiveSession(true);
             handleSessionActive(null);
             return;
           } catch {}
@@ -214,6 +235,7 @@ export default function StudentLoginLayer({
       // 3. Check for existing Supabase auth session
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        setHasActiveSession(true);
         handleSessionActive(session);
         return;
       }
@@ -238,6 +260,7 @@ export default function StudentLoginLayer({
                 if (checkData.student.username) localStorage.setItem('gm_saved_username', checkData.student.username);
               }
             }
+            setHasActiveSession(true);
             setUserName(checkData.student?.name || checkData.student?.username || 'Siswa');
             handleSessionActive(null);
             return;
@@ -376,7 +399,7 @@ export default function StudentLoginLayer({
     }
   };
 
-  // ── RENDERING — LOADING STATES ──────────────────────────────
+  // ── RENDERING: LOADING STATES ──────────────────────────────
 
   // Full Screen checking state
   if (isCheckingSession) {
@@ -547,7 +570,12 @@ export default function StudentLoginLayer({
                           if (typeof window !== 'undefined') {
                             localStorage.removeItem('gm_saved_username');
                             localStorage.removeItem('gm_saved_student_name');
+                            localStorage.removeItem('gm_isStudent');
+                            localStorage.removeItem('gm_student_token');
+                            localStorage.removeItem('gm_studentData');
                           }
+                          setHasActiveSession(false);
+                          if (onLogout) onLogout();
                         }}
                         className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 px-2 py-1 hover:bg-slate-200/60 rounded-lg transition-colors shrink-0 min-h-[36px]"
                       >
@@ -678,6 +706,30 @@ export default function StudentLoginLayer({
                   </label>
                   <span className="text-[11px] text-slate-500 font-medium">Khusus Siswa Terdaftar</span>
                 </div>
+
+                {/* Bagian Buat Akun Siswa Mandiri: Hanya ditampilkan jika belum ada sesi login aktif */}
+                {!isSessionActive && (
+                  <div className="pt-3 border-t border-slate-100 w-full animate-in fade-in duration-200">
+                    <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <div className="text-left w-full sm:w-auto">
+                        <span className="text-xs font-bold text-slate-800 block">
+                          Belum punya akun siswa?
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-medium block">
+                          Pilih nama Anda di kelas untuk membuat akun dan kata sandi
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsGenerateModalOpen(true)}
+                        className="w-full sm:w-auto px-3.5 py-2.5 bg-white hover:bg-slate-100 active:bg-slate-200 border border-slate-300 text-slate-900 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 shrink-0 min-h-[44px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1"
+                      >
+                        <UserPlus size={15} className="text-indigo-600" />
+                        <span>Buat Akun Siswa</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="w-full space-y-3 animate-in fade-in duration-200 text-left">
@@ -753,6 +805,22 @@ export default function StudentLoginLayer({
           GradeMaster Academic Portal
         </p>
       </footer>
+
+      {/* Modal Generate Akun Siswa Mandiri */}
+      <StudentAccountGenerateModal
+        isOpen={isGenerateModalOpen}
+        onClose={() => setIsGenerateModalOpen(false)}
+        onAccountCreated={({ username, password, studentName }) => {
+          setAdminUsername(username);
+          setAdminPassword(password);
+          setSavedStudentName(studentName);
+          setToast({
+            message: `Akun untuk ${studentName} berhasil dibuat. Kredensial telah diisi otomatis.`,
+            type: 'success'
+          });
+        }}
+        setToast={setToast}
+      />
 
     </div>
   );
