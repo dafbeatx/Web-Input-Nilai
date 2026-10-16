@@ -34,33 +34,130 @@ async function getCertificateBackgroundImage(): Promise<string | null> {
   return null;
 }
 
-export function formatCertificateStudentName(fullName: string, maxLength: number = 22): string {
-  const clean = (fullName || '').trim().replace(/\s+/g, ' ').toUpperCase();
-  if (!clean) return '';
-  if (clean.length <= maxLength) return clean;
+export interface FittedCertificateName {
+  displayName: string;
+  fontSize: number; // in pt
+  widthMm: number; // in mm
+  isAbbreviated: boolean;
+}
 
-  const parts = clean.split(' ');
-  if (parts.length <= 1) return clean;
+let cachedMeasurementDoc: jsPDF | null = null;
+function getMeasurementDoc(): jsPDF {
+  if (!cachedMeasurementDoc) {
+    cachedMeasurementDoc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4',
+    });
+  }
+  return cachedMeasurementDoc;
+}
+
+export function smartAbbreviateName(cleanName: string, targetMaxChars: number = 24): string {
+  const parts = cleanName.split(' ');
+  if (parts.length <= 1) return cleanName;
 
   const words = [...parts];
 
-  // 1. If first word is MUHAMMAD, MOHAMMAD, etc., abbreviate to M.
+  // 1. Abbreviate honorific prefix Muhammad/etc to M.
   if (['MUHAMMAD', 'MOHAMMAD', 'MUHAMAD', 'MOHAMAD', 'MOCHAMMAD', 'MOCHAMAD'].includes(words[0])) {
     words[0] = 'M.';
     const candidate = words.join(' ');
-    if (candidate.length <= maxLength) return candidate;
+    if (candidate.length <= targetMaxChars) return candidate;
   }
 
-  // 2. Abbreviate from the last word backwards towards the 2nd word
+  // 2. Abbreviate middle words to initials
+  if (words.length > 2) {
+    for (let i = 1; i < words.length - 1; i++) {
+      if (words[i].length > 1 && !words[i].endsWith('.')) {
+        words[i] = words[i][0] + '.';
+        const candidate = words.join(' ');
+        if (candidate.length <= targetMaxChars) return candidate;
+      }
+    }
+  }
+
+  // 3. Abbreviate last word to initial if still exceeding target
   for (let i = words.length - 1; i >= 1; i--) {
     if (words[i].length > 1 && !words[i].endsWith('.')) {
       words[i] = words[i][0] + '.';
       const candidate = words.join(' ');
-      if (candidate.length <= maxLength) return candidate;
+      if (candidate.length <= targetMaxChars) return candidate;
     }
   }
 
   return words.join(' ');
+}
+
+export function getFittedCertificateStudentName(
+  doc?: jsPDF,
+  fullName?: string,
+  maxWidthMm: number = 98
+): FittedCertificateName {
+  const cleanName = (fullName || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+
+  if (!cleanName) {
+    return {
+      displayName: '',
+      fontSize: 19,
+      widthMm: 0,
+      isAbbreviated: false,
+    };
+  }
+
+  const measurementDoc = doc || getMeasurementDoc();
+  measurementDoc.setFont('helvetica', 'bold');
+
+  // Dynamic starting font size:
+  // Short names (<= 14 chars) get up to 20pt for bold visual impact.
+  // Medium names start at 19.5pt.
+  let targetFontSize = cleanName.length <= 14 ? 20 : 19.5;
+  measurementDoc.setFontSize(targetFontSize);
+  let currentWidth = measurementDoc.getTextWidth(cleanName);
+
+  // 1. Smoothly scale down font size in 0.5pt steps down to 14.0pt
+  while (currentWidth > maxWidthMm && targetFontSize > 14.0) {
+    targetFontSize -= 0.5;
+    measurementDoc.setFontSize(targetFontSize);
+    currentWidth = measurementDoc.getTextWidth(cleanName);
+  }
+
+  // 2. If at 14.0pt it still exceeds maxWidthMm (or is extremely long >= 26 chars and touching the edge > 96mm),
+  // intelligently abbreviate secondary names so it fits with dignified, bold typography (15pt-17.5pt)
+  if (currentWidth > maxWidthMm || (currentWidth > 96 && cleanName.length >= 26)) {
+    const abbreviated = smartAbbreviateName(cleanName, 24);
+    let abbrevFontSize = 17.5;
+    measurementDoc.setFontSize(abbrevFontSize);
+    let abbrevWidth = measurementDoc.getTextWidth(abbreviated);
+
+    while (abbrevWidth > maxWidthMm && abbrevFontSize > 13.0) {
+      abbrevFontSize -= 0.5;
+      measurementDoc.setFontSize(abbrevFontSize);
+      abbrevWidth = measurementDoc.getTextWidth(abbreviated);
+    }
+
+    return {
+      displayName: abbreviated,
+      fontSize: abbrevFontSize,
+      widthMm: abbrevWidth,
+      isAbbreviated: abbreviated !== cleanName,
+    };
+  }
+
+  return {
+    displayName: cleanName,
+    fontSize: targetFontSize,
+    widthMm: currentWidth,
+    isAbbreviated: false,
+  };
+}
+
+export function formatCertificateStudentName(fullName: string, maxLength: number = 22): string {
+  const fitted = getFittedCertificateStudentName(undefined, fullName, 98);
+  return fitted.displayName;
 }
 
 export async function generateBatchLdksCertificatesPdf(
@@ -86,21 +183,16 @@ export async function generateBatchLdksCertificatesPdf(
     const student = students[i];
     if (bgImage) {
       doc.addImage(bgImage, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
-      const studentName = formatCertificateStudentName(student.studentName || '', 22);
+      
+      const fitted = getFittedCertificateStudentName(doc, student.studentName || '', 98);
 
       doc.setFont('helvetica', 'bold');
-      let fontSize = 14;
-      doc.setFontSize(fontSize);
-      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(fitted.fontSize);
+      doc.setTextColor(15, 23, 42); // Deep navy charcoal #0f172a
 
-      const maxLineWidth = 98;
-      const textWidth = doc.getTextWidth(studentName);
-      if (textWidth > maxLineWidth) {
-        fontSize = Math.max(10, Math.floor(fontSize * (maxLineWidth / textWidth)));
-        doc.setFontSize(fontSize);
-      }
-
-      doc.text(studentName, 26, 111.0);
+      // Baseline sits right above the horizontal line (line Y = 112.28mm, text baseline = 111.0mm)
+      // Strictly 1 single line, never wraps, never exceeds line length (max 98mm from X=26mm)
+      doc.text(fitted.displayName, 26, 111.0);
     }
 
     if (onProgress) {
@@ -133,24 +225,16 @@ export async function generateLdksCertificatePdf(
     // Draw Canva background template full-bleed across A4 Landscape
     doc.addImage(bgImage, 'PNG', 0, 0, pageWidth, pageHeight);
 
-    // Print ONLY Student Name right above the horizontal line
-    // If name is too long, abbreviate intelligently so it fits cleanly
-    const studentName = formatCertificateStudentName(student.studentName || '', 22);
+    // Calculate smart dynamic font size and guarantee 1 single line without exceeding the underline
+    const fitted = getFittedCertificateStudentName(doc, student.studentName || '', 98);
 
     doc.setFont('helvetica', 'bold');
-    let fontSize = 14;
-    doc.setFontSize(fontSize);
+    doc.setFontSize(fitted.fontSize);
     doc.setTextColor(15, 23, 42); // Deep slate-900 / dark charcoal
 
-    const maxLineWidth = 98; // mm
-    const textWidth = doc.getTextWidth(studentName);
-    if (textWidth > maxLineWidth) {
-      fontSize = Math.max(10, Math.floor(fontSize * (maxLineWidth / textWidth)));
-      doc.setFontSize(fontSize);
-    }
-
     // Precise placement: X = 26mm, Y = 111.0mm (baseline sits right above line at 112.28mm)
-    doc.text(studentName, 26, 111.0);
+    // Guaranteed single line, no wrap, no exceeding the line
+    doc.text(fitted.displayName, 26, 111.0);
 
     return doc;
   }

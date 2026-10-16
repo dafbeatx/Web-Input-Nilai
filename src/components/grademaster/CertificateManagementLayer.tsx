@@ -24,6 +24,8 @@ import {
   generateLdksCertificatePdf,
   generateBatchLdksCertificatesPdf,
   formatCertificateStudentName,
+  getFittedCertificateStudentName,
+  FittedCertificateName,
 } from '@/lib/grademaster/certificateGenerator';
 
 interface CertificateManagementLayerProps {
@@ -215,9 +217,9 @@ export default function CertificateManagementLayer({
     });
   }, [students, selectedClassTab, searchQuery]);
 
-  // Preview student formatted print name
-  const previewFormattedName = useMemo(() => {
-    return formatCertificateStudentName(previewStudent.name, 22);
+  // Preview student fitted name and smart dynamic font size
+  const previewFittedInfo: FittedCertificateName = useMemo(() => {
+    return getFittedCertificateStudentName(undefined, previewStudent.name, 98);
   }, [previewStudent.name]);
 
   // Toggle Publish Status
@@ -483,7 +485,10 @@ export default function CertificateManagementLayer({
             </div>
 
             {/* Exact Canva Template Preview Container */}
-            <div className="relative w-full aspect-[2000/1414] max-w-4xl mx-auto rounded-xl overflow-hidden border border-slate-200 shadow-md bg-white select-none">
+            <div
+              className="relative w-full aspect-[2000/1414] max-w-4xl mx-auto rounded-xl overflow-hidden border border-slate-200 shadow-md bg-white select-none"
+              style={{ containerType: 'inline-size' }}
+            >
               <Image
                 src="/sertifikat-ldks.png"
                 alt="Desain Sertifikat LDKS"
@@ -493,30 +498,38 @@ export default function CertificateManagementLayer({
                 className="w-full h-full object-contain pointer-events-none"
               />
 
-              {/* Overlaid Student Name precisely above the line */}
+              {/* Overlaid Student Name strictly in 1 single line right above the underline */}
               <div
-                className="absolute font-sans font-bold text-slate-900 tracking-wide select-none pointer-events-none"
+                className="absolute font-sans font-bold text-slate-900 select-none pointer-events-none"
                 style={{
-                  left: '8.65%',
+                  left: '8.55%',
                   bottom: '47.2%',
-                  fontSize: 'clamp(9px, 1.25vw, 15px)',
-                  lineHeight: '1',
-                  maxWidth: '34.2%',
+                  fontSize: `clamp(10px, ${(previewFittedInfo.fontSize * 0.1188).toFixed(3)}cqi, 26px)`,
+                  lineHeight: 1,
                   whiteSpace: 'nowrap',
+                  overflow: 'visible',
+                  maxWidth: 'none',
+                  letterSpacing: '-0.01em',
                 }}
               >
-                {previewFormattedName}
+                {previewFittedInfo.displayName}
               </div>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-slate-500 gap-2 pt-1 max-w-4xl mx-auto">
-              <span className="flex items-center gap-1.5">
+              <span className="flex flex-wrap items-center gap-1.5">
                 <Sparkles size={13} className="text-emerald-600" />
                 Nama tercetak:{' '}
-                <strong className="text-slate-800 font-sans">{previewFormattedName}</strong>
-                {previewFormattedName !== previewStudent.name.toUpperCase() && (
-                  <span className="text-emerald-700 italic font-medium">
-                    (disingkat otomatis agar pas dengan panjang garis)
+                <strong className="text-slate-800 font-sans">{previewFittedInfo.displayName}</strong>
+                <span className="bg-slate-100 text-slate-700 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border border-slate-200">
+                  {previewFittedInfo.fontSize.toFixed(1)}pt
+                </span>
+                <span className="text-slate-400 text-[10px]">
+                  ({previewFittedInfo.widthMm.toFixed(1)} mm / 98 mm batas garis)
+                </span>
+                {previewFittedInfo.isAbbreviated && (
+                  <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                    Disingkat otomatis agar pas 1 baris
                   </span>
                 )}
               </span>
@@ -667,8 +680,7 @@ export default function CertificateManagementLayer({
                       </tr>
                     ) : (
                       filteredStudents.map((s, idx) => {
-                        const formattedName = formatCertificateStudentName(s.name, 22);
-                        const isAbbr = formattedName !== s.name.toUpperCase();
+                        const fitted = getFittedCertificateStudentName(undefined, s.name, 98);
                         const isCurrentPreview = previewStudent.name === s.name;
 
                         return (
@@ -685,14 +697,19 @@ export default function CertificateManagementLayer({
                               {s.name}
                             </td>
                             <td className="py-2.5 px-3.5 font-sans">
-                              <span className="font-bold text-slate-800">
-                                {formattedName}
-                              </span>
-                              {isAbbr && (
-                                <span className="ml-1.5 text-[10px] font-semibold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded">
-                                  Disingkat
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-bold text-slate-800">
+                                  {fitted.displayName}
                                 </span>
-                              )}
+                                <span className="text-[10px] font-mono font-bold text-slate-600 bg-slate-100 border border-slate-200 px-1 py-0.5 rounded">
+                                  {fitted.fontSize.toFixed(1)}pt
+                                </span>
+                                {fitted.isAbbreviated && (
+                                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded">
+                                    Disingkat
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="py-2.5 px-3.5 text-center font-bold text-slate-700">
                               <span className="bg-slate-100 px-2 py-0.5 rounded text-[11px]">
