@@ -33,6 +33,8 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import StudentLessonLayer from './StudentLessonLayer';
 import GamesLayer from './GamesLayer';
+import { generateLdksCertificatePdf } from '@/lib/grademaster/certificateGenerator';
+import type { CertificateTemplate } from '@/app/api/grademaster/certificates/route';
 
 interface BehaviorLog {
   id: string;
@@ -506,6 +508,49 @@ export default function StudentProfileLayer({
         link.href = canvas.toDataURL('image/jpeg', 0.95);
         link.click();
         setToast({ message: "Berhasil mengunduh Sertifikat Kedisiplinan (JPG)", type: "success" });
+
+      } else if (docId === 'cert-ldks') {
+        let template: CertificateTemplate | null = null;
+        try {
+          const res = await fetch('/api/grademaster/certificates?type=LDKS');
+          if (res.ok) {
+            const data = await res.json();
+            template = data.template;
+          }
+        } catch (e) {
+          console.warn('Gagal memuat template dari server, menggunakan default:', e);
+        }
+
+        const fallbackTemplate: CertificateTemplate = {
+          cert_type: 'LDKS',
+          title: 'SERTIFIKAT PENGHARGAAN',
+          subtitle: 'Latihan Dasar Kepemimpinan Siswa (LDKS)',
+          cert_number_prefix: '042/LDKS-SMATAS/X/2026',
+          citation: 'Diberikan dengan penuh hormat dan apresiasi kepada:',
+          description: 'Atas partisipasi aktif, dedikasi, serta integritas tinggi dalam mengikuti dan menyelesaikan seluruh rangkaian kegiatan Latihan Dasar Kepemimpinan Siswa (LDKS) sebagai PESERTA.',
+          city: 'Bogor',
+          issue_date: '16 Oktober 2026',
+          signer1_role: 'Ketua Panitia LDKS,',
+          signer1_name: 'Ketua Panitia LDKS, S.Pd.',
+          signer2_role: 'Kepala Sekolah,',
+          signer2_name: 'Farhan Sopian Sahid, S.Pd.I',
+          academic_year: activeYear || '2026/2027',
+          target_class: 'ALL_X',
+          is_published: true
+        };
+
+        const activeTemplate = template || fallbackTemplate;
+        const studentInfo = {
+          studentName: studentName || 'Siswa',
+          className: activeClass || 'X',
+          academicYear: activeYear || activeTemplate.academic_year || '2026/2027'
+        };
+
+        const doc = generateLdksCertificatePdf(activeTemplate, studentInfo);
+        const safeName = (studentName || 'Siswa').replace(/\s+/g, '_');
+        const safeClass = (activeClass || 'X').replace(/\s+/g, '_');
+        doc.save(`Sertifikat_Penghargaan_LDKS_${safeName}_${safeClass}.pdf`);
+        setToast({ message: "Berhasil mengunduh Sertifikat Penghargaan LDKS (PDF)", type: "success" });
 
       } else if (docId === 'history-1') {
         const academicHistory = studentSummary?.academicHistory || [];

@@ -478,9 +478,30 @@ export async function GET(req: NextRequest) {
     // Urutkan tahun ajaran paling baru (teratas)
     enrollmentHistory.sort((a, b) => b.academic_year.localeCompare(a.academic_year));
 
-    // 4. Mock Documents (In real app, this might pull from a storage table)
+    // Check if LDKS certificate template is published by admin
+    let isLdksPublished = false;
+    try {
+      const { data: certData } = await db
+        .from('gm_certificate_templates')
+        .select('is_published, target_class')
+        .eq('cert_type', 'LDKS')
+        .maybeSingle();
+
+      if (certData && certData.is_published) {
+        const clsUpper = (targetClassName || '').toUpperCase();
+        const isClassX = clsUpper.includes('X') || clsUpper.includes('10') || enrollmentHistory.some(e => e.class_name.toUpperCase().includes('X') || e.class_name.toUpperCase().includes('10'));
+        if (certData.target_class === 'ALL' || isClassX) {
+          isLdksPublished = true;
+        }
+      }
+    } catch {
+      // Table might not exist yet, fallback to false
+    }
+
+    // 4. Documents List
     const documents = [
       { id: 'report-1', name: 'Laporan Progres Kelakuan', type: 'PDF', size: '1.2 MB', ready: true },
+      ...(isLdksPublished ? [{ id: 'cert-ldks', name: 'Sertifikat Penghargaan LDKS', type: 'PDF', size: '0.8 MB', ready: true }] : []),
       ...(totalPoints === 0 ? [{ id: 'cert-1', name: 'Sertifikat Kedisiplinan', type: 'JPG', size: '2.4 MB', ready: academicHistory.length > 0 }] : []),
       { id: 'history-1', name: 'Rekap Nilai Tahunan', type: 'XLSX', size: '0.5 MB', ready: totalAttendance > 0 }
     ];
