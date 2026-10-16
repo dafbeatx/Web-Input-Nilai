@@ -830,10 +830,16 @@ export default function StudentRemedialLayer({
       ? (clientCheatingFlags.includes(explicitReason) ? clientCheatingFlags : [...clientCheatingFlags, explicitReason])
       : clientCheatingFlags;
 
+    const savedSession = loadRemedialSession();
+    const effectiveStartedAt = startedAtRef.current || savedSession?.startedAt;
+    const clientElapsedMs = effectiveStartedAt ? Math.max(0, Date.now() - effectiveStartedAt) : undefined;
+
     const payload = { 
       sessionId, 
+      studentId: currentStudentId || savedSession?.studentId || undefined,
       studentName, 
       status, 
+      elapsedTimeMs: clientElapsedMs,
       location: currentLocation,
       answers: (status === 'COMPLETED' || status === 'TIMEOUT') ? (() => {
         const totalQ = shuffledQuestions.length > 0 ? shuffledQuestions.length : remedialEssayCount;

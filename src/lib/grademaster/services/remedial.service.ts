@@ -267,10 +267,38 @@ export async function submitRemedial(
     };
   }
 
-  // Validasi Durasi di Backend (Mengabaikan data dari frontend)
-  let backendElapsedMs = elapsedTimeMs;
+  // Validasi Durasi di Backend
+  // Ambil waktu mulai paling awal dari server (created_at atau started_at)
+  const serverStartTimestamps: number[] = [];
   if (attempt.started_at) {
-    backendElapsedMs = Date.now() - new Date(attempt.started_at).getTime();
+    const t = new Date(attempt.started_at).getTime();
+    if (!isNaN(t) && t > 0) serverStartTimestamps.push(t);
+  }
+  if (attempt.created_at) {
+    const t = new Date(attempt.created_at).getTime();
+    if (!isNaN(t) && t > 0) serverStartTimestamps.push(t);
+  }
+
+  let serverElapsedMs = 0;
+  if (serverStartTimestamps.length > 0) {
+    const earliestServerStart = Math.min(...serverStartTimestamps);
+    serverElapsedMs = Math.max(0, Date.now() - earliestServerStart);
+  }
+
+  const isFreshRecovery = attempt.location === 'RECOVERY_AUTO' && serverElapsedMs < 15_000;
+  let backendElapsedMs = serverElapsedMs;
+
+  if (isFreshRecovery && elapsedTimeMs && elapsedTimeMs > 0) {
+    backendElapsedMs = elapsedTimeMs;
+  } else if (serverElapsedMs > 0) {
+    // Berikan toleransi 45 detik jika rekaman client sedikit mendahului server akibat latensi jaringan
+    if (elapsedTimeMs && elapsedTimeMs > serverElapsedMs && (elapsedTimeMs - serverElapsedMs) <= 45_000) {
+      backendElapsedMs = elapsedTimeMs;
+    } else {
+      backendElapsedMs = serverElapsedMs;
+    }
+  } else if (elapsedTimeMs && elapsedTimeMs > 0) {
+    backendElapsedMs = elapsedTimeMs;
   }
 
   const attemptUpdate: Record<string, unknown> = {
@@ -341,7 +369,7 @@ export async function submitRemedial(
     });
 
     // Duration validation (Anti-Exploit: Too fast) - Validasi Backend Mutlak
-    const minDurationMs = 5 * 60 * 1000; // 5 minutes minimal
+    const minDurationMs = Math.min(5 * 60 * 1000, Math.max(60 * 1000, ((session.remedial_timer || 15) * 60 * 1000) / 3));
     const isTooFast = backendElapsedMs < minDurationMs;
     
     // Timeout validation (Anti-Exploit: Melebihi waktu sangat lama)
@@ -706,6 +734,8 @@ async function findActiveAttempt(
   attempt_token: string; 
   risk_score: number; 
   started_at: string | null; 
+  created_at?: string | null;
+  location?: string | null;
   status: string; 
   remedial_questions?: string[] | null; 
   remedial_answer_keys?: string[] | null; 
@@ -724,7 +754,7 @@ async function findActiveAttempt(
   // 1. Try finding ACTIVE attempt
   const { data: activeAttempt } = await supabase
     .from('gm_remedial_attempts')
-    .select('id, attempt_token, risk_score, started_at, status, remedial_questions, remedial_answer_keys')
+    .select('id, attempt_token, risk_score, started_at, created_at, location, status, remedial_questions, remedial_answer_keys')
     .eq('session_id', sessionId)
     .eq('student_id', studentId)
     .eq('status', 'ACTIVE')
@@ -742,7 +772,7 @@ async function findActiveAttempt(
 
   const { data: initiatedAttempt } = await supabase
     .from('gm_remedial_attempts')
-    .select('id, attempt_token, risk_score, session_id, started_at, status, remedial_questions, remedial_answer_keys')
+    .select('id, attempt_token, risk_score, session_id, started_at, created_at, location, status, remedial_questions, remedial_answer_keys')
     .eq('session_id', sessionId)
     .eq('student_id', studentId)
     .eq('status', 'INITIATED')
@@ -753,10 +783,11 @@ async function findActiveAttempt(
   if (initiatedAttempt) {
     console.warn(`[Remedial Recovery] Found INITIATED attempt ${initiatedAttempt.id}. Auto-activating...`);
 
-    const now = new Date().toISOString();
+    // Pertahankan waktu awal asli dari attempt agar durasi ujian tidak tereset ke 0
+    const originalStartTime = initiatedAttempt.started_at || initiatedAttempt.created_at || new Date().toISOString();
     await supabase
       .from('gm_remedial_attempts')
-      .update({ status: 'ACTIVE', started_at: now })
+      .update({ status: 'ACTIVE', started_at: originalStartTime })
       .eq('id', initiatedAttempt.id);
 
     await supabase
@@ -765,7 +796,7 @@ async function findActiveAttempt(
       .eq('id', studentId);
 
     initiatedAttempt.status = 'ACTIVE';
-    initiatedAttempt.started_at = now;
+    initiatedAttempt.started_at = originalStartTime;
     return initiatedAttempt;
   }
 
@@ -773,6 +804,7 @@ async function findActiveAttempt(
   console.error(`[Remedial Recovery] No attempt found at all for ${studentName} (session: ${sessionId}). Creating recovery attempt...`);
 
   const recoveryToken = generateAttemptToken(sessionId, studentId);
+  const recoveryStartTime = new Date().toISOString();
 
   const { data: recoveryAttempt, error: recoveryErr } = await supabase
     .from('gm_remedial_attempts')
@@ -782,10 +814,10 @@ async function findActiveAttempt(
       attempt_number: 1,
       attempt_token: recoveryToken,
       status: 'ACTIVE',
-      started_at: new Date().toISOString(),
+      started_at: recoveryStartTime,
       location: 'RECOVERY_AUTO',
     })
-    .select('id, attempt_token, risk_score, started_at, status, remedial_questions, remedial_answer_keys')
+    .select('id, attempt_token, risk_score, started_at, created_at, location, status, remedial_questions, remedial_answer_keys')
     .single();
 
   if (recoveryErr || !recoveryAttempt) {
@@ -1063,7 +1095,7 @@ export async function getRemainingStudents(sessionId: string) {
 export async function activateRemedialAttempt(attemptId: string, studentId: string, token: string) {
   const { data: attempt, error: fetchErr } = await supabase
     .from('gm_remedial_attempts')
-    .select('id, status, session_id')
+    .select('id, status, session_id, started_at, created_at')
     .eq('id', attemptId)
     .eq('student_id', studentId)
     .single();
@@ -1084,12 +1116,15 @@ export async function activateRemedialAttempt(attemptId: string, studentId: stri
     throw new Error(`Token tidak valid atau kadaluarsa (attempt: ${attemptId}, student: ${studentId})`);
   }
 
+  // Pertahankan timestamp awal jika sudah ada agar timer tidak maju
+  const originalStartTime = attempt.started_at || attempt.created_at || new Date().toISOString();
+
   await withRetry(async () => {
     const { error } = await supabase
       .from('gm_remedial_attempts')
       .update({ 
         status: 'ACTIVE',
-        started_at: new Date().toISOString()
+        started_at: originalStartTime
       })
       .eq('id', attemptId);
     if (error) throw error;
