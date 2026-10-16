@@ -27,7 +27,6 @@ import Link from 'next/link';
 import { Layer } from '@/lib/grademaster/types';
 import NeonGraduationCap from '@/components/grademaster/ui/NeonGraduationCap';
 import Image from 'next/image';
-import CertificateManagementModal from './CertificateManagementModal';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -51,7 +50,6 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
-  const [isCertModalOpen, setIsCertModalOpen] = useState(false);
 
   const isEmbedMode = useSyncExternalStore(
     () => () => {},
@@ -96,6 +94,7 @@ export default function Navbar() {
     if (target === 'remedial') return layer === 'remedial_dashboard' && pathname === '/';
     if (target === 'data_center') return layer === 'data_center' && pathname === '/';
     if (target === 'student_lesson') return layer === 'student_lesson' && pathname === '/';
+    if (target === 'certificate_management') return layer === 'certificate_management' && pathname === '/';
     return false;
   };
 
@@ -245,10 +244,12 @@ export default function Navbar() {
                     <Settings size={18} /> Remedial
                   </button>
                   <button
-                    onClick={() => setIsCertModalOpen(true)}
-                    className="w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent"
+                    onClick={() => handleNavigate('certificate_management')}
+                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                      layer === 'certificate_management' ? 'bg-amber-600 text-white shadow-md shadow-amber-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                    }`}
                   >
-                    <Award size={18} className="text-amber-600" /> Sertifikat LDKS
+                    <Award size={18} className={layer === 'certificate_management' ? 'text-white' : 'text-amber-600'} /> Sertifikat LDKS
                   </button>
                 </>
             )}
@@ -621,7 +622,7 @@ export default function Navbar() {
                   </button>
 
                   <button 
-                    onClick={() => { setIsCertModalOpen(true); setIsMobileMenuOpen(false); }} 
+                    onClick={() => { handleNavigate('certificate_management'); setIsMobileMenuOpen(false); }} 
                     className="w-full p-4 bg-surface-container-low hover:bg-surface-container rounded-xl text-left flex items-center gap-4 transition-colors active:scale-[0.98] border border-surface-container"
                   >
                     <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center">
@@ -769,15 +770,6 @@ export default function Navbar() {
         </div>
       )}
 
-      {/* Modal Manajemen Sertifikat LDKS */}
-      {isAdmin && (
-        <CertificateManagementModal
-          isOpen={isCertModalOpen}
-          onClose={() => setIsCertModalOpen(false)}
-          setToast={setToast}
-          academicYear={academicYear}
-        />
-      )}
     </>
   );
 }

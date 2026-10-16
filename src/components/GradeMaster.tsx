@@ -37,6 +37,7 @@ import StudentAccountsLayer from "./grademaster/StudentAccountsLayer";
 import OralExamsLayer from "./grademaster/OralExamsLayer";
 import GamesLayer from "./grademaster/GamesLayer";
 import GameManagementLayer from "./grademaster/GameManagementLayer";
+import CertificateManagementLayer from "./grademaster/CertificateManagementLayer";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 import { subscribeUser, checkSubscriptionStatus } from "@/lib/grademaster/pushHelper";
 
@@ -1404,6 +1405,14 @@ export default function GradeMaster() {
         <GameManagementLayer
           onBack={() => setLayer("home")}
           setToast={setToast}
+        />
+      )}
+
+      {layer === "certificate_management" && isAdmin && (
+        <CertificateManagementLayer
+          onBack={() => setLayer("home")}
+          setToast={setToast}
+          academicYear={academicYear}
         />
       )}
 
