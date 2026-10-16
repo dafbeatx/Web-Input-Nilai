@@ -993,6 +993,7 @@ export default function StudentRemedialLayer({
     validateSubmission,
     clientCheatingFlags,
     sessionId,
+    currentStudentId,
     studentName,
     currentLocation,
     shuffledQuestions,

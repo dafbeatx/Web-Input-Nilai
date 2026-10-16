@@ -155,7 +155,7 @@ export function getFittedCertificateStudentName(
   };
 }
 
-export function formatCertificateStudentName(fullName: string, maxLength: number = 22): string {
+export function formatCertificateStudentName(fullName: string, _maxLength: number = 22): string {
   const fitted = getFittedCertificateStudentName(undefined, fullName, 98);
   return fitted.displayName;
 }
