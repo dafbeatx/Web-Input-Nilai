@@ -16,7 +16,9 @@ import {
   Users,
   Search,
   Printer,
-  ChevronRight
+  ChevronRight,
+  ExternalLink,
+  QrCode,
 } from 'lucide-react';
 import { ToastType } from '@/lib/grademaster/types';
 import { CertificateTemplate } from '@/app/api/grademaster/certificates/route';
@@ -25,6 +27,7 @@ import {
   generateBatchLdksCertificatesPdf,
   formatCertificateStudentName,
   getFittedCertificateStudentName,
+  getCertificateQrCodeDataUrl,
   FittedCertificateName,
 } from '@/lib/grademaster/certificateGenerator';
 
@@ -221,6 +224,23 @@ export default function CertificateManagementLayer({
   const previewFittedInfo: FittedCertificateName = useMemo(() => {
     return getFittedCertificateStudentName(undefined, previewStudent.name, 98);
   }, [previewStudent.name]);
+
+  // Preview student QR Code barcode
+  const [previewQrDataUrl, setPreviewQrDataUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (previewStudent && previewStudent.name) {
+      getCertificateQrCodeDataUrl(previewStudent.name, previewStudent.className, TARGET_ACADEMIC_YEAR)
+        .then((url) => {
+          if (isMounted) setPreviewQrDataUrl(url);
+        })
+        .catch((err) => console.warn('Failed to generate preview QR code:', err));
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [previewStudent.name, previewStudent.className]);
 
   // Toggle Publish Status
   const handleTogglePublish = async () => {
@@ -464,10 +484,20 @@ export default function CertificateManagementLayer({
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full uppercase border border-emerald-200">
                   A4 Landscape
                 </span>
+                <a
+                  href={`/sertifikat/verify?name=${encodeURIComponent(previewStudent.name)}&class=${encodeURIComponent(previewStudent.className)}&year=${encodeURIComponent(TARGET_ACADEMIC_YEAR)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-850 border border-emerald-200 rounded-lg text-xs font-bold transition-all shadow-2xs"
+                  title="Buka halaman verifikasi yang muncul saat barcode di-scan"
+                >
+                  <ExternalLink size={13} className="text-emerald-700" />
+                  <span>Uji Coba Hasil Scan</span>
+                </a>
                 <button
                   type="button"
                   onClick={() => handleDownloadSingle(previewStudent)}
@@ -514,6 +544,36 @@ export default function CertificateManagementLayer({
               >
                 {previewFittedInfo.displayName}
               </div>
+
+              {/* Overlaid QR Code Barcode positioned neatly in the bottom right signature area */}
+              {previewQrDataUrl && (
+                <div
+                  className="absolute flex flex-col items-center pointer-events-none select-none"
+                  style={{
+                    left: '56.5%',
+                    top: '72.8%',
+                    width: '8.1%',
+                  }}
+                >
+                  <img
+                    src={previewQrDataUrl}
+                    alt="Barcode Verifikasi"
+                    className="w-full aspect-square object-contain bg-white rounded-xs shadow-2xs"
+                  />
+                  <span
+                    className="font-bold text-slate-900 tracking-tight text-center leading-tight mt-0.5"
+                    style={{ fontSize: 'clamp(5px, 0.55cqi, 9px)' }}
+                  >
+                    SCAN VERIFIKASI
+                  </span>
+                  <span
+                    className="text-slate-500 text-center leading-tight"
+                    style={{ fontSize: 'clamp(4px, 0.45cqi, 7px)' }}
+                  >
+                    SMP Terpadu
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-slate-500 gap-2 pt-1 max-w-4xl mx-auto">

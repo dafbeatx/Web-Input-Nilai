@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import QRCode from 'qrcode';
 import { CertificateTemplate } from '@/app/api/grademaster/certificates/route';
 
 export interface StudentCertificateInfo {
@@ -160,6 +161,34 @@ export function formatCertificateStudentName(fullName: string, _maxLength: numbe
   return fitted.displayName;
 }
 
+export async function getCertificateQrCodeDataUrl(
+  studentName: string,
+  className?: string,
+  academicYear?: string
+): Promise<string> {
+  const origin = typeof window !== 'undefined'
+    ? window.location.origin
+    : (process.env.NEXT_PUBLIC_SITE_URL || 'https://smpterpadualittihadiyah.sch.id');
+
+  const params = new URLSearchParams({
+    name: studentName,
+    class: className || 'SMP',
+    year: academicYear || '2026/2027',
+  });
+
+  const verifyUrl = `${origin}/sertifikat/verify?${params.toString()}`;
+
+  return await QRCode.toDataURL(verifyUrl, {
+    margin: 1,
+    width: 256,
+    errorCorrectionLevel: 'M',
+    color: {
+      dark: '#0f172a',
+      light: '#ffffff',
+    },
+  });
+}
+
 export async function generateBatchLdksCertificatesPdf(
   template: CertificateTemplate,
   students: StudentCertificateInfo[],
@@ -193,6 +222,28 @@ export async function generateBatchLdksCertificatesPdf(
       // Baseline sits right above the horizontal line (line Y = 112.28mm, text baseline = 111.0mm)
       // Strictly 1 single line, never wraps, never exceeds line length (max 98mm from X=26mm)
       doc.text(fitted.displayName, 26, 111.0);
+
+      // Embedded QR Code verification barcode
+      try {
+        const qrDataUrl = await getCertificateQrCodeDataUrl(
+          student.studentName || '',
+          student.className,
+          student.academicYear || template.academic_year
+        );
+        doc.addImage(qrDataUrl, 'PNG', 168, 153, 24, 24, undefined, 'FAST');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.5);
+        doc.setTextColor(15, 23, 42);
+        doc.text('SCAN VERIFIKASI DOKUMEN', 180, 180.5, { align: 'center' });
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(5);
+        doc.setTextColor(100, 116, 139);
+        doc.text('SMP Terpadu Al-Ittihadiyah', 180, 183.5, { align: 'center' });
+      } catch (qrErr) {
+        console.warn('Failed to embed QR code in batch certificate PDF:', qrErr);
+      }
     }
 
     if (onProgress) {
@@ -235,6 +286,28 @@ export async function generateLdksCertificatePdf(
     // Precise placement: X = 26mm, Y = 111.0mm (baseline sits right above line at 112.28mm)
     // Guaranteed single line, no wrap, no exceeding the line
     doc.text(fitted.displayName, 26, 111.0);
+
+    // Embedded QR Code verification barcode
+    try {
+      const qrDataUrl = await getCertificateQrCodeDataUrl(
+        student.studentName || '',
+        student.className,
+        student.academicYear || template.academic_year
+      );
+      doc.addImage(qrDataUrl, 'PNG', 168, 153, 24, 24);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text('SCAN VERIFIKASI DOKUMEN', 180, 180.5, { align: 'center' });
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(5);
+      doc.setTextColor(100, 116, 139);
+      doc.text('SMP Terpadu Al-Ittihadiyah', 180, 183.5, { align: 'center' });
+    } catch (qrErr) {
+      console.warn('Failed to embed QR code in single certificate PDF:', qrErr);
+    }
 
     return doc;
   }
