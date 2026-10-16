@@ -14,12 +14,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     console.log('API INPUT:', body);
 
-    const { google_name, studentId, student_name, class_name, email, user_id } = body;
+    const { google_name, studentId, student_name, class_name, email } = body;
 
     console.log('VALIDATION:', {
       student_name: body?.student_name,
       email: body?.email,
-      user_id: body?.user_id,
     });
 
     if (!google_name && !studentId) {
@@ -158,8 +157,9 @@ export async function POST(req: NextRequest) {
         photo_url: account.profile_photo_url,
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('API CRASH:', err);
-    return NextResponse.json({ error: err.message || 'Terjadi kesalahan sistem pengikatan profil' }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Terjadi kesalahan sistem pengikatan profil';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
