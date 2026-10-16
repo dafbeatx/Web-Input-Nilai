@@ -13,12 +13,16 @@ import {
   Loader2,
   RotateCcw,
   Sparkles,
-  Users
+  Users,
+  Search,
+  Printer,
+  ChevronRight
 } from 'lucide-react';
 import { ToastType } from '@/lib/grademaster/types';
 import { CertificateTemplate } from '@/app/api/grademaster/certificates/route';
 import {
   generateLdksCertificatePdf,
+  generateBatchLdksCertificatesPdf,
   formatCertificateStudentName,
 } from '@/lib/grademaster/certificateGenerator';
 
@@ -28,12 +32,16 @@ interface CertificateManagementLayerProps {
   academicYear?: string;
 }
 
-interface StudentOption {
+interface StudentRecord {
+  id: string;
   name: string;
   className: string;
+  academicYear: string;
 }
 
-// Filter out SMA classes: only keep SMP classes (e.g. 7, 8, 8A, 9, 9A, etc.)
+const TARGET_ACADEMIC_YEAR = '2026/2027';
+
+// Filter out SMA classes: only keep SMP classes (e.g. 7, 8, 8A, 8B, 9, 9A, 9B)
 const isSmpClass = (cls: string): boolean => {
   const upper = (cls || '').trim().toUpperCase();
   if (!upper) return false;
@@ -45,14 +53,13 @@ const isSmpClass = (cls: string): boolean => {
 export default function CertificateManagementLayer({
   onBack,
   setToast,
-  academicYear = '2026/2027',
 }: CertificateManagementLayerProps) {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isDownloadingSample, setIsDownloadingSample] = useState(false);
-  const [isDownloadingCustom, setIsDownloadingCustom] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; label: string } | null>(null);
+  const [downloadingSingleId, setDownloadingSingleId] = useState<string | null>(null);
 
-  // Template state (stores publication status and academic year)
+  // Template state
   const [template, setTemplate] = useState<CertificateTemplate>({
     cert_type: 'LDKS',
     title: 'SERTIFIKAT PENGHARGAAN',
@@ -67,25 +74,28 @@ export default function CertificateManagementLayer({
     signer1_name: 'Septi Nur Aeni, S.E',
     signer2_role: 'Kepala Sekolah',
     signer2_name: 'Farhan Sopian Sahid, S.Pd.I',
-    academic_year: academicYear,
+    academic_year: TARGET_ACADEMIC_YEAR,
     target_class: 'ALL',
     is_published: false,
   });
 
-  // SMP Students and Classes state
-  const [smpStudents, setSmpStudents] = useState<StudentOption[]>([]);
-  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
-  const [selectedClass, setSelectedClass] = useState<string>('ALL');
+  // Students from Pusat Data
+  const [students, setStudents] = useState<StudentRecord[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedClassTab, setSelectedClassTab] = useState<string>('ALL');
 
-  // Input state
-  const [customStudentName, setCustomStudentName] = useState('MUHAMMAD RIZKY PRATAMA');
-  const [customClassName, setCustomClassName] = useState('7');
+  // Currently previewed student
+  const [previewStudent, setPreviewStudent] = useState<StudentRecord>({
+    id: 'sample',
+    name: 'MUHAMMAD RIZKY PRATAMA',
+    className: '7',
+    academicYear: TARGET_ACADEMIC_YEAR,
+  });
 
-  // Load existing template on mount
+  // 1. Load Certificate Template
   useEffect(() => {
     let isMounted = true;
     const fetchTemplate = async () => {
-      setIsLoading(true);
       try {
         const res = await fetch('/api/grademaster/certificates?type=LDKS');
         if (res.ok) {
@@ -94,14 +104,12 @@ export default function CertificateManagementLayer({
             setTemplate((prev) => ({
               ...prev,
               ...data.template,
-              academic_year: data.template.academic_year || academicYear,
+              academic_year: TARGET_ACADEMIC_YEAR,
             }));
           }
         }
       } catch (err) {
         console.error('Failed to load certificate template:', err);
-      } finally {
-        if (isMounted) setIsLoading(false);
       }
     };
 
@@ -109,80 +117,110 @@ export default function CertificateManagementLayer({
     return () => {
       isMounted = false;
     };
-  }, [academicYear]);
+  }, []);
 
-  // Load SMP student roster and classes (strictly exclude SMA)
+  // 2. Load Students from Pusat Data (Academic Year 2026/2027 ONLY, SMP ONLY)
   useEffect(() => {
     let isMounted = true;
-    const fetchStudentsAndClasses = async () => {
+    const fetchPusatDataStudents = async () => {
+      setIsLoading(true);
       try {
-        const [accRes, classRes] = await Promise.all([
-          fetch(`/api/grademaster/student-accounts?year=${encodeURIComponent(academicYear)}`),
-          fetch(`/api/grademaster/student-accounts?mode=classes&year=${encodeURIComponent(academicYear)}`),
-        ]);
+        // Fetch from Data Center API
+        const res = await fetch('/api/grademaster/data-center/students');
+        let rawList: Array<{ id?: string; name?: string; className?: string; academicYear?: string }> = [];
 
-        let studentsList: StudentOption[] = [];
-        if (accRes.ok) {
-          const d = await accRes.json();
-          const accs = d.accounts || d.data || [];
-          if (Array.isArray(accs)) {
-            studentsList = accs
-              .filter((a: { class_name?: string }) => isSmpClass(a.class_name || ''))
-              .map((a: { student_name: string; class_name?: string }) => ({
-                name: (a.student_name || '').trim(),
-                className: (a.class_name || '7').trim(),
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.students)) {
+            rawList = data.students;
+          }
+        }
+
+        // Fallback / direct behaviors API if needed
+        if (rawList.length === 0) {
+          const behRes = await fetch(`/api/grademaster/behaviors?class=Semua Kelas&year=${encodeURIComponent(TARGET_ACADEMIC_YEAR)}`);
+          if (behRes.ok) {
+            const bData = await behRes.json();
+            const recs = bData.students || bData.data || [];
+            if (Array.isArray(recs)) {
+              rawList = recs.map((r: { id?: string; student_name?: string; class_name?: string; academic_year?: string }) => ({
+                id: r.id,
+                name: r.student_name,
+                className: r.class_name,
+                academicYear: r.academic_year || TARGET_ACADEMIC_YEAR,
               }));
+            }
           }
         }
 
-        let smpClassesList: string[] = [];
-        if (classRes.ok) {
-          const cd = await classRes.json();
-          if (Array.isArray(cd.classes)) {
-            smpClassesList = cd.classes.filter(isSmpClass);
-          }
-        }
-
-        // Merge discovered classes
-        const mergedClasses = Array.from(
-          new Set([...smpClassesList, ...studentsList.map((s) => s.className)])
-        ).sort();
+        // Strictly filter to Academic Year 2026/2027 and SMP classes (No SMA)
+        const smp2026List: StudentRecord[] = rawList
+          .filter((s) => s.academicYear === TARGET_ACADEMIC_YEAR && isSmpClass(s.className || ''))
+          .map((s, idx) => ({
+            id: s.id || `smp_${idx}_${s.name}`,
+            name: (s.name || '').trim(),
+            className: (s.className || '7').trim(),
+            academicYear: TARGET_ACADEMIC_YEAR,
+          }))
+          .sort((a, b) => {
+            const classCompare = a.className.localeCompare(b.className, undefined, { numeric: true });
+            if (classCompare !== 0) return classCompare;
+            return a.name.localeCompare(b.name);
+          });
 
         if (isMounted) {
-          setSmpStudents(studentsList);
-          setAvailableClasses(mergedClasses);
-          if (mergedClasses.length > 0 && selectedClass === 'ALL') {
-            setSelectedClass('ALL');
+          setStudents(smp2026List);
+          if (smp2026List.length > 0) {
+            setPreviewStudent(smp2026List[0]);
           }
         }
       } catch (err) {
-        console.error('Failed to fetch SMP students for certificate:', err);
+        console.error('Failed to load students from Pusat Data:', err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     };
 
-    fetchStudentsAndClasses();
+    fetchPusatDataStudents();
     return () => {
       isMounted = false;
     };
-  }, [academicYear, selectedClass]);
+  }, []);
 
-  // Filtered students by chosen class
+  // Distinct SMP classes available
+  const availableClasses = useMemo(() => {
+    return Array.from(new Set(students.map((s) => s.className))).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true })
+    );
+  }, [students]);
+
+  // Students by Class counts
+  const studentCountByClass = useMemo(() => {
+    const counts: Record<string, number> = {};
+    students.forEach((s) => {
+      counts[s.className] = (counts[s.className] || 0) + 1;
+    });
+    return counts;
+  }, [students]);
+
+  // Filtered Students for the Table
   const filteredStudents = useMemo(() => {
-    if (selectedClass === 'ALL') return smpStudents;
-    return smpStudents.filter((s) => s.className === selectedClass);
-  }, [smpStudents, selectedClass]);
+    return students.filter((s) => {
+      const matchClass = selectedClassTab === 'ALL' || s.className === selectedClassTab;
+      const matchSearch =
+        searchQuery.trim() === '' ||
+        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.className.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchClass && matchSearch;
+    });
+  }, [students, selectedClassTab, searchQuery]);
 
-  // Calculate abbreviated name in real time
-  const formattedPrintName = useMemo(() => {
-    return formatCertificateStudentName(customStudentName || 'MUHAMMAD RIZKY PRATAMA', 22);
-  }, [customStudentName]);
+  // Preview student formatted print name
+  const previewFormattedName = useMemo(() => {
+    return formatCertificateStudentName(previewStudent.name, 22);
+  }, [previewStudent.name]);
 
-  const isNameAbbreviated = useMemo(() => {
-    const raw = (customStudentName || '').trim().toUpperCase();
-    return raw.length > 0 && formattedPrintName !== raw;
-  }, [customStudentName, formattedPrintName]);
-
-  // Handle Save / Publish toggle
+  // Toggle Publish Status
   const handleTogglePublish = async () => {
     setIsSaving(true);
     const newStatus = !template.is_published;
@@ -191,7 +229,7 @@ export default function CertificateManagementLayer({
         ...template,
         target_class: 'ALL',
         is_published: newStatus,
-        academic_year: template.academic_year || academicYear,
+        academic_year: TARGET_ACADEMIC_YEAR,
       };
 
       const res = await fetch('/api/grademaster/certificates', {
@@ -210,7 +248,7 @@ export default function CertificateManagementLayer({
 
       setToast({
         message: newStatus
-          ? 'Sertifikat LDKS resmi diterbitkan ke seluruh siswa SMP!'
+          ? 'Sertifikat LDKS resmi diterbitkan ke seluruh siswa SMP (2026/2027)!'
           : 'Sertifikat ditarik ke status Draf (siswa tidak dapat mengunduh).',
         type: 'success',
       });
@@ -222,54 +260,69 @@ export default function CertificateManagementLayer({
     }
   };
 
-  // Download Sample PDF
-  const handleDownloadSample = async () => {
-    setIsDownloadingSample(true);
-    try {
-      const sampleStudent = {
-        studentName: 'MUHAMMAD RIZKY PRATAMA',
-        className: '7',
-        academicYear: template.academic_year || academicYear,
-      };
-
-      const doc = await generateLdksCertificatePdf(template, sampleStudent);
-      doc.save(`Contoh_Sertifikat_LDKS_SMP_${template.academic_year?.replace('/', '-')}.pdf`);
-      setToast({ message: 'Contoh Sertifikat LDKS (.PDF) berhasil diunduh', type: 'success' });
-    } catch (err) {
-      console.error('Failed to download sample pdf:', err);
-      setToast({ message: 'Gagal membuat file PDF', type: 'error' });
-    } finally {
-      setIsDownloadingSample(false);
-    }
-  };
-
   // Download Single Student PDF
-  const handleDownloadStudent = async () => {
-    if (!customStudentName.trim()) {
-      setToast({ message: 'Silakan ketik atau pilih nama siswa terlebih dahulu', type: 'error' });
-      return;
-    }
-
-    setIsDownloadingCustom(true);
+  const handleDownloadSingle = async (student: StudentRecord) => {
+    setDownloadingSingleId(student.id);
     try {
-      const studentInfo = {
-        studentName: customStudentName.trim(),
-        className: customClassName.trim() || '7',
-        academicYear: template.academic_year || academicYear,
-      };
+      const doc = await generateLdksCertificatePdf(template, {
+        studentName: student.name,
+        className: student.className,
+        academicYear: TARGET_ACADEMIC_YEAR,
+      });
 
-      const doc = await generateLdksCertificatePdf(template, studentInfo);
-      const safeName = formattedPrintName.replace(/[^a-zA-Z0-9]/g, '_');
-      doc.save(`Sertifikat_LDKS_${safeName}.pdf`);
+      const safePrintName = formatCertificateStudentName(student.name, 22).replace(/[^a-zA-Z0-9]/g, '_');
+      doc.save(`Sertifikat_LDKS_${safePrintName}_Kelas_${student.className}.pdf`);
       setToast({
-        message: `Sertifikat untuk ${formattedPrintName} berhasil diunduh (PDF)`,
+        message: `Sertifikat untuk ${student.name} berhasil diunduh (PDF)`,
         type: 'success',
       });
     } catch (err) {
-      console.error('Failed to download student pdf:', err);
+      console.error('Failed to download single certificate:', err);
       setToast({ message: 'Gagal membuat file PDF', type: 'error' });
     } finally {
-      setIsDownloadingCustom(false);
+      setDownloadingSingleId(null);
+    }
+  };
+
+  // Batch Download: All SMP Students or Filtered Class
+  const handleBatchDownload = async (targetScope: 'ALL' | string) => {
+    const listToDownload = targetScope === 'ALL'
+      ? students
+      : students.filter((s) => s.className === targetScope);
+
+    if (listToDownload.length === 0) {
+      setToast({ message: 'Tidak ada data siswa untuk diunduh', type: 'error' });
+      return;
+    }
+
+    const label = targetScope === 'ALL' ? 'Semua Siswa SMP' : `Kelas ${targetScope}`;
+    setBatchProgress({ current: 0, total: listToDownload.length, label });
+
+    try {
+      const studentInfos = listToDownload.map((s) => ({
+        studentName: s.name,
+        className: s.className,
+        academicYear: TARGET_ACADEMIC_YEAR,
+      }));
+
+      const doc = await generateBatchLdksCertificatesPdf(template, studentInfos, (current, total) => {
+        setBatchProgress({ current, total, label });
+      });
+
+      const fileName = targetScope === 'ALL'
+        ? `Sertifikat_LDKS_SMP_2026-2027_SEMUA_${listToDownload.length}_SISWA.pdf`
+        : `Sertifikat_LDKS_SMP_Kelas_${targetScope}_2026-2027.pdf`;
+
+      doc.save(fileName);
+      setToast({
+        message: `Berhasil mengunduh 1 berkas PDF lengkap (${listToDownload.length} halaman) untuk ${label}!`,
+        type: 'success',
+      });
+    } catch (err) {
+      console.error('Failed to generate batch certificates:', err);
+      setToast({ message: 'Gagal membuat berkas PDF gabungan', type: 'error' });
+    } finally {
+      setBatchProgress(null);
     }
   };
 
@@ -290,24 +343,32 @@ export default function CertificateManagementLayer({
             <h1 className="text-2xl md:text-3xl font-bold text-on-surface tracking-tight flex items-center gap-3 font-outfit">
               <Award className="text-emerald-600" size={32} /> Sertifikat Penghargaan LDKS
             </h1>
-            <p className="text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest mt-1.5">
-              SMP Terpadu Al-Ittihadiyah • Cetak Otomatis Nama Peserta LDKS
+            <p className="text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest mt-1.5 flex items-center gap-2">
+              <span>SMP Terpadu Al-Ittihadiyah</span>
+              <span>•</span>
+              <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                Pusat Data 2026/2027 ({students.length} Siswa)
+              </span>
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
             <button
               type="button"
-              onClick={handleDownloadSample}
-              disabled={isDownloadingSample || isLoading}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] shadow-sm min-h-[42px]"
+              onClick={() => handleBatchDownload('ALL')}
+              disabled={batchProgress !== null || isLoading || students.length === 0}
+              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] shadow-md shadow-indigo-600/20 min-h-[42px] disabled:opacity-50"
             >
-              {isDownloadingSample ? (
-                <Loader2 size={16} className="animate-spin text-emerald-600" />
+              {batchProgress ? (
+                <Loader2 size={16} className="animate-spin" />
               ) : (
-                <DownloadCloud size={16} className="text-emerald-600" />
+                <Printer size={16} />
               )}
-              <span>Unduh Contoh .PDF</span>
+              <span>
+                {batchProgress
+                  ? `Memproses ${batchProgress.current}/${batchProgress.total}...`
+                  : `Unduh Semua Sertifikat (${students.length} Siswa)`}
+              </span>
             </button>
 
             <button
@@ -356,13 +417,13 @@ export default function CertificateManagementLayer({
           <div>
             <h4 className="text-sm font-bold font-outfit">
               {template.is_published
-                ? 'Sertifikat Aktif dan Diterbitkan ke Siswa SMP'
+                ? 'Sertifikat Aktif dan Diterbitkan ke Seluruh Siswa SMP'
                 : 'Sertifikat Berstatus Draf (Belum Diterbitkan ke Siswa)'}
             </h4>
             <p className="text-xs opacity-80 mt-0.5">
               {template.is_published
-                ? 'Seluruh siswa SMP dapat melihat dan mengunduh sertifikat resmi (.PDF) di tab profil akun mereka.'
-                : 'Siswa belum dapat melihat dokumen ini. Klik tombol "Simpan & Terbitkan ke Siswa" jika sudah siap dirilis.'}
+                ? `Sebanyak ${students.length} siswa SMP Terpadu Al-Ittihadiyah (Tahun 2026/2027) dapat mengunduh berkas sertifikat resmi di tab profil akun mereka.`
+                : 'Siswa belum dapat melihat dokumen ini. Anda dapat mengunduh semua berkas PDF di halaman ini atau klik "Simpan & Terbitkan ke Siswa" jika sudah siap dirilis.'}
             </p>
           </div>
         </div>
@@ -381,190 +442,305 @@ export default function CertificateManagementLayer({
       {isLoading ? (
         <div className="py-28 flex flex-col items-center justify-center gap-3 text-slate-400 bg-surface border border-outline-variant rounded-3xl">
           <Loader2 size={32} className="animate-spin text-emerald-600" />
-          <p className="text-xs font-bold uppercase tracking-wider">Memuat sertifikat...</p>
+          <p className="text-xs font-bold uppercase tracking-wider">
+            Memuat data siswa SMP dari Pusat Data (Tahun Ajaran 2026/2027)...
+          </p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* Main Layout: Control Panel on Top/Left, Preview in Center */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            
-            {/* Left/Top Column: Clean Student Control Panel (5 Cols) */}
-            <div className="lg:col-span-5 space-y-6">
-              <div className="bg-surface border border-outline-variant rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                    <Users size={16} className="text-emerald-600" /> Pilih Siswa SMP Peserta LDKS
-                  </h3>
-                  <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full uppercase">
-                    SMP Terpadu
-                  </span>
-                </div>
-
-                {/* Filter Kelas SMP */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center justify-between">
-                    <span>Kelas SMP</span>
-                    <span className="text-[10px] font-semibold text-emerald-700">Khusus SMP (Tanpa SMA)</span>
-                  </label>
-                  <select
-                    value={selectedClass}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setSelectedClass(val);
-                      if (val !== 'ALL') {
-                        setCustomClassName(val);
-                        const firstStudent = smpStudents.find((s) => s.className === val);
-                        if (firstStudent) {
-                          setCustomStudentName(firstStudent.name);
-                        }
-                      }
-                    }}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 cursor-pointer"
-                  >
-                    <option value="ALL">Semua Kelas SMP (Kelas 7, 8, 9)</option>
-                    {availableClasses.map((cls) => (
-                      <option key={cls} value={cls}>
-                        Kelas {cls}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Autocomplete / Input Nama Siswa */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center justify-between">
-                    <span>Nama Lengkap Siswa</span>
-                    <span className="text-[10px] text-slate-400">Pilih atau ketik manual</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      list="smp-students-datalist"
-                      value={customStudentName}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setCustomStudentName(val);
-                        const matched = smpStudents.find(
-                          (s) => s.name.toLowerCase() === val.trim().toLowerCase()
-                        );
-                        if (matched) {
-                          setCustomClassName(matched.className);
-                        }
-                      }}
-                      placeholder="Ketik atau pilih nama siswa SMP..."
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold uppercase text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                    />
-                    <datalist id="smp-students-datalist">
-                      {filteredStudents.map((s, idx) => (
-                        <option key={`${s.name}-${idx}`} value={s.name}>
-                          Kelas {s.className}
-                        </option>
-                      ))}
-                    </datalist>
-                  </div>
-                </div>
-
-                {/* Box Pratinjau Nama & Otomatis Singkat */}
-                <div className="p-4 bg-emerald-50/60 border border-emerald-200/70 rounded-xl space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
-                      <Sparkles size={13} className="text-emerald-600" /> Nama Tercetak di Sertifikat
-                    </span>
-                    <span className="text-[10px] font-bold text-emerald-700">
-                      Font Proporsional (14pt)
-                    </span>
-                  </div>
-
-                  <div className="bg-white px-3.5 py-2.5 rounded-lg border border-emerald-200/80 shadow-2xs">
-                    <p className="text-sm font-black text-slate-900 tracking-wide font-sans">
-                      {formattedPrintName || 'NAMA LENGKAP SISWA'}
-                    </p>
-                  </div>
-
-                  {isNameAbbreviated && (
-                    <p className="text-[11px] text-emerald-800 leading-relaxed font-medium">
-                      Nama panjang disingkat otomatis (<strong>{formattedPrintName}</strong>) agar pas dan rapi tepat di atas garis piagam tanpa terpotong.
-                    </p>
-                  )}
-                </div>
-
-                {/* Tombol Unduh PDF Siswa Terpilih */}
-                <button
-                  type="button"
-                  onClick={handleDownloadStudent}
-                  disabled={isDownloadingCustom || !customStudentName.trim()}
-                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.98] shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 disabled:opacity-50 min-h-[44px]"
-                >
-                  {isDownloadingCustom ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <DownloadCloud size={16} />
-                  )}
-                  <span>Unduh Sertifikat PDF ({formattedPrintName.split(' ')[0]})</span>
-                </button>
-              </div>
-
-              {/* Quick Info Box */}
-              <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs text-slate-600 space-y-2">
-                <div className="flex items-center gap-2 font-bold text-slate-800">
-                  <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-                  <span>Desain Canva Siap Digunakan</span>
-                </div>
-                <p className="text-[11px] leading-relaxed text-slate-500">
-                  Seluruh teks piagam, nomor, tanggal, logo SMP Terpadu Al-Ittihadiyah, cap, dan tanda tangan telah tertanam rapi di dalam template desain Canva. Sistem hanya mencetak nama siswa yang dipilih tepat di atas garis.
+        <div className="space-y-8">
+          
+          {/* Top Section: Live Visual Preview Card */}
+          <div className="bg-surface border border-outline-variant rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <Eye size={16} className="text-emerald-600" /> Pratinjau Tampilan Sertifikat LDKS (Canva)
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Menampilkan nama siswa terpilih:{' '}
+                  <strong className="text-slate-800">{previewStudent.name}</strong> (Kelas {previewStudent.className})
                 </p>
               </div>
-            </div>
 
-            {/* Right Column: Prominent Certificate Visual Preview (7 Cols) */}
-            <div className="lg:col-span-7 space-y-4">
-              <div className="bg-surface border border-outline-variant rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                    <Eye size={16} className="text-emerald-600" /> Pratinjau Tampilan Sertifikat (Canva)
-                  </h3>
-                  <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full uppercase border border-emerald-200">
-                    A4 Landscape • SMP
-                  </span>
-                </div>
-
-                {/* Canva Template Container with Pixel-Perfect Positioned Student Name */}
-                <div className="relative w-full aspect-[2000/1414] rounded-xl overflow-hidden border border-slate-200 shadow-md bg-white select-none">
-                  <Image
-                    src="/sertifikat-ldks.png"
-                    alt="Desain Sertifikat LDKS"
-                    width={2000}
-                    height={1414}
-                    priority
-                    className="w-full h-full object-contain pointer-events-none"
-                  />
-
-                  {/* Overlaid Student Name: Positioned just above the line at Y=756px (53.46%) */}
-                  <div
-                    className="absolute font-sans font-bold text-slate-900 tracking-wide select-none pointer-events-none"
-                    style={{
-                      left: '8.65%', // X starts at 173px (~25.68mm)
-                      bottom: '47.2%', // Line is at 53.46%, bottom 47.2% places baseline neatly above line
-                      fontSize: 'clamp(9px, 1.25vw, 15px)',
-                      lineHeight: '1',
-                      maxWidth: '34.2%', // Line length is 685px (~101.7mm)
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {formattedPrintName}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                  <span>Panjang nama disesuaikan dengan proporsi garis di Canva</span>
-                  <span className="font-semibold text-slate-700">
-                    Kertas: 297 × 210 mm (A4)
-                  </span>
-                </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full uppercase border border-emerald-200">
+                  A4 Landscape
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadSingle(previewStudent)}
+                  disabled={downloadingSingleId === previewStudent.id}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all"
+                >
+                  {downloadingSingleId === previewStudent.id ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <DownloadCloud size={13} />
+                  )}
+                  <span>Unduh PDF Siswa Ini</span>
+                </button>
               </div>
             </div>
 
+            {/* Exact Canva Template Preview Container */}
+            <div className="relative w-full aspect-[2000/1414] max-w-4xl mx-auto rounded-xl overflow-hidden border border-slate-200 shadow-md bg-white select-none">
+              <Image
+                src="/sertifikat-ldks.png"
+                alt="Desain Sertifikat LDKS"
+                width={2000}
+                height={1414}
+                priority
+                className="w-full h-full object-contain pointer-events-none"
+              />
+
+              {/* Overlaid Student Name precisely above the line */}
+              <div
+                className="absolute font-sans font-bold text-slate-900 tracking-wide select-none pointer-events-none"
+                style={{
+                  left: '8.65%',
+                  bottom: '47.2%',
+                  fontSize: 'clamp(9px, 1.25vw, 15px)',
+                  lineHeight: '1',
+                  maxWidth: '34.2%',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {previewFormattedName}
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-slate-500 gap-2 pt-1 max-w-4xl mx-auto">
+              <span className="flex items-center gap-1.5">
+                <Sparkles size={13} className="text-emerald-600" />
+                Nama tercetak:{' '}
+                <strong className="text-slate-800 font-sans">{previewFormattedName}</strong>
+                {previewFormattedName !== previewStudent.name.toUpperCase() && (
+                  <span className="text-emerald-700 italic font-medium">
+                    (disingkat otomatis agar pas dengan panjang garis)
+                  </span>
+                )}
+              </span>
+              <span className="font-semibold text-slate-700">
+                SMP Terpadu Al-Ittihadiyah • 2026/2027
+              </span>
+            </div>
           </div>
+
+          {/* Middle Section: Quick Batch Download Per Class */}
+          <div className="bg-surface border border-outline-variant rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <Printer size={16} className="text-indigo-600" /> Unduh Sertifikat Sekaligus Per Kelas (Batch PDF)
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Klik untuk langsung mengunduh 1 berkas PDF gabungan berisi seluruh sertifikat siswa di kelas tersebut:
+                </p>
+              </div>
+              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full uppercase">
+                {availableClasses.length} Kelas SMP
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {/* All Classes Card */}
+              <button
+                type="button"
+                onClick={() => handleBatchDownload('ALL')}
+                disabled={batchProgress !== null || students.length === 0}
+                className="p-3.5 bg-indigo-50/70 hover:bg-indigo-100/70 border border-indigo-200/80 rounded-xl text-left transition-all active:scale-[0.98] group flex flex-col justify-between"
+              >
+                <div>
+                  <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">
+                    Semua Kelas SMP
+                  </span>
+                  <span className="text-lg font-black text-indigo-950 font-outfit block mt-1">
+                    {students.length} Siswa
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold text-indigo-600 group-hover:underline flex items-center gap-1 mt-3">
+                  Unduh Semua <ChevronRight size={11} />
+                </span>
+              </button>
+
+              {/* Per Class Cards */}
+              {availableClasses.map((cls) => {
+                const count = studentCountByClass[cls] || 0;
+                return (
+                  <button
+                    key={cls}
+                    type="button"
+                    onClick={() => handleBatchDownload(cls)}
+                    disabled={batchProgress !== null || count === 0}
+                    className="p-3.5 bg-slate-50 hover:bg-emerald-50 border border-slate-200/80 hover:border-emerald-200 rounded-xl text-left transition-all active:scale-[0.98] group flex flex-col justify-between"
+                  >
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-600 group-hover:text-emerald-700 uppercase tracking-wider block">
+                        Kelas {cls}
+                      </span>
+                      <span className="text-lg font-black text-slate-900 group-hover:text-emerald-950 font-outfit block mt-1">
+                        {count} Siswa
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-500 group-hover:text-emerald-700 group-hover:underline flex items-center gap-1 mt-3">
+                      Unduh PDF <ChevronRight size={11} />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Bottom Section: Full Student Table from Pusat Data */}
+          <div className="bg-surface border border-outline-variant rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <Users size={16} className="text-emerald-600" /> Daftar Siswa SMP Peserta LDKS (Pusat Data)
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Tahun Ajaran <strong>2026/2027</strong> • Menampilkan {filteredStudents.length} dari {students.length} siswa terdaftar
+                </p>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative w-full sm:w-64">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari nama atau kelas..."
+                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            {/* Filter Tabs by Class */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+              <button
+                type="button"
+                onClick={() => setSelectedClassTab('ALL')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                  selectedClassTab === 'ALL'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                }`}
+              >
+                Semua Siswa ({students.length})
+              </button>
+              {availableClasses.map((cls) => (
+                <button
+                  key={cls}
+                  type="button"
+                  onClick={() => setSelectedClassTab(cls)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                    selectedClassTab === cls
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                  }`}
+                >
+                  Kelas {cls} ({studentCountByClass[cls] || 0})
+                </button>
+              ))}
+            </div>
+
+            {/* Students Table */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-black uppercase text-slate-600 tracking-wider">
+                    <tr>
+                      <th className="py-3 px-3.5 w-12 text-center">No</th>
+                      <th className="py-3 px-3.5">Nama Siswa (Pusat Data)</th>
+                      <th className="py-3 px-3.5">Nama Tercetak di Piagam</th>
+                      <th className="py-3 px-3.5 text-center w-20">Kelas</th>
+                      <th className="py-3 px-3.5 text-right w-48">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {filteredStudents.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-12 text-center text-slate-400">
+                          Tidak ada siswa yang sesuai dengan filter pencarian.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredStudents.map((s, idx) => {
+                        const formattedName = formatCertificateStudentName(s.name, 22);
+                        const isAbbr = formattedName !== s.name.toUpperCase();
+                        const isCurrentPreview = previewStudent.name === s.name;
+
+                        return (
+                          <tr
+                            key={s.id || idx}
+                            className={`transition-colors ${
+                              isCurrentPreview ? 'bg-emerald-50/50' : 'hover:bg-slate-50/80'
+                            }`}
+                          >
+                            <td className="py-2.5 px-3.5 text-center text-slate-400 font-mono">
+                              {idx + 1}
+                            </td>
+                            <td className="py-2.5 px-3.5 font-bold text-slate-900">
+                              {s.name}
+                            </td>
+                            <td className="py-2.5 px-3.5 font-sans">
+                              <span className="font-bold text-slate-800">
+                                {formattedName}
+                              </span>
+                              {isAbbr && (
+                                <span className="ml-1.5 text-[10px] font-semibold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded">
+                                  Disingkat
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3.5 text-center font-bold text-slate-700">
+                              <span className="bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                                {s.className}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3.5 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewStudent(s)}
+                                  className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                                    isCurrentPreview
+                                      ? 'bg-emerald-600 text-white shadow-2xs'
+                                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                  }`}
+                                  title="Tampilkan di Pratinjau Desain"
+                                >
+                                  <Eye size={13} />
+                                  <span className="hidden sm:inline">Pratinjau</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadSingle(s)}
+                                  disabled={downloadingSingleId === s.id}
+                                  className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/70 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+                                  title="Unduh Sertifikat PDF Siswa Ini"
+                                >
+                                  {downloadingSingleId === s.id ? (
+                                    <Loader2 size={13} className="animate-spin" />
+                                  ) : (
+                                    <DownloadCloud size={13} />
+                                  )}
+                                  <span className="hidden sm:inline">PDF</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
         </div>
       )}
     </main>

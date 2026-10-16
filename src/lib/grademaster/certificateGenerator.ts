@@ -63,6 +63,54 @@ export function formatCertificateStudentName(fullName: string, maxLength: number
   return words.join(' ');
 }
 
+export async function generateBatchLdksCertificatesPdf(
+  template: CertificateTemplate,
+  students: StudentCertificateInfo[],
+  onProgress?: (current: number, total: number) => void
+): Promise<jsPDF> {
+  const doc = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const pageWidth = 297;
+  const pageHeight = 210;
+  const bgImage = await getCertificateBackgroundImage();
+
+  for (let i = 0; i < students.length; i++) {
+    if (i > 0) {
+      doc.addPage('a4', 'landscape');
+    }
+
+    const student = students[i];
+    if (bgImage) {
+      doc.addImage(bgImage, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
+      const studentName = formatCertificateStudentName(student.studentName || '', 22);
+
+      doc.setFont('helvetica', 'bold');
+      let fontSize = 14;
+      doc.setFontSize(fontSize);
+      doc.setTextColor(15, 23, 42);
+
+      const maxLineWidth = 98;
+      const textWidth = doc.getTextWidth(studentName);
+      if (textWidth > maxLineWidth) {
+        fontSize = Math.max(10, Math.floor(fontSize * (maxLineWidth / textWidth)));
+        doc.setFontSize(fontSize);
+      }
+
+      doc.text(studentName, 26, 111.0);
+    }
+
+    if (onProgress) {
+      onProgress(i + 1, students.length);
+    }
+  }
+
+  return doc;
+}
+
 export async function generateLdksCertificatePdf(
   template: CertificateTemplate,
   student: StudentCertificateInfo
