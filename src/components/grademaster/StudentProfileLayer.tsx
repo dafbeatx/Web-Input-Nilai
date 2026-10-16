@@ -546,7 +546,7 @@ export default function StudentProfileLayer({
           academicYear: activeYear || activeTemplate.academic_year || '2026/2027'
         };
 
-        const doc = generateLdksCertificatePdf(activeTemplate, studentInfo);
+        const doc = await generateLdksCertificatePdf(activeTemplate, studentInfo);
         const safeName = (studentName || 'Siswa').replace(/\s+/g, '_');
         const safeClass = (activeClass || 'X').replace(/\s+/g, '_');
         doc.save(`Sertifikat_Penghargaan_LDKS_${safeName}_${safeClass}.pdf`);

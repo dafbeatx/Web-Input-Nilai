@@ -155,7 +155,7 @@ export default function CertificateManagementLayer({
     }
   };
 
-  const handleDownloadSample = () => {
+  const handleDownloadSample = async () => {
     setIsDownloadingSample(true);
     try {
       const sampleStudent = {
@@ -164,8 +164,8 @@ export default function CertificateManagementLayer({
         academicYear: form.academic_year || academicYear,
       };
 
-      const doc = generateLdksCertificatePdf(form, sampleStudent);
-      doc.save(`Contoh_Sertifikat_LDKS_${form.city}_${form.academic_year?.replace('/', '-')}.pdf`);
+      const doc = await generateLdksCertificatePdf(form, sampleStudent);
+      doc.save(`Sertifikat_Penghargaan_LDKS_${form.city}_${form.academic_year?.replace('/', '-')}.pdf`);
       setToast({ message: 'Contoh Sertifikat LDKS (.PDF) berhasil diunduh', type: 'success' });
     } catch (err) {
       console.error('Failed to download sample pdf:', err);
@@ -175,7 +175,7 @@ export default function CertificateManagementLayer({
     }
   };
 
-  const handleDownloadCustomStudent = () => {
+  const handleDownloadCustomStudent = async () => {
     if (!customStudentName.trim()) {
       setToast({ message: 'Silakan isi nama siswa terlebih dahulu', type: 'error' });
       return;
@@ -189,7 +189,7 @@ export default function CertificateManagementLayer({
         academicYear: form.academic_year || academicYear,
       };
 
-      const doc = generateLdksCertificatePdf(form, studentInfo);
+      const doc = await generateLdksCertificatePdf(form, studentInfo);
       const safeName = studentInfo.studentName.replace(/\s+/g, '_');
       const safeClass = studentInfo.className.replace(/\s+/g, '_');
       doc.save(`Sertifikat_Penghargaan_LDKS_${safeName}_${safeClass}.pdf`);
@@ -513,61 +513,43 @@ export default function CertificateManagementLayer({
             <div className="bg-surface border border-outline-variant rounded-2xl p-5 shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <Eye size={16} className="text-amber-600" /> Pratinjau Tampilan Sertifikat
+                  <Eye size={16} className="text-amber-600" /> Pratinjau Desain Sertifikat (Canva)
                 </h3>
-                <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full uppercase">
+                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full uppercase border border-emerald-200">
                   A4 Landscape
                 </span>
               </div>
 
-              {/* Realistic Parchment Certificate Card */}
-              <div className="bg-[#FCFBF7] border-2 border-amber-300 rounded-xl p-5 sm:p-6 text-center space-y-2.5 shadow-inner font-serif select-none">
-                <p className="text-[11px] text-slate-500 font-bold tracking-widest uppercase">
-                  SMA TERPADU AS SALAAM
-                </p>
-                <p className="text-[9px] text-slate-400 font-sans tracking-wide leading-none">
-                  PANITIA LATIHAN DASAR KEPEMIMPINAN SISWA (LDKS)
-                </p>
-                <p className="text-[9px] text-slate-400 font-mono">
-                  Nomor: {form.cert_number_prefix}
-                </p>
-                <hr className="w-20 mx-auto border-amber-300" />
-                
-                <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-wider">
-                  {form.title || 'SERTIFIKAT PENGHARGAAN'}
-                </h2>
-                <p className="text-xs text-amber-800 italic">
-                  {form.subtitle || 'Latihan Dasar Kepemimpinan Siswa (LDKS)'}
-                </p>
-
-                <p className="text-[10px] text-slate-500 font-sans mt-1">
-                  {form.citation}
-                </p>
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 underline decoration-amber-400 underline-offset-4">
-                  [NAMA LENGKAP SISWA]
-                </h3>
-                <p className="text-[10px] text-slate-600 font-sans font-bold">
-                  Kelas X-1 • Tahun Ajaran {form.academic_year || academicYear}
-                </p>
-
-                <p className="text-[11px] text-slate-700 max-w-md mx-auto leading-relaxed italic px-2">
-                  "{form.description}"
-                </p>
-
-                <p className="text-[10px] text-slate-500 font-sans pt-1">
-                  {form.city}, {form.issue_date}
-                </p>
-
-                <div className="grid grid-cols-2 pt-2 text-[11px] text-slate-800 font-sans">
-                  <div>
-                    <p className="text-[10px] text-slate-500">{form.signer1_role}</p>
-                    <p className="font-bold pt-6 underline">{form.signer1_name || '(Nama Panitia LDKS)'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-500">{form.signer2_role}</p>
-                    <p className="font-bold pt-6 underline">{form.signer2_name || '(Nama Kepala Sekolah)'}</p>
-                  </div>
+              {/* Exact Canva Template Preview with Live Name Overlay */}
+              <div className="relative w-full aspect-[2000/1414] rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white select-none">
+                <img
+                  src="/sertifikat-ldks.png"
+                  alt="Desain Sertifikat LDKS"
+                  className="w-full h-full object-contain pointer-events-none"
+                />
+                {/* Live Overlaid Student Name directly on top of the Canva line */}
+                <div
+                  className="absolute font-sans font-bold text-slate-900 tracking-wide"
+                  style={{
+                    left: '8.65%', // 173 / 2000
+                    top: '49.8%',  // sits right above y: 756 / 1414
+                    fontSize: 'clamp(8px, 1.6vw, 18px)',
+                    maxWidth: '34.2%', // (856 - 171) / 2000
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                  title={customStudentName || 'NAMA LENGKAP SISWA'}
+                >
+                  {(customStudentName || 'MUHAMMAD RIZKY PRATAMA').toUpperCase()}
                 </div>
+              </div>
+
+              <div className="flex items-center gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 text-[11px] text-slate-600">
+                <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+                <span>
+                  Menggunakan template desain Canva (<strong>sertifikat-ldks.png</strong>). Nama siswa dicetak otomatis di atas garis.
+                </span>
               </div>
             </div>
 

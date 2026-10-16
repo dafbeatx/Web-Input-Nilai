@@ -8,10 +8,36 @@ export interface StudentCertificateInfo {
   nisn?: string;
 }
 
-export function generateLdksCertificatePdf(
+let cachedBgDataUrl: string | null = null;
+
+async function getCertificateBackgroundImage(): Promise<string | null> {
+  if (cachedBgDataUrl) return cachedBgDataUrl;
+
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/sertifikat-ldks.png');
+      if (res.ok) {
+        const blob = await res.blob();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        cachedBgDataUrl = dataUrl;
+        return dataUrl;
+      }
+    } catch (e) {
+      console.warn('Unable to load /sertifikat-ldks.png, fallback to vector template', e);
+    }
+  }
+  return null;
+}
+
+export async function generateLdksCertificatePdf(
   template: CertificateTemplate,
   student: StudentCertificateInfo
-): jsPDF {
+): Promise<jsPDF> {
   // A4 Landscape: 297mm x 210mm
   const doc = new jsPDF({
     orientation: 'landscape',
@@ -22,6 +48,36 @@ export function generateLdksCertificatePdf(
   const pageWidth = 297;
   const pageHeight = 210;
   const centerX = pageWidth / 2;
+
+  // 1. Check for custom Canva template from public/sertifikat-ldks.png
+  const bgImage = await getCertificateBackgroundImage();
+
+  if (bgImage) {
+    // Draw Canva background template full-bleed across A4 Landscape
+    doc.addImage(bgImage, 'PNG', 0, 0, pageWidth, pageHeight);
+
+    // Print ONLY Student Name right above the horizontal line
+    const studentName = (student.studentName || '').trim().toUpperCase();
+
+    doc.setFont('helvetica', 'bold');
+    let fontSize = 21;
+    doc.setFontSize(fontSize);
+    doc.setTextColor(15, 23, 42); // Deep slate-900 / dark charcoal
+
+    const maxLineWidth = 98; // mm
+    const textWidth = doc.getTextWidth(studentName);
+    if (textWidth > maxLineWidth) {
+      fontSize = Math.max(12, Math.floor(fontSize * (maxLineWidth / textWidth)));
+      doc.setFontSize(fontSize);
+    }
+
+    // Precise placement: X = 26mm, Y = 110.8mm (baseline sits right above line at 112.28mm)
+    doc.text(studentName, 26, 110.8);
+
+    return doc;
+  }
+
+  // --- Fallback Vector Template ---
 
   // 1. Background Parchment Color
   doc.setFillColor(252, 251, 247); // #FCFBF7
