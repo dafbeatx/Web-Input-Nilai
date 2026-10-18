@@ -2193,16 +2193,16 @@ Kunci: C`}
 
       {/* Modal Konfirmasi Sanksi Nilai 0 (Batas Waktu Remedial) */}
       {isZeroDeadlineModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-surface-container-low border border-white/[0.08] rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 text-left relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-surface-container-low border border-outline-variant/20 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left relative">
             {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.05]">
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/15">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500 dark:text-rose-400 shrink-0">
                   <Ban className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="font-headline text-sm font-black text-primary uppercase tracking-tight">
+                  <h4 className="font-headline text-sm font-bold text-on-surface uppercase tracking-tight">
                     Sanksi Nilai 0 (Batas Waktu)
                   </h4>
                   <p className="text-[9px] font-bold text-on-surface-variant/60 uppercase tracking-widest">
@@ -2213,95 +2213,105 @@ Kunci: C`}
               <button
                 type="button"
                 onClick={() => setIsZeroDeadlineModalOpen(false)}
-                className="w-8 h-8 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant/70 flex items-center justify-center transition-colors"
+                className="w-8 h-8 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors"
               >
                 <X size={16} />
               </button>
             </div>
 
-            {/* Description Warning */}
-            <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-2xl text-[11px] leading-relaxed space-y-2.5 shadow-sm">
-              <p className="font-bold text-rose-800 dark:text-rose-300 flex items-center gap-1.5 text-xs">
-                <AlertTriangle size={15} className="shrink-0 text-rose-600 dark:text-rose-400" />
-                <span>Perhatian: Tindakan Penguncian Nilai 0</span>
-              </p>
-              <p className="text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
-                Hanya siswa yang <strong className="text-rose-700 dark:text-rose-400">belum pernah menyelesaikan remedial</strong> setelah batas waktu yang akan ditetapkan nilainya menjadi <strong className="font-extrabold text-rose-700 dark:text-rose-400">0</strong> dengan status <em>TIME_UP</em>.
-              </p>
-              <div className="p-2.5 rounded-xl bg-surface-container-high/60 border border-outline-variant/30 text-[10px] text-slate-700 dark:text-slate-300 space-y-1">
-                <p className="font-bold text-primary flex items-center gap-1">
-                  <span>🛡️ Perlindungan Nilai Siswa:</span>
-                </p>
-                <p className="leading-relaxed">
-                  Siswa yang <strong>sudah mengerjakan remedial</strong> (termasuk yang sedang menunggu teman sekelas selesai sebelum nilai 75 difinalisasi) serta <strong>nilai yang telah diedit/dinilai guru</strong> akan otomatis terlindungi dan <strong>TIDAK AKAN diubah menjadi 0</strong>.
-                </p>
+            {/* Description Warning Card */}
+            <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/20 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-500 dark:text-rose-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <AlertTriangle size={16} />
+                </div>
+                <div className="space-y-1">
+                  <h5 className="font-headline font-bold text-xs text-on-surface uppercase tracking-tight">
+                    Perhatian: Tindakan Penguncian Nilai 0
+                  </h5>
+                  <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                    Hanya siswa yang <strong className="text-rose-500 dark:text-rose-400 font-bold">belum pernah menyelesaikan remedial</strong> yang akan ditetapkan nilainya menjadi 0 dengan status <em>TIME_UP</em>.
+                  </p>
+                </div>
               </div>
-              <div className="text-[10.5px] text-emerald-900 dark:text-emerald-200 font-semibold p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 flex items-start gap-2">
-                <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs shrink-0 mt-0.5">✓</span>
-                <span className="leading-snug">Nilai asli sebelum remedial tetap disimpan aman dan dapat dikembalikan kapan saja oleh admin dengan tombol <strong className="font-extrabold text-emerald-950 dark:text-emerald-100">&ldquo;Reset ke Nilai Asli&rdquo;</strong>.</span>
+
+              {/* Informational bullet points */}
+              <div className="pt-2.5 border-t border-outline-variant/15 space-y-2 text-[10.5px]">
+                <div className="flex items-start gap-2 text-on-surface-variant">
+                  <ShieldCheck size={14} className="text-primary shrink-0 mt-0.5" />
+                  <span className="leading-snug">
+                    Siswa yang sudah remedial (termasuk yang menunggu teman sekelas untuk penetapan nilai 75) dan nilai yang diedit guru <strong>otomatis aman &amp; tidak diubah</strong>.
+                  </span>
+                </div>
+                <div className="flex items-start gap-2 text-on-surface-variant">
+                  <RotateCcw size={14} className="text-teal-500 dark:text-teal-400 shrink-0 mt-0.5" />
+                  <span className="leading-snug">
+                    Nilai asli sebelum remedial tetap disimpan aman dan dapat dikembalikan kapan saja oleh admin dengan tombol <strong>&ldquo;Reset ke Nilai Asli&rdquo;</strong>.
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* Verification Inputs */}
             <div className="space-y-3.5">
               <div className="flex flex-col gap-1.5">
-                <label className="font-label text-[10px] text-primary uppercase font-black tracking-widest flex items-center gap-1">
+                <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider flex items-center gap-1">
                   <span>Konfirmasi Kelas Target</span>
-                  <span className="text-rose-500 font-bold">*</span>
+                  <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={zeroModalClass}
                   onChange={(e) => setZeroModalClass(e.target.value)}
                   placeholder="Contoh: 7A, 8B, IX-C"
-                  className="w-full bg-surface-container-lowest border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs font-bold text-primary placeholder:text-on-surface-variant/40 focus:border-rose-500/50 outline-none transition-colors"
+                  className="w-full bg-surface-container-lowest border border-outline-variant/25 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-on-surface placeholder:text-on-surface-variant/40 focus:border-rose-500/50 focus:ring-1 focus:ring-rose-500/20 outline-none transition-all"
                 />
-                <span className="text-[9px] text-slate-500 dark:text-slate-400">
+                <span className="text-[9.5px] text-on-surface-variant/60">
                   Harus sesuai dengan kelas sesi aktif ({displayClass}).
                 </span>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="font-label text-[10px] text-primary uppercase font-black tracking-widest flex items-center gap-1">
+                <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider flex items-center gap-1">
                   <span>Konfirmasi Tahun Ajaran</span>
-                  <span className="text-rose-500 font-bold">*</span>
+                  <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={zeroModalAcademicYear}
                   onChange={(e) => setZeroModalAcademicYear(e.target.value)}
                   placeholder="Contoh: 2025/2026 atau 2026/2027"
-                  className="w-full bg-surface-container-lowest border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs font-bold text-primary placeholder:text-on-surface-variant/40 focus:border-rose-500/50 outline-none transition-colors"
+                  className="w-full bg-surface-container-lowest border border-outline-variant/25 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-on-surface placeholder:text-on-surface-variant/40 focus:border-rose-500/50 focus:ring-1 focus:ring-rose-500/20 outline-none transition-all"
                 />
-                <span className="text-[9px] text-slate-500 dark:text-slate-400">
+                <span className="text-[9.5px] text-on-surface-variant/60">
                   Harus sesuai dengan tahun ajaran sesi ({academicYear || '2025/2026'}).
                 </span>
               </div>
 
               {/* Target info */}
-              <div className="p-3 bg-surface-container-lowest rounded-xl border border-white/[0.08] text-[10px]">
-                <span className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider block mb-1 text-[9px]">
+              <div className="p-3 bg-surface-container rounded-xl border border-outline-variant/15 text-[10.5px]">
+                <span className="text-on-surface-variant/60 font-bold uppercase tracking-wider block mb-1 text-[9px]">
                   Cakupan Tindakan:
                 </span>
                 {selectedStudentForZero ? (
-                  <p className="font-bold text-primary">
-                    1 Siswa Terpilih: <strong className="text-rose-600 dark:text-rose-400 font-extrabold">{selectedStudentForZero.name}</strong>
+                  <p className="font-semibold text-on-surface">
+                    1 Siswa Terpilih: <strong className="text-rose-500 dark:text-rose-400 font-bold">{selectedStudentForZero.name}</strong>
                   </p>
                 ) : (
-                  <p className="font-bold text-primary">
-                    Semua Siswa Belum Mengerjakan: <strong className="text-rose-600 dark:text-rose-400 font-extrabold">{pendingDeadlineStudents.length} siswa</strong> di sesi ini.
+                  <p className="font-semibold text-on-surface">
+                    Semua Siswa Belum Mengerjakan: <strong className="text-rose-500 dark:text-rose-400 font-bold">{pendingDeadlineStudents.length} siswa</strong> di sesi ini.
                   </p>
                 )}
               </div>
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.05]">
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-outline-variant/15">
               <button
                 type="button"
                 onClick={() => setIsZeroDeadlineModalOpen(false)}
                 disabled={isZeroingSubmitting}
-                className="px-4 py-2.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+                className="px-4 py-2.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold uppercase tracking-wider transition-colors disabled:opacity-50"
               >
                 Batal
               </button>
@@ -2309,7 +2319,7 @@ Kunci: C`}
                 type="button"
                 onClick={handleExecuteZeroDeadline}
                 disabled={isZeroingSubmitting || !zeroModalClass.trim() || !zeroModalAcademicYear.trim()}
-                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg shadow-rose-900/30 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-rose-950/20 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
               >
                 {isZeroingSubmitting ? (
                   <>
