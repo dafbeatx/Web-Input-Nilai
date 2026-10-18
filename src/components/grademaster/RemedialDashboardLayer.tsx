@@ -4,7 +4,8 @@ import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { 
   Clock, RotateCcw, X, Save, User, CheckSquare, FileText, Sliders, Sparkles, AlertCircle, HelpCircle,
-  Shield, ShieldCheck, Activity, Terminal, ChevronDown, ChevronUp, Cpu, Eye, Monitor, Copy
+  Shield, ShieldCheck, Activity, Terminal, ChevronDown, ChevronUp, Cpu, Eye, Monitor, Copy,
+  AlertTriangle, Ban, Undo2
 } from 'lucide-react';
 import { GradedStudent, ScoringConfig, SessionMeta, RemedialMcqQuestion, isImageUrl } from '@/lib/grademaster/types';
 import { parseRemedialMcq, formatRemedialMcq } from '@/lib/grademaster/parser';
@@ -162,6 +163,15 @@ export default function RemedialDashboardLayer({
   const [loadingSecurityAnalysis, setLoadingSecurityAnalysis] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [openEditorOnLoad, setOpenEditorOnLoad] = useState(false);
+
+  // Deadline & Auto-Zero states
+  const [isZeroDeadlineModalOpen, setIsZeroDeadlineModalOpen] = useState(false);
+  const [zeroModalClass, setZeroModalClass] = useState('');
+  const [zeroModalAcademicYear, setZeroModalAcademicYear] = useState('');
+  const [selectedStudentForZero, setSelectedStudentForZero] = useState<{ id: string; name: string } | null>(null);
+  const [isZeroingSubmitting, setIsZeroingSubmitting] = useState(false);
+  const [restoringStudentId, setRestoringStudentId] = useState<string | null>(null);
+  const [isRestoringAllSubmitting, setIsRestoringAllSubmitting] = useState(false);
 
   // Auto-open editor once the selected session is loaded
   React.useEffect(() => {
@@ -336,6 +346,27 @@ export default function RemedialDashboardLayer({
     issue: remedialStudents.filter(s => s.remedialStatus === 'CHEATED' || s.remedialStatus === 'TIME_UP' || s.remedialStatus === 'TIMEOUT').length
   }), [remedialStudents]);
 
+  const isDeadlineExpired = useMemo(() => {
+    return Boolean(scoringConfig.remedialDeadline && new Date() > new Date(scoringConfig.remedialDeadline));
+  }, [scoringConfig.remedialDeadline]);
+
+  const zeroedStudents = useMemo(() => {
+    return gradedStudents.filter(s => 
+      !deletedIds.includes(s.id) && 
+      s.remedialStatus === 'TIME_UP' && 
+      (s.finalScore === 0 || s.finalScoreLocked === 0)
+    );
+  }, [gradedStudents, deletedIds]);
+
+  const pendingDeadlineStudents = useMemo(() => {
+    return gradedStudents.filter(s => 
+      !deletedIds.includes(s.id) && 
+      (s.finalScoreLocked || s.finalScore) < kkm && 
+      s.remedialStatus !== 'COMPLETED' && 
+      !(s.remedialStatus === 'TIME_UP' && (s.finalScore === 0 || s.finalScoreLocked === 0))
+    );
+  }, [gradedStudents, deletedIds, kkm]);
+
   function parseEssayQuestions(input: string): string[] {
     return input.split('\n').map(s => s.replace(/^\d+\.\s*/, '').trim()).filter(Boolean);
   }
@@ -439,6 +470,117 @@ Kunci: B`;
       alert('Gagal mereset data remedial. Silakan coba lagi.');
     } finally {
       setResettingStudentId(null);
+    }
+  };
+
+  const handleOpenZeroDeadlineModal = (student?: { id: string; name: string }) => {
+    setSelectedStudentForZero(student || null);
+    setZeroModalClass(displayClass !== 'N/A' ? displayClass : '');
+    setZeroModalAcademicYear(academicYear || '2025/2026');
+    setIsZeroDeadlineModalOpen(true);
+  };
+
+  const handleExecuteZeroDeadline = async () => {
+    if (!activeSessionId) return;
+    if (!zeroModalClass.trim()) {
+      alert('Mohon masukkan kelas untuk verifikasi.');
+      return;
+    }
+    if (!zeroModalAcademicYear.trim()) {
+      alert('Mohon masukkan tahun ajaran untuk verifikasi.');
+      return;
+    }
+
+    setIsZeroingSubmitting(true);
+    try {
+      const res = await fetch('/api/grademaster/students/remedial/deadline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: activeSessionId,
+          action: 'ZERO_EXPIRED',
+          studentClass: zeroModalClass.trim(),
+          academicYear: zeroModalAcademicYear.trim(),
+          studentId: selectedStudentForZero?.id
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Gagal menerapkan nilai 0.');
+      }
+
+      alert(data.message || `Berhasil menetapkan nilai 0 untuk ${data.affectedCount || 0} siswa.`);
+      setIsZeroDeadlineModalOpen(false);
+      setSelectedStudentForZero(null);
+      if (onRefreshRef.current) onRefreshRef.current();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(msg);
+    } finally {
+      setIsZeroingSubmitting(false);
+    }
+  };
+
+  const handleRestoreOriginalScore = async (e: React.MouseEvent, studentId: string, studentName: string, originalScore?: number) => {
+    e.stopPropagation();
+    const scoreText = (originalScore !== undefined && originalScore !== null) ? ` (Nilai Asli: ${originalScore})` : '';
+    if (!window.confirm(`Pulihkan nilai siswa "${studentName}" ke nilai asli${scoreText}?\nKunci nilai akan dibuka dan status remedial direset.`)) return;
+
+    setRestoringStudentId(studentId);
+    try {
+      const res = await fetch('/api/grademaster/students/remedial/deadline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: activeSessionId,
+          action: 'RESTORE_ORIGINAL',
+          studentId
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Gagal memulihkan nilai asli');
+      }
+
+      alert(data.message || `Berhasil memulihkan nilai asli siswa "${studentName}".`);
+      if (onRefreshRef.current) onRefreshRef.current();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(msg);
+    } finally {
+      setRestoringStudentId(null);
+    }
+  };
+
+  const handleRestoreAllOriginalScores = async () => {
+    if (!activeSessionId) return;
+    if (!window.confirm('Pulihkan semua siswa yang saat ini bernilai 0 di sesi ini ke nilai asli masing-masing?')) return;
+
+    setIsRestoringAllSubmitting(true);
+    try {
+      const res = await fetch('/api/grademaster/students/remedial/deadline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: activeSessionId,
+          action: 'RESTORE_ORIGINAL'
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Gagal memulihkan nilai');
+      }
+
+      alert(data.message || `Berhasil memulihkan ${data.restoredCount || 0} siswa ke nilai asli.`);
+      if (onRefreshRef.current) onRefreshRef.current();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(msg);
+    } finally {
+      setIsRestoringAllSubmitting(false);
     }
   };
 
@@ -674,6 +816,81 @@ Kunci: B`;
           ))}
         </section>
 
+        {/* Batas Waktu Remedial & Zero-Score Management */}
+        {activeSessionId && (
+          <section className="bg-surface-container-lowest border border-white/[0.05] rounded-3xl p-5 shadow-sm space-y-4 animate-in fade-in duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center border shrink-0 ${
+                  isDeadlineExpired
+                    ? 'bg-rose-500/15 border-rose-500/30 text-rose-400'
+                    : scoringConfig.remedialDeadline
+                    ? 'bg-amber-400/15 border-amber-400/30 text-amber-300'
+                    : 'bg-surface-container border-white/[0.05] text-on-surface-variant/40'
+                }`}>
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-primary">
+                      Batas Waktu Remedial &amp; Kebijakan Nilai 0
+                    </h4>
+                    {scoringConfig.remedialDeadline && (
+                      <span className={`text-[8px] font-mono font-black uppercase px-2 py-0.5 rounded-full border ${
+                        isDeadlineExpired
+                          ? 'bg-rose-500/15 border-rose-500/30 text-rose-400'
+                          : 'bg-amber-400/15 border-amber-400/30 text-amber-300'
+                      }`}>
+                        {isDeadlineExpired ? 'Tenggat Terlewati' : 'Tenggat Aktif'}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-on-surface-variant/70 font-medium mt-1 leading-relaxed">
+                    {scoringConfig.remedialDeadline ? (
+                      <>
+                        Tenggat: <strong className="text-primary">{new Date(scoringConfig.remedialDeadline).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</strong> •{' '}
+                        <span className="text-rose-400 font-bold">{pendingDeadlineStudents.length} siswa belum tuntas</span>
+                        {zeroedStudents.length > 0 && (
+                          <span className="text-amber-400 font-bold"> • {zeroedStudents.length} siswa bernilai 0</span>
+                        )}
+                      </>
+                    ) : (
+                      'Batas waktu remedial belum ditentukan. Atur tenggat pada tab Pengaturan Soal.'
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleOpenZeroDeadlineModal()}
+                  disabled={!isAdmin || pendingDeadlineStudents.length === 0}
+                  className="px-3.5 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 shadow-sm"
+                  title="Jadikan nilai 0 bagi siswa yang belum tuntas melewati batas waktu"
+                >
+                  <Ban className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Jadikan Nilai 0 ({pendingDeadlineStudents.length})</span>
+                </button>
+
+                {zeroedStudents.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleRestoreAllOriginalScores}
+                    disabled={!isAdmin || isRestoringAllSubmitting}
+                    className="px-3.5 py-2.5 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 text-teal-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all disabled:opacity-30 active:scale-95 shadow-sm"
+                    title="Pulihkan semua siswa bernilai 0 ke nilai asli masing-masing"
+                  >
+                    <Undo2 className={`w-3.5 h-3.5 text-teal-400 ${isRestoringAllSubmitting ? 'animate-spin' : ''}`} />
+                    <span>{isRestoringAllSubmitting ? 'Memulihkan...' : `Pulihkan Nilai Asli (${zeroedStudents.length})`}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Editorial Search Bar */}
         <div className="relative group">
           <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-tertiary transition-colors">search</span>
@@ -848,11 +1065,53 @@ Kunci: B`;
 
                       <div className="flex items-center gap-3">
                          <div className="text-right flex flex-col items-end">
-                            <span className="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-widest mb-0.5">Final Score</span>
-                            <span className="text-lg font-headline font-black text-primary leading-none">
-                              {student.finalScoreLocked || student.finalScore}
-                            </span>
+                            {student.remedialStatus === 'TIME_UP' && (student.finalScoreLocked === 0 || student.finalScore === 0) ? (
+                              <>
+                                <span className="text-[8px] font-black text-rose-400 uppercase tracking-widest mb-0.5">Nilai 0 (Batas Waktu)</span>
+                                <span className="text-lg font-headline font-black text-rose-500 leading-none">0</span>
+                                {student.originalScore !== undefined && student.originalScore !== null && (
+                                  <span className="text-[8px] font-mono text-on-surface-variant/70 mt-0.5">Asli: {student.originalScore}</span>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-widest mb-0.5">Final Score</span>
+                                <span className="text-lg font-headline font-black text-primary leading-none">
+                                  {student.finalScoreLocked || student.finalScore}
+                                </span>
+                              </>
+                            )}
                          </div>
+
+                         {/* Tombol Pulihkan ke Nilai Asli (jika berstatus nilai 0 / TIME_UP) */}
+                         {student.remedialStatus === 'TIME_UP' && (student.finalScoreLocked === 0 || student.finalScore === 0) && (
+                           <button
+                             onClick={(e) => handleRestoreOriginalScore(e, student.id, student.name, student.originalScore)}
+                             disabled={!isAdmin || restoringStudentId === student.id}
+                             className="px-3 py-1.5 rounded-xl bg-teal-500/15 border border-teal-500/30 text-teal-300 hover:bg-teal-500 hover:text-neutral-950 transition-all font-bold text-[9px] uppercase tracking-widest flex items-center gap-1.5 disabled:opacity-30 active:scale-95 shadow-sm"
+                             title={`Kembalikan ke nilai asli (${student.originalScore ?? 'awal'})`}
+                           >
+                             <Undo2 size={12} className={restoringStudentId === student.id ? "animate-spin" : ""} />
+                             <span className="leading-none">
+                               {restoringStudentId === student.id ? "Memulihkan..." : "Reset ke Nilai Asli"}
+                             </span>
+                           </button>
+                         )}
+
+                         {/* Tombol Jadikan Nilai 0 (jika belum tuntas dan belum bernilai 0) */}
+                         {!(student.remedialStatus === 'TIME_UP' && (student.finalScoreLocked === 0 || student.finalScore === 0)) && 
+                          student.remedialStatus !== 'COMPLETED' && (
+                           <button
+                             onClick={(e) => { e.stopPropagation(); handleOpenZeroDeadlineModal({ id: student.id, name: student.name }); }}
+                             disabled={!isAdmin}
+                             className="px-2.5 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white transition-all font-bold text-[9px] uppercase tracking-widest flex items-center gap-1 disabled:opacity-30 active:scale-95"
+                             title="Terapkan sanksi nilai 0 karena melewati batas waktu"
+                           >
+                             <Ban size={12} />
+                             <span className="leading-none">Set 0</span>
+                           </button>
+                         )}
+
                          {(student.remedialStatus === 'TIMEOUT' || student.remedialStatus === 'TIME_UP' || student.remedialStatus === 'ACTIVE') && (
                            <button 
                             onClick={(e) => handleExtendTimePrompt(e, student.id, student.name)}
@@ -1876,6 +2135,134 @@ Kunci: C`}
                 </button>
               </div>
            </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Sanksi Nilai 0 (Batas Waktu Remedial) */}
+      {isZeroDeadlineModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-surface-container-low border border-white/[0.08] rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 text-left relative">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.05]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                  <Ban className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-headline text-sm font-black text-primary uppercase tracking-tight">
+                    Sanksi Nilai 0 (Batas Waktu)
+                  </h4>
+                  <p className="text-[9px] font-bold text-on-surface-variant/60 uppercase tracking-widest">
+                    Verifikasi Kelas &amp; Tahun Ajaran
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsZeroDeadlineModalOpen(false)}
+                className="w-8 h-8 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant/70 flex items-center justify-center transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Description Warning */}
+            <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-[10px] text-rose-200/90 leading-relaxed space-y-1">
+              <p className="font-bold text-rose-300 flex items-center gap-1.5">
+                <AlertTriangle size={13} className="shrink-0" />
+                Perhatian: Tindakan Penguncian Nilai 0
+              </p>
+              <p>
+                Siswa yang belum menyelesaikan remedial setelah batas waktu akan ditetapkan nilainya menjadi <strong>0</strong> dengan status <em>TIME_UP</em>.
+              </p>
+              <p className="text-[9px] text-teal-300/80 font-medium pt-1 border-t border-rose-500/20">
+                ✓ Nilai asli sebelum remedial tetap disimpan aman dan dapat dikembalikan kapan saja oleh admin dengan tombol <strong>&ldquo;Reset ke Nilai Asli&rdquo;</strong>.
+              </p>
+            </div>
+
+            {/* Verification Inputs */}
+            <div className="space-y-3.5">
+              <div className="flex flex-col gap-1.5">
+                <label className="font-label text-[10px] text-primary uppercase font-black tracking-widest flex items-center gap-1">
+                  <span>Konfirmasi Kelas Target</span>
+                  <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={zeroModalClass}
+                  onChange={(e) => setZeroModalClass(e.target.value)}
+                  placeholder="Contoh: 7A, 8B, IX-C"
+                  className="w-full bg-surface-container-lowest border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs font-bold text-primary placeholder:text-on-surface-variant/30 focus:border-rose-500/50 outline-none transition-colors"
+                />
+                <span className="text-[8px] text-on-surface-variant/50">
+                  Harus sesuai dengan kelas sesi aktif ({displayClass}).
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="font-label text-[10px] text-primary uppercase font-black tracking-widest flex items-center gap-1">
+                  <span>Konfirmasi Tahun Ajaran</span>
+                  <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={zeroModalAcademicYear}
+                  onChange={(e) => setZeroModalAcademicYear(e.target.value)}
+                  placeholder="Contoh: 2025/2026 atau 2026/2027"
+                  className="w-full bg-surface-container-lowest border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs font-bold text-primary placeholder:text-on-surface-variant/30 focus:border-rose-500/50 outline-none transition-colors"
+                />
+                <span className="text-[8px] text-on-surface-variant/50">
+                  Harus sesuai dengan tahun ajaran sesi ({academicYear || '2025/2026'}).
+                </span>
+              </div>
+
+              {/* Target info */}
+              <div className="p-3 bg-surface-container-lowest rounded-xl border border-white/[0.04] text-[9.5px]">
+                <span className="text-on-surface-variant/50 font-bold uppercase tracking-wider block mb-1">
+                  Cakupan Tindakan:
+                </span>
+                {selectedStudentForZero ? (
+                  <p className="font-bold text-primary">
+                    1 Siswa Terpilih: <strong className="text-rose-400">{selectedStudentForZero.name}</strong>
+                  </p>
+                ) : (
+                  <p className="font-bold text-primary">
+                    Semua Siswa Belum Tuntas: <strong className="text-rose-400">{pendingDeadlineStudents.length} siswa</strong> di sesi ini.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.05]">
+              <button
+                type="button"
+                onClick={() => setIsZeroDeadlineModalOpen(false)}
+                disabled={isZeroingSubmitting}
+                className="px-4 py-2.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteZeroDeadline}
+                disabled={isZeroingSubmitting || !zeroModalClass.trim() || !zeroModalAcademicYear.trim()}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg shadow-rose-900/30 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+              >
+                {isZeroingSubmitting ? (
+                  <>
+                    <Clock size={13} className="animate-spin" />
+                    <span>Menerapkan...</span>
+                  </>
+                ) : (
+                  <>
+                    <Ban size={13} />
+                    <span>Terapkan Nilai 0</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

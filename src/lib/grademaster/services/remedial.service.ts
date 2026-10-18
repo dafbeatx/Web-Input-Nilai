@@ -273,22 +273,32 @@ export async function submitRemedial(
       validateStateTransition(student.remedial_status, 'INITIATED');
     }
 
-    // Auto-Lock Deadline Validation
+    // Auto-Lock Deadline Validation: Nilai dijadikan 0 jika batas waktu telah habis
     const deadline = session.scoring_config?.remedialDeadline;
     if (deadline && new Date() > new Date(deadline)) {
-      // Auto-update student status to TIME_UP and lock score
+      const origScore = (student.original_score !== null && student.original_score !== undefined && Number(student.original_score) > 0)
+        ? Number(student.original_score)
+        : (student.final_score !== null && student.final_score !== undefined && Number(student.final_score) > 0)
+          ? Number(student.final_score)
+          : Math.round((Number(student.mcq_score || 0) * 0.7) + (Number(student.essay_score || 0) * 0.3));
+
+      // Auto-update student status to TIME_UP and lock score to 0
       const { error: lockError } = await supabase
         .from('gm_students')
         .update({ 
+          original_score: origScore,
+          final_score: 0,
+          remedial_score: 0,
           remedial_status: 'TIME_UP', 
-          final_score_locked: true,
+          final_score_locked: 0,
+          remedial_note: 'Nilai dijadikan 0 otomatis karena batas waktu remedial telah berakhir.',
           updated_at: new Date().toISOString()
         })
         .eq('id', studentId);
         
       if (lockError) console.error(`Failed to lock student ${studentName}:`, lockError);
       
-      throw new Error('DEADLINE_PASSED: Batas waktu untuk mengerjakan remedial sesi ini telah habis.');
+      throw new Error('DEADLINE_PASSED: Batas waktu untuk mengerjakan remedial sesi ini telah habis. Nilai akhir Anda menjadi 0.');
     }
 
     // Dynamic AI Question Generator integration
@@ -660,8 +670,26 @@ export async function submitRemedial(
       }
     };
 
-    // Jika melebihi waktu maksimum, otomatis timeout/gagal
-    if (isTooLate && status !== 'CHEATED') {
+    const sessionDeadline = session.scoring_config?.remedialDeadline;
+    const isDeadlinePassed = sessionDeadline ? new Date() > new Date(sessionDeadline) : false;
+
+    // Jika melebihi batas waktu deadline sesi atau durasi maksimum, otomatis nilai 0
+    if (isDeadlinePassed && status !== 'CHEATED') {
+      const origScore = (student.original_score !== null && student.original_score !== undefined && Number(student.original_score) > 0)
+        ? Number(student.original_score)
+        : (student.final_score !== null && student.final_score !== undefined && Number(student.final_score) > 0)
+          ? Number(student.final_score)
+          : Math.round((Number(student.mcq_score || 0) * 0.7) + (Number(student.essay_score || 0) * 0.3));
+
+      studentUpdate.original_score = origScore;
+      studentUpdate.remedial_score = 0;
+      studentUpdate.final_score = 0;
+      studentUpdate.final_score_locked = 0;
+      studentUpdate.remedial_status = 'TIME_UP';
+      attemptUpdate.status = 'TIME_UP';
+      studentUpdate.teacher_reviewed = true;
+      failedReason = "Batas waktu remedial sesi telah habis. Nilai akhir Anda menjadi 0.";
+    } else if (isTooLate && status !== 'CHEATED') {
       throw new Error("Score calculation timed out");
     } else if (explicitlyBlocked) {
       attemptUpdate.status = 'CHEATED';
