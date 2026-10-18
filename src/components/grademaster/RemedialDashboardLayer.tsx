@@ -867,10 +867,10 @@ Kunci: B`;
                   type="button"
                   onClick={() => handleOpenZeroDeadlineModal()}
                   disabled={!isAdmin || pendingDeadlineStudents.length === 0}
-                  className="px-3.5 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 shadow-sm"
+                  className="px-3.5 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 shadow-sm"
                   title="Jadikan nilai 0 bagi siswa yang belum tuntas melewati batas waktu"
                 >
-                  <Ban className="w-3.5 h-3.5 text-rose-400" />
+                  <Ban className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
                   <span>Jadikan Nilai 0 ({pendingDeadlineStudents.length})</span>
                 </button>
 
@@ -879,10 +879,10 @@ Kunci: B`;
                     type="button"
                     onClick={handleRestoreAllOriginalScores}
                     disabled={!isAdmin || isRestoringAllSubmitting}
-                    className="px-3.5 py-2.5 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 text-teal-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all disabled:opacity-30 active:scale-95 shadow-sm"
+                    className="px-3.5 py-2.5 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 text-teal-700 dark:text-teal-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all disabled:opacity-30 active:scale-95 shadow-sm"
                     title="Pulihkan semua siswa bernilai 0 ke nilai asli masing-masing"
                   >
-                    <Undo2 className={`w-3.5 h-3.5 text-teal-400 ${isRestoringAllSubmitting ? 'animate-spin' : ''}`} />
+                    <Undo2 className={`w-3.5 h-3.5 text-teal-600 dark:text-teal-400 ${isRestoringAllSubmitting ? 'animate-spin' : ''}`} />
                     <span>{isRestoringAllSubmitting ? 'Memulihkan...' : `Pulihkan Nilai Asli (${zeroedStudents.length})`}</span>
                   </button>
                 )}
@@ -1088,7 +1088,7 @@ Kunci: B`;
                            <button
                              onClick={(e) => handleRestoreOriginalScore(e, student.id, student.name, student.originalScore)}
                              disabled={!isAdmin || restoringStudentId === student.id}
-                             className="px-3 py-1.5 rounded-xl bg-teal-500/15 border border-teal-500/30 text-teal-300 hover:bg-teal-500 hover:text-neutral-950 transition-all font-bold text-[9px] uppercase tracking-widest flex items-center gap-1.5 disabled:opacity-30 active:scale-95 shadow-sm"
+                             className="px-3 py-1.5 rounded-xl bg-teal-500/15 border border-teal-500/30 text-teal-700 dark:text-teal-300 hover:bg-teal-600 hover:text-white transition-all font-extrabold text-[9px] uppercase tracking-widest flex items-center gap-1.5 disabled:opacity-30 active:scale-95 shadow-sm"
                              title={`Kembalikan ke nilai asli (${student.originalScore ?? 'awal'})`}
                            >
                              <Undo2 size={12} className={restoringStudentId === student.id ? "animate-spin" : ""} />
@@ -1104,7 +1104,7 @@ Kunci: B`;
                            <button
                              onClick={(e) => { e.stopPropagation(); handleOpenZeroDeadlineModal({ id: student.id, name: student.name }); }}
                              disabled={!isAdmin}
-                             className="px-2.5 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white transition-all font-bold text-[9px] uppercase tracking-widest flex items-center gap-1 disabled:opacity-30 active:scale-95"
+                             className="px-2.5 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 hover:bg-rose-600 hover:text-white transition-all font-extrabold text-[9px] uppercase tracking-widest flex items-center gap-1 disabled:opacity-30 active:scale-95"
                              title="Terapkan sanksi nilai 0 karena melewati batas waktu"
                            >
                              <Ban size={12} />
@@ -2167,17 +2167,18 @@ Kunci: C`}
             </div>
 
             {/* Description Warning */}
-            <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-[10px] text-rose-200/90 leading-relaxed space-y-1">
-              <p className="font-bold text-rose-300 flex items-center gap-1.5">
-                <AlertTriangle size={13} className="shrink-0" />
-                Perhatian: Tindakan Penguncian Nilai 0
+            <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-2xl text-[11px] leading-relaxed space-y-2.5 shadow-sm">
+              <p className="font-bold text-rose-800 dark:text-rose-300 flex items-center gap-1.5 text-xs">
+                <AlertTriangle size={15} className="shrink-0 text-rose-600 dark:text-rose-400" />
+                <span>Perhatian: Tindakan Penguncian Nilai 0</span>
               </p>
-              <p>
-                Siswa yang belum menyelesaikan remedial setelah batas waktu akan ditetapkan nilainya menjadi <strong>0</strong> dengan status <em>TIME_UP</em>.
+              <p className="text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
+                Siswa yang belum menyelesaikan remedial setelah batas waktu akan ditetapkan nilainya menjadi <strong className="font-extrabold text-rose-700 dark:text-rose-400">0</strong> dengan status <em>TIME_UP</em>.
               </p>
-              <p className="text-[9px] text-teal-300/80 font-medium pt-1 border-t border-rose-500/20">
-                ✓ Nilai asli sebelum remedial tetap disimpan aman dan dapat dikembalikan kapan saja oleh admin dengan tombol <strong>&ldquo;Reset ke Nilai Asli&rdquo;</strong>.
-              </p>
+              <div className="text-[10.5px] text-emerald-900 dark:text-emerald-200 font-semibold p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 flex items-start gap-2">
+                <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs shrink-0 mt-0.5">✓</span>
+                <span className="leading-snug">Nilai asli sebelum remedial tetap disimpan aman dan dapat dikembalikan kapan saja oleh admin dengan tombol <strong className="font-extrabold text-emerald-950 dark:text-emerald-100">&ldquo;Reset ke Nilai Asli&rdquo;</strong>.</span>
+              </div>
             </div>
 
             {/* Verification Inputs */}
@@ -2185,16 +2186,16 @@ Kunci: C`}
               <div className="flex flex-col gap-1.5">
                 <label className="font-label text-[10px] text-primary uppercase font-black tracking-widest flex items-center gap-1">
                   <span>Konfirmasi Kelas Target</span>
-                  <span className="text-rose-400">*</span>
+                  <span className="text-rose-500 font-bold">*</span>
                 </label>
                 <input
                   type="text"
                   value={zeroModalClass}
                   onChange={(e) => setZeroModalClass(e.target.value)}
                   placeholder="Contoh: 7A, 8B, IX-C"
-                  className="w-full bg-surface-container-lowest border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs font-bold text-primary placeholder:text-on-surface-variant/30 focus:border-rose-500/50 outline-none transition-colors"
+                  className="w-full bg-surface-container-lowest border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs font-bold text-primary placeholder:text-on-surface-variant/40 focus:border-rose-500/50 outline-none transition-colors"
                 />
-                <span className="text-[8px] text-on-surface-variant/50">
+                <span className="text-[9px] text-slate-500 dark:text-slate-400">
                   Harus sesuai dengan kelas sesi aktif ({displayClass}).
                 </span>
               </div>
@@ -2202,32 +2203,32 @@ Kunci: C`}
               <div className="flex flex-col gap-1.5">
                 <label className="font-label text-[10px] text-primary uppercase font-black tracking-widest flex items-center gap-1">
                   <span>Konfirmasi Tahun Ajaran</span>
-                  <span className="text-rose-400">*</span>
+                  <span className="text-rose-500 font-bold">*</span>
                 </label>
                 <input
                   type="text"
                   value={zeroModalAcademicYear}
                   onChange={(e) => setZeroModalAcademicYear(e.target.value)}
                   placeholder="Contoh: 2025/2026 atau 2026/2027"
-                  className="w-full bg-surface-container-lowest border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs font-bold text-primary placeholder:text-on-surface-variant/30 focus:border-rose-500/50 outline-none transition-colors"
+                  className="w-full bg-surface-container-lowest border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs font-bold text-primary placeholder:text-on-surface-variant/40 focus:border-rose-500/50 outline-none transition-colors"
                 />
-                <span className="text-[8px] text-on-surface-variant/50">
+                <span className="text-[9px] text-slate-500 dark:text-slate-400">
                   Harus sesuai dengan tahun ajaran sesi ({academicYear || '2025/2026'}).
                 </span>
               </div>
 
               {/* Target info */}
-              <div className="p-3 bg-surface-container-lowest rounded-xl border border-white/[0.04] text-[9.5px]">
-                <span className="text-on-surface-variant/50 font-bold uppercase tracking-wider block mb-1">
+              <div className="p-3 bg-surface-container-lowest rounded-xl border border-white/[0.08] text-[10px]">
+                <span className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider block mb-1 text-[9px]">
                   Cakupan Tindakan:
                 </span>
                 {selectedStudentForZero ? (
                   <p className="font-bold text-primary">
-                    1 Siswa Terpilih: <strong className="text-rose-400">{selectedStudentForZero.name}</strong>
+                    1 Siswa Terpilih: <strong className="text-rose-600 dark:text-rose-400 font-extrabold">{selectedStudentForZero.name}</strong>
                   </p>
                 ) : (
                   <p className="font-bold text-primary">
-                    Semua Siswa Belum Tuntas: <strong className="text-rose-400">{pendingDeadlineStudents.length} siswa</strong> di sesi ini.
+                    Semua Siswa Belum Tuntas: <strong className="text-rose-600 dark:text-rose-400 font-extrabold">{pendingDeadlineStudents.length} siswa</strong> di sesi ini.
                   </p>
                 )}
               </div>
