@@ -3,7 +3,8 @@
 import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { 
-  Clock, RotateCcw, X, Save, User, CheckSquare, FileText, Sliders, Sparkles, AlertCircle, HelpCircle
+  Clock, RotateCcw, X, Save, User, CheckSquare, FileText, Sliders, Sparkles, AlertCircle, HelpCircle,
+  Shield, ShieldAlert, ShieldCheck, Activity, Terminal, ChevronDown, ChevronUp, Cpu, Eye, Monitor, Zap, Copy
 } from 'lucide-react';
 import { GradedStudent, ScoringConfig, SessionMeta, RemedialMcqQuestion, isImageUrl } from '@/lib/grademaster/types';
 import { parseRemedialMcq, formatRemedialMcq } from '@/lib/grademaster/parser';
@@ -16,6 +17,31 @@ interface ForensicEvent {
   description: string;
 }
 
+interface ThreatVectorDetail {
+  name: string;
+  score: number;
+  status: 'AMAN' | 'WASPADA' | 'KRITIS';
+  summary: string;
+}
+
+interface TelemetryMetrics {
+  total_events: number;
+  tab_switches: number;
+  reloads: number;
+  copy_pastes: number;
+  vision_violations: number;
+  duration_minutes: number;
+  allocated_minutes: number;
+  speed_ratio: number;
+}
+
+interface RawTelemetryEvent {
+  time: string;
+  event: string;
+  severity: string;
+  details?: string;
+}
+
 interface AIForensicRecord {
   risk_level?: string;
   risk_score?: number;
@@ -23,7 +49,11 @@ interface AIForensicRecord {
   threat_vector_summary?: string;
   forensic_timeline?: ForensicEvent[];
   is_ai_analysis?: boolean;
+  engine_model?: string;
   mitigation_actions?: string[];
+  threat_vectors?: ThreatVectorDetail[];
+  telemetry_metrics?: TelemetryMetrics;
+  raw_events?: RawTelemetryEvent[];
 }
 
 interface RemedialDashboardLayerProps {
@@ -162,25 +192,26 @@ export default function RemedialDashboardLayer({
 
   const [aiForensicResult, setAiForensicResult] = useState<Record<string, AIForensicRecord>>({});
   const [forensicConsoleLogs, setForensicConsoleLogs] = useState<string[]>([]);
+  const [expandedRawLogs, setExpandedRawLogs] = useState<Record<string, boolean>>({});
 
   const runAiForensic = async (studentId: string) => {
     setLoadingSecurityAnalysis(studentId);
-    setForensicConsoleLogs(["[SYSTEM] Menghubungkan ke secure telemetry tunnel..."]);
+    setForensicConsoleLogs([
+      "[SYSTEM] Menginisialisasi session telemetry tunnel...",
+      "[INGESTION] Menarik log aktivitas gm_attempt_logs & data sesi...",
+    ]);
     
-    const logs = [
-      "[DATABASE] Menarik rekaman gm_attempt_logs...",
-      "[VISION] Mengorelasikan snapshot bukti deteksi kamera...",
-      "[ANALYSIS] Mengumpulkan baseline heuristik sistem...",
-      "[AI BRAIN] Mengaktifkan Llama-3.3-70B Cyber-Forensics Brain...",
-      "[AI BRAIN] Menganalisis probabilitas pola bypass tab/reload...",
-      "[SYSTEM] Mengompilasi threat vector & rekomendasi guru..."
-    ];
+    const t1 = setTimeout(() => {
+      setForensicConsoleLogs(prev => [...prev, "[TELEMETRY] Memetakan koordinat vektor tab-switching, blur, dan aktivitas input..."]);
+    }, 400);
 
-    logs.forEach((txt, index) => {
-      setTimeout(() => {
-        setForensicConsoleLogs(prev => [...prev, txt]);
-      }, (index + 1) * 700);
-    });
+    const t2 = setTimeout(() => {
+      setForensicConsoleLogs(prev => [...prev, "[PROCTORING] Menganalisis snapshot biometrik wajah & integritas visual kamera..."]);
+    }, 850);
+
+    const t3 = setTimeout(() => {
+      setForensicConsoleLogs(prev => [...prev, "[AI BRAIN] Mengaktifkan Qwen-27B Cyber-Forensics Brain untuk audit multi-vektor..."]);
+    }, 1300);
 
     try {
       const res = await fetch('/api/grademaster/security-analysis', {
@@ -192,22 +223,34 @@ export default function RemedialDashboardLayer({
         })
       });
       
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+
       if (!res.ok) throw new Error('Gagal memindai');
       const data = await res.json();
       
+      const totalEvts = data.telemetry_metrics?.total_events ?? data._debug?.total_logs ?? 0;
+      setForensicConsoleLogs(prev => [
+        ...prev,
+        `[AUDIT SELESAI] Terverifikasi ${totalEvts} event telemetri (${data.engine_model || 'AI Brain'}).`,
+        `[RESULT] Risk Score: ${data.risk_score}% • Verdict: ${data.ai_verdict}`
+      ]);
+
       setTimeout(() => {
         setAiForensicResult(prev => ({
           ...prev,
           [studentId]: data
         }));
         setLoadingSecurityAnalysis(null);
-      }, 5000);
+      }, 400);
     } catch {
-      setTimeout(() => {
-        setForensicConsoleLogs(prev => [...prev, "[ERROR] Kegagalan audit forensik keamanan."]);
-        setLoadingSecurityAnalysis(null);
-        alert('Gagal menjalankan AI Cyber-Forensics. Silakan coba lagi.');
-      }, 3000);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      setForensicConsoleLogs(prev => [...prev, "[ERROR] Kegagalan audit forensik keamanan."]);
+      setLoadingSecurityAnalysis(null);
+      alert('Gagal menjalankan AI Cyber-Forensics. Silakan coba lagi.');
     }
   };
 
@@ -900,73 +943,112 @@ Kunci: B`;
                         </div>
 
                         {/* AI Cyber-Forensics Telemetry Brain Widget */}
-                        <div className="mb-6 bg-surface-container-lowest border border-white/[0.04] rounded-3xl p-5 shadow-inner">
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                              <span className="material-symbols-outlined text-tertiary-dim animate-pulse">psychology</span>
+                        <div className="mb-6 bg-surface-container-lowest border border-white/[0.06] rounded-3xl p-5 shadow-2xl relative overflow-hidden">
+                          {/* Top ambient highlight */}
+                          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-tertiary/30 to-transparent"></div>
+
+                          {/* Widget Header */}
+                          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-xl bg-tertiary/10 border border-tertiary/20 flex items-center justify-center">
+                                <Shield className="w-4 h-4 text-tertiary animate-pulse" />
+                              </div>
                               <div className="text-left">
-                                <h5 className="text-[10px] font-black uppercase tracking-widest text-primary leading-none">AI Cyber-Forensics Telemetry Brain</h5>
-                                <p className="text-[8px] font-bold text-on-surface-variant/40 uppercase tracking-widest mt-0.5">Audit Keamanan & Integritas Sesi</p>
+                                <div className="flex items-center gap-2">
+                                  <h5 className="text-[11px] font-black uppercase tracking-widest text-primary leading-none">
+                                    AI Cyber-Forensics Telemetry Brain
+                                  </h5>
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[7px] font-mono font-bold bg-tertiary/15 text-tertiary border border-tertiary/30">
+                                    <span className="w-1 h-1 rounded-full bg-tertiary animate-ping"></span>
+                                    LIVE SENSORS
+                                  </span>
+                                </div>
+                                <p className="text-[8px] font-bold text-on-surface-variant/50 uppercase tracking-widest mt-1">
+                                  Audit Multi-Vektor Integritas Sesi & Sensor Telemetri
+                                </p>
                               </div>
                             </div>
                             {aiForensicResult[student.id] && (
-                              <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-tertiary/10 text-tertiary border border-tertiary/20">
-                                {aiForensicResult[student.id].is_ai_analysis ? 'Groq Engine' : 'Heuristic Engine'}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[8px] font-mono font-black uppercase tracking-widest px-2.5 py-1 rounded-lg bg-surface-container border border-white/[0.08] text-on-surface-variant flex items-center gap-1.5">
+                                  <Cpu className="w-3 h-3 text-tertiary" />
+                                  {aiForensicResult[student.id].engine_model || (aiForensicResult[student.id].is_ai_analysis ? 'Qwen-27B AI' : 'Heuristic')}
+                                </span>
+                              </div>
                             )}
                           </div>
 
+                          {/* Initial Pre-scan Card */}
                           {!aiForensicResult[student.id] && loadingSecurityAnalysis !== student.id && (
-                            <div className="flex flex-col items-center justify-center p-6 text-center bg-surface-container-low/40 rounded-2xl border border-dashed border-outline-variant/30">
-                              <span className="material-symbols-outlined text-3xl text-on-surface-variant/20 mb-3 animate-pulse">radar</span>
-                              <p className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest mb-3 max-w-[280px] leading-relaxed">
-                                Jalankan analisis keamanan komprehensif menggunakan Llama-3.3-70B Cyber-Forensics Brain.
-                              </p>
-                              <button
-                                onClick={() => runAiForensic(student.id)}
-                                disabled={loadingSecurityAnalysis !== null}
-                                className="px-4 py-2 rounded-xl bg-tertiary text-on-tertiary text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 active:scale-95 transition-all shadow-[0_0_15px_rgba(155,255,206,0.1)] hover:shadow-[0_0_20px_rgba(155,255,206,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <span className="material-symbols-outlined text-xs">manage_search</span>
-                                Audit Keamanan AI
-                              </button>
+                            <div className="p-5 text-left bg-surface-container-low/50 rounded-2xl border border-white/[0.04] space-y-4">
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[8px] font-bold text-on-surface-variant/70 uppercase tracking-wider">
+                                <div className="p-2.5 rounded-xl bg-surface-container-lowest/80 border border-white/[0.03] flex items-center gap-2">
+                                  <Monitor className="w-3.5 h-3.5 text-tertiary shrink-0" />
+                                  <span>Tab & Focus Blur</span>
+                                </div>
+                                <div className="p-2.5 rounded-xl bg-surface-container-lowest/80 border border-white/[0.03] flex items-center gap-2">
+                                  <Eye className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                                  <span>Vision Proctoring</span>
+                                </div>
+                                <div className="p-2.5 rounded-xl bg-surface-container-lowest/80 border border-white/[0.03] flex items-center gap-2">
+                                  <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                  <span>Temporal Velocity</span>
+                                </div>
+                                <div className="p-2.5 rounded-xl bg-surface-container-lowest/80 border border-white/[0.03] flex items-center gap-2">
+                                  <Copy className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                                  <span>Clipboard Guard</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between pt-1">
+                                <p className="text-[9px] font-medium text-on-surface-variant/60 max-w-[340px] leading-relaxed">
+                                  Sistem akan menganalisis rekaman sensor telemetri dari database dan memvalidasi kejanggalan menggunakan Groq Qwen-27B Cyber-Forensics Engine.
+                                </p>
+                                <button
+                                  onClick={() => runAiForensic(student.id)}
+                                  disabled={loadingSecurityAnalysis !== null}
+                                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-tertiary to-emerald-400 text-neutral-950 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 active:scale-95 transition-all shadow-[0_0_20px_rgba(155,255,206,0.15)] hover:shadow-[0_0_25px_rgba(155,255,206,0.25)] disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                                >
+                                  <Terminal className="w-3.5 h-3.5" />
+                                  Jalankan Audit AI
+                                </button>
+                              </div>
                             </div>
                           )}
 
+                          {/* Loading Terminal Scanner */}
                           {loadingSecurityAnalysis === student.id && (
-                            <div className="bg-[#0b0c10] border border-[#1f2833] rounded-2xl p-4 font-mono text-[9px] text-[#66fcf1] shadow-2xl relative overflow-hidden">
-                              {/* Glitch Overlay */}
-                              <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,3px_100%] pointer-events-none opacity-40"></div>
-                              <div className="flex justify-between items-center border-b border-[#1f2833] pb-2 mb-3">
-                                <span className="uppercase tracking-widest font-bold text-[#45f3ff] flex items-center gap-1">
-                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#45f3ff] animate-ping"></span>
-                                  Forensic Scan Active
+                            <div className="bg-[#07090e] border border-[#1b2333] rounded-2xl p-4 font-mono text-[9px] text-[#5eead4] shadow-2xl relative overflow-hidden">
+                              <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.3)_50%),linear-gradient(90deg,rgba(0,255,200,0.03),rgba(0,255,100,0.01),rgba(0,150,255,0.03))] bg-[size:100%_4px,3px_100%] pointer-events-none opacity-60"></div>
+                              <div className="flex justify-between items-center border-b border-[#1b2333] pb-2 mb-3 relative z-10">
+                                <span className="uppercase tracking-widest font-bold text-[#5eead4] flex items-center gap-1.5">
+                                  <Activity className="w-3.5 h-3.5 animate-spin" />
+                                  Telemetric Forensics Stream Active
                                 </span>
-                                <span className="animate-pulse">_</span>
+                                <span className="text-[8px] text-white/40">GROQ_ENGINE: QWEN-27B</span>
                               </div>
-                              <div className="space-y-1 max-h-[140px] overflow-y-auto custom-scrollbar">
+                              <div className="space-y-1.5 max-h-[160px] overflow-y-auto custom-scrollbar relative z-10 text-left">
                                 {forensicConsoleLogs.map((log, index) => (
-                                  <div key={index} className="flex gap-1.5 leading-relaxed">
-                                    <span className="text-[#45f3ff]/40 shrink-0">&gt;&gt;</span>
-                                    <span className="break-all">{log}</span>
+                                  <div key={index} className="flex gap-2 leading-relaxed">
+                                    <span className="text-[#5eead4]/40 shrink-0 font-bold">&gt;&gt;</span>
+                                    <span className="break-all text-white/90">{log}</span>
                                   </div>
                                 ))}
                               </div>
                             </div>
                           )}
 
+                          {/* Completed Forensic Report */}
                           {aiForensicResult[student.id] && (
-                            <div className="space-y-5 animate-in fade-in duration-500 text-left">
-                              {/* Risk Score & Verdict */}
+                            <div className="space-y-4 animate-in fade-in duration-300 text-left">
+                              {/* Row 1: Risk Probability & System Verdict */}
                               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                {/* Risk Score circular indicator */}
-                                <div className="bg-surface-container-low p-4 rounded-2xl flex flex-col items-center justify-center border border-white/[0.02]">
-                                  <div className="relative w-16 h-16 flex items-center justify-center">
-                                    {/* Radial progress track */}
+                                {/* Risk Score Gauge */}
+                                <div className="bg-surface-container-low p-4 rounded-2xl flex flex-col items-center justify-center border border-white/[0.04] relative">
+                                  <div className="relative w-18 h-18 flex items-center justify-center">
                                     <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                                       <path
-                                        className="text-white/[0.05]"
-                                        strokeWidth="3"
+                                        className="text-white/[0.06]"
+                                        strokeWidth="3.2"
                                         stroke="currentColor"
                                         fill="none"
                                         d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
@@ -974,83 +1056,225 @@ Kunci: B`;
                                       <path
                                         className={`transition-all duration-1000 ${
                                           aiForensicResult[student.id].risk_level === 'TINGGI'
-                                            ? 'text-error'
+                                            ? 'text-rose-500'
                                             : aiForensicResult[student.id].risk_level === 'SEDANG'
                                             ? 'text-amber-400'
                                             : 'text-tertiary'
                                         }`}
                                         strokeDasharray={`${aiForensicResult[student.id].risk_score}, 100`}
-                                        strokeWidth="3.2"
+                                        strokeWidth="3.4"
                                         strokeLinecap="round"
                                         stroke="currentColor"
                                         fill="none"
                                         d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                       />
                                     </svg>
-                                    <span className="absolute text-sm font-headline font-black text-primary leading-none">
-                                      {aiForensicResult[student.id].risk_score}%
-                                    </span>
-                                  </div>
-                                  <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/40 mt-2 leading-none">Risk Probability</span>
-                                </div>
-
-                                {/* Verdict detail */}
-                                <div className="sm:col-span-2 bg-surface-container-low p-4 rounded-2xl flex flex-col justify-center border border-white/[0.02]">
-                                  <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/40 mb-1 leading-none">System Verdict</span>
-                                  <div className="flex items-center gap-2">
-                                    <div className={`px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-widest ${
-                                      aiForensicResult[student.id].risk_level === 'TINGGI'
-                                        ? 'bg-error/10 border-error/20 text-error'
-                                        : aiForensicResult[student.id].risk_level === 'SEDANG'
-                                        ? 'bg-amber-400/10 border-amber-400/20 text-amber-400'
-                                        : 'bg-tertiary/10 border-tertiary/20 text-tertiary'
-                                    }`}>
-                                      {aiForensicResult[student.id].ai_verdict}
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                      <span className="text-base font-headline font-black text-primary leading-none">
+                                        {aiForensicResult[student.id].risk_score}%
+                                      </span>
                                     </div>
                                   </div>
-                                  <p className="text-[9px] font-bold text-on-surface-variant/60 uppercase tracking-widest mt-2 leading-none">
-                                    Risk Level: <span className={
-                                      aiForensicResult[student.id].risk_level === 'TINGGI'
-                                        ? 'text-error'
-                                        : aiForensicResult[student.id].risk_level === 'SEDANG'
-                                        ? 'text-amber-400'
-                                        : 'text-tertiary'
-                                    }>{aiForensicResult[student.id].risk_level}</span>
-                                  </p>
+                                  <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/50 mt-2 leading-none">
+                                    Skor Resiko Anomali
+                                  </span>
+                                </div>
+
+                                {/* Verdict Details */}
+                                <div className="sm:col-span-2 bg-surface-container-low p-4 rounded-2xl flex flex-col justify-between border border-white/[0.04]">
+                                  <div>
+                                    <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/40 mb-1.5 block leading-none">
+                                      System Verdict & Status
+                                    </span>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <div className={`px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-widest ${
+                                        aiForensicResult[student.id].risk_level === 'TINGGI'
+                                          ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                                          : aiForensicResult[student.id].risk_level === 'SEDANG'
+                                          ? 'bg-amber-400/10 border-amber-400/30 text-amber-300'
+                                          : 'bg-tertiary/10 border-tertiary/30 text-tertiary'
+                                      }`}>
+                                        {aiForensicResult[student.id].ai_verdict}
+                                      </div>
+                                      <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${
+                                        aiForensicResult[student.id].risk_level === 'TINGGI'
+                                          ? 'text-rose-400 bg-rose-500/15'
+                                          : aiForensicResult[student.id].risk_level === 'SEDANG'
+                                          ? 'text-amber-300 bg-amber-400/15'
+                                          : 'text-tertiary bg-tertiary/15'
+                                      }`}>
+                                        Tingkat: {aiForensicResult[student.id].risk_level}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="mt-2 text-[8px] font-medium text-on-surface-variant/60 flex items-center justify-between border-t border-white/[0.04] pt-2">
+                                    <span>Engine: <strong className="text-primary">{aiForensicResult[student.id].engine_model || 'Groq AI'}</strong></span>
+                                    <span>Database Sensor: <strong className="text-tertiary">gm_attempt_logs</strong></span>
+                                  </div>
                                 </div>
                               </div>
 
-                              {/* Vector Summary */}
-                              <div className="bg-surface-container-low/50 p-4 rounded-2xl border border-white/[0.02]">
-                                <h6 className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/50 mb-2 leading-none">Deskripsi Modus Operandi</h6>
-                                <p className="text-[10px] font-bold text-on-surface-variant/80 leading-relaxed">
+                              {/* Row 2: Real Telemetry Metrics Counters */}
+                              {aiForensicResult[student.id].telemetry_metrics && (
+                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                                  <div className="bg-surface-container-low p-2.5 rounded-xl border border-white/[0.03]">
+                                    <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/40 block leading-none mb-1">
+                                      Durasi Sesi
+                                    </span>
+                                    <p className="text-[11px] font-black text-primary font-mono leading-none">
+                                      {aiForensicResult[student.id].telemetry_metrics?.duration_minutes}m{' '}
+                                      <span className="text-[8px] text-on-surface-variant/50 font-normal">
+                                        / {aiForensicResult[student.id].telemetry_metrics?.allocated_minutes}m
+                                      </span>
+                                    </p>
+                                    <span className="text-[7px] font-mono text-tertiary block mt-1">
+                                      {aiForensicResult[student.id].telemetry_metrics?.speed_ratio}x alokasi
+                                    </span>
+                                  </div>
+
+                                  <div className="bg-surface-container-low p-2.5 rounded-xl border border-white/[0.03]">
+                                    <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/40 block leading-none mb-1">
+                                      Pindah Tab / Blur
+                                    </span>
+                                    <p className={`text-[11px] font-black font-mono leading-none ${
+                                      (aiForensicResult[student.id].telemetry_metrics?.tab_switches ?? 0) > 0 ? 'text-amber-400' : 'text-primary'
+                                    }`}>
+                                      {aiForensicResult[student.id].telemetry_metrics?.tab_switches}x
+                                    </p>
+                                    <span className="text-[7px] text-on-surface-variant/50 block mt-1">
+                                      {(aiForensicResult[student.id].telemetry_metrics?.tab_switches ?? 0) === 0 ? 'Fokus terjaga' : 'Keluar viewport'}
+                                    </span>
+                                  </div>
+
+                                  <div className="bg-surface-container-low p-2.5 rounded-xl border border-white/[0.03]">
+                                    <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/40 block leading-none mb-1">
+                                      Page Reload
+                                    </span>
+                                    <p className={`text-[11px] font-black font-mono leading-none ${
+                                      (aiForensicResult[student.id].telemetry_metrics?.reloads ?? 0) > 1 ? 'text-rose-400' : 'text-primary'
+                                    }`}>
+                                      {aiForensicResult[student.id].telemetry_metrics?.reloads}x
+                                    </p>
+                                    <span className="text-[7px] text-on-surface-variant/50 block mt-1">
+                                      {(aiForensicResult[student.id].telemetry_metrics?.reloads ?? 0) > 1 ? 'Refresh berulang' : 'Normal'}
+                                    </span>
+                                  </div>
+
+                                  <div className="bg-surface-container-low p-2.5 rounded-xl border border-white/[0.03]">
+                                    <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/40 block leading-none mb-1">
+                                      Copy / Paste
+                                    </span>
+                                    <p className={`text-[11px] font-black font-mono leading-none ${
+                                      (aiForensicResult[student.id].telemetry_metrics?.copy_pastes ?? 0) > 0 ? 'text-rose-400' : 'text-primary'
+                                    }`}>
+                                      {aiForensicResult[student.id].telemetry_metrics?.copy_pastes}x
+                                    </p>
+                                    <span className="text-[7px] text-on-surface-variant/50 block mt-1">
+                                      {(aiForensicResult[student.id].telemetry_metrics?.copy_pastes ?? 0) > 0 ? 'Intersepsi input' : 'Bersih'}
+                                    </span>
+                                  </div>
+
+                                  <div className="bg-surface-container-low p-2.5 rounded-xl border border-white/[0.03]">
+                                    <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/40 block leading-none mb-1">
+                                      Sensor Logs
+                                    </span>
+                                    <p className="text-[11px] font-black text-tertiary font-mono leading-none">
+                                      {aiForensicResult[student.id].telemetry_metrics?.total_events}
+                                    </p>
+                                    <span className="text-[7px] text-on-surface-variant/50 block mt-1">
+                                      {aiForensicResult[student.id].telemetry_metrics?.vision_violations ?? 0} anomali kamera
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Row 3: 4 Multi-Vector Threat Scorecards */}
+                              {((aiForensicResult[student.id].threat_vectors?.length ?? 0) > 0) && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <h6 className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/60">
+                                      Evaluasi 4 Vektor Ancaman
+                                    </h6>
+                                    <span className="text-[7px] text-tertiary/80 font-mono">MULTI-VECTOR TELEMETRY</span>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {aiForensicResult[student.id].threat_vectors!.map((vec, vIdx) => {
+                                      const statusColor = 
+                                        vec.status === 'KRITIS' ? 'text-rose-400 bg-rose-500/10 border-rose-500/30' :
+                                        vec.status === 'WASPADA' ? 'text-amber-400 bg-amber-400/10 border-amber-400/30' :
+                                        'text-tertiary bg-tertiary/10 border-tertiary/30';
+                                      const barColor = 
+                                        vec.status === 'KRITIS' ? 'bg-rose-500' :
+                                        vec.status === 'WASPADA' ? 'bg-amber-400' :
+                                        'bg-tertiary';
+
+                                      return (
+                                        <div key={vIdx} className="bg-surface-container-low/70 p-3 rounded-2xl border border-white/[0.03] space-y-2">
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                              {vIdx === 0 && <Monitor className="w-3.5 h-3.5 text-primary shrink-0" />}
+                                              {vIdx === 1 && <Eye className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
+                                              {vIdx === 2 && <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+                                              {vIdx === 3 && <Copy className="w-3.5 h-3.5 text-purple-400 shrink-0" />}
+                                              <span className="text-[9px] font-bold text-primary truncate leading-none">
+                                                {vec.name}
+                                              </span>
+                                            </div>
+                                            <span className={`text-[7px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${statusColor} shrink-0`}>
+                                              {vec.status} ({vec.score}%)
+                                            </span>
+                                          </div>
+                                          {/* Score bar */}
+                                          <div className="w-full h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                                            <div 
+                                              className={`h-full rounded-full transition-all duration-700 ${barColor}`} 
+                                              style={{ width: `${Math.min(100, Math.max(5, vec.score))}%` }}
+                                            />
+                                          </div>
+                                          <p className="text-[8px] text-on-surface-variant/70 leading-relaxed font-medium">
+                                            {vec.summary}
+                                          </p>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Row 4: Modus Operandi & Forensic Timeline */}
+                              <div className="bg-surface-container-low/50 p-4 rounded-2xl border border-white/[0.03]">
+                                <h6 className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/50 mb-1.5 leading-none">
+                                  Sintesis Forensik & Modus Operandi
+                                </h6>
+                                <p className="text-[10px] font-medium text-on-surface-variant/90 leading-relaxed">
                                   {aiForensicResult[student.id]?.threat_vector_summary}
                                 </p>
                               </div>
 
                               {/* Chronological Timeline */}
                               {((aiForensicResult[student.id]?.forensic_timeline?.length ?? 0) > 0) && (
-                                <div className="space-y-3">
-                                  <h6 className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/50 mb-1.5 leading-none">Timeline Anomali Forensik</h6>
-                                  <div className="border-l border-white/[0.05] pl-3 ml-1.5 space-y-3 relative">
+                                <div className="space-y-2.5">
+                                  <h6 className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/50 mb-1 leading-none">
+                                    Kronologi Anomali Sesi
+                                  </h6>
+                                  <div className="border-l border-white/[0.08] pl-3 ml-2 space-y-2.5 relative">
                                     {(aiForensicResult[student.id]?.forensic_timeline || []).map((evt, eidx) => (
                                       <div key={eidx} className="relative flex flex-col gap-0.5">
-                                        {/* Pin indicator */}
-                                        <div className={`absolute -left-[16.5px] top-1 w-2.5 h-2.5 rounded-full border-2 border-surface-container-lowest ${
-                                          evt.risk_points > 60
-                                            ? 'bg-error'
-                                            : evt.risk_points > 30
+                                        <div className={`absolute -left-[16px] top-1 w-2.5 h-2.5 rounded-full border-2 border-surface-container-lowest ${
+                                          evt.risk_points > 50
+                                            ? 'bg-rose-500'
+                                            : evt.risk_points > 25
                                             ? 'bg-amber-400'
                                             : 'bg-tertiary'
                                         }`} />
                                         <div className="flex items-center gap-2">
-                                          <span className="text-[8px] font-black text-tertiary leading-none">{evt.time}</span>
-                                          <span className="text-[8px] font-black uppercase tracking-widest text-primary leading-none truncate max-w-[150px]">{evt.action}</span>
-                                          <span className={`text-[7px] font-black px-1 py-0.2 rounded ${
-                                            evt.risk_points > 60 ? 'bg-error/10 text-error' : evt.risk_points > 30 ? 'bg-amber-400/10 text-amber-400' : 'bg-tertiary/10 text-tertiary'
+                                          <span className="text-[8px] font-mono font-bold text-tertiary leading-none">{evt.time}</span>
+                                          <span className="text-[8px] font-black uppercase tracking-widest text-primary leading-none truncate max-w-[200px]">{evt.action}</span>
+                                          <span className={`text-[7px] font-black px-1.5 py-0.2 rounded ${
+                                            evt.risk_points > 50 ? 'bg-rose-500/15 text-rose-400' : evt.risk_points > 25 ? 'bg-amber-400/15 text-amber-300' : 'bg-tertiary/15 text-tertiary'
                                           }`}>+{evt.risk_points} pts</span>
                                         </div>
-                                        <p className="text-[9px] font-medium text-on-surface-variant/50 leading-relaxed mt-0.5">
+                                        <p className="text-[8px] font-medium text-on-surface-variant/70 leading-relaxed mt-0.5">
                                           {evt.description}
                                         </p>
                                       </div>
@@ -1059,15 +1283,16 @@ Kunci: B`;
                                 </div>
                               )}
 
-                              {/* Mitigation Actions */}
+                              {/* Rekomendasi Guru */}
                               {((aiForensicResult[student.id]?.mitigation_actions?.length ?? 0) > 0) && (
-                                <div className="p-4 bg-tertiary/5 border border-tertiary/10 rounded-2xl">
-                                  <h6 className="text-[8px] font-black uppercase tracking-widest text-tertiary mb-2 leading-none flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[10px]">shield</span> Rekomendasi Keamanan Guru
+                                <div className="p-4 bg-tertiary/5 border border-tertiary/15 rounded-2xl">
+                                  <h6 className="text-[8px] font-black uppercase tracking-widest text-tertiary mb-2 leading-none flex items-center gap-1.5">
+                                    <ShieldCheck className="w-3 h-3 text-tertiary" />
+                                    Rekomendasi Tindakan Guru
                                   </h6>
                                   <ul className="space-y-1.5">
                                     {(aiForensicResult[student.id]?.mitigation_actions || []).map((act, aidx) => (
-                                      <li key={aidx} className="text-[9px] font-bold text-on-surface-variant/70 flex items-start gap-1.5">
+                                      <li key={aidx} className="text-[9px] font-medium text-on-surface-variant/80 flex items-start gap-1.5">
                                         <span className="text-tertiary shrink-0 mt-0.5">•</span>
                                         <span>{act}</span>
                                       </li>
@@ -1076,14 +1301,67 @@ Kunci: B`;
                                 </div>
                               )}
 
-                              {/* Re-Scan Option */}
-                              <div className="flex justify-end">
+                              {/* Row 5: Raw Telemetry Stream Inspector (Collapsible) */}
+                              <div className="border border-white/[0.04] rounded-2xl overflow-hidden bg-surface-container-low/30">
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedRawLogs(prev => ({ ...prev, [student.id]: !prev[student.id] }))}
+                                  className="w-full px-4 py-2.5 flex items-center justify-between text-left hover:bg-white/[0.02] transition-colors"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <Terminal className="w-3.5 h-3.5 text-on-surface-variant/60" />
+                                    <span className="text-[9px] font-mono font-bold text-on-surface-variant uppercase tracking-wider">
+                                      Inspeksi Raw Event Telemetri ({aiForensicResult[student.id].raw_events?.length || 0} events)
+                                    </span>
+                                  </div>
+                                  {expandedRawLogs[student.id] ? (
+                                    <ChevronUp className="w-3.5 h-3.5 text-on-surface-variant/60" />
+                                  ) : (
+                                    <ChevronDown className="w-3.5 h-3.5 text-on-surface-variant/60" />
+                                  )}
+                                </button>
+
+                                {expandedRawLogs[student.id] && (
+                                  <div className="p-3 border-t border-white/[0.04] bg-[#07090e] font-mono text-[8px] max-h-[180px] overflow-y-auto custom-scrollbar">
+                                    {(!aiForensicResult[student.id].raw_events || aiForensicResult[student.id].raw_events!.length === 0) ? (
+                                      <p className="text-white/40 italic py-2 text-center">
+                                        Tidak ada event mencurigakan atau perpindahan tab yang tercatat pada database sesi ini.
+                                      </p>
+                                    ) : (
+                                      <div className="space-y-1.5">
+                                        {aiForensicResult[student.id].raw_events!.map((rev, rIdx) => (
+                                          <div key={rIdx} className="flex items-center justify-between border-b border-white/[0.03] pb-1 gap-2">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                              <span className="text-white/40 shrink-0">{rev.time}</span>
+                                              <span className={`px-1 rounded text-[7px] font-bold ${
+                                                rev.severity === 'HIGH' ? 'bg-rose-500/20 text-rose-400' :
+                                                rev.severity === 'MEDIUM' ? 'bg-amber-400/20 text-amber-300' :
+                                                'bg-white/10 text-white/70'
+                                              }`}>
+                                                {rev.event}
+                                              </span>
+                                              <span className="text-white/70 truncate">{rev.details || '-'}</span>
+                                            </div>
+                                            <span className="text-[7px] text-white/30 shrink-0">{rev.severity}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Footer Actions */}
+                              <div className="flex justify-between items-center pt-2">
+                                <span className="text-[7px] font-mono text-on-surface-variant/40">
+                                  Live audit source: PostgreSQL / gm_attempt_logs
+                                </span>
                                 <button
                                   onClick={() => runAiForensic(student.id)}
-                                  className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/40 hover:text-primary transition-colors flex items-center gap-1"
+                                  className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/50 hover:text-primary transition-colors flex items-center gap-1.5"
                                 >
-                                  <span className="material-symbols-outlined text-[10px]">sync</span>
-                                  Ulangi Pemindaian AI
+                                  <RotateCcw className="w-3 h-3" />
+                                  Audit Ulang AI
                                 </button>
                               </div>
                             </div>
