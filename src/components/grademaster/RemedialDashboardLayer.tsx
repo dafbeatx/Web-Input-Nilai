@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { 
   Clock, RotateCcw, X, Save, User, CheckSquare, FileText, Sliders, Sparkles, AlertCircle, HelpCircle,
-  Shield, ShieldAlert, ShieldCheck, Activity, Terminal, ChevronDown, ChevronUp, Cpu, Eye, Monitor, Zap, Copy
+  Shield, ShieldCheck, Activity, Terminal, ChevronDown, ChevronUp, Cpu, Eye, Monitor, Copy
 } from 'lucide-react';
 import { GradedStudent, ScoringConfig, SessionMeta, RemedialMcqQuestion, isImageUrl } from '@/lib/grademaster/types';
 import { parseRemedialMcq, formatRemedialMcq } from '@/lib/grademaster/parser';
