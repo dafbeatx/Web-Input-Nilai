@@ -3,9 +3,10 @@
 import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { 
-  Clock, RotateCcw, X, Save, User
+  Clock, RotateCcw, X, Save, User, CheckSquare, FileText, Sliders, Sparkles, AlertCircle, HelpCircle
 } from 'lucide-react';
 import { GradedStudent, ScoringConfig, SessionMeta, RemedialMcqQuestion, isImageUrl } from '@/lib/grademaster/types';
+import { parseRemedialMcq, formatRemedialMcq } from '@/lib/grademaster/parser';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 
 interface ForensicEvent {
@@ -108,8 +109,17 @@ export default function RemedialDashboardLayer({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [editorTab, setEditorTab] = useState<'mcq' | 'essay' | 'settings'>('mcq');
   const [localTimer, setLocalTimer] = useState<number>(remedialTimer);
   const [localDeadline, setLocalDeadline] = useState<string>(scoringConfig.remedialDeadline || "");
+  const [localMcqInput, setLocalMcqInput] = useState<string>(() => formatRemedialMcq(scoringConfig.remedialMcqQuestions || []));
+  const [localMcqQuota, setLocalMcqQuota] = useState<number>(scoringConfig.remedialMcqQuota || 10);
+  const [localPgWeight, setLocalPgWeight] = useState<number>(
+    scoringConfig.remedialPgWeight !== undefined ? Math.round(scoringConfig.remedialPgWeight * 100) : 70
+  );
+  const [localEssayWeight, setLocalEssayWeight] = useState<number>(
+    scoringConfig.remedialEssayWeight !== undefined ? Math.round(scoringConfig.remedialEssayWeight * 100) : 30
+  );
   const [reviewScore, setReviewScore] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
@@ -133,7 +143,7 @@ export default function RemedialDashboardLayer({
     }
   }, [activeSessionId, openEditorOnLoad]);
 
-  // Sync local config values when active session is updated
+  // Sync local config values when active session or props are updated
   React.useEffect(() => {
     queueMicrotask(() => {
       setLocalTimer(remedialTimer);
@@ -143,8 +153,12 @@ export default function RemedialDashboardLayer({
   React.useEffect(() => {
     queueMicrotask(() => {
       setLocalDeadline(scoringConfig.remedialDeadline || "");
+      setLocalMcqInput(formatRemedialMcq(scoringConfig.remedialMcqQuestions || []));
+      setLocalMcqQuota(scoringConfig.remedialMcqQuota || 10);
+      setLocalPgWeight(scoringConfig.remedialPgWeight !== undefined ? Math.round(scoringConfig.remedialPgWeight * 100) : 70);
+      setLocalEssayWeight(scoringConfig.remedialEssayWeight !== undefined ? Math.round(scoringConfig.remedialEssayWeight * 100) : 30);
     });
-  }, [scoringConfig.remedialDeadline]);
+  }, [scoringConfig]);
 
   const [aiForensicResult, setAiForensicResult] = useState<Record<string, AIForensicRecord>>({});
   const [forensicConsoleLogs, setForensicConsoleLogs] = useState<string[]>([]);
@@ -279,20 +293,80 @@ export default function RemedialDashboardLayer({
     issue: remedialStudents.filter(s => s.remedialStatus === 'CHEATED' || s.remedialStatus === 'TIME_UP' || s.remedialStatus === 'TIMEOUT').length
   }), [remedialStudents]);
 
-  // Actions
-  const handleSaveQuestions = () => {
-    onUpdateRemedial?.(
-      parseEssayQuestions(remedialQuestionsInput),
-      parseEssayQuestions(remedialAnswerKeysInput),
-      localTimer,
-      localDeadline
-    );
-    setIsEditing(false);
-  };
-
   function parseEssayQuestions(input: string): string[] {
     return input.split('\n').map(s => s.replace(/^\d+\.\s*/, '').trim()).filter(Boolean);
   }
+
+  const parsedMcqs = useMemo(() => {
+    return parseRemedialMcq(localMcqInput);
+  }, [localMcqInput]);
+
+  const parsedEssays = useMemo(() => {
+    return parseEssayQuestions(remedialQuestionsInput);
+  }, [remedialQuestionsInput]);
+
+  const parsedKeys = useMemo(() => {
+    return parseEssayQuestions(remedialAnswerKeysInput);
+  }, [remedialAnswerKeysInput]);
+
+  const handleInsertMcqTemplate = () => {
+    const template = `1. Berapakah hasil dari 15 + 25?
+A. 30
+B. 35
+C. 40
+D. 45
+Kunci: C
+
+2. Manakah di bawah ini yang merupakan bilangan prima?
+A. 4
+B. 6
+C. 7
+D. 9
+Kunci: C
+
+3. Apa ibu kota negara Indonesia?
+A. Surabaya
+B. Jakarta
+C. Bandung
+D. Medan
+Kunci: B`;
+
+    if (!localMcqInput.trim()) {
+      setLocalMcqInput(template);
+    } else {
+      setLocalMcqInput(prev => prev.trim() + "\n\n" + template);
+    }
+  };
+
+  // Actions
+  const handleSaveQuestions = () => {
+    let finalPgWeight: number | undefined = undefined;
+    let finalEssayWeight: number | undefined = undefined;
+
+    if (parsedMcqs.length > 0 && parsedEssays.length > 0) {
+      const totalW = (localPgWeight + localEssayWeight) || 100;
+      finalPgWeight = Number((localPgWeight / totalW).toFixed(2));
+      finalEssayWeight = Number((1 - finalPgWeight).toFixed(2));
+    } else if (parsedMcqs.length > 0) {
+      finalPgWeight = 1;
+      finalEssayWeight = 0;
+    } else if (parsedEssays.length > 0) {
+      finalPgWeight = 0;
+      finalEssayWeight = 1;
+    }
+
+    onUpdateRemedial?.(
+      parsedEssays,
+      parsedKeys,
+      localTimer,
+      localDeadline,
+      parsedMcqs,
+      localMcqQuota,
+      finalPgWeight,
+      finalEssayWeight
+    );
+    setIsEditing(false);
+  };
 
   const handleAutoFormatList = (input: string) => {
     const lines = input.split('\n');
@@ -1155,104 +1229,368 @@ export default function RemedialDashboardLayer({
               <div className="flex justify-between items-center">
                 <div>
                   <h3 className="font-headline font-black text-xl text-primary uppercase tracking-tight">Atur Soal Remedial</h3>
-                  <p className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest mt-1">Konfigurasi Essay System</p>
+                  <p className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest mt-1">Konfigurasi Pilihan Ganda &amp; Essay</p>
                 </div>
-                <button onClick={() => setIsEditing(false)} className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center">
+                <button 
+                  onClick={() => setIsEditing(false)} 
+                  className="w-10 h-10 rounded-full bg-surface-variant hover:bg-surface-variant/80 transition-colors flex items-center justify-center text-on-surface-variant"
+                  aria-label="Tutup editor"
+                >
                   <X size={20} />
                 </button>
               </div>
 
-              {/* Editor Fields */}
-              <div className="flex flex-col gap-6">
-                 {/* Timer Config */}
-                 <div className="flex flex-col gap-2 relative">
-                    <label className="font-label text-[10px] text-tertiary-dim uppercase font-black tracking-widest pl-1">
-                      <Clock size={12} className="inline mr-1" /> Durasi Remedial (Menit)
-                    </label>
-                    <input 
-                      type="number" 
-                      min="1" 
-                      max="180" 
-                      value={localTimer} 
-                      onChange={(e) => setLocalTimer(Number(e.target.value))} 
-                      disabled={!isAdmin}
-                      className="w-full bg-surface-container-lowest border-none rounded-2xl p-5 text-sm font-medium text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none disabled:opacity-50"
-                    />
-                 </div>
+              {/* Segmented Tab Navigation */}
+              <div className="flex bg-surface-container-lowest p-1.5 rounded-2xl gap-1 border border-outline/10">
+                <button
+                  type="button"
+                  onClick={() => setEditorTab('mcq')}
+                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+                    editorTab === 'mcq'
+                      ? 'bg-primary text-on-primary shadow-sm'
+                      : 'text-on-surface-variant/70 hover:text-primary hover:bg-surface-variant/40'
+                  }`}
+                >
+                  <CheckSquare size={14} />
+                  <span>Pilihan Ganda</span>
+                  {parsedMcqs.length > 0 && (
+                    <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                      editorTab === 'mcq' ? 'bg-on-primary/20 text-on-primary' : 'bg-tertiary/20 text-tertiary'
+                    }`}>
+                      {parsedMcqs.length}
+                    </span>
+                  )}
+                </button>
 
-                 {/* Deadline Config */}
-                 <div className="flex flex-col gap-2 relative">
-                    <label className="font-label text-[10px] text-error uppercase font-black tracking-widest pl-1">
-                      Tenggat Waktu / Auto-Lock (Opsional)
-                    </label>
-                    <input 
-                      type="datetime-local" 
-                      value={localDeadline} 
-                      onChange={(e) => setLocalDeadline(e.target.value)} 
-                      disabled={!isAdmin}
-                      className="w-full bg-surface-container-lowest border-none rounded-2xl p-5 text-sm font-medium text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-error/40 transition-all outline-none disabled:opacity-50"
-                    />
-                    <p className="text-[10px] text-on-surface-variant/50 px-2 font-medium">Jika diisi, siswa akan otomatis terkunci dan dianggap tidak tuntas jika melewati waktu ini.</p>
-                 </div>
+                <button
+                  type="button"
+                  onClick={() => setEditorTab('essay')}
+                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+                    editorTab === 'essay'
+                      ? 'bg-primary text-on-primary shadow-sm'
+                      : 'text-on-surface-variant/70 hover:text-primary hover:bg-surface-variant/40'
+                  }`}
+                >
+                  <FileText size={14} />
+                  <span>Essay</span>
+                  {parsedEssays.length > 0 && (
+                    <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                      editorTab === 'essay' ? 'bg-on-primary/20 text-on-primary' : 'bg-tertiary/20 text-tertiary'
+                    }`}>
+                      {parsedEssays.length}
+                    </span>
+                  )}
+                </button>
 
-                 {/* Questions */}
-                  <div className="flex flex-col gap-2 relative">
-                    <div className="flex items-center justify-between">
-                      <label className="font-label text-[10px] text-tertiary-dim uppercase font-black tracking-widest pl-1">Pertanyaan Essay (Format: 1. Soal)</label>
-                      <button 
-                        onClick={() => onRemedialInputChange?.(handleAutoFormatList(remedialQuestionsInput))}
-                        className="text-[9px] font-black uppercase tracking-widest text-primary hover:text-tertiary transition-colors flex items-center gap-1"
-                      >
-                        <span className="material-symbols-outlined text-[12px]">format_list_numbered</span>
-                        Auto Format
-                      </button>
+                <button
+                  type="button"
+                  onClick={() => setEditorTab('settings')}
+                  className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+                    editorTab === 'settings'
+                      ? 'bg-primary text-on-primary shadow-sm'
+                      : 'text-on-surface-variant/70 hover:text-primary hover:bg-surface-variant/40'
+                  }`}
+                  title="Pengaturan Waktu & Bobot"
+                >
+                  <Sliders size={14} />
+                  <span className="hidden sm:inline">Waktu &amp; Bobot</span>
+                </button>
+              </div>
+
+              {/* Editor Tab Contents */}
+              <div className="flex flex-col gap-4">
+                {/* TAB 1: PILIHAN GANDA */}
+                {editorTab === 'mcq' && (
+                  <div className="flex flex-col gap-4 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <span className="font-label text-[10px] text-tertiary-dim uppercase font-black tracking-widest pl-1">
+                          Bank Soal Pilihan Ganda
+                        </span>
+                        {parsedMcqs.length > 0 ? (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-tertiary/15 text-tertiary border border-tertiary/20">
+                            {parsedMcqs.length} Soal Terdeteksi
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-surface-variant/40 text-on-surface-variant/60">
+                            Belum Ada Soal
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleInsertMcqTemplate}
+                          className="text-[10px] font-black uppercase tracking-wider text-tertiary hover:text-tertiary-dim transition-colors flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-tertiary/10 hover:bg-tertiary/20"
+                        >
+                          <Sparkles size={12} />
+                          Sisipkan Contoh
+                        </button>
+                        {localMcqInput.trim() && (
+                          <button
+                            type="button"
+                            onClick={() => setLocalMcqInput('')}
+                            className="text-[10px] font-black uppercase tracking-wider text-on-surface-variant/60 hover:text-error transition-colors px-2 py-1"
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <textarea 
-                      className="w-full bg-surface-container-lowest border-none rounded-3xl p-5 text-sm font-medium text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none resize-none min-h-[160px] disabled:opacity-50"
-                      placeholder="Tekan enter untuk soal baru. Nomor akan dibuat otomatis..."
-                      value={remedialQuestionsInput}
-                      onChange={(e) => onRemedialInputChange?.(e.target.value)}
-                      onBlur={(e) => onRemedialInputChange?.(handleAutoFormatList(e.target.value))}
-                      disabled={!isAdmin}
-                    />
-                 </div>
-                 
-                 {/* Answer Keys */}
-                 <div className="flex flex-col gap-2 relative">
-                    <div className="flex items-center justify-between">
-                      <label className="font-label text-[10px] text-tertiary uppercase font-black tracking-widest pl-1">Kunci Jawaban (Similarity Matcher)</label>
-                      <button 
-                        onClick={() => onAnswerKeysInputChange?.(handleAutoFormatList(remedialAnswerKeysInput))}
-                        className="text-[9px] font-black uppercase tracking-widest text-tertiary hover:text-primary transition-colors flex items-center gap-1"
-                      >
-                        <span className="material-symbols-outlined text-[12px]">format_list_numbered</span>
-                        Auto Format
-                      </button>
-                    </div>
-                    <textarea 
-                      className="w-full bg-surface-container-lowest border-none rounded-3xl p-5 text-sm font-medium text-tertiary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none resize-none min-h-[160px] disabled:opacity-50"
-                      placeholder="Tekan enter untuk jawaban baru..."
-                      value={remedialAnswerKeysInput}
-                      onChange={(e) => onAnswerKeysInputChange?.(e.target.value)}
-                      onBlur={(e) => onAnswerKeysInputChange?.(handleAutoFormatList(e.target.value))}
-                      disabled={!isAdmin}
-                    />
-                 </div>
 
-                 {/* Alerts */}
-                 {parseEssayQuestions(remedialQuestionsInput).length === 0 && (
-                   <div className="p-4 bg-error/10 border border-error/20 rounded-2xl flex items-center gap-3">
-                      <span className="material-symbols-outlined text-error">warning</span>
-                      <p className="text-[9px] font-black text-error uppercase tracking-widest">Satu atau lebih soal wajib diisi agar sistem aktif.</p>
-                   </div>
-                 )}
+                    {/* Format Guideline Card */}
+                    <div className="p-3.5 bg-surface-container-lowest/70 border border-outline/10 rounded-2xl flex flex-col gap-1.5 text-[11px] text-on-surface-variant/80">
+                      <div className="font-bold text-primary flex items-center gap-1.5 text-xs">
+                        <HelpCircle size={13} className="text-tertiary" />
+                        Panduan Format Soal Pilihan Ganda:
+                      </div>
+                      <div className="font-mono text-[10.5px] bg-surface-container-lowest px-3 py-2 rounded-xl border border-outline/10 text-on-surface-variant/90 leading-relaxed whitespace-pre-line">
+{`1. Berapakah hasil dari 15 + 25?
+A. 30
+B. 35
+C. 40
+D. 45
+Kunci: C`}
+                      </div>
+                      <p className="text-[10px] text-on-surface-variant/60">
+                        * Gunakan nomor <strong>1. Soal</strong>, opsi <strong>A.</strong> sampai <strong>E.</strong>, dan baris <strong>Kunci: [A/B/C/D/E]</strong>.
+                      </p>
+                    </div>
+
+                    {/* Textarea for MCQ */}
+                    <div className="flex flex-col gap-1.5">
+                      <textarea
+                        className="w-full bg-surface-container-lowest border-none rounded-3xl p-5 text-sm font-mono text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none resize-none min-h-[220px] disabled:opacity-50 custom-scrollbar leading-relaxed"
+                        placeholder={`Tulis atau tempel soal PG di sini...\n\n1. Apa ibukota Indonesia?\nA. Surabaya\nB. Jakarta\nC. Bandung\nD. Medan\nKunci: B`}
+                        value={localMcqInput}
+                        onChange={(e) => setLocalMcqInput(e.target.value)}
+                        disabled={!isAdmin}
+                      />
+                    </div>
+
+                    {/* Parsed Preview */}
+                    {parsedMcqs.length > 0 && (
+                      <div className="flex flex-col gap-2 p-3.5 bg-surface-container-lowest/80 rounded-2xl border border-outline/10">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-primary">
+                            Pratinjau Soal Terdeteksi ({parsedMcqs.length})
+                          </span>
+                          <span className="text-[10px] text-tertiary font-bold">Kunci Jawaban Terverifikasi</span>
+                        </div>
+                        <div className="max-h-48 overflow-y-auto space-y-2 custom-scrollbar pr-1">
+                          {parsedMcqs.map((q, qIdx) => (
+                            <div key={q.id || qIdx} className="p-2.5 bg-surface-container-highest/60 rounded-xl text-xs flex flex-col gap-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <span className="font-semibold text-primary line-clamp-1">{qIdx + 1}. {q.question}</span>
+                                <span className="px-2 py-0.5 rounded bg-tertiary text-on-tertiary font-black text-[10px] shrink-0">
+                                  Kunci: {q.correctAnswer}
+                                </span>
+                              </div>
+                              <div className="text-[10.5px] text-on-surface-variant/70 line-clamp-1">
+                                {q.options.map((opt, oi) => `${['A','B','C','D','E'][oi]}. ${opt}`).join('  |  ')}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 2: ESSAY */}
+                {editorTab === 'essay' && (
+                  <div className="flex flex-col gap-4 animate-in fade-in duration-200">
+                    {/* Questions */}
+                    <div className="flex flex-col gap-2 relative">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <label className="font-label text-[10px] text-tertiary-dim uppercase font-black tracking-widest pl-1">
+                            Pertanyaan Essay (Format: 1. Soal)
+                          </label>
+                          {parsedEssays.length > 0 && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-tertiary/15 text-tertiary">
+                              {parsedEssays.length} Soal
+                            </span>
+                          )}
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => onRemedialInputChange?.(handleAutoFormatList(remedialQuestionsInput))}
+                          className="text-[9px] font-black uppercase tracking-widest text-primary hover:text-tertiary transition-colors flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-[12px]">format_list_numbered</span>
+                          Auto Format
+                        </button>
+                      </div>
+                      <textarea 
+                        className="w-full bg-surface-container-lowest border-none rounded-3xl p-5 text-sm font-medium text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none resize-none min-h-[160px] disabled:opacity-50 custom-scrollbar"
+                        placeholder="Tekan enter untuk soal baru. Nomor akan dibuat otomatis..."
+                        value={remedialQuestionsInput}
+                        onChange={(e) => onRemedialInputChange?.(e.target.value)}
+                        onBlur={(e) => onRemedialInputChange?.(handleAutoFormatList(e.target.value))}
+                        disabled={!isAdmin}
+                      />
+                    </div>
+                    
+                    {/* Answer Keys */}
+                    <div className="flex flex-col gap-2 relative">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <label className="font-label text-[10px] text-tertiary uppercase font-black tracking-widest pl-1">
+                            Kunci Jawaban (Similarity Matcher)
+                          </label>
+                          {parsedKeys.length > 0 && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-tertiary/15 text-tertiary">
+                              {parsedKeys.length} Kunci
+                            </span>
+                          )}
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => onAnswerKeysInputChange?.(handleAutoFormatList(remedialAnswerKeysInput))}
+                          className="text-[9px] font-black uppercase tracking-widest text-tertiary hover:text-primary transition-colors flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-[12px]">format_list_numbered</span>
+                          Auto Format
+                        </button>
+                      </div>
+                      <textarea 
+                        className="w-full bg-surface-container-lowest border-none rounded-3xl p-5 text-sm font-medium text-tertiary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none resize-none min-h-[160px] disabled:opacity-50 custom-scrollbar"
+                        placeholder="Tekan enter untuk jawaban baru..."
+                        value={remedialAnswerKeysInput}
+                        onChange={(e) => onAnswerKeysInputChange?.(e.target.value)}
+                        onBlur={(e) => onAnswerKeysInputChange?.(handleAutoFormatList(e.target.value))}
+                        disabled={!isAdmin}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 3: WAKTU & BOBOT */}
+                {editorTab === 'settings' && (
+                  <div className="flex flex-col gap-5 animate-in fade-in duration-200">
+                    {/* Timer Config */}
+                    <div className="flex flex-col gap-2 relative">
+                      <label className="font-label text-[10px] text-tertiary-dim uppercase font-black tracking-widest pl-1">
+                        <Clock size={12} className="inline mr-1" /> Durasi Ujian Remedial (Menit)
+                      </label>
+                      <input 
+                        type="number" 
+                        min="1" 
+                        max="180" 
+                        value={localTimer} 
+                        onChange={(e) => setLocalTimer(Number(e.target.value))} 
+                        disabled={!isAdmin}
+                        className="w-full bg-surface-container-lowest border-none rounded-2xl p-4 text-sm font-medium text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/40 transition-all outline-none disabled:opacity-50"
+                      />
+                    </div>
+
+                    {/* Deadline Config */}
+                    <div className="flex flex-col gap-2 relative">
+                      <label className="font-label text-[10px] text-error uppercase font-black tracking-widest pl-1">
+                        Tenggat Waktu / Auto-Lock (Opsional)
+                      </label>
+                      <input 
+                        type="datetime-local" 
+                        value={localDeadline} 
+                        onChange={(e) => setLocalDeadline(e.target.value)} 
+                        disabled={!isAdmin}
+                        className="w-full bg-surface-container-lowest border-none rounded-2xl p-4 text-sm font-medium text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-error/40 transition-all outline-none disabled:opacity-50"
+                      />
+                      <p className="text-[10px] text-on-surface-variant/50 px-2 font-medium">
+                        Jika diisi, sesi siswa akan otomatis terkunci jika melewati waktu ini.
+                      </p>
+                    </div>
+
+                    {/* MCQ Quota Per Student */}
+                    <div className="flex flex-col gap-2 relative">
+                      <label className="font-label text-[10px] text-primary uppercase font-black tracking-widest pl-1">
+                        Kuota Soal PG per Siswa (Diacak)
+                      </label>
+                      <input 
+                        type="number" 
+                        min="1" 
+                        max={Math.max(1, parsedMcqs.length || 100)} 
+                        value={localMcqQuota} 
+                        onChange={(e) => setLocalMcqQuota(Math.max(1, Number(e.target.value)))} 
+                        disabled={!isAdmin}
+                        className="w-full bg-surface-container-lowest border-none rounded-2xl p-4 text-sm font-medium text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-primary/40 transition-all outline-none disabled:opacity-50"
+                      />
+                      <p className="text-[10px] text-on-surface-variant/50 px-2 font-medium">
+                        Tiap siswa akan mendapatkan {Math.min(localMcqQuota, Math.max(1, parsedMcqs.length || localMcqQuota))} soal pilihan ganda acak dari {parsedMcqs.length} soal di bank soal.
+                      </p>
+                    </div>
+
+                    {/* Bobot Nilai jika kedua jenis soal aktif */}
+                    <div className="flex flex-col gap-3 p-4 bg-surface-container-lowest rounded-2xl border border-outline/10">
+                      <div className="flex items-center justify-between">
+                        <label className="font-label text-[10px] text-primary uppercase font-black tracking-widest">
+                          Pembagian Bobot Nilai
+                        </label>
+                        <span className="text-[10px] font-bold text-tertiary">
+                          Total: {localPgWeight + localEssayWeight}%
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-[11px] font-bold text-on-surface-variant/80">Bobot PG (%)</span>
+                          <input 
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={localPgWeight}
+                            onChange={(e) => {
+                              const val = Math.max(0, Math.min(100, Number(e.target.value)));
+                              setLocalPgWeight(val);
+                              setLocalEssayWeight(100 - val);
+                            }}
+                            disabled={!isAdmin}
+                            className="w-full bg-surface-container-highest border-none rounded-xl p-3 text-sm font-bold text-primary outline-none focus:ring-1 focus:ring-primary/40"
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-[11px] font-bold text-on-surface-variant/80">Bobot Essay (%)</span>
+                          <input 
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={localEssayWeight}
+                            onChange={(e) => {
+                              const val = Math.max(0, Math.min(100, Number(e.target.value)));
+                              setLocalEssayWeight(val);
+                              setLocalPgWeight(100 - val);
+                            }}
+                            disabled={!isAdmin}
+                            className="w-full bg-surface-container-highest border-none rounded-xl p-3 text-sm font-bold text-primary outline-none focus:ring-1 focus:ring-primary/40"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-on-surface-variant/50">
+                        * Jika hanya mengisi salah satu jenis soal (hanya PG atau hanya Essay), jenis soal tersebut otomatis mendapat bobot 100%.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Validation Alert */}
+                {parsedMcqs.length === 0 && parsedEssays.length === 0 && (
+                  <div className="p-4 bg-error/10 border border-error/20 rounded-2xl flex items-center gap-3">
+                    <AlertCircle size={18} className="text-error shrink-0" />
+                    <p className="text-[10px] font-bold text-error uppercase tracking-wider">
+                      Minimal 1 soal (Pilihan Ganda atau Essay) wajib diisi agar sesi remedial aktif.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Footer Save */}
               <div className="pt-4 sticky bottom-0 bg-surface-container-highest pb-2">
                 <button 
                   onClick={handleSaveQuestions}
-                  disabled={!isAdmin || isSaving}
+                  disabled={!isAdmin || isSaving || (parsedMcqs.length === 0 && parsedEssays.length === 0)}
                   className="w-full h-14 bg-tertiary text-on-tertiary rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl active:scale-[0.98] transition-all disabled:opacity-50"
                 >
                   {isSaving ? <Clock size={18} className="animate-spin" /> : <Save size={18} />}

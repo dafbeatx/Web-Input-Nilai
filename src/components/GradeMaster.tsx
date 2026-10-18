@@ -9,6 +9,7 @@ import {
   ScoringConfig,
   DEFAULT_SCORING_CONFIG,
   QuestionDifficulty,
+  RemedialMcqQuestion,
 } from "@/lib/grademaster/types";
 import { parseAnswerKey, parseEssayQuestions, formatEssayQuestions } from "@/lib/grademaster/parser";
 import { generateAnalytics, generateInsights } from '@/lib/grademaster/analytics';
@@ -83,7 +84,7 @@ export default function GradeMaster() {
   const [keyInput, setKeyInput] = useState("");
   const [answerKey, setAnswerKey] = useState<string[]>([]);
   const [studentList, setStudentList] = useState<string[]>([]);
-  const [scoringConfig] = useState<ScoringConfig>(DEFAULT_SCORING_CONFIG);
+  const [scoringConfig, setScoringConfig] = useState<ScoringConfig>(DEFAULT_SCORING_CONFIG);
   const [examType, setExamType] = useState("UTS");
   const [semester, setSemester] = useState("Ganjil");
   const [kkm, setKkm] = useState<number>(70);
@@ -95,6 +96,8 @@ export default function GradeMaster() {
   const [remedialQuestionsInput, setRemedialQuestionsInput] = useState("");
   const [remedialAnswerKeys, setRemedialAnswerKeys] = useState<string[]>([]);
   const [remedialAnswerKeysInput, setRemedialAnswerKeysInput] = useState("");
+  const [remedialMcqQuestions, setRemedialMcqQuestions] = useState<RemedialMcqQuestion[]>([]);
+  const [remedialMcqQuota, setRemedialMcqQuota] = useState<number>(10);
 
   // Grading state
   const [studentName, setStudentName] = useState("");
@@ -227,6 +230,10 @@ export default function GradeMaster() {
       const ansKeys = data.scoringConfig?.remedialAnswerKeys || [];
       setRemedialAnswerKeys(ansKeys);
       setRemedialAnswerKeysInput(formatEssayQuestions(ansKeys));
+      const mcqs = data.scoringConfig?.remedialMcqQuestions || [];
+      setRemedialMcqQuestions(mcqs);
+      setRemedialMcqQuota(data.scoringConfig?.remedialMcqQuota || 10);
+      if (data.scoringConfig) setScoringConfig(data.scoringConfig);
       setApiQuestionDifficulties(data.questionDifficulties || []);
       setIsSessionPublic(data.isPublic);
       setIsDemo(data.isDemo === true);
@@ -599,13 +606,33 @@ export default function GradeMaster() {
     }
   };
 
-  const handleUpdateRemedialQuestions = async (newQuestions: string[], newKeys: string[], newTimer: number, newDeadline?: string) => {
+  const handleUpdateRemedialQuestions = async (
+    newQuestions: string[],
+    newKeys: string[],
+    newTimer: number,
+    newDeadline?: string,
+    newMcqs?: RemedialMcqQuestion[],
+    newMcqQuota?: number,
+    newPgWeight?: number,
+    newEssayWeight?: number
+  ) => {
     if (!sessionId) {
       setToast({ message: "Sesi belum dimuat. Silakan login ke sesi terlebih dahulu.", type: "error" });
       return;
     }
     setIsUpdatingQuestions(true);
     try {
+      const updatedConfig: ScoringConfig = {
+        ...scoringConfig,
+        remedialQuestions: newQuestions,
+        remedialAnswerKeys: newKeys,
+        remedialDeadline: newDeadline,
+        remedialMcqQuestions: newMcqs !== undefined ? newMcqs : remedialMcqQuestions,
+        remedialMcqQuota: newMcqQuota !== undefined ? newMcqQuota : remedialMcqQuota,
+        remedialPgWeight: newPgWeight !== undefined ? newPgWeight : scoringConfig?.remedialPgWeight,
+        remedialEssayWeight: newEssayWeight !== undefined ? newEssayWeight : scoringConfig?.remedialEssayWeight,
+      };
+
       const res = await fetch("/api/grademaster", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -619,7 +646,7 @@ export default function GradeMaster() {
           className: studentClass,
           schoolLevel,
           studentList,
-          scoringConfig: { ...scoringConfig, remedialQuestions: newQuestions, remedialAnswerKeys: newKeys, remedialDeadline: newDeadline },
+          scoringConfig: updatedConfig,
           examType,
           academicYear,
           kkm,
@@ -634,6 +661,9 @@ export default function GradeMaster() {
       setRemedialAnswerKeys(newKeys);
       setRemedialTimer(newTimer);
       if (newDeadline !== undefined) setRemedialDeadline(newDeadline);
+      if (newMcqs !== undefined) setRemedialMcqQuestions(newMcqs);
+      if (newMcqQuota !== undefined) setRemedialMcqQuota(newMcqQuota);
+      setScoringConfig(updatedConfig);
       setToast({ message: "Konfigurasi remedial berhasil diperbarui!", type: "success" });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal menyimpan";
@@ -670,6 +700,10 @@ export default function GradeMaster() {
       const ansKeys = data.scoringConfig?.remedialAnswerKeys || [];
       setRemedialAnswerKeys(ansKeys);
       setRemedialAnswerKeysInput(formatEssayQuestions(ansKeys));
+      const mcqs = data.scoringConfig?.remedialMcqQuestions || [];
+      setRemedialMcqQuestions(mcqs);
+      setRemedialMcqQuota(data.scoringConfig?.remedialMcqQuota || 10);
+      if (data.scoringConfig) setScoringConfig(data.scoringConfig);
       setApiQuestionDifficulties(data.questionDifficulties || []);
       setIsSessionPublic(data.isPublic);
       setIsDemo(data.isDemo === true);
@@ -753,6 +787,10 @@ export default function GradeMaster() {
       const ansKeys = data.scoringConfig?.remedialAnswerKeys || [];
       setRemedialAnswerKeys(ansKeys);
       setRemedialAnswerKeysInput(formatEssayQuestions(ansKeys));
+      const mcqs = data.scoringConfig?.remedialMcqQuestions || [];
+      setRemedialMcqQuestions(mcqs);
+      setRemedialMcqQuota(data.scoringConfig?.remedialMcqQuota || 10);
+      if (data.scoringConfig) setScoringConfig(data.scoringConfig);
       setApiQuestionDifficulties(data.questionDifficulties || []);
       setIsSessionPublic(data.isPublic);
       setIsDemo(data.isDemo === true);
@@ -800,6 +838,10 @@ export default function GradeMaster() {
       const ansKeys = data.scoringConfig?.remedialAnswerKeys || [];
       setRemedialAnswerKeys(ansKeys);
       setRemedialAnswerKeysInput(formatEssayQuestions(ansKeys));
+      const mcqs = data.scoringConfig?.remedialMcqQuestions || [];
+      setRemedialMcqQuestions(mcqs);
+      setRemedialMcqQuota(data.scoringConfig?.remedialMcqQuota || 10);
+      if (data.scoringConfig) setScoringConfig(data.scoringConfig);
       setApiQuestionDifficulties(data.questionDifficulties || []);
       setIsSessionPublic(data.isPublic);
       setIsPublicView(false); // Admin/Teacher view
@@ -1289,7 +1331,14 @@ export default function GradeMaster() {
           subject={subject}
           schoolLevel={schoolLevel}
           semester={semester}
-          scoringConfig={{ ...scoringConfig, remedialQuestions, remedialAnswerKeys, remedialDeadline }}
+          scoringConfig={{
+            ...scoringConfig,
+            remedialQuestions,
+            remedialAnswerKeys,
+            remedialDeadline,
+            remedialMcqQuestions,
+            remedialMcqQuota,
+          }}
           remedialQuestionsInput={remedialQuestionsInput}
           onBack={() => setLayer("home")}
           remedialAnswerKeysInput={remedialAnswerKeysInput}
