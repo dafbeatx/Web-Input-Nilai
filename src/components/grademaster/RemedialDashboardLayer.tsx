@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import { 
   Clock, RotateCcw, X, Save, User, CheckSquare, FileText, Sliders, Sparkles, AlertCircle, HelpCircle,
@@ -358,14 +358,61 @@ export default function RemedialDashboardLayer({
     );
   }, [gradedStudents, deletedIds]);
 
+  // Cek apakah siswa SUDAH pernah menyelesaikan remedial, sedang menunggu teman lain,
+  // atau nilainya telah diedit oleh guru. Siswa seperti ini TIDAK BOLEH dijadikan nilai 0.
+  const isStudentExemptFromZero = useCallback((s: GradedStudent) => {
+    // 1. Status pengerjaan sudah selesai atau diserahkan
+    if (s.remedialStatus === 'COMPLETED' || s.remedialStatus === 'SUBMITTED') {
+      return true;
+    }
+
+    // 2. Nilai remedial ditahan sementara menunggu teman sekelas selesai (siswa ini SUDAH selesai remedial!)
+    if (s.cheatingFlags && s.cheatingFlags.some(f => typeof f === 'string' && (f.includes('Nilai remedial ditahan') || f.includes('menunggu')))) {
+      return true;
+    }
+
+    // 3. Nilai telah diperiksa atau diedit secara manual oleh guru
+    if (s.teacherReviewed === true && s.remedialStatus !== 'TIME_UP') {
+      return true;
+    }
+    if (s.essayScoreManual !== undefined && s.essayScoreManual !== null) {
+      return true;
+    }
+
+    // 4. Memiliki skor remedial yang valid (> 0)
+    if (s.remedialScore !== undefined && s.remedialScore !== null && s.remedialScore > 0) {
+      return true;
+    }
+
+    // 5. Memiliki bukti jawaban remedial yang dikerjakan (essay / PG)
+    const hasEssayAnswers = Array.isArray(s.remedialAnswers) && s.remedialAnswers.some(a => a && a.trim().length > 0);
+    const hasMcqAnswers = Array.isArray(s.remedialMcqAnswers) && s.remedialMcqAnswers.length > 0;
+    if (hasEssayAnswers || hasMcqAnswers) {
+      return true;
+    }
+
+    // 6. Nilai akhir sudah mencapai atau melampaui KKM (misal 75)
+    const currentScore = (s.finalScoreLocked !== undefined && s.finalScoreLocked !== null) ? s.finalScoreLocked : s.finalScore;
+    if (currentScore >= kkm) {
+      return true;
+    }
+
+    return false;
+  }, [kkm]);
+
   const pendingDeadlineStudents = useMemo(() => {
-    return gradedStudents.filter(s => 
-      !deletedIds.includes(s.id) && 
-      (s.finalScoreLocked || s.finalScore) < kkm && 
-      s.remedialStatus !== 'COMPLETED' && 
-      !(s.remedialStatus === 'TIME_UP' && (s.finalScore === 0 || s.finalScoreLocked === 0))
-    );
-  }, [gradedStudents, deletedIds, kkm]);
+    return gradedStudents.filter(s => {
+      if (deletedIds.includes(s.id)) return false;
+      // Jangan masukkan siswa yang sudah bernilai 0 dengan status TIME_UP
+      if (s.remedialStatus === 'TIME_UP' && (s.finalScore === 0 || s.finalScoreLocked === 0)) return false;
+      // Jangan masukkan siswa yang sudah selesai, sedang menunggu teman, atau nilainya diedit guru
+      if (isStudentExemptFromZero(s)) return false;
+
+      // Siswa kandidat remedial yang nilai awalnya di bawah KKM dan belum pernah selesai mengerjakan
+      const baseScore = (s.originalScore !== undefined && s.originalScore !== null && s.originalScore > 0) ? s.originalScore : s.finalScore;
+      return baseScore < kkm;
+    });
+  }, [gradedStudents, deletedIds, kkm, isStudentExemptFromZero]);
 
   function parseEssayQuestions(input: string): string[] {
     return input.split('\n').map(s => s.replace(/^\d+\.\s*/, '').trim()).filter(Boolean);
@@ -849,7 +896,7 @@ Kunci: B`;
                     {scoringConfig.remedialDeadline ? (
                       <>
                         Tenggat: <strong className="text-primary">{new Date(scoringConfig.remedialDeadline).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</strong> •{' '}
-                        <span className="text-rose-400 font-bold">{pendingDeadlineStudents.length} siswa belum tuntas</span>
+                        <span className="text-rose-400 font-bold">{pendingDeadlineStudents.length} siswa belum mengerjakan</span>
                         {zeroedStudents.length > 0 && (
                           <span className="text-amber-400 font-bold"> • {zeroedStudents.length} siswa bernilai 0</span>
                         )}
@@ -1057,8 +1104,14 @@ Kunci: B`;
                         </div>
                         <div className="min-w-0">
                           <h4 className="font-headline font-bold text-sm text-primary uppercase tracking-tight truncate max-w-[150px]">{student.name}</h4>
-                          <div className="flex items-center gap-2 mt-0.5">
+                          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                              {getStatusBadge(student.remedialStatus || '', student.teacherReviewed)}
+                             {student.cheatingFlags && student.cheatingFlags.some(f => typeof f === 'string' && (f.includes('Nilai remedial ditahan') || f.includes('menunggu'))) && (
+                               <span className="px-2 py-0.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[8.5px] font-black uppercase tracking-wider flex items-center gap-1">
+                                 <span className="material-symbols-outlined text-[10px]">hourglass_top</span>
+                                 <span>Menunggu Teman</span>
+                               </span>
+                             )}
                           </div>
                         </div>
                       </div>
@@ -1098,14 +1151,14 @@ Kunci: B`;
                            </button>
                          )}
 
-                         {/* Tombol Jadikan Nilai 0 (jika belum tuntas dan belum bernilai 0) */}
-                         {!(student.remedialStatus === 'TIME_UP' && (student.finalScoreLocked === 0 || student.finalScore === 0)) && 
-                          student.remedialStatus !== 'COMPLETED' && (
+                         {/* Tombol Jadikan Nilai 0 (hanya untuk siswa yang belum pernah selesai mengerjakan remedial dan tidak exempt) */}
+                         {!isStudentExemptFromZero(student) && 
+                          !(student.remedialStatus === 'TIME_UP' && (student.finalScoreLocked === 0 || student.finalScore === 0)) && (
                            <button
                              onClick={(e) => { e.stopPropagation(); handleOpenZeroDeadlineModal({ id: student.id, name: student.name }); }}
                              disabled={!isAdmin}
                              className="px-2.5 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 hover:bg-rose-600 hover:text-white transition-all font-extrabold text-[9px] uppercase tracking-widest flex items-center gap-1 disabled:opacity-30 active:scale-95"
-                             title="Terapkan sanksi nilai 0 karena melewati batas waktu"
+                             title="Terapkan sanksi nilai 0 karena belum mengerjakan remedial setelah batas waktu"
                            >
                              <Ban size={12} />
                              <span className="leading-none">Set 0</span>
@@ -2173,8 +2226,16 @@ Kunci: C`}
                 <span>Perhatian: Tindakan Penguncian Nilai 0</span>
               </p>
               <p className="text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
-                Siswa yang belum menyelesaikan remedial setelah batas waktu akan ditetapkan nilainya menjadi <strong className="font-extrabold text-rose-700 dark:text-rose-400">0</strong> dengan status <em>TIME_UP</em>.
+                Hanya siswa yang <strong className="text-rose-700 dark:text-rose-400">belum pernah menyelesaikan remedial</strong> setelah batas waktu yang akan ditetapkan nilainya menjadi <strong className="font-extrabold text-rose-700 dark:text-rose-400">0</strong> dengan status <em>TIME_UP</em>.
               </p>
+              <div className="p-2.5 rounded-xl bg-surface-container-high/60 border border-outline-variant/30 text-[10px] text-slate-700 dark:text-slate-300 space-y-1">
+                <p className="font-bold text-primary flex items-center gap-1">
+                  <span>🛡️ Perlindungan Nilai Siswa:</span>
+                </p>
+                <p className="leading-relaxed">
+                  Siswa yang <strong>sudah mengerjakan remedial</strong> (termasuk yang sedang menunggu teman sekelas selesai sebelum nilai 75 difinalisasi) serta <strong>nilai yang telah diedit/dinilai guru</strong> akan otomatis terlindungi dan <strong>TIDAK AKAN diubah menjadi 0</strong>.
+                </p>
+              </div>
               <div className="text-[10.5px] text-emerald-900 dark:text-emerald-200 font-semibold p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 flex items-start gap-2">
                 <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs shrink-0 mt-0.5">✓</span>
                 <span className="leading-snug">Nilai asli sebelum remedial tetap disimpan aman dan dapat dikembalikan kapan saja oleh admin dengan tombol <strong className="font-extrabold text-emerald-950 dark:text-emerald-100">&ldquo;Reset ke Nilai Asli&rdquo;</strong>.</span>
@@ -2228,7 +2289,7 @@ Kunci: C`}
                   </p>
                 ) : (
                   <p className="font-bold text-primary">
-                    Semua Siswa Belum Tuntas: <strong className="text-rose-600 dark:text-rose-400 font-extrabold">{pendingDeadlineStudents.length} siswa</strong> di sesi ini.
+                    Semua Siswa Belum Mengerjakan: <strong className="text-rose-600 dark:text-rose-400 font-extrabold">{pendingDeadlineStudents.length} siswa</strong> di sesi ini.
                   </p>
                 )}
               </div>
