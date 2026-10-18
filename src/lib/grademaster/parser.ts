@@ -141,3 +141,128 @@ export function formatEssayQuestions(questions: string[]): string {
     .map((q, i) => `${i + 1}. ${q}`)
     .join("\n");
 }
+
+import { RemedialMcqQuestion } from './types';
+
+/**
+ * Deterministic parser for remedial multiple choice questions.
+ * Handles:
+ * 1. Pertanyaan
+ * A. Opsi 1
+ * B. Opsi 2
+ * C. Opsi 3
+ * D. Opsi 4
+ * Kunci: B
+ */
+export function parseRemedialMcq(input: string): RemedialMcqQuestion[] {
+  if (!input || !input.trim()) return [];
+
+  const lines = input.split(/\r?\n/);
+  const questions: RemedialMcqQuestion[] = [];
+  
+  let currentQ: {
+    num: number;
+    questionLines: string[];
+    options: { letter: string; text: string }[];
+    correctAnswer: string;
+  } | null = null;
+
+  let currentOptionLetter: string | null = null;
+
+  const OPTION_REGEX = /^\s*([A-Ea-e])\s*[.:\)\-\]]\s*(.*)$/;
+  const KEY_REGEX = /^\s*(?:kunci(?:\s*jawaban)?|jawaban|key|ans(?:wer)?)\s*[:=\-]?\s*([A-Ea-e])/i;
+  const QUESTION_NUM_REGEX = /^\s*(?:soal\s*)?(\d+)\s*[.:\)\-]\s*(.*)$/i;
+
+  const pushCurrent = () => {
+    if (currentQ) {
+      const qText = currentQ.questionLines.join(' ').trim();
+      const opts = currentQ.options.map(o => o.text.trim());
+      if (qText && opts.length >= 2) {
+        questions.push({
+          id: `mcq-${questions.length + 1}`,
+          question: qText,
+          options: opts,
+          correctAnswer: (currentQ.correctAnswer || currentQ.options[0]?.letter || 'A').toUpperCase()
+        });
+      }
+    }
+    currentQ = null;
+    currentOptionLetter = null;
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    // Check if this line is a Key line
+    const keyMatch = line.match(KEY_REGEX);
+    if (keyMatch) {
+      if (currentQ) {
+        currentQ.correctAnswer = keyMatch[1].toUpperCase();
+        currentOptionLetter = null;
+      }
+      continue;
+    }
+
+    // Check if this line starts a new Question Number
+    const qMatch = line.match(QUESTION_NUM_REGEX);
+    if (qMatch) {
+      pushCurrent();
+      currentQ = {
+        num: parseInt(qMatch[1], 10),
+        questionLines: qMatch[2] ? [qMatch[2]] : [],
+        options: [],
+        correctAnswer: 'A'
+      };
+      continue;
+    }
+
+    // Check if this line starts an Option (A, B, C, D, E)
+    const optMatch = line.match(OPTION_REGEX);
+    if (optMatch) {
+      if (!currentQ) {
+        currentQ = {
+          num: questions.length + 1,
+          questionLines: ['Soal ' + (questions.length + 1)],
+          options: [],
+          correctAnswer: 'A'
+        };
+      }
+      const letter = optMatch[1].toUpperCase();
+      const text = optMatch[2] || '';
+      currentQ.options.push({ letter, text });
+      currentOptionLetter = letter;
+      continue;
+    }
+
+    // Continuation line
+    if (currentQ) {
+      if (currentOptionLetter && currentQ.options.length > 0) {
+        const lastOpt = currentQ.options[currentQ.options.length - 1];
+        lastOpt.text = (lastOpt.text + ' ' + line).trim();
+      } else {
+        currentQ.questionLines.push(line);
+      }
+    } else {
+      currentQ = {
+        num: questions.length + 1,
+        questionLines: [line],
+        options: [],
+        correctAnswer: 'A'
+      };
+    }
+  }
+
+  pushCurrent();
+  return questions;
+}
+
+export function formatRemedialMcq(questions: RemedialMcqQuestion[]): string {
+  if (!questions || questions.length === 0) return "";
+  const LETTERS = ['A', 'B', 'C', 'D', 'E'];
+  return questions.map((q, i) => {
+    const opts = q.options.map((opt, oi) => `${LETTERS[oi] || 'A'}. ${opt}`).join('\n');
+    return `${i + 1}. ${q.question}\n${opts}\nKunci: ${q.correctAnswer || 'A'}`;
+  }).join('\n\n');
+}
+

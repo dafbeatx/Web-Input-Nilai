@@ -82,6 +82,8 @@ export default function StudentLoginLayer({
     return true;
   });
 
+  const isAnyLoginActive = isAdminLoggingIn || isLoginInProgress || isRedirecting;
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       if (localStorage.getItem('gm_remember_me') === null) {
@@ -414,7 +416,7 @@ export default function StudentLoginLayer({
           </div>
           <div className="text-center">
             <h2 className="text-sm font-black text-[#0F172A] uppercase tracking-[0.3em] mb-2 font-outfit">GradeMaster OS</h2>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Memeriksa Sesi...</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Memverifikasi akun...</p>
           </div>
         </div>
       </div>
@@ -437,7 +439,7 @@ export default function StudentLoginLayer({
               </p>
             )}
             <p className="text-sm font-medium text-slate-400 leading-relaxed px-4">
-              Menghubungkan Anda ke portal akademik GradeMaster...
+              Memuat profil siswa...
             </p>
           </div>
           <div className="flex gap-1.5 justify-center pt-4">
@@ -596,11 +598,12 @@ export default function StudentLoginLayer({
                         type="text"
                         value={adminUsername}
                         onChange={(e) => setAdminUsername(e.target.value)}
+                        disabled={isAnyLoginActive}
                         placeholder="contoh: ahmad.dahlan.9a"
                         autoComplete="username"
                         autoCapitalize="none"
                         required
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all min-h-[44px]"
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all min-h-[44px] disabled:opacity-60 disabled:cursor-not-allowed"
                       />
                     </div>
                   </div>
@@ -617,15 +620,17 @@ export default function StudentLoginLayer({
                         type={showPassword ? 'text' : 'password'}
                         value={adminPassword}
                         onChange={(e) => setAdminPassword(e.target.value)}
+                        disabled={isAnyLoginActive}
                         placeholder="Masukkan kata sandi..."
                         autoComplete="current-password"
                         required
-                        className="w-full pl-10 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all min-h-[44px]"
+                        className="w-full pl-10 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all min-h-[44px] disabled:opacity-60 disabled:cursor-not-allowed"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 min-h-[32px] min-w-[32px] flex items-center justify-center cursor-pointer"
+                        disabled={isAnyLoginActive}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 min-h-[32px] min-w-[32px] flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
                       >
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -635,13 +640,13 @@ export default function StudentLoginLayer({
 
                   <button
                     type="submit"
-                    disabled={isAdminLoggingIn}
-                    className="w-full mt-1 py-3 px-4 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm min-h-[46px] disabled:opacity-60 cursor-pointer"
+                    disabled={isAnyLoginActive}
+                    className="w-full mt-1 py-3 px-4 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm min-h-[46px] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {isAdminLoggingIn ? (
                       <>
                         <Loader2 size={18} className="animate-spin text-slate-300" />
-                        <span>Memeriksa Akun...</span>
+                        <span>Memverifikasi akun...</span>
                       </>
                     ) : (
                       <>
@@ -666,13 +671,13 @@ export default function StudentLoginLayer({
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
-                  disabled={isLoginInProgress}
-                  className="w-full py-3 px-4 bg-white hover:bg-slate-50 active:scale-[0.99] text-slate-800 border border-slate-200 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-3 shadow-xs min-h-[46px] disabled:opacity-60 cursor-pointer"
+                  disabled={isAnyLoginActive}
+                  className="w-full py-3 px-4 bg-white hover:bg-slate-50 active:scale-[0.99] text-slate-800 border border-slate-200 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-3 shadow-xs min-h-[46px] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isLoginInProgress ? (
                     <>
                       <Loader2 size={18} className="animate-spin text-slate-400" />
-                      <span>Menyambungkan ke Akun Google...</span>
+                      <span>Mengaitkan profil...</span>
                     </>
                   ) : (
                     <>
@@ -692,13 +697,14 @@ export default function StudentLoginLayer({
                     <input
                       type="checkbox"
                       checked={rememberMe}
+                      disabled={isAnyLoginActive}
                       onChange={(e) => {
                         setRememberMe(e.target.checked);
                         if (typeof window !== 'undefined') {
                           localStorage.setItem('gm_remember_me', e.target.checked ? 'true' : 'false');
                         }
                       }}
-                      className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer"
+                      className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer disabled:opacity-50"
                     />
                     <span className="text-xs font-semibold text-slate-600">
                       Ingat sesi login
@@ -722,7 +728,8 @@ export default function StudentLoginLayer({
                       <button
                         type="button"
                         onClick={() => setIsGenerateModalOpen(true)}
-                        className="w-full sm:w-auto px-3.5 py-2.5 bg-white hover:bg-slate-100 active:bg-slate-200 border border-slate-300 text-slate-900 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 shrink-0 min-h-[44px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1"
+                        disabled={isAnyLoginActive}
+                        className="w-full sm:w-auto px-3.5 py-2.5 bg-white hover:bg-slate-100 active:bg-slate-200 border border-slate-300 text-slate-900 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 shrink-0 min-h-[44px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         <UserPlus size={15} className="text-indigo-600" />
                         <span>Daftar Akun Siswa</span>
@@ -749,8 +756,9 @@ export default function StudentLoginLayer({
                       setSearchQuery(e.target.value);
                       setShowDropdown(true);
                     }}
+                    disabled={isAnyLoginActive}
                     placeholder="Ketik nama lengkap anak..."
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-150 transition-all min-h-[44px]"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-150 transition-all min-h-[44px] disabled:opacity-60 disabled:cursor-not-allowed"
                   />
 
                   {showDropdown && searchQuery.trim() && (

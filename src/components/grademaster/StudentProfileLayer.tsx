@@ -2372,14 +2372,21 @@ export default function StudentProfileLayer({
 
                     {/* Kesimpulan Ringkas */}
                     <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-xl p-4">
-                      <p className="text-xs sm:text-sm font-semibold text-indigo-950 leading-relaxed">
-                        {totalExams === 0 
-                          ? "Belum ada riwayat ujian yang tercatat pada sistem." 
-                          : isParent 
-                            ? `Ananda memperoleh rata-rata nilai sebesar ${avgScore.toFixed(1)} dari total ${totalExams} sesi ujian. Capaian terbaik diraih pada mata pelajaran ${bestSubject} dengan nilai ${highestScore}.`
-                            : `Kamu memperoleh rata-rata nilai sebesar ${avgScore.toFixed(1)} dari total ${totalExams} sesi ujian. Capaian terbaikmu diraih pada mata pelajaran ${bestSubject} dengan nilai ${highestScore}.`
-                        }
-                      </p>
+                      {isLoadingSummary ? (
+                        <div className="animate-pulse space-y-2 py-1">
+                          <div className="h-3.5 bg-indigo-200/60 rounded w-3/4" />
+                          <div className="h-3.5 bg-indigo-200/60 rounded w-1/2" />
+                        </div>
+                      ) : (
+                        <p className="text-xs sm:text-sm font-semibold text-indigo-950 leading-relaxed">
+                          {totalExams === 0 
+                            ? "Belum ada riwayat ujian yang tercatat pada sistem." 
+                            : isParent 
+                              ? `Ananda memperoleh rata-rata nilai sebesar ${avgScore.toFixed(1)} dari total ${totalExams} sesi ujian. Capaian terbaik diraih pada mata pelajaran ${bestSubject} dengan nilai ${highestScore}.`
+                              : `Kamu memperoleh rata-rata nilai sebesar ${avgScore.toFixed(1)} dari total ${totalExams} sesi ujian. Capaian terbaikmu diraih pada mata pelajaran ${bestSubject} dengan nilai ${highestScore}.`
+                          }
+                        </p>
+                      )}
                     </div>
 
                     {/* List Sesi Ujian */}
@@ -2455,7 +2462,7 @@ export default function StudentProfileLayer({
                                       {startingRemedialSessionName === grade.sessionName ? (
                                         <>
                                           <Loader2 size={10} className="animate-spin" />
-                                          <span>Memuat...</span>
+                                          <span>Memuat Sesi...</span>
                                         </>
                                       ) : (
                                         <>

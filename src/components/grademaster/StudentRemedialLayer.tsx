@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ToastType } from '@/lib/grademaster/types';
+import { ToastType, AssignedMcqQuestion } from '@/lib/grademaster/types';
 import { ArrowLeft, Send, AlertTriangle, ShieldX, Camera, CameraOff, Clock, CheckCircle2, User, Star, ShieldCheck, ArrowRight, Cpu, MonitorOff, Play, Activity, AppWindow, Wifi, RefreshCw } from 'lucide-react';
 import ProctoringCamera from './ProctoringCamera';
 import { saveRemedialSession, loadRemedialSession, clearRemedialSession } from '@/lib/grademaster/session';
@@ -14,6 +14,7 @@ interface StudentRemedialLayerProps {
   remedialEssayCount: number;
   remedialTimer: number;
   remedialQuestions: string[];
+  remedialMcqQuestions?: AssignedMcqQuestion[];
   sessionId: string;
   className: string;
   academicYear: string;
@@ -242,6 +243,7 @@ export default function StudentRemedialLayer({
   remedialEssayCount,
   remedialTimer,
   remedialQuestions,
+  remedialMcqQuestions = [],
   sessionId,
   className,
   academicYear,
@@ -257,6 +259,26 @@ export default function StudentRemedialLayer({
     const len = (remedialQuestions && remedialQuestions.length > 0) ? remedialQuestions.length : remedialEssayCount;
     return new Array(len).fill("");
   });
+  const [assignedMcqs, setAssignedMcqs] = useState<AssignedMcqQuestion[]>(() => remedialMcqQuestions || []);
+  const [mcqAnswers, setMcqAnswers] = useState<string[]>(() => new Array(remedialMcqQuestions?.length || 0).fill(""));
+  const mcqAnswersRef = useRef(mcqAnswers);
+
+  React.useEffect(() => {
+    mcqAnswersRef.current = mcqAnswers;
+  }, [mcqAnswers]);
+
+  const handleSelectMcqOption = (qIdx: number, optionLetter: string) => {
+    setMcqAnswers(prev => {
+      const next = [...prev];
+      next[qIdx] = optionLetter;
+      if (typeof window !== 'undefined') {
+        const backupKeyMcq = `gm_remedial_backup_mcq_${sessionId}_${studentName.toLowerCase().trim()}`;
+        localStorage.setItem(backupKeyMcq, JSON.stringify(next));
+      }
+      return next;
+    });
+  };
+
   const [timeLeft, setTimeLeft] = useState(remedialTimer * 60);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionLabel, setSubmissionLabel] = useState("");
@@ -334,10 +356,6 @@ export default function StudentRemedialLayer({
   const wakeLockRef = useRef<WakeLockSentinel | null>(null); // Screen Wake Lock
   const lastPhotoHashRef = useRef<string>(''); // Dedup: track last sent photo hash
   const consecutiveDupCountRef = useRef<number>(0); // Track how many dupes skipped in a row
-
-  const totalQuestions = shuffledQuestions.length > 0
-    ? shuffledQuestions.length
-    : ((remedialQuestions && remedialQuestions.length > 0) ? remedialQuestions.length : remedialEssayCount);
 
   // Draggable PiP Camera State
   const pipRef = useRef<HTMLDivElement>(null);
@@ -851,6 +869,7 @@ export default function StudentRemedialLayer({
         });
         return mappedAnswers;
       })() : undefined,
+      mcqAnswers: (status === 'COMPLETED' || status === 'TIMEOUT') ? mcqAnswersRef.current : undefined,
       note: status === 'COMPLETED' ? noteRef.current : undefined,
       clientCheatingFlags: allFlags.length > 0 ? allFlags : undefined,
       examMode,
@@ -912,6 +931,8 @@ export default function StudentRemedialLayer({
           if (typeof window !== 'undefined') {
             const backupKey = `gm_remedial_backup_${sessionId}_${studentName.toLowerCase().trim()}`;
             localStorage.removeItem(backupKey);
+            const backupKeyMcq = `gm_remedial_backup_mcq_${sessionId}_${studentName.toLowerCase().trim()}`;
+            localStorage.removeItem(backupKeyMcq);
           }
           
           const finalStatus = data.status || status;
@@ -1361,6 +1382,11 @@ export default function StudentRemedialLayer({
         
         queueMicrotask(() => {
           setAnswers(saved.answers && saved.answers.length === expectedLen ? saved.answers : new Array(expectedLen).fill(""));
+          if (saved.remedialMcqQuestions && Array.isArray(saved.remedialMcqQuestions)) {
+            setAssignedMcqs(saved.remedialMcqQuestions);
+            const mcqLen = saved.remedialMcqQuestions.length;
+            setMcqAnswers(saved.mcqAnswers && saved.mcqAnswers.length === mcqLen ? saved.mcqAnswers : new Array(mcqLen).fill(""));
+          }
           setNote(saved.note || '');
           setCurrentLocation(saved.location || '');
           if (saved.attemptId) setAttemptId(saved.attemptId);
@@ -1373,8 +1399,8 @@ export default function StudentRemedialLayer({
           if (saved.isPenaltyApplied) {
             setIsPenaltyApplied(true);
           }
-          if (questionsAvailable) {
-            // Questions confirmed — safe to restore step
+          if (questionsAvailable || (saved.remedialMcqQuestions && saved.remedialMcqQuestions.length > 0)) {
+            // Questions confirmed, safe to restore step
             setStep(saved.step as RemedialStep);
           }
         });
@@ -1418,25 +1444,31 @@ export default function StudentRemedialLayer({
                 if (initRes.ok) {
                   const initData = await initRes.json();
                   const serverQuestions = initData.remedialQuestions || [];
-                  if (serverQuestions.length > 0) {
-                    saveRemedialSession({ ...saved, remedialQuestions: serverQuestions });
-                    const indices = saved.shuffledIndices && saved.shuffledIndices.length > 0
-                      ? saved.shuffledIndices
-                      : serverQuestions.map((_: string, idx: number) => idx);
-                    setShuffledQuestions(indices.map((idx: number) => ({ text: serverQuestions[idx] || '', originalIndex: idx })));
-                    if (saved.answers && saved.answers.length === serverQuestions.length) {
-                      setAnswers(saved.answers);
-                    } else {
-                      const next = new Array(serverQuestions.length).fill("");
-                      if (saved.answers) {
-                        saved.answers.forEach((val: string, idx: number) => {
-                          if (idx < next.length) next[idx] = val;
-                        });
+                  const serverMcqs = initData.remedialMcqQuestions || [];
+                  if (serverQuestions.length > 0 || serverMcqs.length > 0) {
+                    saveRemedialSession({ ...saved, remedialQuestions: serverQuestions, remedialMcqQuestions: serverMcqs });
+                    if (serverMcqs.length > 0) {
+                      setAssignedMcqs(serverMcqs);
+                      setMcqAnswers(saved.mcqAnswers && saved.mcqAnswers.length === serverMcqs.length ? saved.mcqAnswers : new Array(serverMcqs.length).fill(""));
+                    }
+                    if (serverQuestions.length > 0) {
+                      const indices = saved.shuffledIndices && saved.shuffledIndices.length > 0
+                        ? saved.shuffledIndices
+                        : serverQuestions.map((_: string, idx: number) => idx);
+                      setShuffledQuestions(indices.map((idx: number) => ({ text: serverQuestions[idx] || '', originalIndex: idx })));
+                      if (saved.answers && saved.answers.length === serverQuestions.length) {
+                        setAnswers(saved.answers);
+                      } else {
+                        const next = new Array(serverQuestions.length).fill("");
+                        if (saved.answers) {
+                          saved.answers.forEach((val: string, idx: number) => {
+                            if (idx < next.length) next[idx] = val;
+                          });
+                        }
+                        setAnswers(next);
                       }
-                      setAnswers(next);
                     }
                     setStep(saved.step as RemedialStep);
-                    // setToast({ message: "Soal berhasil dimuat dari server. Melanjutkan ujian...", type: "success" });
                     return;
                   }
                 }
@@ -1628,6 +1660,8 @@ export default function StudentRemedialLayer({
         step,
         startedAt: startedAtRef.current || saved?.startedAt || Date.now(),
         answers,
+        remedialMcqQuestions: assignedMcqs.length > 0 ? assignedMcqs : (saved?.remedialMcqQuestions || []),
+        mcqAnswers,
         note,
         location: currentLocation,
         refreshCount,
@@ -1646,9 +1680,15 @@ export default function StudentRemedialLayer({
       });
 
       // Backup answers to a separate key that survives session resets
-      if (step === 'EXAM' && answers && answers.some(a => a && a.trim() !== '')) {
-        const backupKey = `gm_remedial_backup_${sessionId}_${studentName.toLowerCase().trim()}`;
-        localStorage.setItem(backupKey, JSON.stringify(answers));
+      if (step === 'EXAM') {
+        if (answers && answers.some(a => a && a.trim() !== '')) {
+          const backupKey = `gm_remedial_backup_${sessionId}_${studentName.toLowerCase().trim()}`;
+          localStorage.setItem(backupKey, JSON.stringify(answers));
+        }
+        if (mcqAnswers && mcqAnswers.some(a => !!a)) {
+          const backupKeyMcq = `gm_remedial_backup_mcq_${sessionId}_${studentName.toLowerCase().trim()}`;
+          localStorage.setItem(backupKeyMcq, JSON.stringify(mcqAnswers));
+        }
       }
     }, 1000); // 1-second debounce
 
@@ -1657,7 +1697,7 @@ export default function StudentRemedialLayer({
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [answers, note, step, sessionId, studentName, className, subject, currentLocation, shuffledQuestions, currentStudentId, examMode, cameraStatus, remedialQuestions, remedialTimer, semester, remedialEssayCount]);
+  }, [answers, mcqAnswers, assignedMcqs, note, step, sessionId, studentName, className, subject, currentLocation, shuffledQuestions, currentStudentId, examMode, cameraStatus, remedialQuestions, remedialTimer, semester, remedialEssayCount]);
 
   // ── AI Proctoring Analyzer — Periodic Snapshot Analysis (30s) ──
   useEffect(() => {
@@ -2207,6 +2247,12 @@ export default function StudentRemedialLayer({
       if (data.remedialQuestions && data.remedialQuestions.length > 0) {
         setShuffledQuestions(data.remedialQuestions.map((q: string, i: number) => ({ text: q, originalIndex: i })));
       }
+
+      let activeAssignedMcqs = assignedMcqs;
+      if (data.remedialMcqQuestions && Array.isArray(data.remedialMcqQuestions) && data.remedialMcqQuestions.length > 0) {
+        setAssignedMcqs(data.remedialMcqQuestions);
+        activeAssignedMcqs = data.remedialMcqQuestions;
+      }
       
       if (data.attemptId && data.attemptToken && data.studentId) {
         attemptIdFromServer = data.attemptId;
@@ -2257,12 +2303,30 @@ export default function StudentRemedialLayer({
       }
       setAnswers(initialAnswers);
 
+      let initialMcqAnswers = new Array(activeAssignedMcqs.length).fill("");
+      if (typeof window !== 'undefined') {
+        const mcqBackupKey = `gm_remedial_backup_mcq_${sessionId}_${studentName.toLowerCase().trim()}`;
+        const mcqBackupRaw = localStorage.getItem(mcqBackupKey);
+        if (mcqBackupRaw) {
+          try {
+            const parsed = JSON.parse(mcqBackupRaw);
+            if (Array.isArray(parsed) && parsed.length === activeAssignedMcqs.length) {
+              initialMcqAnswers = parsed;
+              console.log("Restored MCQ answers from backup on exam start:", parsed);
+            }
+          } catch {}
+        }
+      }
+      setMcqAnswers(initialMcqAnswers);
+
       saveRemedialSession({
         sessionId,
         studentName,
         step: 'EXAM',
         startedAt: startedAtRef.current,
         answers: initialAnswers,
+        remedialMcqQuestions: activeAssignedMcqs,
+        mcqAnswers: initialMcqAnswers,
         note,
         location: locStr || 'UNAVAILABLE',
         refreshCount: 0,
@@ -2662,10 +2726,19 @@ export default function StudentRemedialLayer({
   }, [tabWarningCount, step, secondChanceUsed, setToast, handleStatusUpdate, sendTelegramNotify, capturePhoto]);
 
   const handleSubmit = async () => {
-    const isAnyEmpty = answers.some(a => !a.trim());
-    if (isAnyEmpty) {
-      setToast({ message: "Harap isi semua soal essay sebelum mengumpulkan.", type: "error" });
-      return;
+    if (assignedMcqs.length > 0) {
+      const unansweredMcqs = assignedMcqs.filter((_, i) => !mcqAnswers[i] || !mcqAnswers[i].trim());
+      if (unansweredMcqs.length > 0) {
+        setToast({ message: `Harap jawab semua soal pilihan ganda (${unansweredMcqs.length} soal belum dijawab).`, type: "error" });
+        return;
+      }
+    }
+    if (answers.length > 0) {
+      const isAnyEmpty = answers.some(a => !a.trim());
+      if (isAnyEmpty) {
+        setToast({ message: "Harap isi semua soal essay sebelum mengumpulkan.", type: "error" });
+        return;
+      }
     }
     await handleStatusUpdate('COMPLETED');
   };
@@ -3692,18 +3765,35 @@ export default function StudentRemedialLayer({
           <div className="hidden lg:block bg-primary/5 border border-primary/20 p-6 rounded-[2rem] shadow-xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/20 transition-colors"></div>
             <p className="text-[9px] font-black text-primary uppercase tracking-[0.3em] mb-4">Statistik Progres</p>
-            <div className="flex items-baseline justify-between mb-4">
-              <span className="text-4xl font-black font-outfit text-on-surface tracking-tighter">
-                {answers.filter(a => a.trim() !== '').length}
-              </span>
-              <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">/ {totalQuestions} Soal</span>
-            </div>
-            <div className="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden border border-outline-variant">
-              <div 
-                className="h-full bg-primary shadow-[0_0_12px_rgba(59,130,246,0.5)] transition-all duration-1000 ease-out" 
-                style={{ width: `${(answers.filter(a => a.trim() !== '').length / totalQuestions) * 100}%` }}
-              />
-            </div>
+            {(() => {
+              const answeredEssayCount = answers.filter(a => a.trim() !== '').length;
+              const answeredMcqCount = mcqAnswers.filter(a => !!a && a.trim() !== '').length;
+              const totalAllAnswered = answeredEssayCount + answeredMcqCount;
+              const totalAllCount = answers.length + assignedMcqs.length;
+              const progressPercent = totalAllCount > 0 ? (totalAllAnswered / totalAllCount) * 100 : 0;
+              return (
+                <>
+                  <div className="flex items-baseline justify-between mb-4">
+                    <span className="text-4xl font-black font-outfit text-on-surface tracking-tighter">
+                      {totalAllAnswered}
+                    </span>
+                    <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">/ {totalAllCount} Soal</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden border border-outline-variant">
+                    <div 
+                      className="h-full bg-primary shadow-[0_0_12px_rgba(59,130,246,0.5)] transition-all duration-1000 ease-out" 
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                  {assignedMcqs.length > 0 && (
+                    <div className="mt-4 pt-3 border-t border-outline-variant/30 flex justify-between text-[9px] font-black uppercase tracking-wider text-on-surface-variant">
+                      <span>PG: {answeredMcqCount}/{assignedMcqs.length}</span>
+                      <span>Esai: {answeredEssayCount}/{answers.length}</span>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Compact Mobile Panel */}
@@ -3725,126 +3815,267 @@ export default function StudentRemedialLayer({
             </div>
 
             {/* Row 2: Progress */}
-            <div className="flex items-center justify-between gap-4 border-t border-outline-variant/50 pt-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Progres:</span>
-                <span className="text-xs font-black font-outfit text-on-surface">
-                  {answers.filter(a => a.trim() !== '').length} / {totalQuestions} Soal
-                </span>
-              </div>
-              <div className="flex-1 max-w-[150px] h-1 bg-surface-variant rounded-full overflow-hidden border border-outline-variant">
-                <div 
-                  className="h-full bg-primary shadow-[0_0_12px_rgba(59,130,246,0.5)] transition-all duration-1000 ease-out" 
-                  style={{ width: `${(answers.filter(a => a.trim() !== '').length / totalQuestions) * 100}%` }}
-                />
-              </div>
-            </div>
+            {(() => {
+              const answeredEssayCount = answers.filter(a => a.trim() !== '').length;
+              const answeredMcqCount = mcqAnswers.filter(a => !!a && a.trim() !== '').length;
+              const totalAllAnswered = answeredEssayCount + answeredMcqCount;
+              const totalAllCount = answers.length + assignedMcqs.length;
+              const progressPercent = totalAllCount > 0 ? (totalAllAnswered / totalAllCount) * 100 : 0;
+              return (
+                <div className="flex items-center justify-between gap-4 border-t border-outline-variant/50 pt-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Progres:</span>
+                    <span className="text-xs font-black font-outfit text-on-surface">
+                      {totalAllAnswered} / {totalAllCount} Soal
+                    </span>
+                    {assignedMcqs.length > 0 && (
+                      <span className="text-[9px] font-bold text-primary">
+                        (PG {answeredMcqCount}/{assignedMcqs.length})
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 max-w-[150px] h-1 bg-surface-variant rounded-full overflow-hidden border border-outline-variant">
+                    <div 
+                      className="h-full bg-primary shadow-[0_0_12px_rgba(59,130,246,0.5)] transition-all duration-1000 ease-out" 
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </aside>
 
         {/* Question Area */}
         <section className="flex-1 space-y-8 animate-in fade-in duration-1000">
-          {answers.map((ans, idx) => {
-            const isInvalid = invalidQuestionIndices.includes(idx);
-            return (
-            <div key={idx} id={`question-card-${idx}`} className={`bg-surface premium-shadow backdrop-blur-2xl rounded-2xl md:rounded-[2.5rem] p-5 sm:p-8 md:p-12 border premium-shadow relative overflow-hidden group transition-all ${isInvalid ? 'border-rose-500/60 ring-2 ring-rose-500/20 shadow-rose-500/10' : 'border-outline-variant hover:border-primary/30'}`}>
-              <div className={`absolute top-0 left-0 w-1.5 h-full transition-all duration-500 ${isInvalid ? 'bg-rose-500' : 'bg-primary/20 group-hover:bg-primary'}`} />
-              
-              <div className="flex items-center gap-4 mb-6 md:mb-8">
-                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center font-black text-base md:text-lg border shadow-lg ${isInvalid ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 shadow-rose-500/20' : 'bg-primary/10 text-primary border-primary/20 shadow-primary/20'}`}>
-                  {idx + 1}
-                </div>
+          {/* Bagian 1: Pilihan Ganda (Jika Ada) */}
+          {assignedMcqs.length > 0 && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-outline-variant/30 gap-2">
                 <div>
-                  <h3 className="text-lg md:text-xl font-black text-on-surface tracking-tight font-outfit uppercase">Soal Essay {idx + 1}</h3>
-                  {isInvalid ? (
-                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-1">
-                      <AlertTriangle size={10} /> Jawaban Tidak Valid — Perbaiki Jawaban Anda
-                    </p>
-                  ) : (
-                    <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em]">Kategori Pengerjaan Mandiri</p>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
+                      Bagian 1: Pilihan Ganda
+                    </span>
+                    <span className="text-xs font-black font-outfit text-on-surface">
+                      {assignedMcqs.length} Soal
+                    </span>
+                  </div>
+                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mt-1">
+                    Soal dan urutan opsi diacak secara unik khusus untuk lembar ujian Anda.
+                  </p>
+                </div>
+                <div className="text-left sm:text-right">
+                  <span className="text-xs font-black font-outfit text-primary">
+                    {mcqAnswers.filter(a => !!a && a.trim() !== '').length} / {assignedMcqs.length} Terjawab
+                  </span>
                 </div>
               </div>
 
-              {shuffledQuestions[idx] && (
-                <div className="mb-6 md:mb-10">
-                  <QuestionCanvas text={shuffledQuestions[idx].text} />
-                </div>
-              )}
-
-              <div className="relative">
-                <textarea
-                  className="w-full bg-surface-variant border border-outline-variant rounded-2xl md:rounded-[2rem] p-4 sm:p-6 md:p-8 text-sm md:text-lg font-bold text-on-surface outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all resize-none min-h-[220px] md:min-h-[320px] shadow-sm custom-scrollbar"
-                  placeholder="Ketikkan argumentasi jawaban Anda secara sistematis di sini..."
-                  value={ans}
-                  onChange={(e) => handleChange(idx, e.target.value)}
-                  onCopy={(e) => e.preventDefault()}
-                  onPaste={(e) => e.preventDefault()}
-                  autoComplete="off"
-                  spellCheck="false"
-                />
-                <div className="absolute top-3 right-4 md:top-4 md:right-8">
-                   <div className="px-2.5 py-0.5 md:px-3 md:py-1 rounded-full bg-primary/10 border border-primary/20">
-                     <span className="text-[8px] md:text-[9px] font-black text-primary uppercase tracking-widest">Essay Mode</span>
-                   </div>
-                </div>
-              </div>
-              
-              {/* Real-time Checklist */}
-              {(() => {
-                const evalResult = evaluateAnswerValidity(ans);
-                const showChecklist = ans.trim().length > 0;
-                
-                if (!showChecklist) {
-                  return (
-                    <p className="mt-3 text-[10px] text-on-surface-variant/60 font-bold uppercase tracking-wider pl-2 italic">
-                      Tulis jawaban untuk melihat verifikasi kriteria kelayakan.
-                    </p>
-                  );
-                }
-                
+              {assignedMcqs.map((mcq, qIdx) => {
+                const currentAns = mcqAnswers[qIdx] || "";
                 return (
-                  <div className="mt-4 p-4 rounded-2xl bg-surface-variant/40 border border-outline-variant/30 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider">
-                      <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black text-white ${evalResult.lengthOk ? 'bg-emerald-500' : 'bg-rose-500'}`}>
-                        {evalResult.lengthOk ? '✓' : '✗'}
+                  <div 
+                    key={mcq.id || qIdx} 
+                    id={`mcq-card-${qIdx}`} 
+                    className={`bg-surface premium-shadow backdrop-blur-2xl rounded-2xl md:rounded-[2.5rem] p-5 sm:p-8 md:p-10 border relative overflow-hidden group transition-all ${
+                      currentAns ? 'border-primary/40 ring-1 ring-primary/20' : 'border-outline-variant hover:border-primary/30'
+                    }`}
+                  >
+                    <div className={`absolute top-0 left-0 w-1.5 h-full transition-all duration-500 ${currentAns ? 'bg-primary' : 'bg-surface-variant'}`} />
+                    
+                    <div className="flex items-center gap-4 mb-5 md:mb-6">
+                      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center font-black text-base md:text-lg border shadow-lg ${
+                        currentAns ? 'bg-primary/10 text-primary border-primary/20 shadow-primary/20' : 'bg-surface-variant text-on-surface-variant border-outline-variant'
+                      }`}>
+                        {qIdx + 1}
                       </div>
-                      <span className={evalResult.lengthOk ? 'text-emerald-400' : 'text-rose-400'}>
-                        Min. 20 Karakter ({ans.length}/20)
-                      </span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base md:text-lg font-black text-on-surface tracking-tight font-outfit uppercase">
+                            Soal Pilihan Ganda {qIdx + 1}
+                          </h3>
+                          {currentAns && (
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              Opsi {currentAns}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em]">Pilih Satu Jawaban Terbaik</p>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider">
-                      <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black text-white ${(!evalResult.hasGarbage && !evalResult.hasRepetitiveChars && !evalResult.hasRepetitiveWords) ? 'bg-emerald-500' : 'bg-rose-500'}`}>
-                        {(!evalResult.hasGarbage && !evalResult.hasRepetitiveChars && !evalResult.hasRepetitiveWords) ? '✓' : '✗'}
-                      </div>
-                      <span className={(!evalResult.hasGarbage && !evalResult.hasRepetitiveChars && !evalResult.hasRepetitiveWords) ? 'text-emerald-400' : 'text-rose-400'}>
-                        Bebas Kata Asal / Spam
-                      </span>
+                    <div className="mb-6 md:mb-8">
+                      <QuestionCanvas text={mcq.question} />
                     </div>
 
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider">
-                      <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black text-white ${(evalResult.minWordsOk && evalResult.minUniqueWordsOk) ? 'bg-emerald-500' : 'bg-rose-500'}`}>
-                        {(evalResult.minWordsOk && evalResult.minUniqueWordsOk) ? '✓' : '✗'}
-                      </div>
-                      <span className={(evalResult.minWordsOk && evalResult.minUniqueWordsOk) ? 'text-emerald-400' : 'text-rose-400'}>
-                        Min. 5 Kata Sah
-                      </span>
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {mcq.options.map((optText, optIdx) => {
+                        const letter = ['A', 'B', 'C', 'D', 'E'][optIdx] || String.fromCharCode(65 + optIdx);
+                        const isSelected = currentAns === letter;
+                        return (
+                          <button
+                            key={letter}
+                            type="button"
+                            onClick={() => handleSelectMcqOption(qIdx, letter)}
+                            className={`min-h-[48px] w-full text-left p-3.5 sm:p-4 rounded-xl md:rounded-2xl border transition-all flex items-center gap-3.5 group/opt ${
+                              isSelected
+                                ? 'bg-primary/10 border-primary text-primary ring-2 ring-primary/20 shadow-sm'
+                                : 'bg-surface-variant/40 border-outline-variant/60 hover:bg-surface-variant hover:border-primary/40 text-on-surface'
+                            }`}
+                          >
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0 transition-all ${
+                              isSelected
+                                ? 'bg-primary text-white shadow-md shadow-primary/30'
+                                : 'bg-surface-variant text-on-surface-variant group-hover/opt:bg-primary/10 group-hover/opt:text-primary border border-outline-variant'
+                            }`}>
+                              {letter}
+                            </div>
+                            <span className="text-xs sm:text-sm font-bold flex-1 select-none leading-relaxed">
+                              {optText}
+                            </span>
+                            {isSelected && (
+                              <CheckCircle2 size={18} className="text-primary shrink-0 animate-in zoom-in duration-200" />
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 );
-              })()}
-              
-              <div className="mt-6 flex items-center justify-between text-[10px] font-black text-on-surface-variant uppercase tracking-widest pl-2">
-                <span className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
-                  Sistem Sinkronisasi Aktif
-                </span>
-                <span className="bg-surface-variant px-4 py-1.5 rounded-full border border-outline-variant">{ans.length} Karakter</span>
-              </div>
+              })}
             </div>
-          );
-          })}
+          )}
+
+          {/* Bagian 2: Soal Uraian / Essay (Jika Ada) */}
+          {answers.length > 0 && (
+            <div className="space-y-6">
+              {assignedMcqs.length > 0 && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-6 pb-3 border-b border-outline-variant/30 gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
+                        Bagian 2: Uraian / Essay
+                      </span>
+                      <span className="text-xs font-black font-outfit text-on-surface">
+                        {answers.length} Soal
+                      </span>
+                    </div>
+                    <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mt-1">
+                      Ketikkan argumentasi jawaban secara mandiri dan sistematis.
+                    </p>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <span className="text-xs font-black font-outfit text-primary">
+                      {answers.filter(a => a.trim() !== '').length} / {answers.length} Terjawab
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {answers.map((ans, idx) => {
+                const isInvalid = invalidQuestionIndices.includes(idx);
+                return (
+                  <div key={idx} id={`question-card-${idx}`} className={`bg-surface premium-shadow backdrop-blur-2xl rounded-2xl md:rounded-[2.5rem] p-5 sm:p-8 md:p-12 border premium-shadow relative overflow-hidden group transition-all ${isInvalid ? 'border-rose-500/60 ring-2 ring-rose-500/20 shadow-rose-500/10' : 'border-outline-variant hover:border-primary/30'}`}>
+                    <div className={`absolute top-0 left-0 w-1.5 h-full transition-all duration-500 ${isInvalid ? 'bg-rose-500' : 'bg-primary/20 group-hover:bg-primary'}`} />
+                    
+                    <div className="flex items-center gap-4 mb-6 md:mb-8">
+                      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center font-black text-base md:text-lg border shadow-lg ${isInvalid ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 shadow-rose-500/20' : 'bg-primary/10 text-primary border-primary/20 shadow-primary/20'}`}>
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <h3 className="text-lg md:text-xl font-black text-on-surface tracking-tight font-outfit uppercase">Soal Essay {idx + 1}</h3>
+                        {isInvalid ? (
+                          <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-1">
+                            <AlertTriangle size={10} /> Jawaban Tidak Valid: Perbaiki Jawaban Anda
+                          </p>
+                        ) : (
+                          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em]">Kategori Pengerjaan Mandiri</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {shuffledQuestions[idx] && (
+                      <div className="mb-6 md:mb-10">
+                        <QuestionCanvas text={shuffledQuestions[idx].text} />
+                      </div>
+                    )}
+
+                    <div className="relative">
+                      <textarea
+                        className="w-full bg-surface-variant border border-outline-variant rounded-2xl md:rounded-[2rem] p-4 sm:p-6 md:p-8 text-sm md:text-lg font-bold text-on-surface outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all resize-none min-h-[220px] md:min-h-[320px] shadow-sm custom-scrollbar"
+                        placeholder="Ketikkan argumentasi jawaban Anda secara sistematis di sini..."
+                        value={ans}
+                        onChange={(e) => handleChange(idx, e.target.value)}
+                        onCopy={(e) => e.preventDefault()}
+                        onPaste={(e) => e.preventDefault()}
+                        autoComplete="off"
+                        spellCheck="false"
+                      />
+                      <div className="absolute top-3 right-4 md:top-4 md:right-8">
+                         <div className="px-2.5 py-0.5 md:px-3 md:py-1 rounded-full bg-primary/10 border border-primary/20">
+                           <span className="text-[8px] md:text-[9px] font-black text-primary uppercase tracking-widest">Essay Mode</span>
+                         </div>
+                      </div>
+                    </div>
+                    
+                    {/* Real-time Checklist */}
+                    {(() => {
+                      const evalResult = evaluateAnswerValidity(ans);
+                      const showChecklist = ans.trim().length > 0;
+                      
+                      if (!showChecklist) {
+                        return (
+                          <p className="mt-3 text-[10px] text-on-surface-variant/60 font-bold uppercase tracking-wider pl-2 italic">
+                            Tulis jawaban untuk melihat verifikasi kriteria kelayakan.
+                          </p>
+                        );
+                      }
+                      
+                      return (
+                        <div className="mt-4 p-4 rounded-2xl bg-surface-variant/40 border border-outline-variant/30 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider">
+                            <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black text-white ${evalResult.lengthOk ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+                              {evalResult.lengthOk ? '✓' : '✗'}
+                            </div>
+                            <span className={evalResult.lengthOk ? 'text-emerald-400' : 'text-rose-400'}>
+                              Min. 20 Karakter ({ans.length}/20)
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider">
+                            <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black text-white ${(!evalResult.hasGarbage && !evalResult.hasRepetitiveChars && !evalResult.hasRepetitiveWords) ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+                              {(!evalResult.hasGarbage && !evalResult.hasRepetitiveChars && !evalResult.hasRepetitiveWords) ? '✓' : '✗'}
+                            </div>
+                            <span className={(!evalResult.hasGarbage && !evalResult.hasRepetitiveChars && !evalResult.hasRepetitiveWords) ? 'text-emerald-400' : 'text-rose-400'}>
+                              Bebas Kata Asal / Spam
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider">
+                            <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black text-white ${(evalResult.minWordsOk && evalResult.minUniqueWordsOk) ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+                              {(evalResult.minWordsOk && evalResult.minUniqueWordsOk) ? '✓' : '✗'}
+                            </div>
+                            <span className={(evalResult.minWordsOk && evalResult.minUniqueWordsOk) ? 'text-emerald-400' : 'text-rose-400'}>
+                              Min. 5 Kata Sah
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    
+                    <div className="mt-6 flex items-center justify-between text-[10px] font-black text-on-surface-variant uppercase tracking-widest pl-2">
+                      <span className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
+                        Sistem Sinkronisasi Aktif
+                      </span>
+                      <span className="bg-surface-variant px-4 py-1.5 rounded-full border border-outline-variant">{ans.length} Karakter</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Bottom Actions */}
           <div className="bg-surface premium-shadow backdrop-blur-2xl p-10 md:p-16 rounded-[3rem] border border-outline-variant flex flex-col items-center text-center relative overflow-hidden">

@@ -308,7 +308,8 @@ export async function GET(req: NextRequest) {
       
       const isPassing = finalScore >= kkm;
       const showRemedialButton = true;
-      const hasQuestions = Array.isArray(config?.remedialQuestions) && config.remedialQuestions.length > 0;
+      const hasQuestions = (Array.isArray(config?.remedialQuestions) && config.remedialQuestions.length > 0) ||
+        (Array.isArray(config?.remedialMcqQuestions) && config.remedialMcqQuestions.length > 0);
       const hasRemedialAvailable = !isPassing && showRemedialButton && hasQuestions && (!deadline || new Date() <= new Date(deadline));
 
       // Calculate sibling held back states

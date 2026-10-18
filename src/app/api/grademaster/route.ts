@@ -510,7 +510,36 @@ export async function POST(req: NextRequest) {
         remedialStatus: s.remedial_status,
         remedialLocation: isReadOnly ? undefined : s.remedial_location,
         remedialPhoto: isReadOnly ? undefined : s.remedial_photo,
-        remedialAnswers: isReadOnly ? undefined : s.remedial_answers,
+        remedialAnswers: isReadOnly ? undefined : (
+          (s.remedial_answers && typeof s.remedial_answers === 'object' && !Array.isArray(s.remedial_answers))
+            ? (s.remedial_answers as any).essay
+            : s.remedial_answers
+        ),
+        remedialMcqAnswers: isReadOnly ? undefined : (
+          (s.remedial_answers && typeof s.remedial_answers === 'object' && !Array.isArray(s.remedial_answers))
+            ? (s.remedial_answers as any).mcq
+            : undefined
+        ),
+        remedialMcqScore: isReadOnly ? undefined : (
+          (s.remedial_answers && typeof s.remedial_answers === 'object' && !Array.isArray(s.remedial_answers))
+            ? (s.remedial_answers as any).mcqScore
+            : undefined
+        ),
+        remedialMcqCorrect: isReadOnly ? undefined : (
+          (s.remedial_answers && typeof s.remedial_answers === 'object' && !Array.isArray(s.remedial_answers))
+            ? (s.remedial_answers as any).mcqCorrect
+            : undefined
+        ),
+        remedialMcqTotal: isReadOnly ? undefined : (
+          (s.remedial_answers && typeof s.remedial_answers === 'object' && !Array.isArray(s.remedial_answers))
+            ? (s.remedial_answers as any).mcqTotal
+            : undefined
+        ),
+        remedialMcqDetails: isReadOnly ? undefined : (
+          (s.remedial_answers && typeof s.remedial_answers === 'object' && !Array.isArray(s.remedial_answers))
+            ? (s.remedial_answers as any).mcqDetails
+            : undefined
+        ),
         remedialNote: isReadOnly ? undefined : s.remedial_note,
         originalScore: (s.original_score !== null && s.original_score !== undefined) ? Number(s.original_score) : undefined,
         remedialScore: (s.remedial_score !== null && s.remedial_score !== undefined) ? Number(s.remedial_score) : undefined,
@@ -532,13 +561,14 @@ export async function POST(req: NextRequest) {
     const questionDifficulties = generateQuestionDifficulties(gradedStudents, session.answer_key || []);
 
     // Menampilkan tombol remedial jika guru sudah mengatur soal remedial
-    let parsedConfig: { remedialQuestions?: string[]; [key: string]: unknown } | null = null;
+    let parsedConfig: { remedialQuestions?: string[]; remedialMcqQuestions?: unknown[]; [key: string]: unknown } | null = null;
     if (typeof session.scoring_config === 'string') {
       try { parsedConfig = JSON.parse(session.scoring_config); } catch {}
     } else if (typeof session.scoring_config === 'object' && session.scoring_config !== null) {
       parsedConfig = session.scoring_config;
     }
-    const hasQuestions = Array.isArray(parsedConfig?.remedialQuestions) && parsedConfig.remedialQuestions.length > 0;
+    const hasQuestions = (Array.isArray(parsedConfig?.remedialQuestions) && parsedConfig.remedialQuestions.length > 0) ||
+      (Array.isArray(parsedConfig?.remedialMcqQuestions) && parsedConfig.remedialMcqQuestions.length > 0);
     const showRemedialButton = hasQuestions;
 
     return NextResponse.json({

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { 
   Clock, RotateCcw, X, Save, User
 } from 'lucide-react';
-import { GradedStudent, ScoringConfig, SessionMeta, isImageUrl } from '@/lib/grademaster/types';
+import { GradedStudent, ScoringConfig, SessionMeta, RemedialMcqQuestion, isImageUrl } from '@/lib/grademaster/types';
 import { useGradeMaster } from '@/context/GradeMasterContext';
 
 interface ForensicEvent {
@@ -36,7 +36,16 @@ interface RemedialDashboardLayerProps {
   schoolLevel?: string;
   semester?: string;
   onBack: () => void;
-  onUpdateRemedial?: (questions: string[], keys: string[], timer: number, deadline?: string) => void;
+  onUpdateRemedial?: (
+    questions: string[],
+    keys: string[],
+    timer: number,
+    deadline?: string,
+    mcqs?: RemedialMcqQuestion[],
+    mcqQuota?: number,
+    pgWeight?: number,
+    essayWeight?: number
+  ) => void;
   remedialQuestionsInput?: string;
   onRemedialInputChange?: (v: string) => void;
   remedialAnswerKeysInput?: string;
@@ -736,7 +745,7 @@ export default function RemedialDashboardLayer({
                            >
                               {extendingTimeStudentId === student.id ? <Clock size={12} className="animate-spin" /> : <Clock size={12} />}
                               <span className="text-[9px] font-black uppercase tracking-widest leading-none">
-                                {extendingTimeStudentId === student.id ? "Menambahkan Waktu..." : "Tambah Waktu"}
+                                {extendingTimeStudentId === student.id ? "Menambah waktu..." : "Tambah Waktu"}
                               </span>
                            </button>
                          )}
@@ -771,7 +780,7 @@ export default function RemedialDashboardLayer({
                          >
                             {resettingStudentId === student.id ? <Clock size={12} className="animate-spin" /> : <RotateCcw size={12} strokeWidth={3} />}
                             <span className="text-[9px] font-black uppercase tracking-widest leading-none">
-                              {resettingStudentId === student.id ? "Mereset..." : "Set Ulang"}
+                              {resettingStudentId === student.id ? "Reset remedial..." : "Set Ulang"}
                             </span>
                          </button>
                       </div>
@@ -1034,7 +1043,7 @@ export default function RemedialDashboardLayer({
                                          disabled={!isAdmin || isSubmitting || !reviewScore || reviewingStudentId === student.id}
                                          className="flex-1 py-3 bg-surface-bright text-primary text-[10px] font-black uppercase tracking-widest rounded-2xl disabled:opacity-30 border border-outline-variant active:scale-95 transition-transform disabled:cursor-not-allowed"
                                        >
-                                         {reviewingStudentId === student.id ? "Mengevaluasi..." : "Update"}
+                                         {reviewingStudentId === student.id ? "Menyimpan review..." : "Update"}
                                        </button>
                                        {student.teacherReviewed && (
                                          <button 
@@ -1042,7 +1051,7 @@ export default function RemedialDashboardLayer({
                                            disabled={!isAdmin || isSubmitting || finalizingStudentId === student.id}
                                            className="flex-1 py-3 bg-tertiary text-on-tertiary text-[10px] font-black uppercase tracking-widest rounded-2xl disabled:opacity-30 active:scale-95 transition-transform shadow-[0_0_20px_rgba(155,255,206,0.15)] disabled:cursor-not-allowed"
                                          >
-                                           {finalizingStudentId === student.id ? "Memfinalisasi..." : "Finalisasi"}
+                                           {finalizingStudentId === student.id ? "Finalisasi nilai..." : "Finalisasi"}
                                          </button>
                                        )}
                                     </div>

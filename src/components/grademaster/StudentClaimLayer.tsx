@@ -180,7 +180,8 @@ export default function StudentClaimLayer({
         <button 
           type="button"
           onClick={(e) => { e.preventDefault(); onLogout(); }}
-          className="flex items-center gap-2 px-4 py-2 text-slate-500 hover:text-slate-900 hover:bg-slate-55 rounded-xl transition-all text-xs font-bold"
+          disabled={isSubmitting}
+          className="flex items-center gap-2 px-4 py-2 text-slate-500 hover:text-slate-900 hover:bg-slate-55 rounded-xl transition-all text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <LogOut size={16} />
           <span>Keluar</span>

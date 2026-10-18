@@ -37,6 +37,7 @@ export default function StudentAccountsLayer({
   const [promoteToYear, setPromoteToYear] = useState('');
   const [promoteToClassSelect, setPromoteToClassSelect] = useState('');
   const [isPromoting, setIsPromoting] = useState(false);
+  const [lastPromotedInfo, setLastPromotedInfo] = useState<{ fromClass: string; toClass: string; toYear: string } | null>(null);
   const [hasBehaviors, setHasBehaviors] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetScope, setResetScope] = useState<'class' | 'all'>('class');
@@ -90,10 +91,15 @@ export default function StudentAccountsLayer({
       });
       const data = await res.json();
       if (res.ok) {
-        setToast({ message: data.message || `Berhasil menaikkan siswa ke Kelas ${promoteToClass} 🎉`, type: 'success' });
-        setShowPromoteModal(false);
         const promotedClass = promoteToClass;
         const promotedYear = promoteToYear;
+        const fromCls = selectedClass;
+        setLastPromotedInfo({ fromClass: fromCls, toClass: promotedClass, toYear: promotedYear });
+        setToast({ 
+          message: `Siswa telah dipindahkan ke ${promotedClass} (${promotedYear}). Ubah filter tahun ajaran untuk melihatnya.`, 
+          type: 'success' 
+        });
+        setShowPromoteModal(false);
         setPromoteToClass('');
         if (onPromoteSuccess) {
           onPromoteSuccess(promotedClass, promotedYear);
@@ -538,10 +544,24 @@ export default function StudentAccountsLayer({
             </div>
           ))
         ) : selectedClass ? (
-          <div className="py-20 text-center bg-surface border border-dashed border-outline-variant rounded-2xl">
-            <Users size={48} className="mx-auto text-on-surface-variant/40 mb-4 stroke-1" />
-            <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider">Belum ada akun untuk kelas ini</p>
-            <p className="text-xs text-on-surface-variant/60 mt-1">Klik tombol &quot;Generate&quot; di atas untuk membuat akun otomatis secara instan.</p>
+          <div className="py-20 text-center bg-surface border border-dashed border-outline-variant rounded-2xl px-4">
+            {lastPromotedInfo && lastPromotedInfo.fromClass === selectedClass ? (
+              <div className="max-w-md mx-auto">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+                  <TrendingUp size={24} />
+                </div>
+                <p className="text-sm font-bold text-on-surface uppercase tracking-wider">Kenaikan Kelas Berhasil Diproses</p>
+                <p className="text-xs text-on-surface-variant mt-2 leading-relaxed">
+                  Siswa kelas <strong className="text-primary">{selectedClass}</strong> telah dipindahkan ke <strong className="text-primary">{lastPromotedInfo.toClass}</strong> ({lastPromotedInfo.toYear}). Ubah filter kelas atau tahun ajaran di atas untuk melihat data siswa.
+                </p>
+              </div>
+            ) : (
+              <>
+                <Users size={48} className="mx-auto text-on-surface-variant/40 mb-4 stroke-1" />
+                <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider">Belum ada akun untuk kelas ini</p>
+                <p className="text-xs text-on-surface-variant/60 mt-1">Klik tombol &quot;Generate&quot; di atas untuk membuat akun otomatis secara instan.</p>
+              </>
+            )}
           </div>
         ) : (
           <div className="py-20 text-center bg-surface border border-dashed border-outline-variant rounded-2xl">
@@ -567,7 +587,14 @@ export default function StudentAccountsLayer({
 
       {/* Modal Kenaikan Kelas */}
       {showPromoteModal && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+        <div 
+          className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300"
+          onClick={(e) => {
+            if (!isPromoting && e.target === e.currentTarget) {
+              setShowPromoteModal(false);
+            }
+          }}
+        >
           <div className="bg-surface border border-outline-variant rounded-[2rem] p-6 max-w-md w-full relative shadow-2xl animate-in zoom-in-95 duration-300">
             <h3 className="text-lg font-bold text-on-surface mb-2 flex items-center gap-2 font-outfit">
               <TrendingUp className="text-indigo-600" size={20} /> Kenaikan Kelas Siswa
@@ -659,7 +686,12 @@ export default function StudentAccountsLayer({
                 type="button"
                 className="flex-1 py-3 bg-primary hover:bg-primary-dim disabled:opacity-50 rounded-xl text-xs font-bold uppercase tracking-wider text-white transition-all active:scale-[0.97] flex items-center justify-center gap-1.5 min-h-[44px]"
               >
-                {isPromoting ? <Loader2 size={14} className="animate-spin" /> : "Konfirmasi Naik"}
+                {isPromoting ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Memindahkan...</span>
+                  </>
+                ) : "Konfirmasi Naik"}
               </button>
             </div>
           </div>

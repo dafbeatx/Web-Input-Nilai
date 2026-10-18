@@ -80,7 +80,8 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
   const [isDownloadingClassBehaviorPdf, setIsDownloadingClassBehaviorPdf] = useState(false);
   const [downloadingAcademicId, setDownloadingAcademicId] = useState<string | null>(null);
   const [downloadingBehaviorId, setDownloadingBehaviorId] = useState<string | null>(null);
-  const isAnyActionActive = isLoading || isSubmitting || isDownloadingClassAcademicPdf || isDownloadingClassBehaviorPdf || downloadingAcademicId !== null || downloadingBehaviorId !== null;
+  const [deletingStudentKey, setDeletingStudentKey] = useState<string | null>(null);
+  const isAnyActionActive = isLoading || isSubmitting || isDownloadingClassAcademicPdf || isDownloadingClassBehaviorPdf || downloadingAcademicId !== null || downloadingBehaviorId !== null || deletingStudentKey !== null;
 
   // Signature Upload Modal State
   const [signatureModal, setSignatureModal] = useState<{
@@ -452,6 +453,8 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
 
   const handleDeleteStudent = async (name: string, className: string) => {
     if (!window.confirm(`Hapus ${name} dari sistem?\nOpsi ini akan menyembunyikan nilai dari dashboard (Soft Delete).`)) return;
+    const studentKey = `${name}_${className}`;
+    setDeletingStudentKey(studentKey);
     setIsSubmitting(true);
     try {
       const res = await fetch('/api/grademaster/data-center/students', {
@@ -467,6 +470,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       setToast({ message: err.message, type: 'error' });
     } finally {
       setIsSubmitting(false);
+      setDeletingStudentKey(null);
     }
   };
 
@@ -1454,7 +1458,7 @@ const matchesYear = s.academicYear === academicYear;
                              className="p-2 bg-error/10 text-error hover:bg-error hover:text-white rounded-lg transition-colors active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
                              title="Hapus Siswa (Keluar/Pindah)"
                            >
-                             <Trash2 size={18} />
+                             {deletingStudentKey === `${s.name}_${s.className}` ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                            </button>
                          </div>
                        </td>

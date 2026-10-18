@@ -152,6 +152,30 @@ export async function GET(req: NextRequest) {
       failedReason = "Ujian remedial ditutup karena batas waktu habis tanpa ada jawaban esai yang cukup valid/memadai.";
     }
 
+    const remAns = student.remedial_answers as {
+      essay?: string[];
+      mcq?: string[];
+      mcqScore?: number;
+      mcqCorrect?: number;
+      mcqTotal?: number;
+      mcqDetails?: unknown[];
+    } | string[] | null | undefined;
+    const isObj = Boolean(remAns && typeof remAns === 'object' && !Array.isArray(remAns));
+    const objAns = isObj ? (remAns as {
+      essay?: string[];
+      mcq?: string[];
+      mcqScore?: number;
+      mcqCorrect?: number;
+      mcqTotal?: number;
+      mcqDetails?: unknown[];
+    }) : null;
+    const essayAnswers = objAns ? (objAns.essay || []) : (Array.isArray(remAns) ? remAns : []);
+    const mcqAnswers = objAns ? (objAns.mcq || []) : [];
+    const mcqScore = objAns?.mcqScore ?? null;
+    const mcqCorrect = objAns?.mcqCorrect ?? null;
+    const mcqTotal = objAns?.mcqTotal ?? null;
+    const mcqDetails = objAns ? (objAns.mcqDetails || []) : [];
+
     const response = NextResponse.json({ 
       status: currentStatus,
       finalScore: student.final_score,
@@ -162,7 +186,12 @@ export async function GET(req: NextRequest) {
       violationCount: student.violation_count || 0,
       isBlocked: student.is_blocked || false,
       remedialExtendedTime: student.remedial_extended_time || 0,
-      remedialAnswers: student.remedial_answers || [],
+      remedialAnswers: essayAnswers,
+      remedialMcqAnswers: mcqAnswers,
+      remedialMcqScore: mcqScore,
+      remedialMcqCorrect: mcqCorrect,
+      remedialMcqTotal: mcqTotal,
+      remedialMcqDetails: mcqDetails,
       essayAutoDetails: student.essay_auto_details || [],
       remedialQuestions,
       remedialAnswerKeys,
@@ -189,6 +218,7 @@ interface RemedialRequestBody {
   status?: string;
   location?: string;
   answers?: string[];
+  mcqAnswers?: string[];
   note?: string;
   elapsedTimeMs?: number;
   clientCheatingFlags?: string[];
@@ -217,7 +247,7 @@ export async function POST(req: NextRequest) {
 
     console.log('Incoming remedial request:', JSON.stringify(body, null, 2));
 
-    const { sessionId, studentId, studentName, status, location, answers, note, elapsedTimeMs, clientCheatingFlags, photo, examMode, cameraStatus, riskLevel, isPenaltyApplied } = body;
+    const { sessionId, studentId, studentName, status, location, answers, mcqAnswers, note, elapsedTimeMs, clientCheatingFlags, photo, examMode, cameraStatus, riskLevel, isPenaltyApplied } = body;
     // status: 'STARTED' | 'COMPLETED' | 'CHEATED' | 'TIMEOUT'
 
     if (!sessionId || (!studentName && !studentId) || !status) {
@@ -253,7 +283,8 @@ export async function POST(req: NextRequest) {
        examMode,
        cameraStatus,
        riskLevel,
-       isPenaltyApplied || false
+       isPenaltyApplied || false,
+       mcqAnswers || []
      )) as Record<string, unknown>;
 
     if (status === 'INITIATED') {

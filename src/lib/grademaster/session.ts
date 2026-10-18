@@ -1,5 +1,7 @@
 const STORAGE_KEY = 'gm_remedial_session';
 
+import { AssignedMcqQuestion } from './types';
+
 export interface RemedialSession {
   sessionId: string;
   studentName: string;
@@ -27,6 +29,8 @@ export interface RemedialSession {
   isPenaltyApplied?: boolean;
   semester?: string;
   remedialEssayCount?: number;
+  remedialMcqQuestions?: AssignedMcqQuestion[];
+  mcqAnswers?: string[];
 }
 
 export function saveRemedialSession(data: RemedialSession): void {

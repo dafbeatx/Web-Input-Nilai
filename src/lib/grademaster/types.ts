@@ -1,3 +1,24 @@
+export interface RemedialMcqQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: string;
+}
+
+export interface AssignedMcqQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  originalIndex: number;
+}
+
+export interface RemedialMcqDetail {
+  question: string;
+  studentAnswer: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+}
+
 export interface ScoringConfig {
   pgWeight: number;
   essayWeight: number;
@@ -7,6 +28,10 @@ export interface ScoringConfig {
   remedialAnswerKeys?: string[];
   remedialDeadline?: string;
   aiDynamicQuestions?: boolean;
+  remedialMcqQuestions?: RemedialMcqQuestion[];
+  remedialMcqQuota?: number;
+  remedialPgWeight?: number;
+  remedialEssayWeight?: number;
 }
 
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
@@ -103,6 +128,11 @@ export interface GradedStudent {
   remedialExtendedTime?: number;
   examMode?: 'STRICT' | 'LIMITED';
   cameraStatus?: string;
+  remedialMcqAnswers?: string[];
+  remedialMcqScore?: number;
+  remedialMcqCorrect?: number;
+  remedialMcqTotal?: number;
+  remedialMcqDetails?: RemedialMcqDetail[];
 }
 
 export interface SessionData {

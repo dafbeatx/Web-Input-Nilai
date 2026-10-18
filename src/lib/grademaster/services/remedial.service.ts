@@ -3,6 +3,99 @@ import { assessClientRisk, assessServerRisk, mergeRiskAssessments } from './risk
 import { calculateEssayScore } from '../scoring';
 import { generateAttemptToken, verifyAttemptToken } from '../token';
 import { generateDynamicQuestions } from './question-generator.service';
+import { RemedialMcqQuestion, AssignedMcqQuestion } from '../types';
+
+export function sampleAndShuffleMcqForStudent(
+  mcqPool: RemedialMcqQuestion[],
+  quota?: number
+): { assignedMcqs: AssignedMcqQuestion[]; mcqAnswerKeys: string[] } {
+  if (!mcqPool || mcqPool.length === 0) {
+    return { assignedMcqs: [], mcqAnswerKeys: [] };
+  }
+
+  const targetCount = (quota && quota > 0) 
+    ? Math.min(quota, mcqPool.length) 
+    : Math.min(10, mcqPool.length);
+
+  // Fisher-Yates shuffle pool indices
+  const poolIndices = mcqPool.map((_, i) => i);
+  for (let i = poolIndices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [poolIndices[i], poolIndices[j]] = [poolIndices[j], poolIndices[i]];
+  }
+
+  const selectedIndices = poolIndices.slice(0, targetCount);
+  const assignedMcqs: AssignedMcqQuestion[] = [];
+  const mcqAnswerKeys: string[] = [];
+  const OPTION_LETTERS = ['A', 'B', 'C', 'D', 'E'];
+
+  for (const idx of selectedIndices) {
+    const originalQ = mcqPool[idx];
+    const originalKey = (originalQ.correctAnswer || 'A').toUpperCase().trim();
+    const originalKeyIdx = OPTION_LETTERS.indexOf(originalKey) !== -1 
+      ? OPTION_LETTERS.indexOf(originalKey) 
+      : 0;
+
+    // Shuffle options for this question
+    const optionIndices = originalQ.options.map((_, oi) => oi);
+    for (let oi = optionIndices.length - 1; oi > 0; oi--) {
+      const oj = Math.floor(Math.random() * (oi + 1));
+      [optionIndices[oi], optionIndices[oj]] = [optionIndices[oj], optionIndices[oi]];
+    }
+
+    const shuffledOptions = optionIndices.map(oi => originalQ.options[oi]);
+    const newCorrectIdx = optionIndices.indexOf(originalKeyIdx);
+    const newCorrectLetter = OPTION_LETTERS[newCorrectIdx] || 'A';
+
+    assignedMcqs.push({
+      id: originalQ.id || `mcq-${idx + 1}`,
+      question: originalQ.question,
+      options: shuffledOptions,
+      originalIndex: idx
+    });
+    mcqAnswerKeys.push(newCorrectLetter);
+  }
+
+  return { assignedMcqs, mcqAnswerKeys };
+}
+
+export function extractEssayQuestions(data: unknown): string[] {
+  if (Array.isArray(data)) return data as string[];
+  if (data && typeof data === 'object' && 'essay' in data && Array.isArray((data as any).essay)) {
+    return (data as any).essay as string[];
+  }
+  return [];
+}
+
+export function extractMcqQuestions(data: unknown): AssignedMcqQuestion[] {
+  if (data && typeof data === 'object' && 'mcqs' in data && Array.isArray((data as any).mcqs)) {
+    return (data as any).mcqs as AssignedMcqQuestion[];
+  }
+  return [];
+}
+
+export function extractEssayKeys(data: unknown): string[] {
+  if (Array.isArray(data)) return data as string[];
+  if (data && typeof data === 'object' && 'essay' in data && Array.isArray((data as any).essay)) {
+    return (data as any).essay as string[];
+  }
+  return [];
+}
+
+export function extractMcqKeys(data: unknown): string[] {
+  if (data && typeof data === 'object' && 'mcqKeys' in data && Array.isArray((data as any).mcqKeys)) {
+    return (data as any).mcqKeys as string[];
+  }
+  return [];
+}
+
+export function extractEssayAnswers(data: unknown): string[] {
+  if (Array.isArray(data)) return data as string[];
+  if (data && typeof data === 'object' && 'essay' in data && Array.isArray((data as any).essay)) {
+    return (data as any).essay as string[];
+  }
+  return [];
+}
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   NONE: ['INITIATED'],
@@ -72,7 +165,8 @@ export async function submitRemedial(
   examMode?: string,
   cameraStatus?: string,
   riskLevel?: string,
-  isPenaltyApplied: boolean = false
+  isPenaltyApplied: boolean = false,
+  mcqAnswers: string[] = []
 ) {
   const { data: student, error: fetchErr } = await supabase
     .from('gm_students')
@@ -110,19 +204,24 @@ export async function submitRemedial(
         .limit(1)
         .single();
 
+      const recoveredEssay = extractEssayQuestions(lastAttempt?.remedial_questions);
+      const recoveredMcqs = extractMcqQuestions(lastAttempt?.remedial_questions);
       return {
         ...student,
         remedial_status: student.remedial_status,
         newFinalScore: student.final_score,
         subject: session.subject,
         class_name: session.class_name,
-        remedialQuestions: lastAttempt?.remedial_questions || session.scoring_config?.remedialQuestions || [],
+        remedialQuestions: recoveredEssay.length > 0 ? recoveredEssay : (session.scoring_config?.remedialQuestions || []),
+        remedialMcqQuestions: recoveredMcqs,
       };
     }
 
     if (student.remedial_status === 'ACTIVE') {
       const activeAttempt = await findActiveAttempt(sessionId, studentId, studentName);
       console.log(`[Remedial] Idempotent ACTIVE (Recovery): student=${studentName}, reusing attempt=${activeAttempt.id}`);
+      const recoveredEssay = extractEssayQuestions(activeAttempt.remedial_questions);
+      const recoveredMcqs = extractMcqQuestions(activeAttempt.remedial_questions);
       return {
         ...student,
         remedial_status: 'ACTIVE',
@@ -133,7 +232,8 @@ export async function submitRemedial(
         attempt_token: activeAttempt.attempt_token,
         subject: session.subject,
         class_name: session.class_name,
-        remedialQuestions: activeAttempt.remedial_questions || session.scoring_config?.remedialQuestions || [],
+        remedialQuestions: recoveredEssay.length > 0 ? recoveredEssay : (session.scoring_config?.remedialQuestions || []),
+        remedialMcqQuestions: recoveredMcqs,
       };
     }
 
@@ -151,6 +251,8 @@ export async function submitRemedial(
         
       if (existingAttempt) {
         console.log(`[Remedial] Idempotent INITIATED: student=${studentName}, reusing attempt=${existingAttempt.id}`);
+        const recoveredEssay = extractEssayQuestions(existingAttempt.remedial_questions);
+        const recoveredMcqs = extractMcqQuestions(existingAttempt.remedial_questions);
         return {
           ...student,
           remedial_status: 'INITIATED',
@@ -161,7 +263,8 @@ export async function submitRemedial(
           attempt_token: existingAttempt.attempt_token,
           subject: session.subject,
           class_name: session.class_name,
-          remedialQuestions: existingAttempt.remedial_questions || session.scoring_config?.remedialQuestions || [],
+          remedialQuestions: recoveredEssay.length > 0 ? recoveredEssay : (session.scoring_config?.remedialQuestions || []),
+          remedialMcqQuestions: recoveredMcqs,
         };
       }
     }
@@ -200,10 +303,23 @@ export async function submitRemedial(
       answerKeys = generated.answerKeys;
     }
 
-    if (questions.length === 0) {
+    const mcqPool: RemedialMcqQuestion[] = session.scoring_config?.remedialMcqQuestions || [];
+    const mcqQuota = session.scoring_config?.remedialMcqQuota || 10;
+    const { assignedMcqs, mcqAnswerKeys } = sampleAndShuffleMcqForStudent(mcqPool, mcqQuota);
+
+    if (questions.length === 0 && assignedMcqs.length === 0) {
       console.error(`[Remedial Error] ${studentName} (session: ${sessionId}) - Gagal INITIATED: Soal remedial kosong di Database.`);
       throw new Error('INVALID_SESSION_DATA: Guru belum mengatur soal remedial untuk sesi ini.');
     }
+
+    const questionsPayload = {
+      essay: questions,
+      mcqs: assignedMcqs,
+    };
+    const answerKeysPayload = {
+      essay: answerKeys,
+      mcqKeys: mcqAnswerKeys,
+    };
 
     const attemptToken = generateAttemptToken(sessionId, studentId);
     const attemptNumber = (student.remedial_attempts || 0) + 1;
@@ -221,8 +337,8 @@ export async function submitRemedial(
         p_location: location,
         p_photo: photo || null,
         p_original_score: originalScore,
-        p_remedial_questions: isAiDynamic ? questions : null,
-        p_remedial_answer_keys: isAiDynamic ? answerKeys : null,
+        p_remedial_questions: questionsPayload,
+        p_remedial_answer_keys: answerKeysPayload,
       });
 
       if (error) throw new Error(`RPC start_remedial_attempt: ${error.message}`);
@@ -230,7 +346,7 @@ export async function submitRemedial(
       return data as string;
     }, `Membuat attempt remedial untuk ${studentName} (session: ${sessionId})`);
 
-    console.log(`[Remedial] INITIATED: student=${studentName}, attemptId=${attemptId}, session=${sessionId}, questionCount=${questions.length}`);
+    console.log(`[Remedial] INITIATED: student=${studentName}, attemptId=${attemptId}, session=${sessionId}, essayCount=${questions.length}, mcqCount=${assignedMcqs.length}`);
 
     return {
       ...student,
@@ -244,6 +360,7 @@ export async function submitRemedial(
       subject: session.subject,
       class_name: session.class_name,
       remedialQuestions: questions,
+      remedialMcqQuestions: assignedMcqs,
     };
   }
 
@@ -327,10 +444,10 @@ export async function submitRemedial(
 
     const serverRisk = assessServerRisk(
       answers,
-      (allStudents || []).map((s: { id: string; name: string; remedial_answers?: string[] }) => ({
+      (allStudents || []).map((s: { id: string; name: string; remedial_answers?: unknown }) => ({
         id: s.id,
         name: s.name,
-        remedialAnswers: s.remedial_answers || [],
+        remedialAnswers: extractEssayAnswers(s.remedial_answers),
       })),
       studentId,
       backendElapsedMs,
@@ -340,6 +457,15 @@ export async function submitRemedial(
     const combinedRisk = mergeRiskAssessments(clientRisk, serverRisk);
     const systemFlagged = combinedRisk.shouldAutoFlag;
     const explicitlyBlocked = status === 'CHEATED';
+
+    const questions: string[] = extractEssayQuestions(attempt.remedial_questions).length > 0
+      ? extractEssayQuestions(attempt.remedial_questions)
+      : (session.scoring_config?.remedialQuestions || []);
+    const essayKeys: string[] = extractEssayKeys(attempt.remedial_answer_keys).length > 0
+      ? extractEssayKeys(attempt.remedial_answer_keys)
+      : (session.scoring_config?.remedialAnswerKeys || []);
+    const mcqKeys: string[] = extractMcqKeys(attempt.remedial_answer_keys);
+    const mcqQuestions: AssignedMcqQuestion[] = extractMcqQuestions(attempt.remedial_questions);
 
     // Advanced Effort Validation (Anti-Exploit)
     const minWords = 5;
@@ -360,8 +486,14 @@ export async function submitRemedial(
       return words.length >= minWords && uniqueWords.size >= minUniqueWords;
     });
 
-    const hasEnoughEffort = validAnswers.length >= (answers.length / 2);
-    const hasAnyValidAnswer = validAnswers.length >= 1;
+    const hasEnoughEssayEffort = (questions.length === 0) ? true : (validAnswers.length >= (questions.length / 2));
+    const studentMcqAnswers = mcqAnswers || [];
+    const hasEnoughMcqEffort = (mcqKeys.length === 0) ? true : (studentMcqAnswers.filter(a => !!a && a.trim() !== '').length >= (mcqKeys.length / 2));
+    const hasEnoughEffort = hasEnoughEssayEffort && hasEnoughMcqEffort;
+
+    const hasAnyValidAnswer = (questions.length === 0) 
+      ? (studentMcqAnswers.filter(a => !!a && a.trim() !== '').length > 0)
+      : (validAnswers.length >= 1);
     const totalAnswersLength = answers.map(a => (a || '').trim()).join('').length;
     const isTooGarbage = answers.some(a => {
       const text = (a || '').trim().toLowerCase();
@@ -376,12 +508,43 @@ export async function submitRemedial(
     const maxDurationMs = ((session.remedial_timer || 15) * 60 * 1000) + (2 * 60 * 1000); // Waktu ujian + toleransi 2 menit
     const isTooLate = backendElapsedMs > maxDurationMs;
 
-    // Essay scoring (server-side only) - Use attempt-specific dynamic keys if available
-    const questions: string[] = attempt.remedial_questions || session.scoring_config?.remedialQuestions || [];
-    const essayResult = await calculateEssayScore(answers, answerKeys, questions);
+    // Essay scoring (server-side only)
+    const essayResult = questions.length > 0
+      ? await calculateEssayScore(answers, essayKeys, questions)
+      : { score: 0, details: [] };
+
+    // MCQ Scoring
+    let mcqCorrect = 0;
+    let mcqScore = 0;
+    const mcqDetails: { question: string; studentAnswer: string; correctAnswer: string; isCorrect: boolean }[] = [];
+
+    if (mcqKeys.length > 0) {
+      for (let i = 0; i < mcqKeys.length; i++) {
+        const studentAns = (studentMcqAnswers[i] || '').trim().toUpperCase();
+        const correctAns = (mcqKeys[i] || '').trim().toUpperCase();
+        const isCorrect = Boolean(studentAns && studentAns === correctAns);
+        if (isCorrect) mcqCorrect++;
+        mcqDetails.push({
+          question: mcqQuestions[i]?.question || `Soal ${i + 1}`,
+          studentAnswer: studentAns || '-',
+          correctAnswer: correctAns,
+          isCorrect
+        });
+      }
+      mcqScore = Math.round((mcqCorrect / mcqKeys.length) * 100);
+    }
+
+    const answersData = {
+      essay: answers,
+      mcq: studentMcqAnswers,
+      mcqScore,
+      mcqCorrect,
+      mcqTotal: mcqKeys.length,
+      mcqDetails
+    };
 
     // Update attempt
-    attemptUpdate.answers = answers;
+    attemptUpdate.answers = answersData;
     attemptUpdate.note = note;
     attemptUpdate.risk_score = (attempt.risk_score || 0) + combinedRisk.totalScore;
     attemptUpdate.risk_level = combinedRisk.level;
@@ -401,19 +564,17 @@ export async function submitRemedial(
     attemptUpdate.essay_score_final = essayResult.score;
 
     // Update student cache
-    studentUpdate.remedial_answers = answers;
+    studentUpdate.remedial_answers = answersData;
     studentUpdate.remedial_note = note;
     studentUpdate.is_cheated = systemFlagged || explicitlyBlocked || (isTooFast && status === 'COMPLETED'); 
 
     // Map finalFlags to human-readable Indonesian descriptions
     const mappedFlags: string[] = [];
     finalFlags.forEach((f, idx) => {
-      // If it's a client flag, try using the corresponding raw clientCheatingFlags string
       if (idx < clientCheatingFlags.length) {
         const rawFlag = clientCheatingFlags[idx];
         if (rawFlag) {
           const lowerFlag = rawFlag.toLowerCase();
-          // Skip system logs/health checks
           if (lowerFlag.includes('health_check') || lowerFlag.includes('recovery') || lowerFlag.includes('server')) {
             return;
           }
@@ -422,13 +583,12 @@ export async function submitRemedial(
         }
       }
 
-      // Map server-side / other event codes
       switch (f.event) {
         case 'FAST_COMPLETION':
           mappedFlags.push('Menyelesaikan ujian terlalu cepat (di bawah 5 menit)');
           break;
         case 'LOW_EFFORT':
-          mappedFlags.push('Jawaban esai terlalu pendek / terindikasi asal-asalan');
+          mappedFlags.push('Jawaban ujian terlalu sedikit atau terindikasi asal-asalan');
           break;
         case 'IDENTICAL_ESSAY':
           mappedFlags.push('Deteksi jawaban esai identik dengan peserta lain (plagiarisme)');
@@ -443,7 +603,7 @@ export async function submitRemedial(
           mappedFlags.push('Terdeteksi lebih dari satu orang di kamera');
           break;
         case 'TAB_SWITCH':
-          mappedFlags.push('Meninggalkan halaman ujian / pindah tab');
+          mappedFlags.push('Meninggalkan halaman ujian atau pindah tab');
           break;
         case 'BACK_PRESS':
           mappedFlags.push('Mencoba menekan tombol kembali');
@@ -458,7 +618,7 @@ export async function submitRemedial(
           mappedFlags.push('Mencoba mencetak halaman');
           break;
         case 'OVERLAY_INDICATION':
-          mappedFlags.push('Indikasi menggunakan Layer/Overlay tambahan');
+          mappedFlags.push('Indikasi menggunakan Layer atau Overlay tambahan');
           break;
         case 'UNUSUAL_ACTIVITY':
           mappedFlags.push('Aktivitas tidak biasa terdeteksi');
@@ -467,7 +627,6 @@ export async function submitRemedial(
           mappedFlags.push('Mode Picture-in-Picture aktif');
           break;
         case 'SYSTEM_EVENT':
-          // skip
           break;
         default:
           if (f.event && f.event !== 'UNKNOWN') {
@@ -488,11 +647,23 @@ export async function submitRemedial(
     studentUpdate.essay_score_final = essayResult.score;
     studentUpdate.essay_auto_details = essayResult.details;
 
+    const computeRawScore = () => {
+      const rawEssay = questions.length > 0 ? essayResult.score : 0;
+      if (mcqKeys.length > 0 && questions.length > 0) {
+        const pgW = session.scoring_config?.remedialPgWeight ?? 0.5;
+        const essayW = session.scoring_config?.remedialEssayWeight ?? (1 - pgW);
+        return Math.round((mcqScore * pgW) + (rawEssay * essayW));
+      } else if (mcqKeys.length > 0) {
+        return mcqScore;
+      } else {
+        return rawEssay;
+      }
+    };
+
     // Jika melebihi waktu maksimum, otomatis timeout/gagal
     if (isTooLate && status !== 'CHEATED') {
       throw new Error("Score calculation timed out");
     } else if (explicitlyBlocked) {
-      // Manual/Automatic lockout triggered (e.g. 3 strikes)
       attemptUpdate.status = 'CHEATED';
       studentUpdate.remedial_status = 'CHEATED';
       studentUpdate.remedial_score = 0;
@@ -501,10 +672,7 @@ export async function submitRemedial(
       studentUpdate.essay_score_final = 0;
       studentUpdate.teacher_reviewed = false;
     } else if (status === 'COMPLETED') {
-      // Normal submission
-      
       if (!hasEnoughEffort || isTooFast) {
-        // EXPLOIT PREVENTION: Garbage answers or too fast
         studentUpdate.remedial_score = 0;
         studentUpdate.final_score = 0;
         studentUpdate.final_score_locked = 0;
@@ -512,14 +680,12 @@ export async function submitRemedial(
         attemptUpdate.status = 'FAILED_EFFORT';
         studentUpdate.teacher_reviewed = true;
       } else {
-        // VALID SUBMISSION — Always accept, score capped at KKM ceiling
-        const rawScore = essayResult.score;
+        const calculatedRaw = computeRawScore();
         const penaltyAmount = isPenaltyApplied ? 15 : 0;
         const kkmScore = session.kkm || 75;
         
-        // Score = min(rawScore, KKM) - penalty. Never block submission based on KKM.
-        const finalScore = Math.max(0, Math.min(rawScore, kkmScore) - penaltyAmount);
-        console.log(`[Remedial] VALID submission for ${studentName}: rawScore=${rawScore}, KKM=${kkmScore}, penalty=${penaltyAmount}, finalScore=${finalScore}`);
+        const finalScore = Math.max(0, Math.min(calculatedRaw, kkmScore) - penaltyAmount);
+        console.log(`[Remedial] VALID submission for ${studentName}: mcqScore=${mcqScore}, rawEssay=${essayResult.score}, combinedRaw=${calculatedRaw}, KKM=${kkmScore}, penalty=${penaltyAmount}, finalScore=${finalScore}`);
 
         studentUpdate.remedial_score = finalScore;
         studentUpdate.final_score = finalScore;
@@ -529,12 +695,10 @@ export async function submitRemedial(
         attemptUpdate.status = 'SUBMITTED';
       }
       
-      // Log penalty event if applied
       if (isPenaltyApplied) {
         studentUpdate.cheating_flags = [...(studentUpdate.cheating_flags as string[] || []), 'Sanksi Keterlambatan: Nilai Ujian Dikurangi 15 Poin'];
       }
     } else if (status === 'TIMEOUT' || status === 'FAILED') {
-      // Jika TIMEOUT, nilai tetap dihitung dari apa yang sudah dikerjakan
       if (!hasAnyValidAnswer && (totalAnswersLength < 20 || isTooGarbage)) {
         attemptUpdate.status = 'TIME_UP';
         studentUpdate.remedial_status = 'TIME_UP';
@@ -543,10 +707,10 @@ export async function submitRemedial(
         studentUpdate.final_score_locked = 0;
         studentUpdate.teacher_reviewed = true;
       } else {
-        const rawScore = essayResult.score;
+        const calculatedRaw = computeRawScore();
         const penaltyAmount = isPenaltyApplied ? 15 : 0;
         const kkmScore = session.kkm || 75;
-        const finalScore = Math.max(0, Math.min(rawScore, kkmScore) - penaltyAmount);
+        const finalScore = Math.max(0, Math.min(calculatedRaw, kkmScore) - penaltyAmount);
 
         studentUpdate.remedial_score = finalScore;
         studentUpdate.final_score = finalScore;
@@ -557,18 +721,18 @@ export async function submitRemedial(
       }
     }
 
-    rawScore = essayResult.score;
+    rawScore = computeRawScore();
 
     if (status === 'COMPLETED' && (!hasEnoughEffort || isTooFast)) {
       if (isTooFast && !hasEnoughEffort) {
-        failedReason = "Durasi pengerjaan terlalu cepat (di bawah 5 menit) dan sebagian besar jawaban tidak valid/asal-asalan.";
+        failedReason = "Durasi pengerjaan terlalu cepat (di bawah 5 menit) dan sebagian besar jawaban tidak valid atau asal-asalan.";
       } else if (isTooFast) {
         failedReason = "Durasi pengerjaan terlalu cepat (di bawah 5 menit). Minimal pengerjaan adalah 5 menit.";
       } else {
-        failedReason = "Sebagian besar jawaban terdeteksi asal-asalan, terlalu pendek, atau tidak memenuhi kriteria kelayakan esai.";
+        failedReason = "Sebagian besar jawaban terdeteksi asal-asalan, terlalu pendek, atau tidak memenuhi kriteria kelayakan.";
       }
     } else if ((status === 'TIMEOUT' || status === 'FAILED') && !hasAnyValidAnswer && (totalAnswersLength < 20 || isTooGarbage)) {
-      failedReason = "Ujian remedial ditutup karena batas waktu habis tanpa ada jawaban esai yang cukup valid/memadai.";
+      failedReason = "Ujian remedial ditutup karena batas waktu habis tanpa ada jawaban yang cukup valid.";
     }
   }
 
