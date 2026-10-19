@@ -492,7 +492,32 @@ export async function GET(req: NextRequest) {
         const clsUpper = (targetClassName || '').toUpperCase();
         const isSma = clsUpper.includes('SMA') || clsUpper.includes('10') || clsUpper.includes('11') || clsUpper.includes('12') || clsUpper.startsWith('X');
         if (!isSma || certData.target_class === 'ALL') {
-          isLdksPublished = true;
+          // Check if this student is in LDKS_EXCLUSIONS
+          let isExcluded = false;
+          try {
+            const { data: exclData } = await db
+              .from('gm_certificate_templates')
+              .select('description')
+              .eq('cert_type', 'LDKS_EXCLUSIONS')
+              .maybeSingle();
+
+            if (exclData?.description) {
+              const parsedExcl = JSON.parse(exclData.description);
+              if (Array.isArray(parsedExcl)) {
+                const targetNorm = (targetStudentName || '').trim().toUpperCase();
+                isExcluded = parsedExcl.some((item: string | { name?: string }) => {
+                  const name = typeof item === 'string' ? item : item?.name;
+                  return (name || '').trim().toUpperCase() === targetNorm;
+                });
+              }
+            }
+          } catch {
+            // ignore
+          }
+
+          if (!isExcluded) {
+            isLdksPublished = true;
+          }
         }
       }
     } catch {

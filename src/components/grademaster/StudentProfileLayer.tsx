@@ -515,6 +515,13 @@ export default function StudentProfileLayer({
           const res = await fetch('/api/grademaster/certificates?type=LDKS');
           if (res.ok) {
             const data = await res.json();
+            if (Array.isArray(data.exclusions)) {
+              const normName = (studentName || '').trim().toUpperCase();
+              if (data.exclusions.some((x: string) => (typeof x === 'string' ? x : '').trim().toUpperCase() === normName)) {
+                setToast({ message: "Sertifikat LDKS telah ditarik atau tidak tersedia untuk akun ini.", type: "error" });
+                return;
+              }
+            }
             template = data.template;
           }
         } catch (e) {

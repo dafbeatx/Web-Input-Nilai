@@ -2,7 +2,6 @@
 
 import React, { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   ShieldCheck,
@@ -15,6 +14,7 @@ import {
   ExternalLink,
   Award,
   Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 import { generateLdksCertificatePdf } from '@/lib/grademaster/certificateGenerator';
 import { CertificateTemplate } from '@/app/api/grademaster/certificates/route';
@@ -26,10 +26,32 @@ function CertificateVerificationContent() {
   const academicYear = searchParams.get('year') || '2026/2027';
 
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [isExcluded, setIsExcluded] = useState(false);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    fetch('/api/grademaster/certificates?type=LDKS')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isMounted) return;
+        if (Array.isArray(data.exclusions)) {
+          const norm = rawName.trim().toUpperCase();
+          if (data.exclusions.some((x: string) => (typeof x === 'string' ? x : '').trim().toUpperCase() === norm)) {
+            setIsExcluded(true);
+          }
+        }
+      })
+      .catch((err) => console.warn('Failed to verify exclusion:', err));
+
+    return () => {
+      isMounted = false;
+    };
+  }, [rawName]);
 
   const imageUrl = `/api/grademaster/certificates/render?name=${encodeURIComponent(rawName)}&class=${encodeURIComponent(className)}&year=${encodeURIComponent(academicYear)}`;
 
   const handleDownloadPdf = async () => {
+    if (isExcluded) return;
     setIsDownloadingPdf(true);
     try {
       const template: CertificateTemplate = {
@@ -87,9 +109,15 @@ function CertificateVerificationContent() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-              <ShieldCheck size={14} /> Dokumen Asli Terdaftar
-            </span>
+            {isExcluded ? (
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                <AlertTriangle size={14} /> Dokumen Telah Ditarik
+              </span>
+            ) : (
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                <ShieldCheck size={14} /> Dokumen Asli Terdaftar
+              </span>
+            )}
             <Link
               href="/"
               className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-xs font-semibold flex items-center gap-1"
@@ -103,26 +131,48 @@ function CertificateVerificationContent() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6 sm:py-8 space-y-6">
-        {/* Verification Success Banner */}
-        <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-black shrink-0 shadow-md">
-              <ShieldCheck size={22} />
+        {/* Verification Success or Revoked Banner */}
+        {isExcluded ? (
+          <div className="bg-rose-950/40 border border-rose-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center font-black shrink-0 shadow-md">
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <h2 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
+                  Sertifikat Tidak Aktif atau Telah Ditarik
+                </h2>
+                <p className="text-xs text-rose-300/90 mt-0.5">
+                  Nama siswa ini telah dihapus dari daftar penerima resmi Sertifikat LDKS oleh pihak sekolah.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
-                Sertifikat Penghargaan LDKS Resmi Terverifikasi
-              </h2>
-              <p className="text-xs text-emerald-300/90 mt-0.5">
-                Dokumen elektronik ini sah dikeluarkan oleh Panitia LDKS dan Kepala Sekolah SMP Terpadu Al-Ittihadiyah.
-              </p>
-            </div>
-          </div>
 
-          <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">
-            Tahun Ajaran {academicYear}
-          </span>
-        </div>
+            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-rose-500/20 text-rose-300 border border-rose-500/40 shrink-0">
+              STATUS: DITARIK
+            </span>
+          </div>
+        ) : (
+          <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-black shrink-0 shadow-md">
+                <ShieldCheck size={22} />
+              </div>
+              <div>
+                <h2 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
+                  Sertifikat Penghargaan LDKS Resmi Terverifikasi
+                </h2>
+                <p className="text-xs text-emerald-300/90 mt-0.5">
+                  Dokumen elektronik ini sah dikeluarkan oleh Panitia LDKS dan Kepala Sekolah SMP Terpadu Al-Ittihadiyah.
+                </p>
+              </div>
+            </div>
+
+            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">
+              Tahun Ajaran {academicYear}
+            </span>
+          </div>
+        )}
 
         {/* The Certificate Image Card (Direct Visual Presentation) */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-3 sm:p-5 shadow-2xl space-y-4">
@@ -146,6 +196,7 @@ function CertificateVerificationContent() {
 
           {/* Certificate Image Rendering */}
           <div className="relative w-full aspect-[2000/1414] rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-inner group">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imageUrl}
               alt={`Sertifikat LDKS ${rawName}`}
@@ -171,19 +222,21 @@ function CertificateVerificationContent() {
                 <span>Unduh Gambar (PNG)</span>
               </a>
 
-              <button
-                type="button"
-                onClick={handleDownloadPdf}
-                disabled={isDownloadingPdf}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-emerald-600/20 active:scale-95 min-h-[42px]"
-              >
-                {isDownloadingPdf ? (
-                  <Loader2 size={15} className="animate-spin" />
-                ) : (
-                  <DownloadCloud size={15} />
-                )}
-                <span>Unduh Berkas Resmi (PDF)</span>
-              </button>
+              {!isExcluded && (
+                <button
+                  type="button"
+                  onClick={handleDownloadPdf}
+                  disabled={isDownloadingPdf}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-emerald-600/20 active:scale-95 min-h-[42px]"
+                >
+                  {isDownloadingPdf ? (
+                    <Loader2 size={15} className="animate-spin" />
+                  ) : (
+                    <DownloadCloud size={15} />
+                  )}
+                  <span>Unduh Berkas Resmi (PDF)</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -218,9 +271,16 @@ function CertificateVerificationContent() {
 
             <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                <ShieldCheck size={13} className="text-emerald-400" /> Status Dokumen
+                {isExcluded ? (
+                  <AlertTriangle size={13} className="text-rose-400" />
+                ) : (
+                  <ShieldCheck size={13} className="text-emerald-400" />
+                )}
+                <span>Status Dokumen</span>
               </span>
-              <p className="text-sm font-extrabold text-emerald-400">SAH & AKTIF</p>
+              <p className={`text-sm font-extrabold ${isExcluded ? 'text-rose-400' : 'text-emerald-400'}`}>
+                {isExcluded ? 'DITARIK / TIDAK AKTIF' : 'SAH & AKTIF'}
+              </p>
             </div>
           </div>
 

@@ -18,7 +18,8 @@ import {
   Printer,
   ChevronRight,
   ExternalLink,
-  QrCode,
+  Trash2,
+  X,
 } from 'lucide-react';
 import { ToastType } from '@/lib/grademaster/types';
 import { CertificateTemplate } from '@/app/api/grademaster/certificates/route';
@@ -61,8 +62,14 @@ export default function CertificateManagementLayer({
 }: CertificateManagementLayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isExcluding, setIsExcluding] = useState(false);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; label: string } | null>(null);
   const [downloadingSingleId, setDownloadingSingleId] = useState<string | null>(null);
+
+  // Excluded / Deleted student names (uppercase strings)
+  const [excludedStudents, setExcludedStudents] = useState<string[]>([]);
+  const [studentToDelete, setStudentToDelete] = useState<StudentRecord | null>(null);
+  const [viewMode, setViewMode] = useState<'ACTIVE' | 'EXCLUDED'>('ACTIVE');
 
   // Template state
   const [template, setTemplate] = useState<CertificateTemplate>({
@@ -97,7 +104,7 @@ export default function CertificateManagementLayer({
     academicYear: TARGET_ACADEMIC_YEAR,
   });
 
-  // 1. Load Certificate Template
+  // 1. Load Certificate Template and Exclusions
   useEffect(() => {
     let isMounted = true;
     const fetchTemplate = async () => {
@@ -111,6 +118,21 @@ export default function CertificateManagementLayer({
               ...data.template,
               academic_year: TARGET_ACADEMIC_YEAR,
             }));
+          }
+          if (Array.isArray(data.exclusions) && isMounted) {
+            setExcludedStudents(
+              data.exclusions
+                .map((item: unknown) => {
+                  const nameStr =
+                    typeof item === 'string'
+                      ? item
+                      : item && typeof item === 'object' && 'name' in item && typeof (item as { name?: unknown }).name === 'string'
+                      ? (item as { name: string }).name
+                      : '';
+                  return nameStr.trim().toUpperCase();
+                })
+                .filter(Boolean)
+            );
           }
         }
       } catch (err) {
@@ -192,25 +214,59 @@ export default function CertificateManagementLayer({
     };
   }, []);
 
-  // Distinct SMP classes available
+  // Active students (excluding deleted / excluded students)
+  const activeStudents = useMemo(() => {
+    return students.filter((s) => !excludedStudents.includes(s.name.trim().toUpperCase()));
+  }, [students, excludedStudents]);
+
+  // Deleted / excluded students list
+  const deletedStudents = useMemo(() => {
+    return students.filter((s) => excludedStudents.includes(s.name.trim().toUpperCase()));
+  }, [students, excludedStudents]);
+
+  // Currently active previewed student (fallback to first active student if current preview student is excluded)
+  const activePreviewStudent = useMemo(() => {
+    if (activeStudents.length > 0 && excludedStudents.includes(previewStudent.name.trim().toUpperCase())) {
+      return activeStudents[0];
+    }
+    return previewStudent;
+  }, [activeStudents, excludedStudents, previewStudent]);
+
+  // Escape key listener for accessible modal dismissal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && studentToDelete && !isExcluding) {
+        setStudentToDelete(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [studentToDelete, isExcluding]);
+
+  // Distinct SMP classes available (from all registered SMP students)
   const availableClasses = useMemo(() => {
     return Array.from(new Set(students.map((s) => s.className))).sort((a, b) =>
       a.localeCompare(b, undefined, { numeric: true })
     );
   }, [students]);
 
-  // Students by Class counts
+  // Students by Class counts (from active students)
   const studentCountByClass = useMemo(() => {
     const counts: Record<string, number> = {};
-    students.forEach((s) => {
+    activeStudents.forEach((s) => {
       counts[s.className] = (counts[s.className] || 0) + 1;
     });
     return counts;
-  }, [students]);
+  }, [activeStudents]);
+
+  // Current list based on viewMode (Peserta Aktif vs Dihapus)
+  const currentList = useMemo(() => {
+    return viewMode === 'ACTIVE' ? activeStudents : deletedStudents;
+  }, [viewMode, activeStudents, deletedStudents]);
 
   // Filtered Students for the Table
   const filteredStudents = useMemo(() => {
-    return students.filter((s) => {
+    return currentList.filter((s) => {
       const matchClass = selectedClassTab === 'ALL' || s.className === selectedClassTab;
       const matchSearch =
         searchQuery.trim() === '' ||
@@ -218,29 +274,109 @@ export default function CertificateManagementLayer({
         s.className.toLowerCase().includes(searchQuery.toLowerCase());
       return matchClass && matchSearch;
     });
-  }, [students, selectedClassTab, searchQuery]);
+  }, [currentList, selectedClassTab, searchQuery]);
+
+  // Handler: Confirm delete / exclude student from certificates
+  const handleConfirmDelete = async () => {
+    if (!studentToDelete) return;
+    setIsExcluding(true);
+    const targetNorm = studentToDelete.name.trim().toUpperCase();
+    const nextExclusions = Array.from(new Set([...excludedStudents, targetNorm]));
+
+    try {
+      const res = await fetch('/api/grademaster/certificates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_exclusions',
+          exclusions: nextExclusions,
+          academic_year: TARGET_ACADEMIC_YEAR,
+        }),
+      });
+
+      if (res.ok) {
+        setExcludedStudents(nextExclusions);
+        if (previewStudent.name.trim().toUpperCase() === targetNorm) {
+          const remaining = activeStudents.filter((s) => s.name.trim().toUpperCase() !== targetNorm);
+          if (remaining.length > 0) {
+            setPreviewStudent(remaining[0]);
+          }
+        }
+        setToast({
+          message: `Siswa "${studentToDelete.name}" berhasil dihapus dari daftar sertifikat LDKS.`,
+          type: 'success',
+        });
+        setStudentToDelete(null);
+      } else {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error || 'Gagal menyimpan data');
+      }
+    } catch (err: unknown) {
+      console.error('Failed to exclude student:', err);
+      const msg = err instanceof Error ? err.message : 'Gagal menghapus siswa';
+      setToast({ message: msg, type: 'error' });
+    } finally {
+      setIsExcluding(false);
+    }
+  };
+
+  // Handler: Restore excluded student
+  const handleRestoreStudent = async (student: StudentRecord) => {
+    setIsExcluding(true);
+    const targetNorm = student.name.trim().toUpperCase();
+    const nextExclusions = excludedStudents.filter((n) => n !== targetNorm);
+
+    try {
+      const res = await fetch('/api/grademaster/certificates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_exclusions',
+          exclusions: nextExclusions,
+          academic_year: TARGET_ACADEMIC_YEAR,
+        }),
+      });
+
+      if (res.ok) {
+        setExcludedStudents(nextExclusions);
+        setToast({
+          message: `Siswa "${student.name}" berhasil dipulihkan ke daftar penerima sertifikat.`,
+          type: 'success',
+        });
+      } else {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error || 'Gagal memulihkan siswa');
+      }
+    } catch (err: unknown) {
+      console.error('Failed to restore student:', err);
+      const msg = err instanceof Error ? err.message : 'Gagal memulihkan siswa';
+      setToast({ message: msg, type: 'error' });
+    } finally {
+      setIsExcluding(false);
+    }
+  };
 
   // Preview student fitted name and smart dynamic font size
   const previewFittedInfo: FittedCertificateName = useMemo(() => {
-    return getFittedCertificateStudentName(undefined, previewStudent.name, 98);
-  }, [previewStudent.name]);
+    return getFittedCertificateStudentName(undefined, activePreviewStudent.name, 98);
+  }, [activePreviewStudent.name]);
 
   // Preview student QR Code barcode
   const [previewQrDataUrl, setPreviewQrDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    if (previewStudent && previewStudent.name) {
-      getCertificateQrCodeDataUrl(previewStudent.name, previewStudent.className, TARGET_ACADEMIC_YEAR)
+    if (activePreviewStudent?.name) {
+      getCertificateQrCodeDataUrl(activePreviewStudent.name, activePreviewStudent.className, TARGET_ACADEMIC_YEAR)
         .then((url) => {
           if (isMounted) setPreviewQrDataUrl(url);
         })
-        .catch((err) => console.warn('Failed to generate preview QR code:', err));
+        .catch((err: unknown) => console.warn('Failed to generate preview QR code:', err));
     }
     return () => {
       isMounted = false;
     };
-  }, [previewStudent.name, previewStudent.className]);
+  }, [activePreviewStudent]);
 
   // Toggle Publish Status
   const handleTogglePublish = async () => {
@@ -309,8 +445,8 @@ export default function CertificateManagementLayer({
   // Batch Download: All SMP Students or Filtered Class
   const handleBatchDownload = async (targetScope: 'ALL' | string) => {
     const listToDownload = targetScope === 'ALL'
-      ? students
-      : students.filter((s) => s.className === targetScope);
+      ? activeStudents
+      : activeStudents.filter((s) => s.className === targetScope);
 
     if (listToDownload.length === 0) {
       setToast({ message: 'Tidak ada data siswa untuk diunduh', type: 'error' });
@@ -365,12 +501,17 @@ export default function CertificateManagementLayer({
             <h1 className="text-2xl md:text-3xl font-bold text-on-surface tracking-tight flex items-center gap-3 font-outfit">
               <Award className="text-emerald-600" size={32} /> Sertifikat Penghargaan LDKS
             </h1>
-            <p className="text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest mt-1.5 flex items-center gap-2">
+            <p className="text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest mt-1.5 flex items-center gap-2 flex-wrap">
               <span>SMP Terpadu Al-Ittihadiyah</span>
               <span>•</span>
               <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                Pusat Data 2026/2027 ({students.length} Siswa)
+                Pusat Data 2026/2027 ({activeStudents.length} Penerima Aktif)
               </span>
+              {deletedStudents.length > 0 && (
+                <span className="text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                  {deletedStudents.length} Dihapus
+                </span>
+              )}
             </p>
           </div>
 
@@ -378,7 +519,7 @@ export default function CertificateManagementLayer({
             <button
               type="button"
               onClick={() => handleBatchDownload('ALL')}
-              disabled={batchProgress !== null || isLoading || students.length === 0}
+              disabled={batchProgress !== null || isLoading || activeStudents.length === 0}
               className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] shadow-md shadow-indigo-600/20 min-h-[42px] disabled:opacity-50"
             >
               {batchProgress ? (
@@ -389,7 +530,7 @@ export default function CertificateManagementLayer({
               <span>
                 {batchProgress
                   ? `Memproses ${batchProgress.current}/${batchProgress.total}...`
-                  : `Unduh Semua Sertifikat (${students.length} Siswa)`}
+                  : `Unduh Semua Sertifikat (${activeStudents.length} Siswa)`}
               </span>
             </button>
 
@@ -444,7 +585,7 @@ export default function CertificateManagementLayer({
             </h4>
             <p className="text-xs opacity-80 mt-0.5">
               {template.is_published
-                ? `Sebanyak ${students.length} siswa SMP Terpadu Al-Ittihadiyah (Tahun 2026/2027) dapat mengunduh berkas sertifikat resmi di tab profil akun mereka.`
+                ? `Sebanyak ${activeStudents.length} siswa aktif SMP Terpadu Al-Ittihadiyah (Tahun 2026/2027) dapat mengunduh berkas sertifikat resmi di tab profil akun mereka.`
                 : 'Siswa belum dapat melihat dokumen ini. Anda dapat mengunduh semua berkas PDF di halaman ini atau klik "Simpan & Terbitkan ke Siswa" jika sudah siap dirilis.'}
             </p>
           </div>
@@ -480,7 +621,7 @@ export default function CertificateManagementLayer({
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">
                   Menampilkan nama siswa terpilih:{' '}
-                  <strong className="text-slate-800">{previewStudent.name}</strong> (Kelas {previewStudent.className})
+                  <strong className="text-slate-800">{activePreviewStudent.name}</strong> (Kelas {activePreviewStudent.className})
                 </p>
               </div>
 
@@ -489,10 +630,10 @@ export default function CertificateManagementLayer({
                   A4 Landscape
                 </span>
                 <a
-                  href={`/sertifikat/verify?name=${encodeURIComponent(previewStudent.name)}&class=${encodeURIComponent(previewStudent.className)}&year=${encodeURIComponent(TARGET_ACADEMIC_YEAR)}`}
+                  href={`/sertifikat/verify?name=${encodeURIComponent(activePreviewStudent.name)}&class=${encodeURIComponent(activePreviewStudent.className)}&year=${encodeURIComponent(TARGET_ACADEMIC_YEAR)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-850 border border-emerald-200 rounded-lg text-xs font-bold transition-all shadow-2xs"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-850 border border-emerald-200 rounded-lg text-xs font-bold transition-all shadow-2xs min-h-[36px]"
                   title="Buka halaman verifikasi yang muncul saat barcode di-scan"
                 >
                   <ExternalLink size={13} className="text-emerald-700" />
@@ -500,11 +641,11 @@ export default function CertificateManagementLayer({
                 </a>
                 <button
                   type="button"
-                  onClick={() => handleDownloadSingle(previewStudent)}
-                  disabled={downloadingSingleId === previewStudent.id}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all"
+                  onClick={() => handleDownloadSingle(activePreviewStudent)}
+                  disabled={downloadingSingleId === activePreviewStudent.id}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all min-h-[36px]"
                 >
-                  {downloadingSingleId === previewStudent.id ? (
+                  {downloadingSingleId === activePreviewStudent.id ? (
                     <Loader2 size={13} className="animate-spin" />
                   ) : (
                     <DownloadCloud size={13} />
@@ -555,6 +696,7 @@ export default function CertificateManagementLayer({
                     width: '8.1%',
                   }}
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={previewQrDataUrl}
                     alt="Barcode Verifikasi"
@@ -607,7 +749,7 @@ export default function CertificateManagementLayer({
                   <Printer size={16} className="text-indigo-600" /> Unduh Sertifikat Sekaligus Per Kelas (Batch PDF)
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  Klik untuk langsung mengunduh 1 berkas PDF gabungan berisi seluruh sertifikat siswa di kelas tersebut:
+                  Klik untuk langsung mengunduh 1 berkas PDF gabungan berisi seluruh sertifikat siswa aktif di kelas tersebut:
                 </p>
               </div>
               <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full uppercase">
@@ -620,7 +762,7 @@ export default function CertificateManagementLayer({
               <button
                 type="button"
                 onClick={() => handleBatchDownload('ALL')}
-                disabled={batchProgress !== null || students.length === 0}
+                disabled={batchProgress !== null || activeStudents.length === 0}
                 className="p-3.5 bg-indigo-50/70 hover:bg-indigo-100/70 border border-indigo-200/80 rounded-xl text-left transition-all active:scale-[0.98] group flex flex-col justify-between"
               >
                 <div>
@@ -628,7 +770,7 @@ export default function CertificateManagementLayer({
                     Semua Kelas SMP
                   </span>
                   <span className="text-lg font-black text-indigo-950 font-outfit block mt-1">
-                    {students.length} Siswa
+                    {activeStudents.length} Siswa
                   </span>
                 </div>
                 <span className="text-[10px] font-bold text-indigo-600 group-hover:underline flex items-center gap-1 mt-3">
@@ -672,7 +814,7 @@ export default function CertificateManagementLayer({
                   <Users size={16} className="text-emerald-600" /> Daftar Siswa SMP Peserta LDKS (Pusat Data)
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  Tahun Ajaran <strong>2026/2027</strong> • Menampilkan {filteredStudents.length} dari {students.length} siswa terdaftar
+                  Tahun Ajaran <strong>2026/2027</strong> • Menampilkan {filteredStudents.length} dari {viewMode === 'ACTIVE' ? activeStudents.length : deletedStudents.length} siswa {viewMode === 'ACTIVE' ? 'penerima aktif' : 'yang dihapus'}
                 </p>
               </div>
 
@@ -689,33 +831,67 @@ export default function CertificateManagementLayer({
               </div>
             </div>
 
-            {/* Filter Tabs by Class */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-              <button
-                type="button"
-                onClick={() => setSelectedClassTab('ALL')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                  selectedClassTab === 'ALL'
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                }`}
-              >
-                Semua Siswa ({students.length})
-              </button>
-              {availableClasses.map((cls) => (
+            {/* View Mode Switcher and Class Filter */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {/* Tab: Peserta Aktif vs Dihapus */}
+              <div className="flex items-center gap-1 p-1 bg-slate-100 border border-slate-200 rounded-xl w-fit">
                 <button
-                  key={cls}
                   type="button"
-                  onClick={() => setSelectedClassTab(cls)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                    selectedClassTab === cls
-                      ? 'bg-emerald-600 text-white shadow-xs'
+                  onClick={() => setViewMode('ACTIVE')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all min-h-[36px] ${
+                    viewMode === 'ACTIVE'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Users size={13} className={viewMode === 'ACTIVE' ? 'text-emerald-600' : 'text-slate-500'} />
+                  <span>Peserta Aktif ({activeStudents.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('EXCLUDED')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all min-h-[36px] ${
+                    viewMode === 'EXCLUDED'
+                      ? 'bg-rose-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-rose-700'
+                  }`}
+                >
+                  <Trash2 size={13} className={viewMode === 'EXCLUDED' ? 'text-white' : 'text-rose-600'} />
+                  <span>Dihapus ({deletedStudents.length})</span>
+                </button>
+              </div>
+
+              {/* Filter Tabs by Class */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                <button
+                  type="button"
+                  onClick={() => setSelectedClassTab('ALL')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap min-h-[36px] ${
+                    selectedClassTab === 'ALL'
+                      ? 'bg-slate-900 text-white shadow-xs'
                       : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
                   }`}
                 >
-                  Kelas {cls} ({studentCountByClass[cls] || 0})
+                  Semua Kelas ({currentList.length})
                 </button>
-              ))}
+                {availableClasses.map((cls) => {
+                  const classCount = currentList.filter((s) => s.className === cls).length;
+                  return (
+                    <button
+                      key={cls}
+                      type="button"
+                      onClick={() => setSelectedClassTab(cls)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap min-h-[36px] ${
+                        selectedClassTab === cls
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      Kelas {cls} ({classCount})
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Students Table */}
@@ -728,26 +904,34 @@ export default function CertificateManagementLayer({
                       <th className="py-3 px-3.5">Nama Siswa (Pusat Data)</th>
                       <th className="py-3 px-3.5">Nama Tercetak di Piagam</th>
                       <th className="py-3 px-3.5 text-center w-20">Kelas</th>
-                      <th className="py-3 px-3.5 text-right w-48">Aksi</th>
+                      <th className="py-3 px-3.5 text-right w-56">
+                        {viewMode === 'ACTIVE' ? 'Aksi' : 'Status & Pemulihan'}
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
                     {filteredStudents.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="py-12 text-center text-slate-400">
-                          Tidak ada siswa yang sesuai dengan filter pencarian.
+                          {viewMode === 'EXCLUDED'
+                            ? 'Belum ada siswa yang dihapus dari penerima sertifikat LDKS.'
+                            : 'Tidak ada siswa yang sesuai dengan filter pencarian.'}
                         </td>
                       </tr>
                     ) : (
                       filteredStudents.map((s, idx) => {
                         const fitted = getFittedCertificateStudentName(undefined, s.name, 98);
-                        const isCurrentPreview = previewStudent.name === s.name;
+                        const isCurrentPreview = activePreviewStudent.name === s.name;
 
                         return (
                           <tr
                             key={s.id || idx}
                             className={`transition-colors ${
-                              isCurrentPreview ? 'bg-emerald-50/50' : 'hover:bg-slate-50/80'
+                              viewMode === 'EXCLUDED'
+                                ? 'bg-rose-50/20 hover:bg-rose-50/40'
+                                : isCurrentPreview
+                                ? 'bg-emerald-50/50'
+                                : 'hover:bg-slate-50/80'
                             }`}
                           >
                             <td className="py-2.5 px-3.5 text-center text-slate-400 font-mono">
@@ -777,36 +961,68 @@ export default function CertificateManagementLayer({
                               </span>
                             </td>
                             <td className="py-2.5 px-3.5 text-right">
-                              <div className="flex items-center justify-end gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => setPreviewStudent(s)}
-                                  className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                                    isCurrentPreview
-                                      ? 'bg-emerald-600 text-white shadow-2xs'
-                                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                                  }`}
-                                  title="Tampilkan di Pratinjau Desain"
-                                >
-                                  <Eye size={13} />
-                                  <span className="hidden sm:inline">Pratinjau</span>
-                                </button>
+                              {viewMode === 'ACTIVE' ? (
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setPreviewStudent(s)}
+                                    className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 min-h-[36px] ${
+                                      isCurrentPreview
+                                        ? 'bg-emerald-600 text-white shadow-2xs'
+                                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                    }`}
+                                    title="Tampilkan di Pratinjau Desain"
+                                  >
+                                    <Eye size={13} />
+                                    <span className="hidden sm:inline">Pratinjau</span>
+                                  </button>
 
-                                <button
-                                  type="button"
-                                  onClick={() => handleDownloadSingle(s)}
-                                  disabled={downloadingSingleId === s.id}
-                                  className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/70 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
-                                  title="Unduh Sertifikat PDF Siswa Ini"
-                                >
-                                  {downloadingSingleId === s.id ? (
-                                    <Loader2 size={13} className="animate-spin" />
-                                  ) : (
-                                    <DownloadCloud size={13} />
-                                  )}
-                                  <span className="hidden sm:inline">PDF</span>
-                                </button>
-                              </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDownloadSingle(s)}
+                                    disabled={downloadingSingleId === s.id}
+                                    className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/70 rounded-lg text-xs font-bold transition-all flex items-center gap-1 min-h-[36px]"
+                                    title="Unduh Sertifikat PDF Siswa Ini"
+                                  >
+                                    {downloadingSingleId === s.id ? (
+                                      <Loader2 size={13} className="animate-spin" />
+                                    ) : (
+                                      <DownloadCloud size={13} />
+                                    )}
+                                    <span className="hidden sm:inline">PDF</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setStudentToDelete(s)}
+                                    className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-900 border border-rose-200/80 rounded-lg text-xs font-bold transition-all flex items-center gap-1 active:scale-95 min-h-[36px]"
+                                    title={`Hapus ${s.name} dari daftar penerima sertifikat LDKS`}
+                                  >
+                                    <Trash2 size={13} className="text-rose-600" />
+                                    <span className="hidden sm:inline">Hapus</span>
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-end gap-2">
+                                  <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
+                                    Dihapus
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRestoreStudent(s)}
+                                    disabled={isExcluding}
+                                    className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-2xs active:scale-95 disabled:opacity-50 min-h-[36px]"
+                                    title={`Pulihkan ${s.name} kembali ke daftar penerima sertifikat`}
+                                  >
+                                    {isExcluding ? (
+                                      <Loader2 size={13} className="animate-spin" />
+                                    ) : (
+                                      <RotateCcw size={13} />
+                                    )}
+                                    <span>Pulihkan</span>
+                                  </button>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         );
@@ -818,6 +1034,92 @@ export default function CertificateManagementLayer({
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* Accessible Confirmation Modal for Deleting Student from Certificates */}
+      {studentToDelete && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-delete-student-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isExcluding) {
+              setStudentToDelete(null);
+            }
+          }}
+        >
+          <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl p-6 space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+                <Trash2 size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 id="modal-delete-student-title" className="text-base font-bold text-slate-900 font-outfit">
+                  Hapus Siswa dari Sertifikat LDKS
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Konfirmasi pengecualian siswa dari penerima sertifikat
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStudentToDelete(null)}
+                disabled={isExcluding}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+                aria-label="Tutup dialog konfirmasi"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-3.5 bg-rose-50/70 border border-rose-200/80 rounded-xl text-xs space-y-2.5">
+              <p className="text-slate-800">
+                Apakah Anda yakin ingin menghapus siswa berikut dari daftar penerima sertifikat?
+              </p>
+              <div className="bg-white p-3 rounded-lg border border-rose-200">
+                <div className="font-extrabold text-slate-900 text-sm">
+                  {studentToDelete.name}
+                </div>
+                <div className="text-[11px] font-semibold text-slate-600 mt-0.5">
+                  Kelas {studentToDelete.className} • SMP Terpadu Al-Ittihadiyah (2026/2027)
+                </div>
+              </div>
+              <p className="text-rose-950 text-[11px] font-medium leading-relaxed">
+                Catatan: Siswa ini tidak akan disertakan saat mengunduh sertifikat PDF gabungan dan berkas sertifikat tidak akan tampil pada akun profil siswa. Anda dapat memulihkannya kapan saja melalui tab &quot;Dihapus&quot;.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setStudentToDelete(null)}
+                disabled={isExcluding}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all min-h-[42px] focus:outline-none focus:ring-2 focus:ring-slate-400"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isExcluding}
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all min-h-[42px] shadow-sm shadow-rose-600/20 active:scale-95 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-rose-500"
+              >
+                {isExcluding ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Menghapus...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={14} />
+                    <span>Ya, Hapus Siswa</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </main>

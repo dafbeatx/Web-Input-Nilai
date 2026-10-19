@@ -55,10 +55,30 @@ export async function GET(req: NextRequest) {
       .eq('cert_type', certType)
       .maybeSingle();
 
+    // Fetch excluded students for LDKS
+    let exclusions: string[] = [];
+    try {
+      const { data: exclData } = await supabaseAdmin
+        .from('gm_certificate_templates')
+        .select('description')
+        .eq('cert_type', 'LDKS_EXCLUSIONS')
+        .maybeSingle();
+
+      if (exclData?.description) {
+        const parsed = JSON.parse(exclData.description);
+        if (Array.isArray(parsed)) {
+          exclusions = parsed;
+        }
+      }
+    } catch {
+      // Exclusions table row may not exist yet, default to empty array
+    }
+
     if (error) {
       console.warn('[Certificate API] Table gm_certificate_templates might not exist yet, using default fallback:', error.message);
       return NextResponse.json({
         template: DEFAULT_LDKS_TEMPLATE,
+        exclusions,
         isFallback: true,
       });
     }
@@ -66,18 +86,21 @@ export async function GET(req: NextRequest) {
     if (!data) {
       return NextResponse.json({
         template: DEFAULT_LDKS_TEMPLATE,
+        exclusions,
         isFallback: false,
       });
     }
 
     return NextResponse.json({
       template: data,
+      exclusions,
       isFallback: false,
     });
   } catch (err) {
     console.error('[Certificate API] GET error:', err);
     return NextResponse.json({
       template: DEFAULT_LDKS_TEMPLATE,
+      exclusions: [],
       error: 'Terjadi kesalahan saat memuat template',
     }, { status: 500 });
   }
@@ -93,6 +116,35 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => null);
     if (!body) {
       return NextResponse.json({ error: 'Data tidak valid' }, { status: 400 });
+    }
+
+    // Specific handler: Update excluded students list
+    if (body.action === 'update_exclusions' || body.cert_type === 'LDKS_EXCLUSIONS') {
+      const exclusions = Array.isArray(body.exclusions)
+        ? body.exclusions.map((item: string | { name?: string }) => typeof item === 'string' ? item.trim().toUpperCase() : (item?.name || '').trim().toUpperCase()).filter(Boolean)
+        : [];
+
+      const { error } = await supabaseAdmin
+        .from('gm_certificate_templates')
+        .upsert({
+          cert_type: 'LDKS_EXCLUSIONS',
+          title: 'EXCLUDED_STUDENTS',
+          subtitle: 'Daftar Siswa Dikecualikan dari Sertifikat LDKS',
+          description: JSON.stringify(exclusions),
+          academic_year: (body.academic_year || '2026/2027').trim(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'cert_type' });
+
+      if (error) {
+        console.error('[Certificate API] Error saving exclusions:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        exclusions,
+        message: 'Daftar pengecualian siswa berhasil diperbarui.',
+      });
     }
 
     const certType = body.cert_type || 'LDKS';
