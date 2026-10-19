@@ -61,38 +61,38 @@ export function sampleAndShuffleMcqForStudent(
 
 export function extractEssayQuestions(data: unknown): string[] {
   if (Array.isArray(data)) return data as string[];
-  if (data && typeof data === 'object' && 'essay' in data && Array.isArray((data as any).essay)) {
-    return (data as any).essay as string[];
+  if (data && typeof data === 'object' && 'essay' in data && Array.isArray((data as Record<string, unknown>).essay)) {
+    return (data as Record<string, unknown>).essay as string[];
   }
   return [];
 }
 
 export function extractMcqQuestions(data: unknown): AssignedMcqQuestion[] {
-  if (data && typeof data === 'object' && 'mcqs' in data && Array.isArray((data as any).mcqs)) {
-    return (data as any).mcqs as AssignedMcqQuestion[];
+  if (data && typeof data === 'object' && 'mcqs' in data && Array.isArray((data as Record<string, unknown>).mcqs)) {
+    return (data as Record<string, unknown>).mcqs as AssignedMcqQuestion[];
   }
   return [];
 }
 
 export function extractEssayKeys(data: unknown): string[] {
   if (Array.isArray(data)) return data as string[];
-  if (data && typeof data === 'object' && 'essay' in data && Array.isArray((data as any).essay)) {
-    return (data as any).essay as string[];
+  if (data && typeof data === 'object' && 'essay' in data && Array.isArray((data as Record<string, unknown>).essay)) {
+    return (data as Record<string, unknown>).essay as string[];
   }
   return [];
 }
 
 export function extractMcqKeys(data: unknown): string[] {
-  if (data && typeof data === 'object' && 'mcqKeys' in data && Array.isArray((data as any).mcqKeys)) {
-    return (data as any).mcqKeys as string[];
+  if (data && typeof data === 'object' && 'mcqKeys' in data && Array.isArray((data as Record<string, unknown>).mcqKeys)) {
+    return (data as Record<string, unknown>).mcqKeys as string[];
   }
   return [];
 }
 
 export function extractEssayAnswers(data: unknown): string[] {
   if (Array.isArray(data)) return data as string[];
-  if (data && typeof data === 'object' && 'essay' in data && Array.isArray((data as any).essay)) {
-    return (data as any).essay as string[];
+  if (data && typeof data === 'object' && 'essay' in data && Array.isArray((data as Record<string, unknown>).essay)) {
+    return (data as Record<string, unknown>).essay as string[];
   }
   return [];
 }

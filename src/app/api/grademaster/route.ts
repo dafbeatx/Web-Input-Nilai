@@ -5,8 +5,17 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { hashPassword, verifyPassword, validateSessionInput, checkRateLimit } from '@/lib/grademaster/security';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { generateQuestionDifficulties } from '@/lib/grademaster/analytics';
-import { GradedStudent } from '@/lib/grademaster/types';
+import { GradedStudent, RemedialMcqDetail } from '@/lib/grademaster/types';
 import { calculateStudentResult } from '@/lib/grademaster/scoring';
+
+interface RemedialAnswersJson {
+  essay?: string[];
+  mcq?: string[];
+  mcqScore?: number;
+  mcqCorrect?: number;
+  mcqTotal?: number;
+  mcqDetails?: RemedialMcqDetail[];
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -512,32 +521,32 @@ export async function POST(req: NextRequest) {
         remedialPhoto: isReadOnly ? undefined : s.remedial_photo,
         remedialAnswers: isReadOnly ? undefined : (
           (s.remedial_answers && typeof s.remedial_answers === 'object' && !Array.isArray(s.remedial_answers))
-            ? (s.remedial_answers as any).essay
+            ? (s.remedial_answers as RemedialAnswersJson).essay
             : s.remedial_answers
         ),
         remedialMcqAnswers: isReadOnly ? undefined : (
           (s.remedial_answers && typeof s.remedial_answers === 'object' && !Array.isArray(s.remedial_answers))
-            ? (s.remedial_answers as any).mcq
+            ? (s.remedial_answers as RemedialAnswersJson).mcq
             : undefined
         ),
         remedialMcqScore: isReadOnly ? undefined : (
           (s.remedial_answers && typeof s.remedial_answers === 'object' && !Array.isArray(s.remedial_answers))
-            ? (s.remedial_answers as any).mcqScore
+            ? (s.remedial_answers as RemedialAnswersJson).mcqScore
             : undefined
         ),
         remedialMcqCorrect: isReadOnly ? undefined : (
           (s.remedial_answers && typeof s.remedial_answers === 'object' && !Array.isArray(s.remedial_answers))
-            ? (s.remedial_answers as any).mcqCorrect
+            ? (s.remedial_answers as RemedialAnswersJson).mcqCorrect
             : undefined
         ),
         remedialMcqTotal: isReadOnly ? undefined : (
           (s.remedial_answers && typeof s.remedial_answers === 'object' && !Array.isArray(s.remedial_answers))
-            ? (s.remedial_answers as any).mcqTotal
+            ? (s.remedial_answers as RemedialAnswersJson).mcqTotal
             : undefined
         ),
         remedialMcqDetails: isReadOnly ? undefined : (
           (s.remedial_answers && typeof s.remedial_answers === 'object' && !Array.isArray(s.remedial_answers))
-            ? (s.remedial_answers as any).mcqDetails
+            ? (s.remedial_answers as RemedialAnswersJson).mcqDetails
             : undefined
         ),
         remedialNote: isReadOnly ? undefined : s.remedial_note,
