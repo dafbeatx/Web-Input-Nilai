@@ -3,9 +3,9 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { 
-  Gamepad2, ArrowLeft, Play, 
+  Gamepad2, Play, 
   Trophy, BookOpen, Clock, Zap, 
-  CheckCircle2, Sparkles, Shield, Users, Bot
+  Sparkles, Bot
 } from "lucide-react";
 import { useGradeMaster } from "@/context/GradeMasterContext";
 import ChessGame from "./games/ChessGame";
@@ -37,21 +37,9 @@ const UPCOMING_GAMES = [
   }
 ];
 
-export default function GamesLayer({ onBack }: GamesLayerProps) {
-  const { studentData, setLayer } = useGradeMaster();
+export default function GamesLayer({}: GamesLayerProps) {
+  const { studentData } = useGradeMaster();
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
-
-  const handleBackNavigation = () => {
-    if (activeGameId) {
-      setActiveGameId(null);
-      return;
-    }
-    if (onBack) {
-      onBack();
-    } else if (setLayer) {
-      setLayer("home");
-    }
-  };
 
   // If a game is active, render its screen
   if (activeGameId === 'chess') {
@@ -69,7 +57,7 @@ export default function GamesLayer({ onBack }: GamesLayerProps) {
         <div className="min-w-0 z-10 flex-1">
           <div className="flex items-center gap-1.5 mb-1">
             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full text-[9.5px] font-black uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
               Zona Gamifikasi
             </span>
             <span className="text-[10px] text-slate-300 font-semibold truncate">
@@ -87,10 +75,13 @@ export default function GamesLayer({ onBack }: GamesLayerProps) {
         </div>
 
         <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 relative select-none pointer-events-none">
-          <img 
+          <Image 
             src="/mascot_hijab_idle.png" 
-            alt="Maskot" 
-            className="w-full h-full object-contain" 
+            alt="Maskot Siswa" 
+            fill
+            sizes="80px"
+            className="object-contain" 
+            priority
           />
         </div>
       </div>
@@ -113,7 +104,7 @@ export default function GamesLayer({ onBack }: GamesLayerProps) {
           </div>
 
           <span className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] font-black uppercase tracking-wider rounded-lg flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             Aktif
           </span>
         </div>
