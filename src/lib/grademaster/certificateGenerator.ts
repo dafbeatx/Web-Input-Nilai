@@ -96,6 +96,8 @@ export function getFittedCertificateStudentName(
   maxWidthMm: number = 98
 ): FittedCertificateName {
   const cleanName = (fullName || '')
+    .replace(/[\u2018\u2019\u0060\u00B4]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
     .trim()
     .replace(/\s+/g, ' ')
     .toUpperCase();
@@ -156,8 +158,11 @@ export function getFittedCertificateStudentName(
   };
 }
 
-export function formatCertificateStudentName(fullName: string, _maxLength: number = 22): string {
+export function formatCertificateStudentName(fullName: string, maxLength: number = 22): string {
   const fitted = getFittedCertificateStudentName(undefined, fullName, 98);
+  if (fitted.displayName.length > maxLength) {
+    return smartAbbreviateName(fitted.displayName, maxLength);
+  }
   return fitted.displayName;
 }
 

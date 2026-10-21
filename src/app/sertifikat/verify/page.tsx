@@ -16,7 +16,11 @@ import {
   Loader2,
   AlertTriangle,
 } from 'lucide-react';
-import { generateLdksCertificatePdf } from '@/lib/grademaster/certificateGenerator';
+import {
+  generateLdksCertificatePdf,
+  getFittedCertificateStudentName,
+  getCertificateQrCodeDataUrl,
+} from '@/lib/grademaster/certificateGenerator';
 import { CertificateTemplate } from '@/app/api/grademaster/certificates/route';
 
 function CertificateVerificationContent() {
@@ -25,8 +29,34 @@ function CertificateVerificationContent() {
   const className = searchParams.get('class') || 'SMP';
   const academicYear = searchParams.get('year') || '2026/2027';
 
+  const cleanRawName = React.useMemo(() => {
+    return rawName
+      .replace(/[\u2018\u2019\u0060\u00B4]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .trim();
+  }, [rawName]);
+
+  const fittedInfo = React.useMemo(() => {
+    return getFittedCertificateStudentName(undefined, cleanRawName, 98);
+  }, [cleanRawName]);
+
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [isDownloadingPng, setIsDownloadingPng] = useState(false);
   const [isExcluded, setIsExcluded] = useState(false);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    getCertificateQrCodeDataUrl(cleanRawName, className, academicYear)
+      .then((url) => {
+        if (isMounted) setQrDataUrl(url);
+      })
+      .catch((err) => console.warn('Failed to generate verification QR code:', err));
+
+    return () => {
+      isMounted = false;
+    };
+  }, [cleanRawName, className, academicYear]);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -35,7 +65,7 @@ function CertificateVerificationContent() {
       .then((data) => {
         if (!isMounted) return;
         if (Array.isArray(data.exclusions)) {
-          const norm = rawName.trim().toUpperCase();
+          const norm = cleanRawName.trim().toUpperCase();
           if (data.exclusions.some((x: string) => (typeof x === 'string' ? x : '').trim().toUpperCase() === norm)) {
             setIsExcluded(true);
           }
@@ -46,9 +76,74 @@ function CertificateVerificationContent() {
     return () => {
       isMounted = false;
     };
-  }, [rawName]);
+  }, [cleanRawName]);
 
-  const imageUrl = `/api/grademaster/certificates/render?name=${encodeURIComponent(rawName)}&class=${encodeURIComponent(className)}&year=${encodeURIComponent(academicYear)}`;
+  const imageUrl = `/api/grademaster/certificates/render?name=${encodeURIComponent(cleanRawName)}&class=${encodeURIComponent(className)}&year=${encodeURIComponent(academicYear)}`;
+
+  const handleDownloadPng = async () => {
+    if (isDownloadingPng) return;
+    setIsDownloadingPng(true);
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 2000;
+      canvas.height = 1414;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context not available');
+
+      // Load background template
+      const bgImg = new window.Image();
+      bgImg.crossOrigin = 'anonymous';
+      await new Promise<void>((resolve, reject) => {
+        bgImg.onload = () => resolve();
+        bgImg.onerror = reject;
+        bgImg.src = '/sertifikat-ldks.png';
+      });
+      ctx.drawImage(bgImg, 0, 0, 2000, 1414);
+
+      // Student name placement matching Canva design baseline
+      const fontPx = Math.round((fittedInfo.fontSize * 0.3528 / 297) * 2000);
+      ctx.font = `bold ${fontPx}px "Inter", "Outfit", "Arial", sans-serif`;
+      ctx.fillStyle = '#0f172a';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(fittedInfo.displayName, 171, 747);
+
+      // Draw QR Code and subtitles
+      if (qrDataUrl) {
+        const qrImg = new window.Image();
+        await new Promise<void>((resolve, reject) => {
+          qrImg.onload = () => resolve();
+          qrImg.onerror = reject;
+          qrImg.src = qrDataUrl;
+        });
+        ctx.drawImage(qrImg, 1130, 1030, 170, 170);
+
+        ctx.font = 'bold 14px "Inter", "Outfit", "Arial", sans-serif';
+        ctx.fillStyle = '#0f172a';
+        ctx.textAlign = 'center';
+        ctx.fillText('SCAN VERIFIKASI DOKUMEN', 1215, 1225);
+
+        ctx.font = 'normal 11px "Inter", "Outfit", "Arial", sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('SMP Terpadu Al-Ittihadiyah', 1215, 1245);
+      }
+
+      const safeName = cleanRawName.replace(/[^a-zA-Z0-9]/g, '_');
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `Sertifikat_LDKS_${safeName}_Kelas_${className}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.warn('Canvas export failed, falling back to server render:', err);
+      const link = document.createElement('a');
+      link.download = `Sertifikat_LDKS_${cleanRawName.replace(/\s+/g, '_')}.png`;
+      link.href = imageUrl;
+      link.target = '_blank';
+      link.click();
+    } finally {
+      setIsDownloadingPng(false);
+    }
+  };
 
   const handleDownloadPdf = async () => {
     if (isExcluded) return;
@@ -74,12 +169,12 @@ function CertificateVerificationContent() {
       };
 
       const doc = await generateLdksCertificatePdf(template, {
-        studentName: rawName,
+        studentName: cleanRawName,
         className: className,
         academicYear: academicYear,
       });
 
-      const safeName = rawName.replace(/[^a-zA-Z0-9]/g, '_');
+      const safeName = cleanRawName.replace(/[^a-zA-Z0-9]/g, '_');
       doc.save(`Sertifikat_LDKS_${safeName}_Kelas_${className}.pdf`);
     } catch (err) {
       console.error('Failed to download PDF certificate:', err);
@@ -174,7 +269,7 @@ function CertificateVerificationContent() {
           </div>
         )}
 
-        {/* The Certificate Image Card (Direct Visual Presentation) */}
+        {/* The Certificate Display Card */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-3 sm:p-5 shadow-2xl space-y-4">
           <div className="flex items-center justify-between px-2 pt-1 border-b border-slate-800/80 pb-3">
             <div className="flex items-center gap-2">
@@ -194,15 +289,66 @@ function CertificateVerificationContent() {
             </a>
           </div>
 
-          {/* Certificate Image Rendering */}
-          <div className="relative w-full aspect-[2000/1414] rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-inner group">
+          {/* Exact Canva Template Preview Container with Native Typography */}
+          <div
+            className="relative w-full aspect-[2000/1414] rounded-2xl overflow-hidden bg-white border border-slate-700/80 shadow-2xl select-none"
+            style={{ containerType: 'inline-size' }}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={imageUrl}
-              alt={`Sertifikat LDKS ${rawName}`}
-              className="w-full h-full object-contain select-none"
+              src="/sertifikat-ldks.png"
+              alt={`Desain Sertifikat LDKS ${cleanRawName}`}
+              className="w-full h-full object-contain pointer-events-none select-none"
               loading="eager"
             />
+
+            {/* Overlaid Student Name strictly in 1 single line right above the underline */}
+            <div
+              className="absolute font-sans font-bold text-slate-900 select-none pointer-events-none"
+              style={{
+                left: '8.55%',
+                bottom: '47.2%',
+                fontSize: `clamp(10px, ${(fittedInfo.fontSize * 0.1188).toFixed(3)}cqi, 26px)`,
+                lineHeight: 1,
+                whiteSpace: 'nowrap',
+                overflow: 'visible',
+                maxWidth: 'none',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              {fittedInfo.displayName}
+            </div>
+
+            {/* Overlaid QR Code Barcode positioned neatly in the bottom right signature area */}
+            {qrDataUrl && (
+              <div
+                className="absolute flex flex-col items-center pointer-events-none select-none"
+                style={{
+                  left: '56.5%',
+                  top: '72.8%',
+                  width: '8.1%',
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={qrDataUrl}
+                  alt="Barcode Verifikasi"
+                  className="w-full aspect-square object-contain bg-white rounded-xs shadow-2xs"
+                />
+                <span
+                  className="font-bold text-slate-900 tracking-tight text-center leading-tight mt-0.5"
+                  style={{ fontSize: 'clamp(5px, 0.55cqi, 9px)' }}
+                >
+                  SCAN VERIFIKASI
+                </span>
+                <span
+                  className="text-slate-500 text-center leading-tight"
+                  style={{ fontSize: 'clamp(4px, 0.45cqi, 7px)' }}
+                >
+                  SMP Terpadu
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}
@@ -213,21 +359,26 @@ function CertificateVerificationContent() {
             </p>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <a
-                href={imageUrl}
-                download={`Sertifikat_LDKS_${rawName.replace(/\s+/g, '_')}.png`}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold uppercase tracking-wider transition-all border border-slate-700 min-h-[42px]"
+              <button
+                type="button"
+                onClick={handleDownloadPng}
+                disabled={isDownloadingPng}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 text-xs font-bold uppercase tracking-wider transition-all border border-slate-700 min-h-[42px] cursor-pointer"
               >
-                <DownloadCloud size={15} />
+                {isDownloadingPng ? (
+                  <Loader2 size={15} className="animate-spin text-emerald-400" />
+                ) : (
+                  <DownloadCloud size={15} />
+                )}
                 <span>Unduh Gambar (PNG)</span>
-              </a>
+              </button>
 
               {!isExcluded && (
                 <button
                   type="button"
                   onClick={handleDownloadPdf}
                   disabled={isDownloadingPdf}
-                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-emerald-600/20 active:scale-95 min-h-[42px]"
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-emerald-600/20 active:scale-95 min-h-[42px] cursor-pointer"
                 >
                   {isDownloadingPdf ? (
                     <Loader2 size={15} className="animate-spin" />
@@ -252,7 +403,7 @@ function CertificateVerificationContent() {
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
                 <User size={13} className="text-slate-400" /> Nama Siswa
               </span>
-              <p className="text-sm font-extrabold text-white">{rawName}</p>
+              <p className="text-sm font-extrabold text-white">{cleanRawName}</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
