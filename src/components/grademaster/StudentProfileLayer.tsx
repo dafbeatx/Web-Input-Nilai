@@ -13,7 +13,7 @@ import {
   Settings, LogOut, Share2, Trophy, TrendingUp,
   Home, BookOpen, Upload, GraduationCap, Bug, ArrowRight, Info, Scroll,
   Smartphone, Laptop, RefreshCw, Mic, CheckCircle2, XCircle, ChevronDown, ChevronUp, Award,
-  Gamepad2
+  Gamepad2, Camera
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, Tooltip, 
@@ -97,7 +97,7 @@ export default function StudentProfileLayer({
   semester = 'Ganjil',
   onlyShowRecordPoints = false
 }: StudentProfileLayerProps) {
-  const { isParent } = useGradeMaster();
+  const { isParent, setStudentData } = useGradeMaster();
   const [totalPoints, setTotalPoints] = useState(initialPoints);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(avatarUrl);
   const [activeTab, setActiveTab] = useState<'HOME' | 'GRADES' | 'LESSON' | 'ATTENDANCE' | 'ACCOUNT' | 'GAMES'>('HOME');
@@ -1468,21 +1468,93 @@ export default function StudentProfileLayer({
     setIsUpdatingPoints(false);
   };
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  /**
+   * Mengompresi gambar di sisi browser sebelum dikirim ke server.
+   * Merampingkan ukuran MB foto dari kamera HP ke WebP berukuran puluhan KB
+   * guna menghemat kuota upload siswa, egress, dan kapasitas storage.
+   */
+  const compressImageInBrowser = async (file: File): Promise<Blob> => {
+    if (typeof window === 'undefined' || !file.type.startsWith('image/')) {
+      return file;
+    }
 
-    if (file.size > 20 * 1024 * 1024) {
-      setToast({ message: "Ukuran foto terlalu besar (Maksimal 20MB)", type: "error" });
+    return new Promise((resolve) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 512;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = Math.round((height * MAX_SIZE) / width);
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = Math.round((width * MAX_SIZE) / height);
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob && blob.size < file.size) {
+              resolve(blob);
+            } else {
+              resolve(file);
+            }
+          },
+          'image/webp',
+          0.82
+        );
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(file);
+      };
+
+      img.src = objectUrl;
+    });
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const rawFile = event.target.files?.[0];
+    if (!rawFile) return;
+
+    if (rawFile.size > 20 * 1024 * 1024) {
+      setToast({ message: "Ukuran foto maksimal 20MB", type: "error" });
       return;
     }
 
     setIsUploadingAvatar(true);
-    setToast({ message: "Sedang memproses foto...", type: "success" });
+    setToast({ message: "Mengompresi & menyiapkan foto (WebP)...", type: "success" });
 
     try {
+      // 1. Kompresi gambar di browser agar proses upload instan dan hemat bandwidth
+      const compressedBlob = await compressImageInBrowser(rawFile);
+      const cleanName = rawFile.name.replace(/\.[^/.]+$/, "");
+      const uploadFile = new File([compressedBlob], `${cleanName}.webp`, {
+        type: 'image/webp'
+      });
+
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', uploadFile);
       formData.append('studentId', studentId);
 
       const res = await fetch('/api/grademaster/behaviors/avatar', {
@@ -1493,10 +1565,29 @@ export default function StudentProfileLayer({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal mengunggah foto");
 
-      setToast({ message: "Foto profil berhasil diperbarui!", type: "success" });
+      const origKb = Math.round(rawFile.size / 1024);
+      const compKb = Math.round((data.compressedSize || compressedBlob.size) / 1024);
+      setToast({ 
+        message: `Foto profil berhasil diupload! (${origKb}KB ➜ ${compKb}KB WebP)`, 
+        type: "success" 
+      });
       setCurrentAvatarUrl(data.avatar_url);
+
+      // Sinkronkan ke Context & LocalStorage siswa secara real-time
+      if (data.avatar_url && setStudentData) {
+        setStudentData((prev: any) => {
+          if (!prev) return prev;
+          const updated = { ...prev, avatar_url: data.avatar_url, photo_url: data.avatar_url };
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('gm_studentData', JSON.stringify(updated));
+            } catch {}
+          }
+          return updated;
+        });
+      }
     } catch (err: any) {
-      setToast({ message: err.message || "Gagal mengunggah", type: "error" });
+      setToast({ message: err.message || "Gagal mengunggah foto", type: "error" });
     } finally {
       setIsUploadingAvatar(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -2974,21 +3065,35 @@ export default function StudentProfileLayer({
                       </button>
                     ) : !isParent ? (
                       <button 
-                        onClick={() => setShowAvatarModal(true)}
-                        className="absolute inset-0 bg-slate-900/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer active:opacity-100"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploadingAvatar}
+                        className="absolute inset-0 bg-slate-900/60 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer active:opacity-100 disabled:opacity-50 gap-0.5"
+                        title="Klik untuk mengganti foto profil"
                       >
-                        <Settings size={16} />
+                        {isUploadingAvatar ? (
+                          <Loader2 size={16} className="animate-spin text-white" />
+                        ) : (
+                          <>
+                            <Camera size={16} />
+                            <span className="text-[8.5px] font-bold uppercase tracking-wider">Ubah</span>
+                          </>
+                        )}
                       </button>
                     ) : null}
                   </div>
                   {/* Floating edit button for avatar (siswa only) */}
                   {!isAdmin && !isParent && (
                     <button
-                      onClick={() => setShowAvatarModal(true)}
-                      className="absolute -bottom-1 -right-1 w-7 h-7 bg-white hover:bg-slate-50 text-indigo-600 rounded-full border border-slate-200 shadow-sm flex items-center justify-center transition-all active:scale-90"
-                      title="Ganti Avatar"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingAvatar}
+                      className="absolute -bottom-1 -right-1 w-7 h-7 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full border-2 border-white shadow-sm flex items-center justify-center transition-all active:scale-90 cursor-pointer"
+                      title="Unggah Foto Profil Baru (WebP)"
                     >
-                      <Settings size={13} />
+                      {isUploadingAvatar ? (
+                        <Loader2 size={12} className="animate-spin text-white" />
+                      ) : (
+                        <Camera size={12} />
+                      )}
                     </button>
                   )}
                 </div>
@@ -3851,6 +3956,30 @@ export default function StudentProfileLayer({
                 </button>
               </div>
 
+              {/* Option to upload real profile photo */}
+              <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-650 flex items-center justify-center shrink-0">
+                    <Camera size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-bold text-slate-900 truncate">Unggah Foto Sendiri</h4>
+                    <p className="text-[10px] font-medium text-slate-500 truncate">Format WebP otomatis ringan</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAvatarModal(false);
+                    fileInputRef.current?.click();
+                  }}
+                  disabled={isUploadingAvatar}
+                  className="px-3 py-1.5 bg-indigo-650 hover:bg-indigo-750 text-white text-[11px] font-bold rounded-xl shrink-0 transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
+                >
+                  Pilih Foto
+                </button>
+              </div>
+
               {/* Current Points Display */}
               <div className="bg-gradient-to-r from-emerald-50 to-emerald-100/40 rounded-2xl p-4 border border-emerald-100/50 flex justify-between items-center">
                 <div>
@@ -4243,12 +4372,12 @@ export default function StudentProfileLayer({
         </div>
       )}
 
-      {isAdmin && (
+      {!isParent && (
         <input 
           type="file" 
           ref={fileInputRef} 
           onChange={handleAvatarUpload} 
-          accept="image/*" 
+          accept="image/png, image/jpeg, image/jpg, image/webp, image/heic" 
           className="hidden" 
         />
       )}

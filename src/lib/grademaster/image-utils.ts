@@ -1,4 +1,4 @@
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB limit (dapat menangani foto resolusi tinggi kamera HP)
 const OUTPUT_QUALITY = 78;
 const MAX_DIMENSION = 256;
 
@@ -14,8 +14,8 @@ export function generatePhotoFileName(studentId: string): string {
 export async function compressAndConvertToWebP(buffer: Buffer): Promise<Buffer> {
   const sharp = (await import('sharp')).default;
 
-  // Refactor: Menggunakan failOnError: false untuk mentolerir metadata EXIF yang rusak di beberapa device
-  // Ditambah .rotate() tanpa argumen untuk normalisasi otomatis berdasarkan EXIF orientation
+  // Menggunakan failOnError: false untuk mentolerir metadata EXIF yang rusak di berbagai perangkat
+  // Ditambah .rotate() untuk normalisasi orientasi kamera otomatis
   const processed = await sharp(buffer, { failOnError: false })
     .rotate() 
     .resize(MAX_DIMENSION, MAX_DIMENSION, {
@@ -25,7 +25,7 @@ export async function compressAndConvertToWebP(buffer: Buffer): Promise<Buffer> 
       background: { r: 0, g: 0, b: 0, alpha: 0 }
     })
     .webp({ 
-      quality: 85, 
+      quality: 78, 
       effort: 6,
       lossless: false 
     })

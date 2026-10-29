@@ -42,33 +42,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ID siswa tidak ditemukan' }, { status: 400 });
     }
 
-    // Validasi tambahan jika ini siswa
+    // Validasi otorisasi jika ini sesi siswa
     if (isStudentSession && studentSessionData) {
       const studentBehaviorId = studentSessionData.student.behavior_id;
-      if (!studentBehaviorId || studentId !== studentBehaviorId) {
-        return NextResponse.json({ error: 'Unauthorized: You can only update your own profile photo' }, { status: 403 });
-      }
+      const studentAccountId = studentSessionData.student.id;
+      const isOwner =
+        (studentBehaviorId && studentId === studentBehaviorId) ||
+        (studentAccountId && studentId === studentAccountId);
 
-      // Validasi upload foto kustom (bukan emoji)
-      if (!avatarEmoji) {
-        const { data: currentBehavior, error: behaviorErr } = await supabaseAdmin
-          .from('gm_behaviors')
-          .select('avatar_url')
-          .eq('id', studentId)
-          .maybeSingle();
-
-        if (behaviorErr) {
-          console.error('[Avatar] Error checking existing avatar:', behaviorErr);
-          return NextResponse.json({ error: 'Gagal memverifikasi data profil' }, { status: 500 });
-        }
-
-        if (currentBehavior && currentBehavior.avatar_url && currentBehavior.avatar_url.trim() !== '') {
-          // Hanya blokir jika itu URL foto asli. Jika itu emoji, mereka boleh mengunggah foto baru.
-          const isUrl = currentBehavior.avatar_url.startsWith('http') || currentBehavior.avatar_url.startsWith('/') || currentBehavior.avatar_url.startsWith('data:');
-          if (isUrl) {
-            return NextResponse.json({ error: 'Foto profil sudah ada dan tidak dapat diubah oleh siswa' }, { status: 400 });
-          }
-        }
+      if (!isOwner) {
+        return NextResponse.json({ error: 'Unauthorized: Anda hanya dapat memperbarui foto profil Anda sendiri' }, { status: 403 });
       }
     }
 
@@ -163,21 +146,57 @@ export async function POST(req: NextRequest) {
 
     const publicAvatarUrl = publicUrlData.publicUrl;
 
+    // Resolve record behavior target
+    let behaviorIdToUpdate = studentId;
+    const { data: directBeh } = await supabaseAdmin
+      .from('gm_behaviors')
+      .select('id, student_name, class_name')
+      .eq('id', studentId)
+      .maybeSingle();
+
+    if (!directBeh && isStudentSession && studentSessionData?.student) {
+      behaviorIdToUpdate = studentSessionData.student.behavior_id || studentId;
+    }
+
     // Update Tabel gm_behaviors
     const { error: dbError } = await supabaseAdmin
       .from('gm_behaviors')
       .update({ avatar_url: publicAvatarUrl })
-      .eq('id', studentId);
+      .eq('id', behaviorIdToUpdate);
 
     if (dbError) {
       console.error('[Avatar] DB update failed:', dbError);
       return NextResponse.json({ error: 'Gagal menautkan foto ke profil siswa' }, { status: 500 });
     }
 
+    // Sinkronkan juga ke gm_student_accounts agar seragam di portal siswa dan admin
+    try {
+      if (isStudentSession && studentSessionData?.student?.id) {
+        await supabaseAdmin
+          .from('gm_student_accounts')
+          .update({ profile_photo_url: publicAvatarUrl, updated_at: new Date().toISOString() })
+          .eq('id', studentSessionData.student.id);
+      } else {
+        const targetName = directBeh?.student_name || studentSessionData?.student?.name;
+        const targetClass = directBeh?.class_name || studentSessionData?.student?.class_name;
+        if (targetName && targetClass) {
+          await supabaseAdmin
+            .from('gm_student_accounts')
+            .update({ profile_photo_url: publicAvatarUrl, updated_at: new Date().toISOString() })
+            .ilike('student_name', targetName.trim())
+            .eq('class_name', targetClass);
+        }
+      }
+    } catch (syncErr) {
+      console.warn('[Avatar] Failed to sync photo to gm_student_accounts:', syncErr);
+    }
+
     return NextResponse.json({ 
       success: true, 
-      message: 'Avatar berhasil diunggah dan dikompresi sempurna', 
-      avatar_url: publicAvatarUrl 
+      message: 'Foto profil berhasil diunggah dan dikompresi ke WebP!', 
+      avatar_url: publicAvatarUrl,
+      originalSize: file.size,
+      compressedSize: processedImageBuffer.length,
     });
 
   } catch (err: unknown) {
