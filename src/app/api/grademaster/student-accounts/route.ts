@@ -141,14 +141,49 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { className, academicYear = '2026/2027' } = body;
+    const { className, academicYear = '2026/2027', regenerateMissingPasswords = false } = body;
 
     if (!className) {
       return NextResponse.json({ error: 'Nama kelas wajib diisi' }, { status: 400 });
     }
 
+    // Optional: Regenerate passwords for existing accounts in this class
+    if (regenerateMissingPasswords) {
+      const { data: accountsToRegen, error: fetchRegenErr } = await supabaseAdmin
+        .from('gm_student_accounts')
+        .select('id, student_name')
+        .eq('class_name', className)
+        .eq('academic_year', academicYear);
+
+      if (fetchRegenErr) {
+        return NextResponse.json({ error: `Gagal memuat akun: ${fetchRegenErr.message}` }, { status: 500 });
+      }
+
+      if (!accountsToRegen || accountsToRegen.length === 0) {
+        return NextResponse.json({ error: `Tidak ada akun siswa di kelas ${className} (${academicYear})` }, { status: 404 });
+      }
+
+      for (const acc of accountsToRegen) {
+        const plainPass = generatePassword();
+        const hashPass = await hashPassword(plainPass);
+        await supabaseAdmin
+          .from('gm_student_accounts')
+          .update({
+            password_hash: hashPass,
+            password_plain: plainPass,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', acc.id);
+      }
+
+      return NextResponse.json({
+        message: `Kata sandi berhasil dibuat ulang untuk ${accountsToRegen.length} akun siswa ${className}`,
+        regenerated: accountsToRegen.length,
+      });
+    }
+
     // Step 1: Fetch students from gm_behaviors (master registry for behavioral tracking)
-    const { data: behaviorStudents, error: fetchError } = await supabase
+    const { data: behaviorStudents, error: fetchError } = await supabaseAdmin
       .from('gm_behaviors')
       .select('student_name, class_name')
       .eq('class_name', className)
@@ -164,8 +199,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Tidak ada siswa ditemukan di kelas ${className} (${academicYear})` }, { status: 404 });
     }
 
-    // Step 2: Filter out students who already have an account
-    const { data: existingAccounts, error: existingError } = await supabase
+    // Step 2: Filter out students who already have an account (strict case-insensitive)
+    const { data: existingAccounts, error: existingError } = await supabaseAdmin
       .from('gm_student_accounts')
       .select('student_name')
       .eq('class_name', className)
@@ -175,19 +210,19 @@ export async function POST(req: NextRequest) {
       console.error('[POST Student Accounts] Error checking existing accounts:', existingError);
     }
 
-    const existingNames = new Set(((existingAccounts as { student_name: string }[]) || []).map((a) => a.student_name));
-    const newStudents = ((behaviorStudents as { student_name: string; class_name: string }[]) || []).filter((s) => !existingNames.has(s.student_name));
+    const existingNames = new Set(((existingAccounts as { student_name: string }[]) || []).map((a) => a.student_name.trim().toLowerCase()));
+    const newStudents = ((behaviorStudents as { student_name: string; class_name: string }[]) || []).filter((s) => !existingNames.has(s.student_name.trim().toLowerCase()));
 
     if (newStudents.length === 0) {
       return NextResponse.json({ message: 'Semua siswa di kelas ini sudah memiliki akun', created: 0 });
     }
 
     // Step 3: Check all usernames to avoid collisions
-    const { data: allUsernames } = await supabase
+    const { data: allUsernames } = await supabaseAdmin
       .from('gm_student_accounts')
       .select('username');
 
-    const usedUsernames = new Set(((allUsernames as { username: string }[]) || []).map((a) => a.username));
+    const usedUsernames = new Set(((allUsernames as { username: string }[]) || []).map((a) => a.username.toLowerCase()));
     interface AccountRow {
       student_name: string;
       class_name: string;
@@ -203,11 +238,11 @@ export async function POST(req: NextRequest) {
       let username = baseUsername;
       let counter = 1;
 
-      while (usedUsernames.has(username)) {
+      while (usedUsernames.has(username.toLowerCase())) {
         username = `${baseUsername}${counter}`;
         counter++;
       }
-      usedUsernames.add(username);
+      usedUsernames.add(username.toLowerCase());
 
       const plainPassword = generatePassword();
       const hashedPassword = await hashPassword(plainPassword);
@@ -223,7 +258,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 4: Batch insert the new accounts
-    const { data: inserted, error: insertError } = await supabase
+    const { data: inserted, error: insertError } = await supabaseAdmin
       .from('gm_student_accounts')
       .insert(accountRows)
       .select();
@@ -242,7 +277,7 @@ export async function POST(req: NextRequest) {
         total_points: 0,
         behavior_logs: []
       }));
-      await supabase
+      await supabaseAdmin
         .from('gm_behaviors')
         .upsert(behaviorPayload, { onConflict: 'student_name,class_name,academic_year', ignoreDuplicates: true });
     }
@@ -254,6 +289,61 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     console.error('Create student accounts critical error:', err);
     const msg = err instanceof Error ? err.message : 'Gagal membuat akun siswa';
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const adminSession = await getAdminSession();
+    if (!adminSession) {
+      return NextResponse.json({ error: 'Akses ditolak: Hanya admin yang dapat mereset kata sandi' }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const { accountId, customPassword } = body;
+
+    if (!accountId) {
+      return NextResponse.json({ error: 'Account ID wajib diisi' }, { status: 400 });
+    }
+
+    let newPassword = '';
+    if (typeof customPassword === 'string' && customPassword.trim().length > 0) {
+      if (customPassword.trim().length < 4) {
+        return NextResponse.json({ error: 'Kata sandi minimal 4 karakter' }, { status: 400 });
+      }
+      newPassword = customPassword.trim();
+    } else {
+      newPassword = generatePassword();
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    const { data: updated, error: updateErr } = await supabaseAdmin
+      .from('gm_student_accounts')
+      .update({
+        password_hash: hashedPassword,
+        password_plain: newPassword,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', accountId)
+      .select('id, student_name, class_name, academic_year, username, password_plain')
+      .single();
+
+    if (updateErr || !updated) {
+      console.error('[PATCH Student Accounts] Update error:', updateErr);
+      return NextResponse.json({ error: `Gagal memperbarui kata sandi: ${updateErr?.message || 'Akun tidak ditemukan'}` }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Kata sandi untuk ${updated.student_name} berhasil dibuat ulang: ${newPassword}`,
+      account: updated,
+      newPassword
+    });
+  } catch (err: unknown) {
+    console.error('Reset student password critical error:', err);
+    const msg = err instanceof Error ? err.message : 'Gagal mereset kata sandi siswa';
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

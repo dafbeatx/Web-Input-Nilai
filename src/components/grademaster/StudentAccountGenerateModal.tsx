@@ -490,30 +490,27 @@ export default function StudentAccountGenerateModal({
                             <button
                               key={s.id}
                               type="button"
-                              disabled={s.has_account}
                               onClick={() => {
                                 setSelectedStudentName(s.student_name);
                                 setErrorMessage('');
                               }}
                               className={`w-full px-3.5 py-2.5 text-left flex items-center justify-between text-xs transition-colors min-h-[44px] cursor-pointer ${
-                                s.has_account
-                                  ? 'bg-slate-50/70 text-slate-400 cursor-not-allowed'
-                                  : isSelected
-                                  ? 'bg-indigo-50/90 text-indigo-950 font-bold'
+                                isSelected
+                                  ? 'bg-indigo-50/90 text-indigo-950 font-bold border-l-4 border-indigo-600'
                                   : 'hover:bg-slate-50 text-slate-800'
                               }`}
                             >
                               <div className="min-w-0 pr-2">
                                 <span className="block truncate">{s.student_name}</span>
-                                {s.has_account && (
-                                  <span className="text-[10px] text-slate-400 font-mono">
-                                    Sudah terdaftar: {s.username}
+                                {s.has_account && s.username && (
+                                  <span className="text-[10px] text-indigo-600 font-mono block">
+                                    @{s.username}
                                   </span>
                                 )}
                               </div>
                               <span className="shrink-0">
                                 {s.has_account ? (
-                                  <span className="px-2 py-0.5 bg-slate-200/80 text-slate-600 rounded text-[10px] font-semibold">
+                                  <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-semibold">
                                     Sudah Ada Akun
                                   </span>
                                 ) : isSelected ? (
@@ -544,76 +541,144 @@ export default function StudentAccountGenerateModal({
               </div>
 
               {/* Tampilan Username Otomatis & Input Password (Hanya muncul jika nama siswa sudah dipilih) */}
-              {selectedStudentName && (
-                <div className="space-y-3 pt-2 border-t border-slate-100 animate-in fade-in duration-200">
-                  
-                  {/* Kartu Username Otomatis */}
-                  <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <span className="text-[10.5px] font-bold text-indigo-800 uppercase tracking-wider block">
-                        Username Resmi Anda (Otomatis)
-                      </span>
-                      <span className="text-xs font-mono font-bold text-indigo-950 block truncate mt-0.5">
-                        {previewUsername}
-                      </span>
-                    </div>
-                    <span className="px-2 py-1 bg-white border border-indigo-200 text-indigo-700 text-[10px] font-bold rounded-md shrink-0">
-                      Disediakan
-                    </span>
-                  </div>
+              {selectedStudentName && (() => {
+                const selectedStudent = students.find((s) => s.student_name === selectedStudentName);
+                if (selectedStudent?.has_account) {
+                  const studentUsername = selectedStudent.username || previewUsername;
+                  return (
+                    <div className="space-y-3 pt-2 border-t border-slate-100 animate-in fade-in duration-200">
+                      <div className="p-3.5 bg-indigo-50/80 border border-indigo-200/70 rounded-xl space-y-2.5">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 size={16} className="text-indigo-600 shrink-0" />
+                          <span className="text-xs font-bold text-indigo-950 font-outfit">
+                            Akun Siswa Sudah Terdaftar
+                          </span>
+                        </div>
+                        <p className="text-xs text-indigo-900 leading-relaxed">
+                          Akun atas nama <strong>{selectedStudent.student_name}</strong> sudah aktif dengan username resmi:
+                        </p>
+                        <div className="flex items-center justify-between bg-white border border-indigo-200 rounded-lg px-3 py-2 min-h-[40px]">
+                          <span className="font-mono text-sm font-bold text-indigo-950 truncate select-all">
+                            {studentUsername}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(studentUsername, 'username')}
+                            className="px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                          >
+                            {copiedField === 'username' ? (
+                              <>
+                                <Check size={13} className="text-emerald-600" />
+                                <span className="text-emerald-600">Disalin</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={13} />
+                                <span>Salin</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
 
-                  {/* Input Password Bebas Pilihan Siswa */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">
-                      3. Tentukan Kata Sandi Anda Sendiri
-                    </label>
-                    <p className="text-[11px] text-slate-500 font-medium mb-1.5 leading-snug">
-                      Kata sandi bebas Anda tentukan sendiri agar mudah diingat (minimal 4 karakter).
-                    </p>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={customPassword}
-                        onChange={(e) => setCustomPassword(e.target.value)}
-                        placeholder="Tulis kata sandi baru Anda..."
-                        autoComplete="new-password"
-                        required
-                        className="w-full pl-3.5 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all min-h-[44px]"
-                      />
                       <button
                         type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 min-h-[32px] min-w-[32px] flex items-center justify-center cursor-pointer"
-                        aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                        onClick={() => {
+                          onAccountCreated({
+                            username: studentUsername,
+                            password: '',
+                            studentName: selectedStudent.student_name,
+                            className: selectedClass
+                          });
+                          handleClose();
+                        }}
+                        className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer min-h-[44px]"
                       >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        <KeyRound size={16} />
+                        <span>Gunakan Username Ini untuk Masuk</span>
+                      </button>
+
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2">
+                        <AlertCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                        <p className="text-[11px] text-amber-800 leading-relaxed">
+                          <strong>Lupa kata sandi?</strong> Guru atau wali kelas dapat membuatkan kata sandi baru untuk Anda dalam hitungan detik melalui menu <em>Manajemen Akun Siswa</em>.
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-3 pt-2 border-t border-slate-100 animate-in fade-in duration-200">
+                    
+                    {/* Kartu Username Otomatis */}
+                    <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="text-[10.5px] font-bold text-indigo-800 uppercase tracking-wider block">
+                          Username Resmi Anda (Otomatis)
+                        </span>
+                        <span className="text-xs font-mono font-bold text-indigo-950 block truncate mt-0.5">
+                          {previewUsername}
+                        </span>
+                      </div>
+                      <span className="px-2 py-1 bg-white border border-indigo-200 text-indigo-700 text-[10px] font-bold rounded-md shrink-0">
+                        Disediakan
+                      </span>
+                    </div>
+
+                    {/* Input Password Bebas Pilihan Siswa */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">
+                        3. Tentukan Kata Sandi Anda Sendiri
+                      </label>
+                      <p className="text-[11px] text-slate-500 font-medium mb-1.5 leading-snug">
+                        Kata sandi bebas Anda tentukan sendiri agar mudah diingat (minimal 4 karakter).
+                      </p>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={customPassword}
+                          onChange={(e) => setCustomPassword(e.target.value)}
+                          placeholder="Tulis kata sandi baru Anda..."
+                          autoComplete="new-password"
+                          required
+                          className="w-full pl-3.5 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all min-h-[44px]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 min-h-[32px] min-w-[32px] flex items-center justify-center cursor-pointer"
+                          aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                        >
+                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Tombol Submit Pendaftaran */}
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={!selectedStudentName || !customPassword.trim() || isSubmitting}
+                        className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-h-[46px]"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 size={18} className="animate-spin text-slate-300" />
+                            <span>Mendaftarkan Akun...</span>
+                          </>
+                        ) : (
+                          <>
+                            <UserCheck size={16} className="text-emerald-400" />
+                            <span>Daftar & Masuk ke Portal</span>
+                          </>
+                        )}
                       </button>
                     </div>
+
                   </div>
-
-                </div>
-              )}
-
-              {/* Tombol Submit Pendaftaran */}
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={!selectedStudentName || !customPassword.trim() || isSubmitting}
-                  className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-h-[46px]"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 size={18} className="animate-spin text-slate-300" />
-                      <span>Mendaftarkan Akun...</span>
-                    </>
-                  ) : (
-                    <>
-                      <UserCheck size={16} className="text-emerald-400" />
-                      <span>Daftar & Masuk ke Portal</span>
-                    </>
-                  )}
-                </button>
-              </div>
+                );
+              })()}
 
             </form>
           )}

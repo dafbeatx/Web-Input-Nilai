@@ -113,11 +113,12 @@ export async function GET(req: NextRequest) {
         a.student_name.localeCompare(b.student_name, undefined, { sensitivity: 'base' })
       );
 
-      // 3. Ambil akun yang sudah ada untuk kelas ini dari gm_student_accounts
+      // 3. Ambil akun yang sudah ada untuk kelas dan tahun ajaran ini dari gm_student_accounts
       const { data: existingAccounts, error: accountError } = await supabaseAdmin
         .from('gm_student_accounts')
         .select('student_name, username')
-        .ilike('class_name', className.trim());
+        .ilike('class_name', className.trim())
+        .eq('academic_year', targetYear);
 
       if (accountError) {
         console.error('[Generate Account API] Gagal memeriksa akun siswa:', accountError);
@@ -227,12 +228,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Periksa apakah akun siswa sudah pernah dibuat sebelumnya
+    // 2. Periksa apakah akun siswa sudah pernah dibuat sebelumnya untuk tahun ajaran ini
     const { data: existingAccount, error: checkAccountErr } = await supabaseAdmin
       .from('gm_student_accounts')
       .select('id, student_name, class_name, username')
       .ilike('student_name', trimmedName)
       .ilike('class_name', trimmedClass)
+      .eq('academic_year', targetYear)
       .limit(1)
       .maybeSingle();
 

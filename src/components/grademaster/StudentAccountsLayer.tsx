@@ -5,7 +5,8 @@ import Image from 'next/image';
 import {
   ArrowLeft, Users, Download, Trash2, Shield, Loader2,
   UserPlus, ShieldCheck, Camera, AlertCircle,
-  KeyRound, TrendingUp, RotateCcw, CheckCircle2, AlertTriangle
+  KeyRound, TrendingUp, RotateCcw, CheckCircle2, AlertTriangle,
+  Copy, Check, X
 } from 'lucide-react';
 import { ToastType, StudentAccount, isImageUrl } from '@/lib/grademaster/types';
 
@@ -44,6 +45,14 @@ export default function StudentAccountsLayer({
   const [resetGoogle, setResetGoogle] = useState(true);
   const [resetConfirmationInput, setResetConfirmationInput] = useState('');
   const [isResetting, setIsResetting] = useState(false);
+
+  // States untuk Reset Password per Siswa & Kelas
+  const [resettingAccount, setResettingAccount] = useState<StudentAccount | null>(null);
+  const [resetCustomPassword, setResetCustomPassword] = useState('');
+  const [isResettingSingle, setIsResettingSingle] = useState(false);
+  const [singleResetSuccess, setSingleResetSuccess] = useState<string | null>(null);
+  const [copiedResetPass, setCopiedResetPass] = useState(false);
+  const [isRegeneratingClass, setIsRegeneratingClass] = useState(false);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -345,6 +354,80 @@ export default function StudentAccountsLayer({
     }
   };
 
+  const handleResetStudentPassword = async () => {
+    if (!resettingAccount || isResettingSingle) return;
+    setIsResettingSingle(true);
+    try {
+      const res = await fetch('/api/grademaster/student-accounts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountId: resettingAccount.id,
+          customPassword: resetCustomPassword.trim() || undefined
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const newPass = data.newPassword || data.account?.password_plain;
+        setSingleResetSuccess(newPass);
+        setToast({
+          message: `Kata sandi ${resettingAccount.student_name} berhasil diubah!`,
+          type: 'success'
+        });
+        setAccounts(prev => prev.map(a => 
+          a.id === resettingAccount.id ? { ...a, password_plain: newPass } : a
+        ));
+      } else {
+        setToast({ message: data.error || 'Gagal mereset kata sandi', type: 'error' });
+      }
+    } catch {
+      setToast({ message: 'Terjadi kesalahan sistem saat mereset kata sandi', type: 'error' });
+    } finally {
+      setIsResettingSingle(false);
+    }
+  };
+
+  const handleCopyResetPass = async (pass: string) => {
+    try {
+      await navigator.clipboard.writeText(pass);
+      setCopiedResetPass(true);
+      setTimeout(() => setCopiedResetPass(false), 2000);
+      setToast({ message: 'Kata sandi berhasil disalin ke clipboard!', type: 'success' });
+    } catch {
+      setToast({ message: 'Gagal menyalin kata sandi', type: 'error' });
+    }
+  };
+
+  const handleRegenerateClassPasswords = async () => {
+    if (!selectedClass || isRegeneratingClass) return;
+    if (!window.confirm(`Buat ulang kata sandi baru untuk seluruh siswa di Kelas ${selectedClass}? Kata sandi baru akan tersimpan dan dapat langsung diekspor ke Excel.`)) {
+      return;
+    }
+    setIsRegeneratingClass(true);
+    try {
+      const res = await fetch('/api/grademaster/student-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          className: selectedClass,
+          academicYear: selectedYear,
+          regenerateMissingPasswords: true
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setToast({ message: data.message || 'Semua kata sandi berhasil dibuat ulang', type: 'success' });
+        fetchAccounts();
+      } else {
+        setToast({ message: data.error || 'Gagal membuat ulang kata sandi', type: 'error' });
+      }
+    } catch {
+      setToast({ message: 'Terjadi kesalahan sistem saat membuat ulang kata sandi', type: 'error' });
+    } finally {
+      setIsRegeneratingClass(false);
+    }
+  };
+
   const hasPasswords = accounts.some(a => a.password_plain);
 
   return (
@@ -413,19 +496,30 @@ export default function StudentAccountsLayer({
 
       {/* Action Buttons */}
       {selectedClass && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-6">
+        <div className="flex flex-wrap items-center gap-2.5 mb-6">
           <button
             onClick={handleGenerate}
             disabled={isGenerating}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white border border-primary/10 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] hover:bg-primary/95 disabled:opacity-50 min-h-[44px]"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white border border-primary/10 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] hover:bg-primary/95 disabled:opacity-50 min-h-[42px] cursor-pointer"
           >
             {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
             Generate
           </button>
+          {accounts.length > 0 && !hasPasswords && (
+            <button
+              onClick={handleRegenerateClassPasswords}
+              disabled={isRegeneratingClass}
+              title="Buat kata sandi baru untuk seluruh siswa di kelas ini agar bisa dibagikan"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500/10 text-blue-600 border border-blue-500/20 hover:bg-blue-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 min-h-[42px] cursor-pointer"
+            >
+              {isRegeneratingClass ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16} />}
+              Buat Ulang Sandi
+            </button>
+          )}
           <button
             onClick={handleExport}
             disabled={isExporting || accounts.length === 0}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 min-h-[44px]"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 min-h-[42px] cursor-pointer"
           >
             {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
             Export Excel
@@ -433,7 +527,7 @@ export default function StudentAccountsLayer({
           <button
             onClick={handleClearPasswords}
             disabled={isClearing || !hasPasswords}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 min-h-[44px]"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 min-h-[42px] cursor-pointer"
           >
             {isClearing ? <Loader2 size={16} className="animate-spin" /> : <Shield size={16} />}
             Hapus Password
@@ -447,7 +541,7 @@ export default function StudentAccountsLayer({
               setShowPromoteModal(true);
             }}
             disabled={accounts.length === 0 && !hasBehaviors}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 hover:bg-indigo-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 min-h-[44px]"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 hover:bg-indigo-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 min-h-[42px] cursor-pointer"
           >
             <TrendingUp size={16} />
             Kenaikan Kelas
@@ -458,12 +552,12 @@ export default function StudentAccountsLayer({
               setResetConfirmationInput('');
               setShowResetModal(true);
             }}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-rose-500/10 text-rose-600 border border-rose-500/20 hover:bg-rose-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] min-h-[44px]"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-500/10 text-rose-600 border border-rose-500/20 hover:bg-rose-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] min-h-[42px] cursor-pointer"
           >
             <RotateCcw size={16} />
             Reset Akun
           </button>
-          <div className="col-span-2 sm:col-span-1 md:col-span-1 flex items-center justify-center px-4 py-3 bg-surface border border-outline-variant rounded-xl text-xs font-bold text-on-surface-variant uppercase tracking-wider min-h-[44px]">
+          <div className="flex items-center justify-center px-4 py-2.5 bg-surface border border-outline-variant rounded-xl text-xs font-bold text-on-surface-variant uppercase tracking-wider min-h-[42px] ml-auto">
             <Users size={16} className="mr-2 text-primary" /> {accounts.length} Akun
           </div>
         </div>
@@ -533,13 +627,31 @@ export default function StudentAccountsLayer({
                   </div>
                 </div>
 
-                {/* Delete */}
-                <button
-                  onClick={() => handleDeleteAccount(account.id)}
-                  className="p-2 text-on-surface-variant/40 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all shrink-0 min-h-[38px] flex items-center justify-center"
-                >
-                  <Trash2 size={16} />
-                </button>
+                {/* Actions: Reset Password & Delete */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResettingAccount(account);
+                      setResetCustomPassword('');
+                      setSingleResetSuccess(null);
+                      setCopiedResetPass(false);
+                    }}
+                    title="Buat ulang kata sandi untuk siswa ini"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 hover:bg-indigo-500/20 rounded-xl text-xs font-bold transition-all active:scale-[0.97] min-h-[38px] cursor-pointer"
+                  >
+                    <KeyRound size={14} />
+                    <span className="hidden sm:inline">Reset Sandi</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteAccount(account.id)}
+                    title="Hapus Akun Siswa"
+                    className="p-2 text-on-surface-variant/40 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all shrink-0 min-h-[38px] flex items-center justify-center cursor-pointer"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             </div>
           ))
@@ -831,6 +943,127 @@ export default function StudentAccountsLayer({
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Reset Password Per Siswa */}
+      {resettingAccount && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isResettingSingle) {
+              setResettingAccount(null);
+            }
+          }}
+        >
+          <div className="w-full max-w-md bg-surface border border-outline-variant rounded-2xl shadow-xl overflow-hidden p-5 sm:p-6 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                  <KeyRound size={18} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-on-surface font-outfit truncate">Reset Kata Sandi Siswa</h3>
+                  <p className="text-[11px] font-medium text-on-surface-variant/70 truncate">Buat atau tentukan kata sandi baru</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setResettingAccount(null)}
+                disabled={isResettingSingle}
+                className="p-1.5 text-on-surface-variant/50 hover:text-on-surface rounded-lg transition-colors cursor-pointer shrink-0"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {singleResetSuccess ? (
+              <div className="space-y-4 animate-in fade-in duration-200 text-center py-2">
+                <div className="w-12 h-12 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
+                  <CheckCircle2 size={26} strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-on-surface font-outfit">Kata Sandi Berhasil Dibuat Ulang!</h4>
+                  <p className="text-xs text-on-surface-variant mt-1">
+                    Siswa: <strong className="text-on-surface">{resettingAccount.student_name}</strong> (@{resettingAccount.username})
+                  </p>
+                </div>
+                <div className="p-3 bg-surface-variant border border-outline-variant rounded-xl flex items-center justify-between gap-3 min-h-[48px]">
+                  <span className="font-mono text-base font-bold text-indigo-600 tracking-wider select-all truncate pl-1">
+                    {singleResetSuccess}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyResetPass(singleResetSuccess)}
+                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 min-h-[36px]"
+                  >
+                    {copiedResetPass ? <Check size={14} /> : <Copy size={14} />}
+                    <span>{copiedResetPass ? 'Disalin' : 'Salin'}</span>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setResettingAccount(null)}
+                  className="w-full py-2.5 bg-surface-variant hover:bg-surface-variant/80 text-on-surface rounded-xl text-xs font-bold transition-colors cursor-pointer min-h-[42px]"
+                >
+                  Selesai
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-3 bg-surface-variant border border-outline-variant rounded-xl text-xs space-y-1.5">
+                  <div className="flex justify-between gap-2">
+                    <span className="text-on-surface-variant">Nama Siswa:</span>
+                    <span className="font-bold text-on-surface truncate">{resettingAccount.student_name}</span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-on-surface-variant">Kelas:</span>
+                    <span className="font-bold text-on-surface">{resettingAccount.class_name} ({resettingAccount.academic_year})</span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-on-surface-variant">Username:</span>
+                    <span className="font-mono font-bold text-primary truncate">@{resettingAccount.username}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
+                    Kata Sandi Baru (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    value={resetCustomPassword}
+                    onChange={(e) => setResetCustomPassword(e.target.value)}
+                    placeholder="Kosongkan untuk kata sandi acak otomatis..."
+                    className="w-full px-3.5 py-2.5 bg-surface-variant border border-outline-variant rounded-xl text-sm font-medium text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary transition-all min-h-[44px]"
+                  />
+                  <p className="text-[11px] text-on-surface-variant/70 mt-1.5">
+                    Biarkan kosong jika ingin dibuatkan kata sandi acak 8 karakter secara otomatis.
+                  </p>
+                </div>
+
+                <div className="flex gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setResettingAccount(null)}
+                    disabled={isResettingSingle}
+                    className="flex-1 py-2.5 bg-surface-variant hover:bg-surface-variant/80 text-on-surface rounded-xl text-xs font-bold transition-colors cursor-pointer min-h-[44px]"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetStudentPassword}
+                    disabled={isResettingSingle}
+                    className="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs min-h-[44px]"
+                  >
+                    {isResettingSingle ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
+                    <span>Simpan Kata Sandi</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
