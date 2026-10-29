@@ -110,7 +110,8 @@ export async function GET(req: NextRequest) {
       .order('student_name', { ascending: true });
 
     if (className) {
-      query = query.eq('class_name', className);
+      const cleanClass = className.replace(/^kelas\s+/i, '').trim();
+      query = query.or(`class_name.eq.${cleanClass},class_name.ilike.${cleanClass},class_name.ilike.Kelas ${cleanClass}`);
     }
 
     const { data, error } = await query;
@@ -129,7 +130,6 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
     const adminSession = await getAdminSession();
     if (!adminSession) {
       return NextResponse.json({ error: 'Akses ditolak: Hanya admin yang dapat membuat akun siswa' }, { status: 403 });

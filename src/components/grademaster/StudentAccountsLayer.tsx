@@ -144,6 +144,7 @@ export default function StudentAccountsLayer({
         setToast({ message: data.message || 'Akun siswa berhasil direset', type: 'success' });
         setShowResetModal(false);
         setResetConfirmationInput('');
+        setAccounts([]);
         fetchClasses();
         fetchAccounts();
       } else {
@@ -536,6 +537,21 @@ export default function StudentAccountsLayer({
             {isClearing ? <Loader2 size={16} className="animate-spin" /> : <Shield size={16} />}
             Hapus Password
           </button>
+          {accounts.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setResetScope('class');
+                setResetConfirmationInput('');
+                setShowResetModal(true);
+              }}
+              title="Reset seluruh akun siswa kelas ini agar siswa dapat mendaftar ulang di halaman login"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-500/10 text-rose-600 border border-rose-500/20 hover:bg-rose-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 min-h-[42px] cursor-pointer"
+            >
+              <RotateCcw size={16} />
+              Reset Akun Kelas
+            </button>
+          )}
           <button
             onClick={() => {
               const defClass = getDefaultDestinationClass(selectedClass);

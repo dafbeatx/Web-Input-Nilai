@@ -114,7 +114,6 @@ export async function POST(req: NextRequest) {
 
     if (scope === 'all') {
       // 1. Reset all student accounts
-      // First, get count of existing accounts to report back
       const { count: totalAccounts } = await supabaseAdmin
         .from('gm_student_accounts')
         .select('*', { count: 'exact', head: true });
@@ -124,8 +123,12 @@ export async function POST(req: NextRequest) {
         deletedGoogleCount = await deleteStudentAuthUsers();
       }
 
+      // Explicitly delete sessions, login logs, and push subscriptions first to avoid foreign key blocks
+      await supabaseAdmin.from('gm_student_sessions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabaseAdmin.from('gm_student_login_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabaseAdmin.from('gm_push_subscriptions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
       // Delete all student accounts from gm_student_accounts
-      // Cascades automatically delete gm_student_sessions, gm_student_login_logs, gm_push_subscriptions
       const { error: delError } = await supabaseAdmin
         .from('gm_student_accounts')
         .delete()
@@ -146,46 +149,79 @@ export async function POST(req: NextRequest) {
       });
     } else {
       // 2. Reset accounts for specific class
-      const { data: classAccounts, error: fetchErr } = await supabaseAdmin
-        .from('gm_student_accounts')
-        .select('id, google_email')
-        .eq('class_name', className)
-        .eq('academic_year', academicYear);
+      const rawClass = typeof className === 'string' ? className.trim() : '';
+      const cleanClass = rawClass.replace(/^kelas\s+/i, '').trim();
+      const targetYear = typeof academicYear === 'string' ? academicYear.trim() : '2026/2027';
 
-      if (fetchErr) {
+      const classFilter = `class_name.eq.${cleanClass},class_name.ilike.${cleanClass},class_name.ilike.Kelas ${cleanClass}`;
+
+      let query = supabaseAdmin
+        .from('gm_student_accounts')
+        .select('id, google_email, student_name, class_name, academic_year')
+        .or(classFilter);
+
+      if (targetYear) {
+        query = query.eq('academic_year', targetYear);
+      }
+
+      const { data: initialAccounts, error: fetchErr } = await query;
+      let classAccounts = initialAccounts;
+
+      // Fallback: If no accounts matched with academic_year filter, search class name alone
+      if ((!classAccounts || classAccounts.length === 0) && cleanClass) {
+        const fallback = await supabaseAdmin
+          .from('gm_student_accounts')
+          .select('id, google_email, student_name, class_name, academic_year')
+          .or(classFilter);
+        if (fallback.data && fallback.data.length > 0) {
+          classAccounts = fallback.data;
+        }
+      }
+
+      if (fetchErr && (!classAccounts || classAccounts.length === 0)) {
         console.error('[ResetAccounts] Error fetching class accounts:', fetchErr);
         return NextResponse.json({ error: `Gagal memuat akun kelas ${className}: ${fetchErr.message}` }, { status: 500 });
       }
 
       const accountsList = classAccounts || [];
-      const classGoogleEmails = new Set<string>();
+      const targetIds = accountsList.map((a) => a.id);
 
-      for (const acc of accountsList) {
-        if (acc.google_email) {
-          classGoogleEmails.add(acc.google_email.toLowerCase().trim());
+      if (targetIds.length > 0) {
+        // Delete related child records first to ensure referential integrity
+        await supabaseAdmin.from('gm_student_sessions').delete().in('account_id', targetIds);
+        await supabaseAdmin.from('gm_student_login_logs').delete().in('account_id', targetIds);
+        await supabaseAdmin.from('gm_push_subscriptions').delete().in('account_id', targetIds);
+
+        // Delete Google auth users if requested
+        if (resetGoogle) {
+          const classGoogleEmails = new Set<string>();
+          for (const acc of accountsList) {
+            if (acc.google_email) {
+              classGoogleEmails.add(acc.google_email.toLowerCase().trim());
+            }
+          }
+          if (classGoogleEmails.size > 0) {
+            deletedGoogleCount = await deleteStudentAuthUsers(classGoogleEmails);
+          }
         }
+
+        // Delete accounts directly by primary keys (guaranteed exact delete)
+        const { error: delError } = await supabaseAdmin
+          .from('gm_student_accounts')
+          .delete()
+          .in('id', targetIds);
+
+        if (delError) {
+          console.error(`[ResetAccounts] Error deleting accounts for class ${className}:`, delError);
+          return NextResponse.json({ error: `Gagal mereset akun kelas ${className}: ${delError.message}` }, { status: 500 });
+        }
+
+        deletedAccountsCount = targetIds.length;
       }
-
-      if (resetGoogle && classGoogleEmails.size > 0) {
-        deletedGoogleCount = await deleteStudentAuthUsers(classGoogleEmails);
-      }
-
-      const { error: delError } = await supabaseAdmin
-        .from('gm_student_accounts')
-        .delete()
-        .eq('class_name', className)
-        .eq('academic_year', academicYear);
-
-      if (delError) {
-        console.error(`[ResetAccounts] Error deleting accounts for class ${className}:`, delError);
-        return NextResponse.json({ error: `Gagal mereset akun kelas ${className}: ${delError.message}` }, { status: 500 });
-      }
-
-      deletedAccountsCount = accountsList.length;
 
       return NextResponse.json({
         success: true,
-        message: `Berhasil mereset akun siswa kelas ${className} (${deletedAccountsCount} akun) dan ${deletedGoogleCount} akun Google terkait. Data nilai dan perilaku tetap aman!`,
+        message: `Berhasil mereset akun siswa kelas ${cleanClass || className} (${deletedAccountsCount} akun) dan ${deletedGoogleCount} akun Google terkait. Siswa kini dapat mendaftar ulang di halaman login!`,
         deletedAccountsCount,
         deletedGoogleCount,
       });

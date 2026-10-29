@@ -101,7 +101,9 @@ export default function StudentAccountGenerateModal({
       setIsLoadingClasses(true);
       setErrorMessage('');
       try {
-        const res = await fetch('/api/student/generate-account?action=classes&year=2026/2027');
+        const res = await fetch(`/api/student/generate-account?action=classes&year=2026/2027&_t=${Date.now()}`, {
+          cache: 'no-store'
+        });
         const data = await res.json();
         if (res.ok && isMounted) {
           setClasses(data.classes || []);
@@ -137,7 +139,8 @@ export default function StudentAccountGenerateModal({
     setCustomPassword('');
     try {
       const res = await fetch(
-        `/api/student/generate-account?action=students&class=${encodeURIComponent(className)}&year=2026/2027`
+        `/api/student/generate-account?action=students&class=${encodeURIComponent(className)}&year=2026/2027&_t=${Date.now()}`,
+        { cache: 'no-store' }
       );
       const data = await res.json();
       if (res.ok) {

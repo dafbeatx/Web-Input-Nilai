@@ -114,10 +114,12 @@ export async function GET(req: NextRequest) {
       );
 
       // 3. Ambil akun yang sudah ada untuk kelas dan tahun ajaran ini dari gm_student_accounts
+      const cleanClass = className.replace(/^kelas\s+/i, '').trim();
+      const classFilter = `class_name.eq.${cleanClass},class_name.ilike.${cleanClass},class_name.ilike.Kelas ${cleanClass}`;
       const { data: existingAccounts, error: accountError } = await supabaseAdmin
         .from('gm_student_accounts')
         .select('student_name, username')
-        .ilike('class_name', className.trim())
+        .or(classFilter)
         .eq('academic_year', targetYear);
 
       if (accountError) {
