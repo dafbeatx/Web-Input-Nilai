@@ -522,7 +522,7 @@ export default function HomeLayer(props: HomeLayerProps) {
   }, [expandedGroup]);
 
   return (
-    <main className="flex-1 min-h-screen pt-2 md:pt-[env(safe-area-inset-top,20px)] mt-2 md:mt-24 pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-32 px-2 sm:px-6 flex flex-col gap-4 md:gap-8 max-w-7xl mx-auto w-full animate-in fade-in transition-all duration-300">
+    <main className="flex-1 min-h-screen pt-2 md:pt-[env(safe-area-inset-top,20px)] mt-2 md:mt-24 pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-32 px-3 sm:px-6 lg:px-8 flex flex-col gap-4 md:gap-6 max-w-7xl 2xl:max-w-[1536px] mx-auto w-full animate-in fade-in transition-all duration-300">
       
       {/* Personalized Identity Section with Academic Year */}
       {!expandedGroup && (
@@ -731,54 +731,54 @@ export default function HomeLayer(props: HomeLayerProps) {
                 </div>
 
                 {/* Sessions Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                   {subjSessions.map((s) => (
                     <button
                       key={s.id}
                       onClick={() => onSessionClick(s)}
-                      className="group relative w-full text-left bg-surface-container-lowest ambient-shadow p-6 rounded-2xl transition-all duration-300 ease-out active:scale-[0.98] border border-outline-variant/10 overflow-hidden"
+                      className="group relative w-full text-left bg-surface-container-lowest ambient-shadow p-3.5 sm:p-4 rounded-xl sm:rounded-2xl transition-all duration-200 ease-out active:scale-[0.98] border border-outline-variant/10 hover:border-primary/30 hover:shadow-md flex flex-col justify-between overflow-hidden"
                     >
-                      <div className="flex justify-between items-start mb-6 relative z-10">
-                        <div className="flex-1 pr-6">
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <div className="flex justify-between items-start gap-3 mb-3 relative z-10 w-full">
+                        <div className="flex-1 min-w-0 pr-1">
+                          <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                             {s.is_public ? (
-                              <span className="bg-primary-container/10 text-on-primary-fixed text-[10px] font-bold px-2 py-1 rounded-sm uppercase tracking-wider">Public</span>
+                              <span className="bg-primary/10 text-primary text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">Public</span>
                             ) : (
-                              <span className="bg-surface-container-high text-on-surface-variant text-[10px] font-bold px-2 py-1 rounded-sm uppercase tracking-wider">Private</span>
+                              <span className="bg-surface-container-high text-on-surface-variant text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">Private</span>
                             )}
                             {s.is_demo && (
-                              <span className="bg-amber-500/10 text-amber-500 text-[10px] font-bold px-2 py-1 rounded-sm uppercase tracking-wider flex items-center gap-1">
-                                <span className="material-symbols-outlined text-[14px]">science</span> Demo
+                              <span className="bg-amber-500/10 text-amber-500 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[12px]">science</span> Demo
                               </span>
                             )}
                           </div>
-                          <h3 className="font-headline text-xl font-bold text-on-surface leading-tight tracking-tight">{s.session_name}</h3>
+                          <h3 className="font-headline text-sm sm:text-base font-bold text-on-surface leading-snug tracking-tight line-clamp-2" title={s.session_name}>{s.session_name}</h3>
                         </div>
                         
-                        <div className="w-10 h-10 rounded-xl bg-surface-container-low flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-300 transform group-hover:rotate-12 shadow-sm">
-                          <span className="material-symbols-outlined text-xl">analytics</span>
+                        <div className="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-300 transform group-hover:rotate-6 shadow-sm shrink-0">
+                          <span className="material-symbols-outlined text-lg">analytics</span>
                         </div>
                       </div>
                       
-                      <div className="flex items-center justify-between relative z-10 border-t border-surface-container-low pt-4">
+                      <div className="flex items-center justify-between relative z-10 border-t border-surface-container-low pt-2.5 mt-auto w-full">
                         <div>
-                          <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Tipe Evaluasi</p>
-                          <p className="text-sm font-semibold text-on-surface">{s.exam_type || 'UJIAN'}</p>
+                          <p className="text-[9px] text-on-surface-variant uppercase tracking-wider mb-0.5 font-semibold">Tipe Evaluasi</p>
+                          <p className="text-xs font-semibold text-on-surface">{s.exam_type || 'UJIAN'}</p>
                         </div>
                         
                         {isAdmin && (
                           <div 
                             onClick={(e) => { e.stopPropagation(); onDeleteSession(s.id, s.session_name); }}
-                            className="w-10 h-10 rounded-full hover:bg-error/10 text-on-surface-variant/40 hover:text-error flex items-center justify-center transition-all z-20 active:scale-90"
+                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-error/10 text-on-surface-variant/40 hover:text-error flex items-center justify-center transition-all z-20 active:scale-90"
                             title="Hapus Sesi"
                           >
-                            <span className="material-symbols-outlined text-xl">delete</span>
+                            <span className="material-symbols-outlined text-base">delete</span>
                           </div>
                         )}
                       </div>
                       
                       {/* Highlight decorative */}
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-primary/20 transition-colors pointer-events-none"></div>
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 blur-2xl rounded-full -mr-12 -mt-12 group-hover:bg-primary/15 transition-colors pointer-events-none"></div>
                     </button>
                   ))}
                 </div>
@@ -839,23 +839,23 @@ export default function HomeLayer(props: HomeLayerProps) {
             </div>
           </div>
 
-          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {displayedClassGroups.length === 0 ? (
-              <div className="col-span-full py-16 px-6 bg-surface-container-low rounded-3xl border border-dashed border-outline-variant/30 flex flex-col items-center justify-center text-center">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-4 border border-primary/20">
-                  <span className="material-symbols-outlined text-3xl">school</span>
+              <div className="col-span-full py-12 px-6 bg-surface-container-low rounded-2xl border border-dashed border-outline-variant/30 flex flex-col items-center justify-center text-center">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-3 border border-primary/20">
+                  <span className="material-symbols-outlined text-2xl">school</span>
                 </div>
-                <h3 className="font-headline text-lg font-bold text-on-surface mb-1">
+                <h3 className="font-headline text-base font-bold text-on-surface mb-1">
                   Tidak Ada Kelas di Tahun Ajaran {academicYear}
                 </h3>
-                <p className="font-body text-xs text-on-surface-variant max-w-md mb-6 leading-relaxed">
+                <p className="font-body text-xs text-on-surface-variant max-w-md mb-4 leading-relaxed">
                   Belum ada kelas atau sesi evaluasi yang terdaftar untuk Tahun Ajaran {academicYear}. Sesi dari tahun sebelumnya tersimpan di arsip.
                 </p>
-                <div className="flex flex-wrap items-center justify-center gap-3">
+                <div className="flex flex-wrap items-center justify-center gap-2.5">
                   {isAdmin && (
                     <button
                       onClick={onCreateNew}
-                      className="px-5 py-2.5 bg-primary text-surface-container-lowest rounded-xl text-xs font-bold shadow-lg shadow-primary/25 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                      className="px-4 py-2 bg-primary text-surface-container-lowest rounded-xl text-xs font-bold shadow-md shadow-primary/25 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
                     >
                       <span className="material-symbols-outlined text-base">add</span>
                       Buat Sesi Ujian Baru
@@ -863,7 +863,7 @@ export default function HomeLayer(props: HomeLayerProps) {
                   )}
                   <button
                     onClick={() => setSelectedViewYear('all')}
-                    className="px-5 py-2.5 bg-surface-container-high text-on-surface rounded-xl text-xs font-bold hover:bg-surface-container-highest transition-all flex items-center gap-2"
+                    className="px-4 py-2 bg-surface-container-high text-on-surface rounded-xl text-xs font-bold hover:bg-surface-container-highest transition-all flex items-center gap-1.5"
                   >
                     <span className="material-symbols-outlined text-base">folder_open</span>
                     Buka Arsip Semua Tahun
@@ -883,43 +883,43 @@ export default function HomeLayer(props: HomeLayerProps) {
                       setExpandedClass(key);
                       setStudentClass(g.className);
                     }} 
-                    className={`bg-surface-container-lowest ambient-shadow rounded-2xl p-6 text-left w-full group hover:bg-surface-container-low transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] border border-outline-variant/10 relative overflow-hidden`}
+                    className="bg-surface-container-lowest ambient-shadow rounded-xl sm:rounded-2xl p-3.5 sm:p-4 text-left w-full group hover:bg-surface-container-low hover:border-primary/30 hover:shadow-md transition-all duration-200 border border-outline-variant/10 relative overflow-hidden flex flex-col justify-between"
                   >
                     {isActive && (
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-primary-fixed/30 rounded-bl-full -mr-4 -mt-4 opacity-50 z-0"></div>
+                      <div className="absolute top-0 right-0 w-16 h-16 bg-primary-fixed/30 rounded-bl-full -mr-3 -mt-3 opacity-50 z-0 pointer-events-none"></div>
                     )}
                     
-                    <div className="flex justify-between items-start mb-6 relative z-10">
-                      <div className="flex items-center space-x-3">
-                        <h2 className={`text-3xl font-headline font-bold tracking-tight ${isActive ? 'text-primary' : 'text-on-surface'}`}>
+                    <div className="flex justify-between items-start gap-2 mb-3.5 relative z-10 w-full">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <h2 className={`text-xl sm:text-2xl font-headline font-black tracking-tight leading-none truncate ${isActive ? 'text-primary' : 'text-on-surface'}`}>
                           {g.className}
                         </h2>
                         {isActive ? (
-                          <span className="bg-secondary-container/20 text-on-secondary-container text-[10px] font-bold px-2 py-1 rounded-sm uppercase tracking-wider flex items-center border border-secondary-container/30">
-                            <span className="material-symbols-outlined text-[14px] mr-1" style={{ fontVariationSettings: "'FILL' 1" }}>star</span> Aktif
+                          <span className="bg-secondary-container/20 text-on-secondary-container text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center border border-secondary-container/30 shrink-0">
+                            <span className="material-symbols-outlined text-[12px] mr-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>star</span> Aktif
                           </span>
                         ) : (
-                          <span className="material-symbols-outlined text-on-surface-variant/40" style={{ fontSize: '20px' }}>person</span>
+                          <span className="material-symbols-outlined text-on-surface-variant/40 shrink-0" style={{ fontSize: '18px' }}>school</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest bg-surface-container-low px-2.5 py-1 rounded-full border border-outline-variant/5">
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider bg-surface-container-low px-2 py-0.5 rounded-md border border-outline-variant/5">
                           {g.schoolLevel}
                         </span>
-                        <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full border ${g.academicYear === academicYear ? 'bg-primary/10 text-primary border-primary/25' : 'bg-surface-container text-on-surface-variant/70 border-outline-variant/5'}`}>
+                        <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border ${g.academicYear === academicYear ? 'bg-primary/10 text-primary border-primary/25' : 'bg-surface-container text-on-surface-variant/70 border-outline-variant/5'}`}>
                           TA {g.academicYear}
                         </span>
                       </div>
                     </div>
                     
-                    <div className="flex justify-between items-end relative z-10 border-t border-surface-container-low pt-4">
+                    <div className="flex justify-between items-end relative z-10 border-t border-surface-container-low pt-2.5 mt-auto w-full">
                       <div>
-                        <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1 font-semibold">Sesi Ujian</p>
-                        <p className="text-sm font-extrabold text-on-surface leading-none">{g.sessions.length} Sesi</p>
+                        <p className="text-[9px] text-on-surface-variant uppercase tracking-wider mb-0.5 font-semibold">Sesi Ujian</p>
+                        <p className="text-xs sm:text-sm font-extrabold text-on-surface leading-none">{g.sessions.length} Sesi</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1 font-semibold">Total Siswa</p>
-                        <p className="text-sm font-extrabold text-on-surface leading-none">{bData.count} Siswa</p>
+                        <p className="text-[9px] text-on-surface-variant uppercase tracking-wider mb-0.5 font-semibold">Total Siswa</p>
+                        <p className="text-xs sm:text-sm font-extrabold text-on-surface leading-none">{bData.count} Siswa</p>
                       </div>
                     </div>
                   </button>
@@ -929,18 +929,18 @@ export default function HomeLayer(props: HomeLayerProps) {
           </section>
 
           {/* Info Card - Bento Style */}
-          <section className="bg-surface-container-low/50 p-6 rounded-2xl flex flex-col gap-4 border border-outline-variant/10 shadow-sm mt-4">
+          <section className="bg-surface-container-low/50 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-outline-variant/10 shadow-sm mt-2">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center border border-primary/10">
-                <span className="material-symbols-outlined text-primary text-xl">insights</span>
+              <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center border border-primary/10 shrink-0">
+                <span className="material-symbols-outlined text-primary text-lg">insights</span>
               </div>
-              <h4 className="font-headline font-bold text-on-surface tracking-tight">
+              <h4 className="font-headline font-bold text-sm text-on-surface tracking-tight">
                 {isAdmin ? 'Ringkasan Sistem' : 'Info Akademik'}
               </h4>
             </div>
-            <p className="font-body text-xs text-on-surface-variant leading-relaxed opacity-80">
+            <p className="font-body text-xs text-on-surface-variant leading-relaxed opacity-80 sm:text-right max-w-2xl">
               {isAdmin ? (
-                <>Terdeteksi <span className="text-primary font-bold">{displayedClassGroups.length} Kelas</span> aktif pada <span className="text-primary font-bold">{selectedViewYear === 'current' ? `TA ${academicYear}` : 'Semua Tahun'}</span> dengan total <span className="text-primary font-bold">{displayedSessionsCount} Sesi</span>. Sinkronisasi berjalan otomatis untuk memastikan integritas data.</>
+                <>Terdeteksi <span className="text-primary font-bold">{displayedClassGroups.length} Kelas</span> aktif pada <span className="text-primary font-bold">{selectedViewYear === 'current' ? `TA ${academicYear}` : 'Semua Tahun'}</span> dengan total <span className="text-primary font-bold">{displayedSessionsCount} Sesi</span>. Sinkronisasi berjalan otomatis.</>
               ) : (
                 <>Terdapat <span className="text-primary font-bold">{displayedClassGroups.length} Kelas</span> terbuka pada <span className="text-primary font-bold">{selectedViewYear === 'current' ? `TA ${academicYear}` : 'Semua Tahun'}</span>. Pilih kelas Anda untuk melihat laporan lengkap.</>
               )}
