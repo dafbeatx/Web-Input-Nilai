@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { checkRateLimit } from '@/lib/grademaster/security';
 import { logActivity } from '@/lib/grademaster/audit';
@@ -193,11 +194,14 @@ export async function DELETE(req: NextRequest) {
     const year = searchParams.get('year');
 
     if (cls && year) {
-      const { error } = await supabase.from('gm_behaviors').delete().eq('class_name', cls).eq('academic_year', year);
+      const { error } = await supabaseAdmin.from('gm_behaviors').delete().eq('class_name', cls).eq('academic_year', year);
       if (error) {
         console.error('[DELETE Behaviors - Class] Error:', error);
         throw error;
       }
+
+      // Also delete from gm_student_accounts so they don't resurrect
+      await supabaseAdmin.from('gm_student_accounts').delete().eq('class_name', cls).eq('academic_year', year);
 
       logActivity({
         adminId: adminSession.user_id,
@@ -213,10 +217,28 @@ export async function DELETE(req: NextRequest) {
     }
 
     if (!id) return NextResponse.json({ error: 'ID wajib diisi' }, { status: 400 });
-    const { error } = await supabase.from('gm_behaviors').delete().eq('id', id);
+
+    // Fetch behavior record first to get student name, class, year
+    const { data: behRecord } = await supabaseAdmin
+      .from('gm_behaviors')
+      .select('student_name, class_name, academic_year')
+      .eq('id', id)
+      .maybeSingle();
+
+    const { error } = await supabaseAdmin.from('gm_behaviors').delete().eq('id', id);
     if (error) {
       console.error('[DELETE Behaviors - Single] Error:', error);
       throw error;
+    }
+
+    // Also delete matching student account from gm_student_accounts so it doesn't resurrect
+    if (behRecord?.student_name) {
+      await supabaseAdmin
+        .from('gm_student_accounts')
+        .delete()
+        .ilike('student_name', behRecord.student_name.trim())
+        .eq('class_name', behRecord.class_name)
+        .eq('academic_year', behRecord.academic_year || '2026/2027');
     }
 
     logActivity({

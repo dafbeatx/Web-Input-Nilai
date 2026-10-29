@@ -303,17 +303,21 @@ export default function StudentAccountsLayer({
     }
   };
 
-  const handleDeleteAccount = async (accountId: string) => {
+  const handleDeleteAccount = async (account: StudentAccount) => {
+    if (!window.confirm(`Hapus akun dan data siswa "${account.student_name}" secara permanen? Data yang dihapus tidak akan muncul kembali.`)) {
+      return;
+    }
     try {
       const res = await fetch('/api/grademaster/student-accounts', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId }),
+        body: JSON.stringify({ accountId: account.id }),
       });
       const data = await res.json();
       if (res.ok) {
-        setToast({ message: data.message, type: 'success' });
-        setAccounts(prev => prev.filter(a => a.id !== accountId));
+        setToast({ message: data.message || 'Akun siswa berhasil dihapus', type: 'success' });
+        setAccounts(prev => prev.filter(a => a.id !== account.id && a.student_name.trim().toLowerCase() !== account.student_name.trim().toLowerCase()));
+        fetchBehaviorCount();
       } else {
         setToast({ message: data.error, type: 'error' });
       }
@@ -645,7 +649,7 @@ export default function StudentAccountsLayer({
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDeleteAccount(account.id)}
+                    onClick={() => handleDeleteAccount(account)}
                     title="Hapus Akun Siswa"
                     className="p-2 text-on-surface-variant/40 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all shrink-0 min-h-[38px] flex items-center justify-center cursor-pointer"
                   >

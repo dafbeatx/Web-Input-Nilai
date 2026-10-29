@@ -362,10 +362,10 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Account ID wajib diisi' }, { status: 400 });
     }
 
-    // Look up account first to check if there is a linked google_email
+    // Look up account first to check if there is a linked google_email, student_name, class_name, academic_year
     const { data: account } = await supabaseAdmin
       .from('gm_student_accounts')
-      .select('id, google_email')
+      .select('id, google_email, student_name, class_name, academic_year')
       .eq('id', accountId)
       .maybeSingle();
 
@@ -386,17 +386,45 @@ export async function DELETE(req: NextRequest) {
       }
     }
 
-    const { error } = await supabaseAdmin
-      .from('gm_student_accounts')
-      .delete()
-      .eq('id', accountId);
+    // 1. Delete from gm_student_accounts (both by accountId and case-insensitive student_name in that class & year)
+    if (account?.student_name && account?.class_name) {
+      const { error: delAccErr } = await supabaseAdmin
+        .from('gm_student_accounts')
+        .delete()
+        .ilike('student_name', account.student_name.trim())
+        .eq('class_name', account.class_name)
+        .eq('academic_year', account.academic_year || '2026/2027');
 
-    if (error) {
-      console.error('[DELETE Student Account] Error:', error);
-      throw error;
+      if (delAccErr) {
+        console.error('[DELETE Student Account] Error deleting matching accounts:', delAccErr);
+      }
+    } else {
+      const { error } = await supabaseAdmin
+        .from('gm_student_accounts')
+        .delete()
+        .eq('id', accountId);
+
+      if (error) {
+        console.error('[DELETE Student Account] Error:', error);
+        throw error;
+      }
     }
 
-    return NextResponse.json({ message: 'Akun siswa berhasil dihapus' });
+    // 2. Also delete from gm_behaviors so the student does not resurrect when Generate / sync runs!
+    if (account?.student_name && account?.class_name) {
+      const { error: delBehErr } = await supabaseAdmin
+        .from('gm_behaviors')
+        .delete()
+        .ilike('student_name', account.student_name.trim())
+        .eq('class_name', account.class_name)
+        .eq('academic_year', account.academic_year || '2026/2027');
+
+      if (delBehErr) {
+        console.warn('[DELETE Student Account] Warning deleting from gm_behaviors:', delBehErr);
+      }
+    }
+
+    return NextResponse.json({ message: `Akun dan data siswa ${account?.student_name || ''} berhasil dihapus permanen` });
   } catch (err: unknown) {
     console.error('Delete student account critical error:', err);
     const msg = err instanceof Error ? err.message : 'Gagal menghapus akun siswa';

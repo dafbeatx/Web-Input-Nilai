@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getAdminSession } from '@/lib/grademaster/admin';
 import { hashPassword } from '@/lib/grademaster/security';
 
@@ -213,30 +214,34 @@ export async function DELETE(req: NextRequest) {
 
     if (!name) return NextResponse.json({ error: 'Nama wajib diisi' }, { status: 400 });
 
-    const supabase = await createClient();
+    const trimmedName = name.trim();
 
+    // 1. Delete from gm_student_accounts (case-insensitive)
+    await supabaseAdmin
+      .from('gm_student_accounts')
+      .delete()
+      .ilike('student_name', trimmedName);
+
+    // 2. Delete from gm_behaviors (case-insensitive) so student does not resurrect
+    await supabaseAdmin
+      .from('gm_behaviors')
+      .delete()
+      .ilike('student_name', trimmedName);
+
+    // 3. Delete or soft-delete from gm_students
     if (action === 'hard_delete') {
-      // Hard delete from gm_student_accounts
-      await supabase.from('gm_student_accounts')
+      await supabaseAdmin
+        .from('gm_students')
         .delete()
-        .eq('student_name', name);
-
-      // Hard delete from gm_students
-      await supabase.from('gm_students')
-        .delete()
-        .eq('name', name);
+        .ilike('name', trimmedName);
     } else {
-      // Soft delete: Delete from gm_student_accounts, but mark is_deleted=true in gm_students
-      await supabase.from('gm_student_accounts')
-        .delete()
-        .eq('student_name', name);
-
-      await supabase.from('gm_students')
+      await supabaseAdmin
+        .from('gm_students')
         .update({ is_deleted: true })
-        .eq('name', name);
+        .ilike('name', trimmedName);
     }
 
-    return NextResponse.json({ success: true, message: `Siswa ${name} berhasil dihapus.` });
+    return NextResponse.json({ success: true, message: `Siswa ${trimmedName} berhasil dihapus.` });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: msg }, { status: 500 });
