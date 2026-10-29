@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (mode === 'classes') {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('gm_student_accounts')
         .select('class_name')
         .eq('academic_year', academicYear);
@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Akses ditolak: Sesi admin tidak valid' }, { status: 403 });
     }
 
-    let query = supabase
+    let query = supabaseAdmin
       .from('gm_student_accounts')
       .select('*')
       .eq('academic_year', academicYear)
