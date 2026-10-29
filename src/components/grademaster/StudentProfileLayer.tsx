@@ -97,7 +97,7 @@ export default function StudentProfileLayer({
   semester = 'Ganjil',
   onlyShowRecordPoints = false
 }: StudentProfileLayerProps) {
-  const { isParent, setStudentData } = useGradeMaster();
+  const { isParent, studentData, setStudentData } = useGradeMaster();
   const [totalPoints, setTotalPoints] = useState(initialPoints);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(avatarUrl);
   const [activeTab, setActiveTab] = useState<'HOME' | 'GRADES' | 'LESSON' | 'ATTENDANCE' | 'ACCOUNT' | 'GAMES'>('HOME');
@@ -1574,17 +1574,34 @@ export default function StudentProfileLayer({
       setCurrentAvatarUrl(data.avatar_url);
 
       // Sinkronkan ke Context & LocalStorage siswa secara real-time
-      if (data.avatar_url && setStudentData) {
-        setStudentData((prev: any) => {
-          if (!prev) return prev;
-          const updated = { ...prev, avatar_url: data.avatar_url, photo_url: data.avatar_url };
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem('gm_studentData', JSON.stringify(updated));
-            } catch {}
-          }
-          return updated;
-        });
+      if (data.avatar_url) {
+        let baseData = studentData;
+        if (!baseData && typeof window !== 'undefined') {
+          try {
+            const raw = localStorage.getItem('gm_studentData');
+            if (raw) baseData = JSON.parse(raw);
+          } catch {}
+        }
+
+        const updated = baseData
+          ? { ...baseData, avatar_url: data.avatar_url, photo_url: data.avatar_url }
+          : {
+              avatar_url: data.avatar_url,
+              photo_url: data.avatar_url,
+              name: studentName,
+              class_name: activeClass,
+              academic_year: activeYear,
+            };
+
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('gm_studentData', JSON.stringify(updated));
+          } catch {}
+        }
+
+        if (setStudentData) {
+          setStudentData(updated);
+        }
       }
     } catch (err: any) {
       setToast({ message: err.message || "Gagal mengunggah foto", type: "error" });

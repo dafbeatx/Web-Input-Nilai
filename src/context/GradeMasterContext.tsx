@@ -61,7 +61,7 @@ interface GradeMasterContextType {
   isParent: boolean;
   setIsParent: (isParent: boolean) => void;
   studentData: StudentData | null;
-  setStudentData: (data: StudentData | null) => void;
+  setStudentData: React.Dispatch<React.SetStateAction<StudentData | null>>;
   toast: ToastType | null;
   setToast: (toast: ToastType | null) => void;
   modal: ModalType;
