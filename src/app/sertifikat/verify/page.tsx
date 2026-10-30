@@ -20,6 +20,7 @@ import {
   generateLdksCertificatePdf,
   getFittedCertificateStudentName,
   getCertificateQrCodeDataUrl,
+  createComposedCertificatePng,
 } from '@/lib/grademaster/certificateGenerator';
 import { CertificateTemplate } from '@/app/api/grademaster/certificates/route';
 
@@ -140,51 +141,10 @@ function CertificateVerificationContent() {
     if (isDownloadingPng) return;
     setIsDownloadingPng(true);
     try {
-      const canvas = document.createElement('canvas');
-      canvas.width = 2000;
-      canvas.height = 1414;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas context not available');
-
-      // Load background template
-      const bgImg = new window.Image();
-      bgImg.crossOrigin = 'anonymous';
-      await new Promise<void>((resolve, reject) => {
-        bgImg.onload = () => resolve();
-        bgImg.onerror = reject;
-        bgImg.src = '/sertifikat-ldks.png';
-      });
-      ctx.drawImage(bgImg, 0, 0, 2000, 1414);
-
-      // Student name placement matching Canva design baseline
-      const fontPx = Math.round((fittedInfo.fontSize * 0.3528 / 297) * 2000);
-      ctx.font = `bold ${fontPx}px "Inter", "Outfit", "Arial", sans-serif`;
-      ctx.fillStyle = '#0f172a';
-      ctx.textBaseline = 'alphabetic';
-      ctx.fillText(fittedInfo.displayName, 171, 747);
-
-      // Draw QR Code and subtitles
-      if (qrDataUrl) {
-        const qrImg = new window.Image();
-        await new Promise<void>((resolve, reject) => {
-          qrImg.onload = () => resolve();
-          qrImg.onerror = reject;
-          qrImg.src = qrDataUrl;
-        });
-        ctx.drawImage(qrImg, 1130, 1030, 170, 170);
-
-        ctx.font = 'bold 14px "Inter", "Outfit", "Arial", sans-serif';
-        ctx.fillStyle = '#0f172a';
-        ctx.textAlign = 'center';
-        ctx.fillText('SCAN VERIFIKASI DOKUMEN', 1215, 1225);
-
-        ctx.font = 'normal 11px "Inter", "Outfit", "Arial", sans-serif';
-        ctx.fillStyle = '#64748b';
-        ctx.fillText('SMP Terpadu Al-Ittihadiyah', 1215, 1245);
-      }
+      const dataUrl = await createComposedCertificatePng(cleanRawName, className, academicYear);
+      if (!dataUrl) throw new Error('Canvas export returned null');
 
       const safeName = cleanRawName.replace(/[^a-zA-Z0-9]/g, '_');
-      const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = `Sertifikat_LDKS_${safeName}_Kelas_${className}.png`;
       link.href = dataUrl;
