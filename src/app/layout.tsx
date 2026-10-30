@@ -3,10 +3,14 @@ import "./globals.css";
 
 
 export const metadata: Metadata = {
-  title: "GradeMaster OS - DFBX",
-  description: "Advanced grading and educational assistance platform",
+  title: "Nawasena - DFBX",
+  description: "Advanced educational and grading intelligence platform",
   icons: {
-    icon: "/favicon.png",
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
   },
 };
 
@@ -30,9 +34,10 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="GradeMaster" />
+        <meta name="apple-mobile-web-app-title" content="Nawasena" />
         <meta name="theme-color" content="#090d16" />
-        <link rel="apple-touch-icon" href="/favicon.png" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

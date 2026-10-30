@@ -5,7 +5,6 @@ import { useGradeMaster } from '@/context/GradeMasterContext';
 import { supabase } from '@/lib/supabase/client';
 import { ToastType, StudentAccount } from '@/lib/grademaster/types';
 import { Session } from '@supabase/supabase-js';
-import NeonGraduationCap from '@/components/grademaster/ui/NeonGraduationCap';
 import StudentAccountGenerateModal from './StudentAccountGenerateModal';
 
 interface StudentLoginLayerProps {
@@ -22,7 +21,7 @@ function setParentStudentCookie(studentName: string) {
 }
 
 /**
- * GradeMaster OS - Student Portal Login Page
+ * Nawasena - Student Portal Login Page
  * Redesigned with premium Apple + Linear aesthetics, pure white theme, 
  * and persistent session detection logic.
  */
@@ -411,11 +410,11 @@ export default function StudentLoginLayer({
           <div className="relative">
             <div className="w-16 h-16 border-[3px] border-slate-100 border-t-[#0F172A] rounded-full animate-spin" />
             <div className="absolute inset-0 flex items-center justify-center">
-              <NeonGraduationCap size={20} />
+              <Image src="/logo.svg" alt="Nawasena Logo" width={28} height={28} className="object-contain" />
             </div>
           </div>
           <div className="text-center">
-            <h2 className="text-sm font-black text-[#0F172A] uppercase tracking-[0.3em] mb-2 font-outfit">GradeMaster OS</h2>
+            <h2 className="text-sm font-black text-[#0F172A] uppercase tracking-[0.3em] mb-2 font-outfit">Nawasena</h2>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Memverifikasi akun...</p>
           </div>
         </div>
@@ -459,11 +458,11 @@ export default function StudentLoginLayer({
       {/* Top Mobile Header */}
       <header className="w-full max-w-md pt-safe pb-2 flex items-center justify-between px-4 sm:px-6 relative z-10 shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-sm">
-             <NeonGraduationCap size={16} />
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center overflow-hidden bg-slate-900/5 shadow-sm">
+             <Image src="/logo.svg" alt="Nawasena Logo" width={24} height={24} className="object-contain" />
           </div>
           <div>
-            <span className="text-xs font-black text-slate-900 tracking-wider uppercase font-outfit block leading-none">GradeMaster</span>
+            <span className="text-xs font-black text-slate-900 tracking-wider uppercase font-outfit block leading-none">Nawasena</span>
             <span className="text-[9.5px] font-semibold text-slate-500">Portal Akademik</span>
           </div>
         </div>

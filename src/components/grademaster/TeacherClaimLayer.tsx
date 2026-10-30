@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { 
   User, 
   BookOpen, 
@@ -9,7 +10,6 @@ import {
 } from 'lucide-react';
 import { ToastType } from '@/lib/grademaster/types';
 import { supabase } from '@/lib/supabase/client';
-import NeonGraduationCap from '@/components/grademaster/ui/NeonGraduationCap';
 
 interface TeacherClaimLayerProps {
   googleUser: {
@@ -56,8 +56,8 @@ export default function TeacherClaimLayer({
 
       setToast({ message: 'Profil Guru berhasil dikonfigurasi!', type: 'success' });
       onSuccess(displayName.trim(), subject.trim());
-    } catch (err: any) {
-      setToast({ message: err.message || 'Gagal menyimpan profil', type: 'error' });
+    } catch (err: unknown) {
+      setToast({ message: err instanceof Error ? err.message : 'Gagal menyimpan profil', type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -67,10 +67,10 @@ export default function TeacherClaimLayer({
     <div className="min-h-screen bg-white flex flex-col font-inter animate-in fade-in duration-500">
       <header className="w-full h-16 md:h-20 border-b border-slate-100 flex items-center justify-between px-6 md:px-12 sticky top-0 bg-white z-50">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#0F172A] text-white rounded-xl flex items-center justify-center shadow-lg shadow-slate-200">
-            <NeonGraduationCap size={24} />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden bg-slate-900/5 shadow-md">
+            <Image src="/logo.svg" alt="Nawasena Logo" width={32} height={32} priority className="object-contain" />
           </div>
-          <h1 className="text-sm font-black text-[#0F172A] tracking-tighter uppercase font-outfit">GradeMaster OS</h1>
+          <h1 className="text-sm font-black text-[#0F172A] tracking-tighter uppercase font-outfit">Nawasena</h1>
         </div>
         <button 
           onClick={onLogout}
@@ -145,7 +145,7 @@ export default function TeacherClaimLayer({
       </main>
 
       <footer className="p-12 text-center text-[10px] font-black text-slate-200 uppercase tracking-[0.5em]">
-        GradeMaster OS Teacher Identity v1.0
+        Nawasena Teacher Identity v1.0
       </footer>
     </div>
   );

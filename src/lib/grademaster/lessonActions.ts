@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase/client';
 import { DailyLesson, Quiz } from './types';
 
 /**
- * GRADEMASTER OS - Lesson Management Actions
+ * NAWASENA - Lesson Management Actions
  * Handles data persistence and AI interaction placeholders.
  */
 

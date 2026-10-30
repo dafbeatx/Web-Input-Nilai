@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Image from 'next/image';
 import {
   X,
   Save,
@@ -103,10 +104,10 @@ export default function Modals(props: ModalsProps) {
           </button>
 
           <div className="relative z-10 flex flex-col items-center text-center mt-6">
-            <div className="w-16 h-16 md:w-20 md:h-20 bg-primary shadow-2xl shadow-primary/20 rounded-[2rem] flex items-center justify-center text-white mb-4 border border-outline-variant">
-              <GraduationCap size={36} className="md:w-10 md:h-10" />
+            <div className="w-16 h-16 md:w-20 md:h-20 rounded-[2rem] flex items-center justify-center mb-4 bg-slate-900/5 shadow-md overflow-hidden">
+              <Image src="/logo.svg" alt="Nawasena Logo" width={48} height={48} className="object-contain" />
             </div>
-            <h3 className="font-outfit font-black text-xl md:text-3xl text-on-surface tracking-tight uppercase">GradeMaster OS</h3>
+            <h3 className="font-outfit font-black text-xl md:text-3xl text-on-surface tracking-tight uppercase">Nawasena</h3>
             <p className="text-[10px] md:text-xs font-black text-primary uppercase tracking-[0.2em] mb-2">Modern Analytics Edition</p>
             <p className="text-xs md:text-sm font-bold text-on-surface-variant mt-2 leading-relaxed">Sistem Koreksi & Analitik Performa modern yang mengutamakan validitas data melalui metrik CSI (Cognitive Skill Index) dan LPS (Learning Performance Score).</p>
           </div>
@@ -174,8 +175,8 @@ export default function Modals(props: ModalsProps) {
       try {
         await onUpdateAdmin(newUsername, newPassword, newRemedialPassword);
         onClose();
-      } catch (err: any) {
-        setAdminError(err.message || 'Gagal mengubah profil admin.');
+      } catch (err: unknown) {
+        setAdminError(err instanceof Error ? err.message : 'Gagal mengubah profil admin.');
       } finally {
         setIsUpdatingAdmin(false);
       }
@@ -326,7 +327,7 @@ export default function Modals(props: ModalsProps) {
                 <div className="flex items-center gap-2 p-3 bg-primary/10 border border-primary/20 rounded-2xl">
                   <Shield size={16} className="text-primary shrink-0" />
                   <p className="text-[9px] font-bold text-primary/80 leading-relaxed uppercase tracking-tight">
-                    Audit log bersifat permanen untuk menjamin integritas data sistem GradeMaster OS.
+                    Audit log bersifat permanen untuk menjamin integritas data sistem Nawasena.
                   </p>
                 </div>
               </div>

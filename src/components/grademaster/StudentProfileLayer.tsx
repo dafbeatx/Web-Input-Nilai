@@ -381,7 +381,7 @@ export default function StudentProfileLayer({
         doc.setFont("Helvetica", "normal");
         doc.setFontSize(8);
         doc.setTextColor(120, 120, 120);
-        doc.text('Dokumen dihasilkan otomatis oleh GradeMaster OS', 15, footerY + 5);
+        doc.text('Dokumen dihasilkan otomatis oleh Sistem Nawasena', 15, footerY + 5);
 
         doc.save(`Laporan_Perilaku_${studentName.replace(/ /g, '_')}_${activeClass}.pdf`);
         setToast({ message: "Berhasil mengunduh Laporan Progres Kelakuan", type: "success" });
@@ -1057,7 +1057,7 @@ export default function StudentProfileLayer({
       `*HASIL PENILAIAN:*\n` +
       scoreDetails +
       `\n📝 *Catatan Penguji:*\n"${record.notes || 'Terus tingkatkan semangat belajar dan muroja\'ah.'}"\n\n` +
-      `_Laporan resmi dari Sistem Penilaian GradeMaster OS._`;
+      `_Laporan resmi dari Sistem Penilaian Nawasena._`;
       
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
@@ -2606,7 +2606,7 @@ export default function StudentProfileLayer({
                                           reasonText = 'Batas waktu remedial telah terlewati.';
                                         }
                                         
-                                        const message = `*GradeMaster OS - Pengingat Ujian Ananda*\n\nHalo, mohon perhatian untuk ananda:\n👤 Siswa: *${studentName}*\n🏫 Kelas: *${className}*\n📚 Mata Pelajaran: *${grade.subject}*\n📝 Sesi: *${grade.sessionName}*\n📊 Nilai: *${grade.score}* (Standar KKM: ${grade.kkm})\n⚠️ Catatan: ${reasonText}\n\nSilakan buka tautan portal untuk menyelesaikan ujian/remedial:\n🔗 ${appUrl}\n\nBatas waktu: *${deadlineText}*.\nTerima kasih atas bimbingan Ayah/Bunda di rumah.`;
+                                        const message = `*Nawasena - Pengingat Ujian Ananda*\n\nHalo, mohon perhatian untuk ananda:\n👤 Siswa: *${studentName}*\n🏫 Kelas: *${className}*\n📚 Mata Pelajaran: *${grade.subject}*\n📝 Sesi: *${grade.sessionName}*\n📊 Nilai: *${grade.score}* (Standar KKM: ${grade.kkm})\n⚠️ Catatan: ${reasonText}\n\nSilakan buka tautan portal untuk menyelesaikan ujian/remedial:\n🔗 ${appUrl}\n\nBatas waktu: *${deadlineText}*.\nTerima kasih atas bimbingan Ayah/Bunda di rumah.`;
                                         const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
                                         window.open(waUrl, '_blank');
                                       }}
@@ -3276,7 +3276,7 @@ export default function StudentProfileLayer({
                     </div>
                     <div>
                       <h4 className="text-slate-800 font-extrabold text-[12px] leading-tight">Tentang Platform</h4>
-                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Mengenal GradeMaster OS</p>
+                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Mengenal Nawasena</p>
                     </div>
                   </button>
 
@@ -3873,7 +3873,7 @@ export default function StudentProfileLayer({
               
               <div className="space-y-3.5 text-xs text-slate-600 leading-relaxed font-medium">
                 <p>
-                  <strong>GradeMaster OS</strong> adalah sistem informasi sekolah dan manajemen kedisiplinan yang berfokus pada transparansi dan objektivitas data akademik serta perilaku siswa.
+                  <strong>Nawasena</strong> adalah sistem informasi sekolah dan manajemen kedisiplinan yang berfokus pada transparansi dan objektivitas data akademik serta perilaku siswa.
                 </p>
                 <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-2">
                   <p className="text-[10px] font-black text-indigo-650 uppercase tracking-wider">Fitur Siswa & Orang Tua</p>
@@ -3926,7 +3926,7 @@ export default function StudentProfileLayer({
               
               <div className="max-h-[280px] overflow-y-auto pr-1 space-y-3.5 text-xs text-slate-600 leading-relaxed font-medium scrollbar-thin">
                 <p>
-                  Dengan mengakses dan menggunakan sistem <strong>GradeMaster OS</strong>, Anda menyatakan bersetuju untuk tunduk pada aturan berikut:
+                  Dengan mengakses dan menggunakan sistem <strong>Nawasena</strong>, Anda menyatakan bersetuju untuk tunduk pada aturan berikut:
                 </p>
                 <div className="space-y-3">
                   <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3.5">

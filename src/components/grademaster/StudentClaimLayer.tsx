@@ -9,7 +9,6 @@ import {
   GraduationCap 
 } from 'lucide-react';
 import { ToastType, StudentAccount } from '@/lib/grademaster/types';
-import NeonGraduationCap from '@/components/grademaster/ui/NeonGraduationCap';
 import { supabase } from '@/lib/supabase/client';
 
 interface StudentClaimLayerProps {
@@ -172,10 +171,10 @@ export default function StudentClaimLayer({
       {/* Top Bar */}
       <header className="w-full pt-safe pb-4 border-b border-slate-100 flex items-center justify-between px-6 md:px-12 sticky top-0 bg-white z-50">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#0F172A] text-white rounded-xl flex items-center justify-center shadow-lg shadow-slate-200">
-            <NeonGraduationCap size={24} />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden bg-slate-900/5 shadow-md">
+            <Image src="/logo.svg" alt="Nawasena Logo" width={32} height={32} priority className="object-contain" />
           </div>
-          <h1 className="text-sm font-black text-[#0F172A] tracking-tighter uppercase font-outfit">GradeMaster OS</h1>
+          <h1 className="text-sm font-black text-[#0F172A] tracking-tighter uppercase font-outfit">Nawasena</h1>
         </div>
         <button 
           type="button"
@@ -320,7 +319,7 @@ export default function StudentClaimLayer({
 
       {/* Footer Design Element */}
       <footer className="p-12 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.5em]">
-        GradeMaster OS System Identity v2.5
+        Nawasena System Identity v2.5
       </footer>
     </div>
   );

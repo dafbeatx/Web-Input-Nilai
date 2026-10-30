@@ -1,7 +1,7 @@
 {
-  "name": "GradeMaster OS",
-  "short_name": "GradeMaster",
-  "description": "Sistem Informasi & Penginputan Nilai Terproteksi",
+  "name": "Nawasena",
+  "short_name": "Nawasena",
+  "description": "Sistem Informasi & Manajemen Pendidikan Nawasena",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#090d16",

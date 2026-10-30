@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { Lock, ArrowLeft, Loader2, User, Key } from 'lucide-react';
+import Image from 'next/image';
+import { Lock, ArrowLeft, Loader2 } from 'lucide-react';
 import { ToastType } from '@/lib/grademaster/types';
 import { supabase } from '@/lib/supabase/client';
 
 interface LoginLayerProps {
   onBack: () => void;
-  onSuccess: (username: string) => void;
-  setToast: (t: ToastType) => void;
+  onSuccess?: (username: string) => void;
+  setToast?: (t: ToastType) => void;
 }
 
-export default function LoginLayer({ onBack, onSuccess, setToast }: LoginLayerProps) {
+export default function LoginLayer({ onBack }: LoginLayerProps) {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -44,8 +45,8 @@ export default function LoginLayer({ onBack, onSuccess, setToast }: LoginLayerPr
       }
       
       // The page will redirect to Google
-    } catch (err: any) {
-      setError(err.message || 'Gagal login via Google');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Gagal login via Google');
       setIsGoogleLoading(false);
     }
   };
@@ -61,8 +62,8 @@ export default function LoginLayer({ onBack, onSuccess, setToast }: LoginLayerPr
         </button>
 
         <div className="mb-10">
-          <div className="w-16 h-16 bg-primary/10 text-primary rounded-3xl flex items-center justify-center mb-6 shadow-lg shadow-primary/20">
-            <Lock size={32} />
+          <div className="w-16 h-16 rounded-3xl flex items-center justify-center mb-6 shadow-md bg-slate-900/5 overflow-hidden">
+            <Image src="/logo.svg" alt="Nawasena Logo" width={48} height={48} priority className="object-contain" />
           </div>
           <h2 className="text-3xl font-black text-on-surface tracking-tight leading-tight">Secure Login</h2>
           <p className="text-on-surface-variant font-bold mt-2 text-sm leading-relaxed">Pilih metode masuk untuk mengakses panel maupun sesi profil spesifik Anda.</p>
@@ -115,7 +116,7 @@ export default function LoginLayer({ onBack, onSuccess, setToast }: LoginLayerPr
         </div>
 
         <p className="mt-8 text-center text-[10px] text-slate-600 font-bold uppercase tracking-widest">
-          GradeMaster OS Secure Auth
+          Nawasena Secure Auth
         </p>
       </div>
     </div>

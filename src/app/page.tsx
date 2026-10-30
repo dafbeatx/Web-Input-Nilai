@@ -4,7 +4,7 @@ import React from "react";
 import GradeMaster from "@/components/GradeMaster";
 
 /**
- * GradeMaster OS - Simplified Root Entry point.
+ * Nawasena - Simplified Root Entry point.
  * Removed launcher grid to prioritize GradeMaster application focus.
  */
 export default function GradeMasterOS() {

@@ -138,8 +138,8 @@ export default function HomeLayer(props: HomeLayerProps) {
   }, [messages, isAiResponding]);
 
   const getInitialMessage = useCallback(() => {
-    const userLabel = userData.name || (isAdmin ? 'Guru GradeMaster' : 'Siswa');
-    const welcomeText = `Halo **${userLabel}**! Saya adalah **GradeMaster AI Navigator**. 🤖✨\n\nSaya di sini untuk membantu Anda mengoperasikan platform GradeMaster OS dengan asisten cerdas. Beritahu saya apa yang ingin Anda lakukan (contoh: *'absen kelas 7A'*, *'koreksi UTS Matematika'*, atau *'buka rekap sikap'*) dan saya akan mengarahkan Anda ke sana secara instan!`;
+    const userLabel = userData.name || (isAdmin ? 'Bapak/Ibu Guru' : 'Siswa');
+    const welcomeText = `Halo **${userLabel}**! Saya adalah **Nawasena AI Navigator**. 🤖✨\n\nSaya di sini untuk membantu Anda mengoperasikan platform Nawasena dengan asisten cerdas. Beritahu saya apa yang ingin Anda lakukan (contoh: *'absen kelas 7A'*, *'koreksi UTS Matematika'*, atau *'buka rekap sikap'*) dan saya akan mengarahkan Anda ke sana secara instan!`;
 
     let actions: { label: string; layer: Layer; description?: string }[] = [];
 
@@ -1131,7 +1131,7 @@ export default function HomeLayer(props: HomeLayerProps) {
               </div>
               <h3 className="font-headline font-black text-xl text-slate-100 uppercase tracking-wide">Pilih Tampilan Dashboard</h3>
               <p className="text-xs text-slate-400 max-w-sm">
-                Selamat datang di **GradeMaster OS**. Silakan pilih gaya tampilan beranda utama yang paling nyaman untuk Anda bekerja.
+                Selamat datang di **Nawasena**. Silakan pilih gaya tampilan beranda utama yang paling nyaman untuk Anda bekerja.
               </p>
             </div>
 

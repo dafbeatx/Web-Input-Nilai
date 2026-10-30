@@ -588,12 +588,12 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       doc.setFont("Helvetica", "italic");
       doc.setFontSize(8);
       doc.setTextColor(120, 120, 120);
-      doc.text('Catatan: Rapor ini dicetak secara otomatis dan sah menggunakan enkripsi GradeMaster OS.', 15, finalY);
+      doc.text('Catatan: Rapor ini dicetak secara otomatis dan sah menggunakan enkripsi Sistem Nawasena.', 15, finalY);
 
       // Footer
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
-      doc.text(`Dicetak oleh GradeMaster OS pada ${new Date().toLocaleString('id-ID')}`, 105, 280, { align: 'center' });
+      doc.text(`Dicetak oleh Sistem Nawasena pada ${new Date().toLocaleString('id-ID')}`, 105, 280, { align: 'center' });
 
       doc.save(`Rapor_Akademik_${student.name.replace(/ /g, '_')}_${student.className}.pdf`);
       setToast({ message: `Berhasil mengunduh Rapor Akademik untuk ${student.name}`, type: 'success' });
@@ -848,7 +848,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       doc.setFont("Helvetica", "normal");
       doc.setFontSize(9);
       doc.setTextColor(120, 120, 120);
-      doc.text('Dokumen dihasilkan otomatis oleh GradeMaster OS', 15, footerY + 5);
+      doc.text('Dokumen dihasilkan otomatis oleh Sistem Nawasena', 15, footerY + 5);
       doc.text(dateTimeStr, 15, footerY + 10);
 
       doc.save(`Laporan_Pelanggaran_${student.name.replace(/ /g, '_')}_${student.className}.pdf`);
@@ -971,12 +971,12 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         doc.setFont("Helvetica", "italic");
         doc.setFontSize(8);
         doc.setTextColor(120, 120, 120);
-        doc.text('Catatan: Rapor ini dicetak secara otomatis dan sah menggunakan enkripsi GradeMaster OS.', 15, finalY);
+        doc.text('Catatan: Rapor ini dicetak secara otomatis dan sah menggunakan enkripsi Sistem Nawasena.', 15, finalY);
 
         // Footer
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
-        doc.text(`Dicetak oleh GradeMaster OS pada ${new Date().toLocaleString('id-ID')}`, 105, 280, { align: 'center' });
+        doc.text(`Dicetak oleh Sistem Nawasena pada ${new Date().toLocaleString('id-ID')}`, 105, 280, { align: 'center' });
       }
 
       doc.save(`Rapor_Akademik_Kelas_${className}.pdf`);
@@ -1237,7 +1237,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
         doc.setFont("Helvetica", "normal");
         doc.setFontSize(9);
         doc.setTextColor(120, 120, 120);
-        doc.text('Dokumen dihasilkan otomatis oleh GradeMaster OS', 15, footerY + 5);
+        doc.text('Dokumen dihasilkan otomatis oleh Sistem Nawasena', 15, footerY + 5);
         doc.text(dateTimeStr, 15, footerY + 10);
       }
 

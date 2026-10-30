@@ -720,7 +720,7 @@ export async function generateLdksCertificatePdf(
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(148, 163, 184);
-  doc.text('Dokumen Sertifikat Resmi Digital • Sistem Terpadu GradeMaster OS', centerX, pageHeight - 16, { align: 'center' });
+  doc.text('Dokumen Sertifikat Resmi Digital • Sistem Terpadu Nawasena', centerX, pageHeight - 16, { align: 'center' });
 
   return doc;
 }

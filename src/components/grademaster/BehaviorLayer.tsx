@@ -250,7 +250,7 @@ export default function BehaviorLayer({
           <div className="bg-primary-container p-1.5 rounded-lg flex items-center justify-center">
             <span className="material-symbols-outlined text-white text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>school</span>
           </div>
-          <span className="text-sm font-bold tracking-[0.05em] uppercase text-slate-950 font-outfit">GRADEMASTER OS</span>
+          <span className="text-sm font-bold tracking-[0.05em] uppercase text-slate-950 font-outfit">NAWASENA</span>
         </div>
         <div className="flex items-center gap-4">
           <button className="hover:opacity-70 transition-opacity text-slate-400 hidden sm:block">

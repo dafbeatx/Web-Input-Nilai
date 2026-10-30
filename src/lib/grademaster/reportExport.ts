@@ -50,7 +50,7 @@ export function exportToPDF(data: ExportData) {
   doc.setFont('Helvetica', 'bold');
   doc.setFontSize(18);
   doc.setTextColor(30, 41, 59); // Slate 800
-  doc.text('GradeMaster OS', 14, 20);
+  doc.text('Nawasena', 14, 20);
 
   doc.setFontSize(10);
   doc.setFont('Helvetica', 'normal');
@@ -117,7 +117,7 @@ export function exportToPDF(data: ExportData) {
     headStyles: { fillColor: [71, 85, 105], textColor: [255, 255, 255], fontStyle: 'bold' }
   });
 
-  const nextY = (doc as any).lastAutoTable.finalY + 10;
+  const nextY = ((doc as unknown) as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
 
   // Student list table
   doc.setFont('Helvetica', 'bold');
@@ -178,7 +178,7 @@ export function exportToPDF(data: ExportData) {
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184); // Slate 400
     // Footer text
-    doc.text(`Dicetak secara otomatis oleh GradeMaster OS pada ${new Date().toLocaleDateString('id-ID')} • Halaman ${i} dari ${finalPageCount}`, 14, 287);
+    doc.text(`Dicetak secara otomatis oleh Sistem Nawasena pada ${new Date().toLocaleDateString('id-ID')} • Halaman ${i} dari ${finalPageCount}`, 14, 287);
   }
 
   const filename = `Laporan_Nilai_${studentClass.replace(/ /g, '_')}_${subject.replace(/ /g, '_')}.pdf`;
@@ -212,7 +212,7 @@ export function exportToExcel(data: ExportData) {
 
   // Sheet 1: Informasi Sesi
   const infoRows = [
-    ['DOKUMEN EVALUASI PEMBELAJARAN - GRADEMASTER OS'],
+    ['DOKUMEN EVALUASI PEMBELAJARAN - NAWASENA'],
     [],
     ['INFORMASI UMUM'],
     ['Nama Sesi Ujian', sessionName],
@@ -334,7 +334,7 @@ export function exportToDOCX(data: ExportData) {
     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
     <head>
       <meta charset="utf-8">
-      <title>Laporan Hasil Ujian - GradeMaster OS</title>
+      <title>Laporan Hasil Ujian - Nawasena</title>
       <style>
         body { font-family: 'Arial', sans-serif; color: #0f172a; line-height: 1.5; }
         .title { text-align: center; font-size: 18pt; font-weight: bold; color: #1e293b; margin-top: 0; margin-bottom: 5px; }
@@ -352,7 +352,7 @@ export function exportToDOCX(data: ExportData) {
     </head>
     <body>
       <div class="title">LAPORAN HASIL EVALUASI PEMBELAJARAN</div>
-      <div class="subtitle">GradeMaster OS - Platform Manajemen Ujian & Analisis Pendidikan</div>
+      <div class="subtitle">Nawasena - Platform Manajemen Ujian & Analisis Pendidikan</div>
 
       <div class="section-header">A. INFORMASI SESI EVALUASI</div>
       <table class="meta-table">
@@ -428,8 +428,8 @@ export function exportToDOCX(data: ExportData) {
       </table>
 
       <div class="footer">
-        Dokumen ini dihasilkan secara elektronik oleh sistem GradeMaster OS dan sah digunakan sebagai laporan pembelajaran resmi.<br/>
-        GradeMaster OS © ${new Date().getFullYear()}
+        Dokumen ini dihasilkan secara elektronik oleh sistem Nawasena dan sah digunakan sebagai laporan pembelajaran resmi.<br/>
+        Nawasena © ${new Date().getFullYear()}
       </div>
     </body>
     </html>

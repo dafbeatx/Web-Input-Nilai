@@ -260,7 +260,7 @@ export async function POST(req: NextRequest) {
           note: attemptData.note || 'N/A'
         };
 
-        const systemPrompt = `Anda adalah Pakar Forensik Keamanan Siber Sistem Ujian & AI Proctoring Specialist Senior pada GradeMaster OS.
+        const systemPrompt = `Anda adalah Pakar Forensik Keamanan Siber Sistem Ujian & AI Proctoring Specialist Senior pada Nawasena.
 Tugas Anda adalah melakukan audit investigasi mendalam terhadap data telemetri aktivitas siswa selama sesi remedial untuk mengidentifikasi ada tidaknya kecurangan terencana.
 
 PANDUAN EVALUASI & METODOLOGI FORENSIK:

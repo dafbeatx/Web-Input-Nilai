@@ -5,7 +5,32 @@ import webpush from 'web-push';
 // Initialize web-push with VAPID details
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
-const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:admin@grademaster.os';
+const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:admin@nawasena.id';
+
+interface PushSubRecord {
+  subscription: webpush.PushSubscription;
+  student_account_id: string;
+  gm_student_accounts: {
+    id: string;
+    student_name: string;
+    class_name: string;
+    academic_year: string;
+  } | null;
+}
+
+interface StudentWithSession {
+  id: string;
+  name: string;
+  final_score: number | null;
+  remedial_status: string | null;
+  gm_sessions: {
+    id: string;
+    subject: string;
+    class_name: string;
+    academic_year: string;
+    kkm: number | string | null;
+  } | null;
+}
 
 if (vapidPublicKey && vapidPrivateKey) {
   webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
@@ -34,8 +59,8 @@ async function runRemedialReminder() {
   }
 
   // Map subscriptions by key: name_class_year
-  const subMap = new Map();
-  subs.forEach((sub: any) => {
+  const subMap = new Map<string, webpush.PushSubscription>();
+  (subs as unknown as PushSubRecord[]).forEach((sub) => {
     const sa = sub.gm_student_accounts;
     if (sa) {
       const key = `${sa.student_name.toLowerCase().trim()}_${sa.class_name.toLowerCase().trim()}_${sa.academic_year}`;
@@ -68,7 +93,8 @@ async function runRemedialReminder() {
   }
 
   // Filter students who need remedial (final_score < KKM) and are not marked COMPLETED or RESOLVED
-  const pendingRemedials = students.filter((s: any) => {
+  const typedStudents = students as unknown as StudentWithSession[];
+  const pendingRemedials = typedStudents.filter((s) => {
     const session = s.gm_sessions;
     if (!session) return false;
     
@@ -85,8 +111,9 @@ async function runRemedialReminder() {
   let failCount = 0;
 
   // 3. Send notifications to matched subscriptions
-  const notificationPromises = pendingRemedials.map(async (student: any) => {
+  const notificationPromises = pendingRemedials.map(async (student) => {
     const session = student.gm_sessions;
+    if (!session) return;
     const key = `${student.name.toLowerCase().trim()}_${session.class_name.toLowerCase().trim()}_${session.academic_year}`;
     const sub = subMap.get(key);
 
@@ -132,9 +159,9 @@ export async function GET(req: NextRequest) {
 
     console.log('[Push Send API] GET request detected. Running daily remedial reminder cron...');
     return await runRemedialReminder();
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[Push Send API] GET Error:', err);
-    return NextResponse.json({ error: err.message || 'Terjadi kesalahan internal server.' }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Terjadi kesalahan internal server.' }, { status: 500 });
   }
 }
 
@@ -157,7 +184,7 @@ export async function POST(req: NextRequest) {
       }
 
       const payload = JSON.stringify({
-        title: title || 'Notifikasi GradeMaster OS',
+        title: title || 'Notifikasi Nawasena',
         body: message || 'Ada pemberitahuan baru dari sekolah.',
         url: url || '/'
       });
@@ -179,8 +206,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: 'Aksi tidak valid atau parameter tidak lengkap.' }, { status: 400 });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[Push Send API] POST Error:', err);
-    return NextResponse.json({ error: err.message || 'Terjadi kesalahan internal server.' }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Terjadi kesalahan internal server.' }, { status: 500 });
   }
 }

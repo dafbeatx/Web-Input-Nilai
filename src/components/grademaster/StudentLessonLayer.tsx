@@ -466,7 +466,7 @@ export default function StudentLessonLayer({
       setChatMessages([
         { 
           role: 'assistant', 
-          content: `Halo! Saya asisten AI GradeMaster OS. Saya siap membantumu mempelajari materi **${selectedLesson?.subject || 'pelajaran'}** hari ini. Ada konsep yang belum kamu pahami dari rangkuman materi?` 
+          content: `Halo! Saya asisten AI Nawasena. Saya siap membantumu mempelajari materi **${selectedLesson?.subject || 'pelajaran'}** hari ini. Ada konsep yang belum kamu pahami dari rangkuman materi?` 
         }
       ]);
 

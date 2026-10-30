@@ -25,7 +25,6 @@ import { useGradeMaster } from '@/context/GradeMasterContext';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Layer } from '@/lib/grademaster/types';
-import NeonGraduationCap from '@/components/grademaster/ui/NeonGraduationCap';
 import Image from 'next/image';
 
 export default function Navbar() {
@@ -134,10 +133,10 @@ export default function Navbar() {
         <div className="flex flex-col h-full p-5">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-10 mt-2">
-            <div className="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 flex-shrink-0">
-              <NeonGraduationCap size={22} />
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden bg-slate-900/5">
+              <Image src="/logo.svg" alt="Nawasena Logo" width={36} height={36} priority className="object-contain" />
             </div>
-            <h1 className="text-lg font-black text-on-surface tracking-tight font-outfit uppercase leading-tight">GradeMaster<br/><span className="text-primary">OS</span></h1>
+            <h1 className="text-lg font-black text-on-surface tracking-tight font-outfit uppercase leading-tight">Nawasena</h1>
           </div>
 
           {/* Navigation Items */}
@@ -373,12 +372,12 @@ export default function Navbar() {
              </div>
            ) : (
              <>
-               <div className="w-9 h-9 bg-[#0F172A] rounded-xl flex items-center justify-center shadow-sm">
-                 <NeonGraduationCap size={18} />
+               <div className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0 bg-slate-900/5">
+                 <Image src="/logo.svg" alt="Nawasena Logo" width={32} height={32} className="object-contain" />
                </div>
                <div className="flex flex-col">
-                 <span className="text-[13px] font-extrabold text-on-surface tracking-tight leading-none">GradeMaster</span>
-                 <span className="text-[9px] font-bold text-on-surface-variant/60 tracking-wider uppercase leading-tight">Education OS</span>
+                 <span className="text-[13px] font-extrabold text-on-surface tracking-tight leading-none">Nawasena</span>
+                 <span className="text-[9px] font-bold text-on-surface-variant/60 tracking-wider uppercase leading-tight">Education Platform</span>
                </div>
              </>
            )}

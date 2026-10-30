@@ -264,7 +264,7 @@ export default function AttendanceLayer({
           <div className="bg-emerald-500 p-1.5 rounded-lg flex items-center justify-center text-white">
             <span className="material-symbols-outlined text-white text-xl animate-pulse" style={{ fontVariationSettings: "'FILL' 1" }}>school</span>
           </div>
-          <span className="text-sm font-bold tracking-[0.05em] uppercase text-slate-900 font-outfit">GradeMaster OS</span>
+          <span className="text-sm font-bold tracking-[0.05em] uppercase text-slate-900 font-outfit">Nawasena</span>
         </div>
         <div className="flex items-center gap-4">
           <button className="hover:opacity-70 transition-opacity text-slate-400 hidden sm:block">

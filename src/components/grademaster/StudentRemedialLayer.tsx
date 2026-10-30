@@ -2825,7 +2825,7 @@ export default function StudentRemedialLayer({
          </div>
          
          <div className="mt-8">
-            <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">GradeMaster Dynamic Security v2.0</p>
+            <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">Nawasena Dynamic Security v2.0</p>
          </div>
       </div>
     );
@@ -2907,7 +2907,7 @@ export default function StudentRemedialLayer({
 
               <h2 className="text-lg sm:text-2xl font-black text-on-surface tracking-tight uppercase leading-tight font-outfit">
                 Protokol Pengawasan <br className="hidden xs:inline" />
-                <span className="text-primary italic">GradeMaster OS</span>
+                <span className="text-primary italic">Nawasena</span>
               </h2>
 
               <div className="flex justify-center gap-2 mt-2">
@@ -3282,7 +3282,7 @@ export default function StudentRemedialLayer({
       }
 
       const friendPart = targetFriend ? `Khusus untuk *${targetFriend}* dan rekan lainnya, ` : '';
-      const text = `*GradeMaster OS - Pengingat Remedial* 🔄\n\nHalo! Saya (*${studentName}*) sudah berhasil menyelesaikan remedial ujian *${subject}*.\n\n${friendPart}karena nilai kita akan ditahan sementara oleh sistem sampai semua rekan sekelas selesai mengerjakan, mohon segera diselesaikan pengerjaannya ya!\n\nLink Pengerjaan: ${window.location.origin}\nTerima kasih! 🙏`;
+      const text = `*Nawasena - Pengingat Remedial* 🔄\n\nHalo! Saya (*${studentName}*) sudah berhasil menyelesaikan remedial ujian *${subject}*.\n\n${friendPart}karena nilai kita akan ditahan sementara oleh sistem sampai semua rekan sekelas selesai mengerjakan, mohon segera diselesaikan pengerjaannya ya!\n\nLink Pengerjaan: ${window.location.origin}\nTerima kasih! 🙏`;
       
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
     };
@@ -3628,7 +3628,7 @@ export default function StudentRemedialLayer({
         <div className="fixed inset-0 z-[9999] bg-white pointer-events-none"></div>
       )}
       
-      {/* ── TOP APP BAR (GradeMaster OS Header) ── */}
+      {/* ── TOP APP BAR (Nawasena Header) ── */}
       <header className="fixed top-0 w-full z-[80] bg-surface premium-shadow backdrop-blur-2xl border-b border-outline-variant px-6 pt-safe pb-4">
         <div className="flex justify-between items-center w-full max-w-7xl mx-auto">
           <div className="flex items-center gap-4">
@@ -4420,7 +4420,7 @@ export default function StudentRemedialLayer({
            </div>
            
            <div className="mt-12">
-              <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">GradeMaster Dynamic Security v2.0</p>
+              <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">Nawasena Dynamic Security v2.0</p>
            </div>
         </div>
       )}
@@ -4455,7 +4455,7 @@ export default function StudentRemedialLayer({
            </div>
            
            <div className="mt-12">
-              <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">GradeMaster Dynamic Security v2.0</p>
+              <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">Nawasena Dynamic Security v2.0</p>
            </div>
         </div>
       )}
