@@ -12,7 +12,10 @@ import {
   Bot,
   Search,
   Trash2,
-  X
+  X,
+  Play,
+  Video,
+  ExternalLink
 } from 'lucide-react';
 import { DailyLesson, Quiz, ToastType } from '@/lib/grademaster/types';
 import { supabase } from '@/lib/supabase/client';
@@ -23,6 +26,7 @@ import {
   deleteLesson 
 } from '@/lib/grademaster/lessonActions';
 import { parseLessonToSlides } from '@/lib/grademaster/lessonParser';
+import { extractYouTubeId, getYouTubeEmbedUrl, getYouTubeThumbnailUrl, injectYouTubeTag, stripYouTubeTag } from '@/lib/grademaster/youtubeHelper';
 
 const getSubjectExample = (subject: string): { daily: string; quiz: string } => {
   const examples: Record<string, { daily: string; quiz: string }> = {
@@ -125,6 +129,9 @@ export default function LessonManagementLayer({
   const [isUploading, setIsUploading] = useState(false);
   const [historyLessons, setHistoryLessons] = useState<DailyLesson[]>([]);
   const [historySearchQuery, setHistorySearchQuery] = useState('');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [editVideoUrl, setEditVideoUrl] = useState('');
+  const [isUpdatingVideo, setIsUpdatingVideo] = useState(false);
 
   // Selected config during chat
   const [flowType, setFlowType] = useState<'daily' | 'quiz' | 'notebook' | 'susulan' | null>(null);
@@ -148,7 +155,8 @@ export default function LessonManagementLayer({
     extractedText: '',
     aiResult: null as AiResultData | null,
     selectedYear: academicYear,
-    susulanType: null as 'Susulan UTS' | 'Susulan UAS' | null
+    susulanType: null as 'Susulan UTS' | 'Susulan UAS' | null,
+    youtubeUrl: ''
   });
 
   // Keep ref in sync with state
@@ -160,9 +168,10 @@ export default function LessonManagementLayer({
       extractedText,
       aiResult,
       selectedYear,
-      susulanType
+      susulanType,
+      youtubeUrl
     };
-  }, [flowType, selectedClass, selectedSubject, extractedText, aiResult, selectedYear, susulanType]);
+  }, [flowType, selectedClass, selectedSubject, extractedText, aiResult, selectedYear, susulanType, youtubeUrl]);
 
   // Lesson Preview Modal
   const [previewingLesson, setPreviewingLesson] = useState<DailyLesson | null>(null);
@@ -207,6 +216,7 @@ export default function LessonManagementLayer({
     setSelectedYear(academicYear);
     setSusulanType(null);
     setAwaitingCustomYear(false);
+    setYoutubeUrl('');
     chatStateRef.current = {
       flowType: null,
       selectedClass: '',
@@ -214,7 +224,8 @@ export default function LessonManagementLayer({
       extractedText: '',
       aiResult: null,
       selectedYear: academicYear,
-      susulanType: null
+      susulanType: null,
+      youtubeUrl: ''
     };
     setMessages([getWelcomeMessage()]);
   };
@@ -546,6 +557,7 @@ export default function LessonManagementLayer({
         subject: activeSubject,
         date: new Date().toISOString().split('T')[0],
         content: activeText || `Pembahasan materi mata pelajaran ${activeSubject} kelas ${activeClass}`,
+        video_url: chatStateRef.current.youtubeUrl || undefined,
         ai_reading_preview: activeAiResult.preview,
         ai_chat_prompt: activeAiResult.chatPrompt,
         is_published: publish,
@@ -614,11 +626,11 @@ export default function LessonManagementLayer({
     } finally {
       setIsAiResponding(false);
     }
-  };
-
-  // Open Preview Modal of old lesson
+  };  // Open Preview Modal of old lesson
   const handleOpenPreview = async (lesson: DailyLesson) => {
     setPreviewingLesson(lesson);
+    const extractedYt = extractYouTubeId(lesson.video_url || lesson.content);
+    setEditVideoUrl(extractedYt ? (lesson.video_url || `https://www.youtube.com/watch?v=${extractedYt}`) : '');
     setIsLoadingPreviewQuizzes(true);
     setPreviewingQuizzes([]);
 
@@ -634,6 +646,34 @@ export default function LessonManagementLayer({
       console.error(err);
     } finally {
       setIsLoadingPreviewQuizzes(false);
+    }
+  };
+
+
+  const handleUpdateVideoUrl = async () => {
+    if (!previewingLesson) return;
+    setIsUpdatingVideo(true);
+    try {
+      const cleanUrl = editVideoUrl.trim();
+      const updatedContent = cleanUrl 
+        ? injectYouTubeTag(previewingLesson.content || '', cleanUrl)
+        : stripYouTubeTag(previewingLesson.content || '');
+
+      const { error } = await supabase
+        .from('daily_lessons')
+        .update({ content: updatedContent })
+        .eq('id', previewingLesson.id);
+
+      if (error) throw error;
+
+      setToast({ message: "Link video pembelajaran berhasil disimpan!", type: 'success' });
+      setPreviewingLesson(prev => prev ? { ...prev, content: updatedContent, video_url: cleanUrl || undefined } : null);
+      loadHistory();
+    } catch (err) {
+      console.error(err);
+      setToast({ message: "Gagal menyimpan link video", type: 'error' });
+    } finally {
+      setIsUpdatingVideo(false);
     }
   };
 
@@ -901,6 +941,47 @@ export default function LessonManagementLayer({
                     </div>
                   </div>
 
+                  
+                  {/* YouTube Video URL Input for Teacher */}
+                  <div className="bg-[#212121] p-4 rounded-xl border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#afafaf] flex items-center gap-1.5">
+                        <Play size={13} className="text-red-500 fill-red-500" /> Link Video Pembelajaran (YouTube - Opsional)
+                      </h4>
+                      {extractYouTubeId(youtubeUrl) && (
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                          <CheckCircle2 size={11} /> Video Terdeteksi
+                        </span>
+                      )}
+                    </div>
+
+                    <input
+                      type="url"
+                      value={youtubeUrl}
+                      onChange={(e) => {
+                        setYoutubeUrl(e.target.value);
+                        chatStateRef.current.youtubeUrl = e.target.value;
+                      }}
+                      placeholder="Tempel link YouTube (contoh: https://www.youtube.com/watch?v=... atau https://youtu.be/...)"
+                      className="w-full h-11 bg-[#171717] border border-white/10 rounded-xl px-4 text-xs font-medium text-white placeholder:text-slate-500 focus:outline-none focus:border-[#d25e28]"
+                    />
+
+                    {extractYouTubeId(youtubeUrl) && (
+                      <div className="flex items-center gap-3 p-2.5 bg-black/40 rounded-xl border border-white/5">
+                        <img
+                          src={getYouTubeThumbnailUrl(youtubeUrl) || ''}
+                          alt="Thumbnail"
+                          className="w-24 h-14 object-cover rounded-lg border border-white/10"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-white">Video YouTube Terhubung</p>
+                          <p className="text-[10px] text-slate-400 truncate mt-0.5">{youtubeUrl}</p>
+                          <p className="text-[9px] text-emerald-400 mt-1">Video akan otomatis disematkan dan tampil di LMS siswa.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* MCQ & Essay Questions preview */}
                   {aiResult.questions && aiResult.questions.length > 0 && (
                     <div>
@@ -1057,6 +1138,48 @@ export default function LessonManagementLayer({
             </div>
 
             <div className="space-y-5 sm:space-y-6">
+              
+              {/* YouTube Video in Preview Modal */}
+              {previewingLesson && (
+                <div className="bg-[#212121] rounded-2xl p-4 sm:p-5 border border-white/5 space-y-3">
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#afafaf] flex items-center justify-between">
+                    <span className="flex items-center gap-1.5"><Play size={14} className="text-red-500 fill-red-500" /> Video Pembelajaran (YouTube)</span>
+                    {extractYouTubeId(previewingLesson.video_url || previewingLesson.content) && (
+                      <span className="text-[9px] text-emerald-400 font-mono">Video Aktif</span>
+                    )}
+                  </h4>
+
+                  {extractYouTubeId(previewingLesson.video_url || previewingLesson.content) && (
+                    <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-white/10 shadow-md">
+                      <iframe
+                        src={getYouTubeEmbedUrl(previewingLesson.video_url || previewingLesson.content) || ''}
+                        title="Preview Video"
+                        className="w-full h-full border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-1">
+                    <input
+                      type="url"
+                      value={editVideoUrl}
+                      onChange={(e) => setEditVideoUrl(e.target.value)}
+                      placeholder="Ubah / tambahkan link YouTube..."
+                      className="flex-1 h-10 bg-[#171717] border border-white/10 rounded-xl px-3 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-[#d25e28]"
+                    />
+                    <button
+                      onClick={handleUpdateVideoUrl}
+                      disabled={isUpdatingVideo}
+                      className="px-4 h-10 bg-[#d25e28] hover:bg-[#c15321] text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 shrink-0"
+                    >
+                      {isUpdatingVideo ? 'Menyimpan...' : 'Simpan Video'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Summary as Book Slides */}
               {previewingLesson.ai_reading_preview && (
                 <div className="bg-[#d25e28]/5 rounded-2xl p-4 sm:p-5 border border-[#d25e28]/15 space-y-3">

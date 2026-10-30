@@ -8,15 +8,25 @@ import {
   Calendar, 
   CheckCircle2, 
   FileText, 
-  Bot,
-  Send,
-  Loader2,
-  HelpCircle,
-  Award,
-  AlertCircle,
-  Lightbulb,
-  ChevronLeft,
-  ChevronRight
+  Bot, 
+  Send, 
+  Loader2, 
+  HelpCircle, 
+  Award, 
+  AlertCircle, 
+  Lightbulb, 
+  ChevronLeft, 
+  ChevronRight,
+  Play,
+  Video,
+  VideoOff,
+  ExternalLink,
+  Edit3,
+  Search,
+  Filter,
+  CheckCircle,
+  Copy,
+  Check
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useGradeMaster } from '@/context/GradeMasterContext';
@@ -24,6 +34,11 @@ import { DailyLesson, Quiz, ToastType } from '@/lib/grademaster/types';
 import GradeMasterMascot from './ui/GradeMasterMascot';
 import { addBehaviorAction } from '@/lib/actions/behavior';
 import { parseLessonToSlides, BookSlide } from '@/lib/grademaster/lessonParser';
+import { 
+  extractYouTubeId, 
+  getYouTubeEmbedUrl, 
+  stripYouTubeTag 
+} from '@/lib/grademaster/youtubeHelper';
 
 interface SimplifiedSlide {
   title: string;
@@ -48,7 +63,7 @@ interface StudentLessonLayerProps {
   studentClassOverride?: string;
 }
 
-type TabType = 'materi' | 'chat_ai' | 'kuis';
+type TabType = 'video' | 'materi' | 'catatan' | 'kuis' | 'chat_ai';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -148,7 +163,18 @@ export default function StudentLessonLayer({
   const [lessons, setLessons] = useState<DailyLesson[]>([]);
   const [isLoadingLessons, setIsLoadingLessons] = useState(true);
   const [selectedLesson, setSelectedLesson] = useState<DailyLesson | null>(null);
-  const [activeTab, setActiveTab] = useState<TabType>('materi');
+  const [activeTab, setActiveTab] = useState<TabType>('video');
+
+  // LMS Filter & Search State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('ALL');
+
+  // LMS Module Completion Persistence
+  const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
+
+  // LMS Personal Student Notepad
+  const [studentNote, setStudentNote] = useState('');
+  const [isCopiedNote, setIsCopiedNote] = useState(false);
 
   // Quiz State
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -176,18 +202,34 @@ export default function StudentLessonLayer({
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
   const [bookViewMode, setBookViewMode] = useState<'slide' | 'scroll'>('slide');
 
+  // Extract YouTube ID & Embed URL for currently selected lesson
+  const currentVideoId = useMemo(() => {
+    if (!selectedLesson) return null;
+    return extractYouTubeId(selectedLesson.video_url || selectedLesson.content);
+  }, [selectedLesson]);
+
+  const currentEmbedUrl = useMemo(() => {
+    return currentVideoId ? getYouTubeEmbedUrl(currentVideoId) : null;
+  }, [currentVideoId]);
+
+  // Clean text content without any raw [YOUTUBE: ...] markers
+  const cleanLessonContent = useMemo(() => {
+    if (!selectedLesson) return '';
+    return stripYouTubeTag(selectedLesson.content);
+  }, [selectedLesson]);
+
   // Compute parsed book slides dynamically from lesson material
   const bookSlides: BookSlide[] = useMemo(() => {
     if (!selectedLesson) return [];
-    const textToParse = selectedLesson.ai_reading_preview || selectedLesson.content || '';
+    const textToParse = selectedLesson.ai_reading_preview || cleanLessonContent || '';
     return parseLessonToSlides(textToParse, selectedLesson.subject);
-  }, [selectedLesson]);
+  }, [selectedLesson, cleanLessonContent]);
 
   // Streak & Mascot states
   const [streakCount, setStreakCount] = useState<number>(studentData?.study_streak || 0);
   const [hasStreakUpdatedToday, setHasStreakUpdatedToday] = useState<boolean>(false);
   const [mascotState, setMascotState] = useState<'idle' | 'success' | 'sad' | 'streak'>('idle');
-  const [mascotMessage, setMascotMessage] = useState<string>('Halo! Yuk kita mulai belajar materi hari ini. Pilih salah satu materi di kiri ya!');
+  const [mascotMessage, setMascotMessage] = useState<string>('Selamat datang di Nawasena LMS! Pilih salah satu modul pembelajaran untuk mulai belajar.');
 
   const getLocalDateString = () => {
     const date = new Date();
@@ -195,6 +237,71 @@ export default function StudentLessonLayer({
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  };
+
+  // Load completed lessons from localStorage
+  useEffect(() => {
+    if (!activeClassName || typeof window === 'undefined') return;
+    try {
+      const saved = localStorage.getItem(`nawasena_lms_completed_${activeClassName}`);
+      if (saved) {
+        setCompletedLessons(new Set(JSON.parse(saved)));
+      }
+    } catch {
+      // Ignored
+    }
+  }, [activeClassName]);
+
+  // Load student note for selected lesson
+  useEffect(() => {
+    if (!selectedLesson || typeof window === 'undefined') return;
+    const studentId = studentData?.id || 'guest';
+    const noteKey = `nawasena_note_${studentId}_${selectedLesson.id}`;
+    const saved = localStorage.getItem(noteKey) || '';
+    setStudentNote(saved);
+  }, [selectedLesson, studentData?.id]);
+
+  const handleSaveNote = (newNote: string) => {
+    setStudentNote(newNote);
+    if (!selectedLesson || typeof window === 'undefined') return;
+    const studentId = studentData?.id || 'guest';
+    const noteKey = `nawasena_note_${studentId}_${selectedLesson.id}`;
+    try {
+      localStorage.setItem(noteKey, newNote);
+    } catch {
+      // Ignored
+    }
+  };
+
+  const handleCopyNote = () => {
+    if (!studentNote) return;
+    navigator.clipboard.writeText(studentNote);
+    setIsCopiedNote(true);
+    setToast({ message: "Catatan berhasil disalin ke clipboard!", type: "success" });
+    setTimeout(() => setIsCopiedNote(false), 2000);
+  };
+
+  const toggleLessonCompleted = (lessonId: string) => {
+    setCompletedLessons(prev => {
+      const next = new Set(prev);
+      const isNowCompleted = !next.has(lessonId);
+      if (isNowCompleted) {
+        next.add(lessonId);
+        fireConfetti();
+        setMascotState('success');
+        setMascotMessage('Luar biasa! Modul pembelajaran berhasil kamu selesaikan. Tetap semangat!');
+        setToast({ message: 'Modul ditandai selesai! 🎉', type: 'success' });
+      } else {
+        next.delete(lessonId);
+        setToast({ message: 'Tanda penyelesaian modul dibatalkan.', type: 'success' });
+      }
+      try {
+        localStorage.setItem(`nawasena_lms_completed_${activeClassName}`, JSON.stringify(Array.from(next)));
+      } catch {
+        // Ignored
+      }
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -237,10 +344,6 @@ export default function StudentLessonLayer({
           setMascotMessage(`Hebat! Streak belajar harianmu meningkat menjadi 🔥 ${data.streak} hari berturut-turut!`);
           fireConfetti();
         }
-      } else if (data.error === 'database_migration_pending') {
-        console.warn('Database streak migration pending:', data.message);
-      } else {
-        console.error('Failed to update streak:', data.error);
       }
     } catch (err) {
       console.error('Streak update network error:', err);
@@ -252,35 +355,27 @@ export default function StudentLessonLayer({
     queueMicrotask(() => {
       if (!selectedLesson) {
         setMascotState('idle');
-        setMascotMessage('Halo! Yuk kita mulai belajar materi hari ini. Pilih salah satu materi di kiri ya!');
+        setMascotMessage('Halo! Yuk pilih salah satu modul pembelajaran di kurikulum sebelah kiri.');
         return;
       }
 
-      if (activeTab === 'materi') {
-        if (learningMode === 'santai') {
-          if (simplifiedSlides.length === 0) {
-            setMascotState('idle');
-            setMascotMessage(`Yuk kita pelajari materi tentang ${selectedLesson.subject}!`);
-          } else {
-            const total = simplifiedSlides.length;
-            if (currentSlideIdx === 0) {
-              setMascotState('idle');
-              setMascotMessage(`Selamat datang di Paham Kilat AI! Yuk baca perlahan slide demi slide tentang ${selectedLesson.subject}.`);
-            } else if (currentSlideIdx === total - 1) {
-              setMascotState('success');
-              setMascotMessage(`Wah, kamu sampai di slide terakhir! Klik "Selesai" untuk melengkapi belajarmu hari ini.`);
-            } else {
-              setMascotState('idle');
-              setMascotMessage(`Bagus! Slide ${currentSlideIdx + 1} dari ${total}. Terus baca ya, kamu hebat!`);
-            }
-          }
+      if (activeTab === 'video') {
+        if (currentVideoId) {
+          setMascotState('idle');
+          setMascotMessage(`Tonton video pembelajaran tentang ${selectedLesson.subject}. Catat poin-poin penting di tab Catatan ya!`);
         } else {
           setMascotState('idle');
-          setMascotMessage(`Kamu sedang membaca isi materi lengkap. Fokus dan serap ilmunya ya!`);
+          setMascotMessage(`Belum ada video terlampir untuk modul ini. Yuk baca rangkuman materi di tab Materi!`);
         }
+      } else if (activeTab === 'materi') {
+        setMascotState('idle');
+        setMascotMessage(`Kamu sedang membaca slide materi ${selectedLesson.subject}. Pahami konsep utamanya perlahan ya!`);
+      } else if (activeTab === 'catatan') {
+        setMascotState('idle');
+        setMascotMessage(`Tuliskan ringkasan pribadi atau rumus pentingmu di sini. Catatanmu tersimpan otomatis!`);
       } else if (activeTab === 'chat_ai') {
         setMascotState('idle');
-        setMascotMessage(`Ada bagian materi "${selectedLesson.subject}" yang kurang jelas? Tanyakan padaku! Aku siap membantu menjelaskan.`);
+        setMascotMessage(`Ada konsep yang membingungkan dari materi "${selectedLesson.subject}"? Tanyakan pada AI Tutor!`);
       } else if (activeTab === 'kuis') {
         if (showQuizResults && quizScoreRecord) {
           const score = Math.round(quizScoreRecord.score);
@@ -289,18 +384,18 @@ export default function StudentLessonLayer({
             setMascotMessage(`Luar biasa! Kamu menyelesaikan kuis dengan nilai ${score}/100 dan mendapatkan +2 Poin Kebaikan! 🔥`);
           } else {
             setMascotState('sad');
-            setMascotMessage(`Kuis selesai dengan nilai ${score}/100. Jangan berkecil hati, mari pelajari lagi materinya agar lebih paham!`);
+            setMascotMessage(`Kuis selesai dengan nilai ${score}/100. Tetap semangat, pelajari kembali video & materinya ya!`);
           }
         } else if (isBlockedFromSusulan) {
           setMascotState('sad');
           setMascotMessage(`Ujian susulan ditutup karena kamu sudah memiliki nilai untuk mata pelajaran ini.`);
         } else {
           setMascotState('idle');
-          setMascotMessage(`Siap menguji pemahamanmu tentang ${selectedLesson.subject}? Jawab kuis ini dengan nilai >= 70 untuk bonus +2 Poin Kebaikan!`);
+          setMascotMessage(`Siap menguji pemahamanmu tentang ${selectedLesson.subject}? Nilai >= 70 mendapatkan bonus +2 Poin Kebaikan!`);
         }
       }
     });
-  }, [activeTab, selectedLesson, learningMode, simplifiedSlides.length, currentSlideIdx, showQuizResults, quizScoreRecord, isBlockedFromSusulan]);
+  }, [activeTab, selectedLesson, currentVideoId, showQuizResults, quizScoreRecord, isBlockedFromSusulan]);
 
   const fetchSimplifiedContent = useCallback(async (subject: string, content: string) => {
     if (!content) return;
@@ -358,9 +453,22 @@ export default function StudentLessonLayer({
           .order('date', { ascending: false });
 
         if (error) throw error;
-        setLessons(data || []);
-        if (data && data.length > 0) {
-          setSelectedLesson(data[0]);
+
+        // Auto-extract YouTube video URL from either video_url column or tagged content
+        const mappedLessons = (data || []).map(l => {
+          const ytId = extractYouTubeId(l.video_url || l.content);
+          return {
+            ...l,
+            video_url: l.video_url || (ytId ? `https://www.youtube.com/watch?v=${ytId}` : undefined)
+          };
+        });
+
+        setLessons(mappedLessons);
+        if (mappedLessons.length > 0) {
+          setSelectedLesson(mappedLessons[0]);
+          // Default tab to 'video' if video exists, else 'materi'
+          const hasVideo = extractYouTubeId(mappedLessons[0].video_url || mappedLessons[0].content);
+          setActiveTab(hasVideo ? 'video' : 'materi');
         } else {
           setSelectedLesson(null);
         }
@@ -395,7 +503,6 @@ export default function StudentLessonLayer({
       setUserAnswers({});
 
       try {
-        // 1. Fetch quizzes linked to this lesson
         const { data: quizData, error: quizError } = await supabase
           .from('quizzes')
           .select('*')
@@ -408,12 +515,10 @@ export default function StudentLessonLayer({
           const firstQuiz = quizData[0];
           setSelectedQuiz(firstQuiz);
 
-          // Get logged in student profile UUID
           const { data: { user } } = await supabase.auth.getUser();
           const studentId = studentData?.id || user?.id;
 
           if (studentId) {
-            // Check Susulan eligibility
             if (firstQuiz.title && firstQuiz.title.includes('Susulan')) {
               try {
                 const examType = (firstQuiz.title.includes('UTS') || firstQuiz.title.includes('ASTS')) ? 'Susulan UTS' : 'Susulan UAS';
@@ -435,7 +540,6 @@ export default function StudentLessonLayer({
               }
             }
 
-            // 2. Fetch existing score record
             const { data: scoreData } = await supabase
               .from('student_scores')
               .select('*')
@@ -461,39 +565,50 @@ export default function StudentLessonLayer({
 
     fetchQuizzesAndScores();
 
-    // Reset Chat messages for the new lesson
     queueMicrotask(() => {
       setChatMessages([
         { 
           role: 'assistant', 
-          content: `Halo! Saya asisten AI Nawasena. Saya siap membantumu mempelajari materi **${selectedLesson?.subject || 'pelajaran'}** hari ini. Ada konsep yang belum kamu pahami dari rangkuman materi?` 
+          content: `Halo! Saya asisten AI Nawasena LMS. Saya siap membantumu mempelajari materi **${selectedLesson?.subject || 'pelajaran'}** hari ini. Ada pertanyaan tentang konsep dalam video atau materi?` 
         }
       ]);
 
-      // Reset and trigger simplify if needed
       setSimplifiedSlides([]);
       setCurrentSlideIdx(0);
       if (selectedLesson && learningMode === 'santai') {
-        fetchSimplifiedContent(selectedLesson.subject, selectedLesson.content || selectedLesson.ai_reading_preview || "");
+        fetchSimplifiedContent(selectedLesson.subject, cleanLessonContent || selectedLesson.ai_reading_preview || "");
       }
     });
-  }, [selectedLesson, activeClassName, academicYear, semester, studentData, learningMode, fetchSimplifiedContent]);
+  }, [selectedLesson, activeClassName, academicYear, semester, studentData, learningMode, cleanLessonContent, fetchSimplifiedContent]);
 
-  // Trigger auto-simplification when mode is switched to 'santai' and we have no cached slides
-  useEffect(() => {
-    if (learningMode === 'santai' && selectedLesson && simplifiedSlides.length === 0 && !isLoadingSimplify) {
-      queueMicrotask(() => {
-        fetchSimplifiedContent(selectedLesson.subject, selectedLesson.content || selectedLesson.ai_reading_preview || "");
-      });
-    }
-  }, [learningMode, selectedLesson, simplifiedSlides.length, isLoadingSimplify, fetchSimplifiedContent]);
+  // Available subjects for filter pills
+  const availableSubjects = useMemo(() => {
+    return Array.from(new Set(lessons.map(l => l.subject)));
+  }, [lessons]);
 
-  // Send message to Copilot AI
+  // Filtered lessons by subject & search query
+  const filteredLessons = useMemo(() => {
+    return lessons.filter(l => {
+      const matchSubject = selectedSubjectFilter === 'ALL' || l.subject === selectedSubjectFilter;
+      const matchSearch = !searchQuery.trim() || 
+        l.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        l.content.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchSubject && matchSearch;
+    });
+  }, [lessons, selectedSubjectFilter, searchQuery]);
+
+  // LMS metrics calculations
+  const totalModules = lessons.length;
+  const completedCount = lessons.filter(l => completedLessons.has(l.id)).length;
+  const videoModulesCount = lessons.filter(l => extractYouTubeId(l.video_url || l.content)).length;
+  const completionPercent = totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0;
+
+  // Suggested questions for AI tutor
   const suggestedLessonQuestions = [
-    "💡 Jelaskan materi gampangnya dong!",
-    "🔍 Berikan contoh nyata materi ini",
-    "📝 Buat 3 soal kuis latihan singkat",
-    "📚 Apa kesimpulan penting hari ini?"
+    "💡 Jelaskan inti video pembelajaran ini!",
+    "🔍 Berikan contoh penerapan materi dalam kehidupan nyata",
+    "📝 Buat 3 pertanyaan latihan singkat",
+    "📚 Apa kesimpulan paling penting yang harus saya ingat?"
   ];
 
   const handleSelectSuggestedQuestion = async (questionText: string) => {
@@ -531,7 +646,7 @@ export default function StudentLessonLayer({
       console.error("AI response error:", err);
       setChatMessages(prev => [
         ...prev, 
-        { role: 'assistant', content: `Maaf, saya sedang mengalami kendala jaringan. Pertanyaan Anda: "${questionText}". Silakan coba tanyakan kembali.` }
+        { role: 'assistant', content: `Maaf, terjadi kendala jaringan saat menghubungkan ke AI. Silakan tanyakan kembali.` }
       ]);
     } finally {
       setIsAiResponding(false);
@@ -576,21 +691,19 @@ export default function StudentLessonLayer({
       console.error("AI response error:", err);
       setChatMessages(prev => [
         ...prev, 
-        { role: 'assistant', content: `Maaf, saya sedang mengalami kendala jaringan. Pertanyaan Anda: "${userText}". Silakan coba tanyakan kembali.` }
+        { role: 'assistant', content: `Maaf, sedang terjadi kendala jaringan. Silakan ulangi pertanyaan Anda.` }
       ]);
     } finally {
       setIsAiResponding(false);
     }
   };
 
-  // Submit Interactive Quiz
   const handleSubmitQuiz = async () => {
     if (!selectedQuiz || !selectedLesson) return;
 
     const questionsList = (selectedQuiz.questions || []) as QuizQuestion[];
     if (questionsList.length === 0) return;
 
-    // Ensure all MCQs are answered
     const unansweredMCQ = questionsList.some((q, idx) => {
       return (q.type === 'mcq' || !q.type) && !userAnswers[idx];
     });
@@ -609,7 +722,6 @@ export default function StudentLessonLayer({
 
     setIsSubmittingQuiz(true);
     try {
-      // Calculate Score
       let correctCount = 0;
       let mcqCount = 0;
 
@@ -633,7 +745,6 @@ export default function StudentLessonLayer({
         throw new Error("Siswa tidak teridentifikasi.");
       }
 
-      // Save to Supabase
       const { data, error } = await supabase
         .from('student_scores')
         .insert({
@@ -650,40 +761,25 @@ export default function StudentLessonLayer({
 
       if (error) throw error;
 
-      // If score is passing (>= 70) and it was not previously completed (no quizScoreRecord existed yet)
       const isFirstAttempt = !quizScoreRecord;
       if (finalScore >= 70 && isFirstAttempt) {
-        // Trigger behavior action for +2 Poin Kebaikan
         const behaviorId = studentData?.behavior_id || studentData?.student_id;
         if (behaviorId) {
-          const behaviorResult = await addBehaviorAction({
+          await addBehaviorAction({
             studentId: behaviorId,
-            pointsDelta: -2, // Positive 2 merits/appreciation = negative delta in gm_behaviors
+            pointsDelta: -2,
             reason: `Menyelesaikan Kuis Harian: ${selectedLesson.subject} (Nilai: ${finalScore})`
           });
-          if (behaviorResult.success) {
-            console.log('Successfully rewarded +2 Poin Kebaikan');
-          } else {
-            console.error('Failed to reward behavior points:', behaviorResult.error);
-          }
         }
-
-        // Trigger streak update
         await triggerStreakUpdate();
-        
-        // Fire confetti
         fireConfetti();
-        
-        // Set mascot success state
         setMascotState('success');
         setMascotMessage(`Selamat! Kamu lulus kuis dengan nilai ${finalScore}/100! +2 Poin Kebaikan telah ditambahkan ke akunmu! 🌟`);
       } else {
-        // Just trigger streak update if it's completed (even if they didn't pass, studying counts as streak activity!)
         await triggerStreakUpdate();
-        
         if (finalScore < 70) {
           setMascotState('sad');
-          setMascotMessage(`Kuis selesai dengan nilai ${finalScore}/100. Yuk pelajari lagi materinya biar bisa dapat nilai lebih tinggi lain kali!`);
+          setMascotMessage(`Kuis selesai dengan nilai ${finalScore}/100. Yuk pelajari lagi video & materinya biar nilaimu meningkat!`);
         }
       }
 
@@ -698,7 +794,6 @@ export default function StudentLessonLayer({
       setIsSubmittingQuiz(false);
     }
   };
-
 
   const renderFormattedText = (text: string) => {
     if (!text) return null;
@@ -738,7 +833,7 @@ export default function StudentLessonLayer({
     if (currentSlides.length === 0) {
       return (
         <div className="bg-white border border-slate-200 rounded-3xl p-8 text-center text-slate-400">
-          Belum ada isi materi pelajaran.
+          Belum ada isi materi pelajaran digital untuk topik ini.
         </div>
       );
     }
@@ -748,11 +843,9 @@ export default function StudentLessonLayer({
 
     return (
       <div className="flex flex-col gap-4 animate-in fade-in duration-300">
-        
-        {/* Top Header: Badge, Slide indicator & View Mode toggle */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-1">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-100/70 px-3 py-1 rounded-full border border-emerald-500/20 flex items-center gap-1.5 shadow-sm shadow-emerald-500/5">
+            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-100/70 px-3 py-1 rounded-full border border-emerald-500/20 flex items-center gap-1.5 shadow-sm">
               <BookOpen size={12} className="text-emerald-600" />
               Slide {currentSlideIdx + 1} dari {totalSlides}
             </span>
@@ -764,7 +857,6 @@ export default function StudentLessonLayer({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* View Mode Toggle: Slide vs Scroll */}
             <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200/60">
               <button
                 onClick={() => setBookViewMode('slide')}
@@ -773,7 +865,6 @@ export default function StudentLessonLayer({
                     ? 'bg-white text-emerald-600 shadow-sm' 
                     : 'text-slate-400 hover:text-slate-600'
                 }`}
-                title="Mode Slide per Halaman Buku"
               >
                 Slide
               </button>
@@ -784,7 +875,6 @@ export default function StudentLessonLayer({
                     ? 'bg-white text-emerald-600 shadow-sm' 
                     : 'text-slate-400 hover:text-slate-600'
                 }`}
-                title="Mode Baca Semua Paragraf"
               >
                 Semua
               </button>
@@ -794,7 +884,6 @@ export default function StudentLessonLayer({
 
         {bookViewMode === 'slide' ? (
           <>
-            {/* Segmented Progress Bar */}
             <div className="flex gap-1.5 w-full px-1">
               {Array.from({ length: totalSlides }).map((_, idx) => (
                 <button
@@ -802,20 +891,18 @@ export default function StudentLessonLayer({
                   onClick={() => setCurrentSlideIdx(idx)}
                   className={`h-1.5 rounded-full flex-1 transition-all duration-300 cursor-pointer ${
                     idx === currentSlideIdx 
-                      ? 'bg-emerald-500 shadow-sm shadow-emerald-500/30 ring-1 ring-emerald-400' 
+                      ? 'bg-emerald-500 shadow-sm ring-1 ring-emerald-400' 
                       : idx < currentSlideIdx 
                       ? 'bg-emerald-400/80' 
                       : 'bg-slate-200 hover:bg-slate-300'
                   }`}
-                  title={`Lompat ke Slide ${idx + 1}`}
+                  title={`Slide ${idx + 1}`}
                 />
               ))}
             </div>
 
-            {/* Slide Card - Book page style */}
             <div className="bg-white border border-slate-200/80 rounded-[2rem] p-5 sm:p-7 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[380px] transition-all">
               <div className="space-y-5">
-                {/* Slide Title */}
                 <div className="border-b border-slate-100 pb-3.5 flex items-start justify-between gap-3">
                   <div>
                     <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 font-mono">
@@ -830,7 +917,6 @@ export default function StudentLessonLayer({
                   </div>
                 </div>
 
-                {/* Slide Paragraphs */}
                 <div className="space-y-4 text-slate-700 text-sm leading-relaxed font-normal">
                   {activeSlide.paragraphs.map((para, pIdx) => {
                     const trimmed = para.trim();
@@ -854,7 +940,6 @@ export default function StudentLessonLayer({
                   })}
                 </div>
 
-                {/* Optional Analogy Box if present */}
                 {activeSlide.analogy && (
                   <div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-3.5 mt-3 text-left flex items-start gap-2.5 animate-in slide-in-from-bottom-2 duration-300">
                     <div className="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
@@ -870,7 +955,6 @@ export default function StudentLessonLayer({
                 )}
               </div>
 
-              {/* Navigation Controls */}
               <div className="flex justify-between items-center gap-2 pt-5 border-t border-slate-100 mt-6 shrink-0">
                 <button
                   onClick={() => setCurrentSlideIdx(prev => Math.max(0, prev - 1))}
@@ -880,7 +964,6 @@ export default function StudentLessonLayer({
                   <ChevronLeft size={16} /> <span className="hidden xs:inline">Sebelumnya</span>
                 </button>
 
-                {/* Direct pagination numbers */}
                 <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar max-w-[180px] sm:max-w-none">
                   {Array.from({ length: totalSlides }).map((_, idx) => (
                     <button
@@ -891,7 +974,6 @@ export default function StudentLessonLayer({
                           ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25 scale-105' 
                           : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
                       }`}
-                      title={`Slide ${idx + 1}`}
                     >
                       {idx + 1}
                     </button>
@@ -910,8 +992,8 @@ export default function StudentLessonLayer({
                   }}
                   className={`px-4 sm:px-5 py-2 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all min-h-[40px] active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-md ${
                     currentSlideIdx === totalSlides - 1
-                      ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/25'
-                      : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/25'
+                      ? 'bg-indigo-600 hover:bg-indigo-700'
+                      : 'bg-emerald-500 hover:bg-emerald-600'
                   }`}
                 >
                   {currentSlideIdx === totalSlides - 1 ? (
@@ -924,7 +1006,6 @@ export default function StudentLessonLayer({
             </div>
           </>
         ) : (
-          /* Mode Semua Paragraf (Scroll Mode) */
           <div className="bg-white border border-slate-200/80 rounded-[2rem] p-5 sm:p-7 shadow-sm space-y-6">
             <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
               <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
@@ -971,14 +1052,13 @@ export default function StudentLessonLayer({
           </div>
         )}
 
-        {/* Optional: Detail Catatan Tambahan Guru jika berbeda dari ringkasan */}
-        {selectedLesson?.content && selectedLesson.content.trim() !== selectedLesson.ai_reading_preview?.trim() && selectedLesson.content.length > 50 && (
+        {cleanLessonContent && cleanLessonContent.trim() !== selectedLesson?.ai_reading_preview?.trim() && cleanLessonContent.length > 50 && (
           <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 sm:p-5 text-left space-y-2 mt-2">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-0.5">
-              Catatan / Instruksi Tambahan Guru
+              Catatan / Instruksi Guru
             </h4>
             <div className="text-xs text-slate-700 leading-relaxed font-medium whitespace-pre-wrap">
-              {selectedLesson.content}
+              {cleanLessonContent}
             </div>
           </div>
         )}
@@ -987,87 +1067,221 @@ export default function StudentLessonLayer({
   };
 
   return (
-    <div className={`${isTab ? 'min-h-full px-3.5 py-3 pb-28' : 'min-h-dvh px-3.5 py-4 max-w-md mx-auto page-pt pb-24'} bg-slate-50/50 font-outfit`}>
-      {/* Header */}
-      <header className={`${isTab ? 'mb-4' : 'mb-6'} animate-in fade-in duration-300`}>
+    <div className={`${isTab ? 'min-h-full px-3 sm:px-6 py-4 pb-28' : 'min-h-dvh px-3 sm:px-8 py-6 max-w-7xl mx-auto page-pt pb-28'} bg-slate-50/60 font-outfit text-slate-900`}>
+      
+      {/* LMS TOP HEADER & METRICS BAR */}
+      <header className="mb-6 space-y-4">
         {!isTab && (
           <button 
             onClick={onBack}
-            className="flex items-center gap-1.5 text-slate-500 hover:text-slate-900 font-bold text-xs transition-all mb-3 group min-h-[44px]"
+            className="flex items-center gap-1.5 text-slate-500 hover:text-slate-900 font-bold text-xs transition-all group min-h-[44px]"
           >
-            <ArrowLeft size={15} className="group-hover:-translate-x-1 transition-transform" /> Kembali ke Beranda
+            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Kembali ke Portal Utama
           </button>
         )}
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight leading-tight truncate">
-              {isParent ? 'Materi Pelajaran Ananda' : 'Pelajaran Saya'}
+
+        {/* Title, Class, and Badges */}
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
+                Nawasena LMS
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                Ruang Belajar Digital
+              </span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              {isParent ? 'Kurikulum & Video Pembelajaran Ananda' : 'Pusat Pembelajaran & Video Interaktif'}
             </h1>
-            <p className="text-slate-500 text-[11px] font-medium mt-0.5 truncate">
-              Kelas {activeClassName} • Semester {semester}
+            <p className="text-slate-500 text-xs font-medium">
+              Kelas {activeClassName} • Tahun Ajaran {academicYear} • Semester {semester}
             </p>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {isParent ? (
-              <div className="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-800 rounded-full border border-indigo-200 text-[10px] font-bold shadow-sm">
-                <span>👨‍👩‍👧</span>
-                <span>Wali Murid</span>
+
+          {/* Quick Metrics Bar */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
+            <div className="flex-1 sm:flex-none flex items-center gap-2 px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs">
+              <BookOpen size={16} className="text-indigo-600" />
+              <div>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Modul</p>
+                <p className="font-black text-slate-800 leading-tight mt-0.5">{totalModules} Modul</p>
               </div>
-            ) : (
-              <div className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-800 rounded-full border border-amber-200 text-[10px] font-bold shadow-sm animate-in fade-in duration-300">
-                <span className="text-xs select-none">🔥</span>
-                <span>{streakCount} Hari</span>
+            </div>
+
+            <div className="flex-1 sm:flex-none flex items-center gap-2 px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs">
+              <Video size={16} className="text-red-500" />
+              <div>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Video Materi</p>
+                <p className="font-black text-slate-800 leading-tight mt-0.5">{videoModulesCount} Video</p>
               </div>
-            )}
-            <div className="px-2.5 py-1 bg-emerald-50 text-emerald-800 rounded-full border border-emerald-200 text-[10px] font-bold">
-               {activeClassName}
+            </div>
+
+            <div className="flex-1 sm:flex-none flex items-center gap-2 px-3.5 py-2 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs">
+              <CheckCircle2 size={16} className="text-emerald-600" />
+              <div>
+                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none">Tuntas</p>
+                <p className="font-black text-emerald-800 leading-tight mt-0.5">{completedCount} ({completionPercent}%)</p>
+              </div>
+            </div>
+
+            <div className="flex-1 sm:flex-none flex items-center gap-2 px-3.5 py-2 bg-amber-50 border border-amber-200 rounded-2xl text-xs">
+              <span className="text-sm">🔥</span>
+              <div>
+                <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest leading-none">Streak Belajar</p>
+                <p className="font-black text-amber-900 leading-tight mt-0.5">{streakCount} Hari</p>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Progress Bar of Course Completion */}
+        <div className="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all duration-500 ease-out rounded-full"
+            style={{ width: `${completionPercent}%` }}
+          />
+        </div>
       </header>
+
+      {/* FILTER & SEARCH TOOLBAR */}
+      <div className="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        {/* Subject Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+          <button
+            onClick={() => setSelectedSubjectFilter('ALL')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              selectedSubjectFilter === 'ALL'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            Semua ({lessons.length})
+          </button>
+          {availableSubjects.map((sub) => (
+            <button
+              key={sub}
+              onClick={() => setSelectedSubjectFilter(sub)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                selectedSubjectFilter === sub
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {sub}
+            </button>
+          ))}
+        </div>
+
+        {/* Search Input */}
+        <div className="relative min-w-[220px]">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Cari materi / modul..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-1.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+          />
+        </div>
+      </div>
 
       {isLoadingLessons ? (
         <div className="min-h-[400px] flex flex-col items-center justify-center bg-white border border-slate-200 rounded-[32px] p-8 shadow-sm">
-          <Loader2 size={36} className="animate-spin text-emerald-500 mb-4" />
-          <p className="text-slate-500 font-bold text-sm">Memuat materi pelajaran Anda...</p>
+          <Loader2 size={36} className="animate-spin text-indigo-500 mb-4" />
+          <p className="text-slate-500 font-bold text-sm">Memuat kurikulum dan video LMS Anda...</p>
         </div>
       ) : lessons.length === 0 ? (
         <div className="min-h-[400px] flex flex-col items-center justify-center bg-white border border-slate-200 rounded-[32px] p-8 text-center shadow-sm">
           <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 border border-slate-100">
             <BookOpen size={32} className="text-slate-300" />
           </div>
-          <h3 className="text-xl font-black text-slate-900 mb-2">Belum Ada Pelajaran</h3>
-          <p className="text-slate-400 text-sm font-medium max-w-sm">Guru belum mempublikasikan pelajaran harian untuk kelas {activeClassName} saat ini.</p>
+          <h3 className="text-xl font-black text-slate-900 mb-2">Belum Ada Materi LMS</h3>
+          <p className="text-slate-400 text-sm font-medium max-w-sm">Guru belum mempublikasikan modul pembelajaran harian untuk kelas {activeClassName}.</p>
         </div>
       ) : (
-        <div className={`grid grid-cols-1 ${isTab ? 'gap-5' : 'lg:grid-cols-12 gap-8'} items-start`}>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* LEFT: MASTER LIST */}
-          <div className={`${isTab ? '' : 'lg:col-span-4'} space-y-3`}>
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Materi Terbit</h3>
-            <div className={`flex ${isTab ? 'flex-row overflow-x-auto gap-3 pb-2.5 scrollbar-thin' : 'flex-col space-y-3 max-h-[600px] overflow-y-auto'} pr-1 no-scrollbar`}>
-              {lessons.map((lesson) => {
+          {/* LEFT: LMS CURRICULUM PLAYLIST / SIDEBAR */}
+          <div className="lg:col-span-4 space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                Daftar Modul ({filteredLessons.length})
+              </h3>
+              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                Kelas {activeClassName}
+              </span>
+            </div>
+
+            <div className="flex flex-col space-y-2.5 max-h-[720px] overflow-y-auto pr-1 custom-scrollbar">
+              {filteredLessons.map((lesson, idx) => {
                 const isSelected = selectedLesson?.id === lesson.id;
+                const isDone = completedLessons.has(lesson.id);
+                const hasVideo = Boolean(extractYouTubeId(lesson.video_url || lesson.content));
+
                 return (
                   <button
                     key={lesson.id}
-                    onClick={() => setSelectedLesson(lesson)}
-                    className={`${isTab ? 'min-w-[200px] max-w-[220px] p-4' : 'w-full p-5'} rounded-2xl border text-left transition-all duration-300 flex items-start gap-3.5 shrink-0 active:scale-[0.98] ${
+                    onClick={() => {
+                      setSelectedLesson(lesson);
+                      if (hasVideo && activeTab === 'materi') {
+                        setActiveTab('video');
+                      }
+                    }}
+                    className={`w-full p-4 rounded-2xl border text-left transition-all duration-200 flex items-start gap-3.5 relative overflow-hidden group active:scale-[0.99] ${
                       isSelected 
-                        ? 'bg-white border-emerald-500 shadow-md shadow-emerald-500/5 ring-1 ring-emerald-500' 
-                        : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
+                        ? 'bg-white border-indigo-500 shadow-md ring-1 ring-indigo-500' 
+                        : 'bg-white border-slate-200/90 hover:border-slate-300 shadow-sm'
                     }`}
                   >
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      isSelected ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20' : 'bg-slate-50 text-slate-400'
-                    }`}>
-                      <FileText size={18} />
+                    {/* Completion status dot/check */}
+                    <div 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleLessonCompleted(lesson.id);
+                      }}
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform active:scale-90 cursor-pointer ${
+                        isDone 
+                          ? 'bg-emerald-500 text-white shadow-sm' 
+                          : isSelected 
+                          ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' 
+                          : 'bg-slate-100 text-slate-400 hover:text-slate-600'
+                      }`}
+                      title={isDone ? "Tandai belum selesai" : "Tandai sudah selesai"}
+                    >
+                      {isDone ? <Check size={16} /> : <span className="text-[10px] font-black">{idx + 1}</span>}
                     </div>
+
                     <div className="min-w-0 flex-1">
-                      <h4 className="font-black text-slate-950 text-sm truncate leading-snug">{lesson.subject}</h4>
-                      <div className="flex items-center gap-1.5 mt-1.5 text-slate-400 font-bold text-[9px] uppercase tracking-wider">
-                        <Calendar size={10} />
-                        <span className="truncate">{lesson.date}</span>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-[9px] font-black uppercase tracking-wider text-indigo-600 font-mono">
+                          Modul {String(idx + 1).padStart(2, '0')}
+                        </span>
+                        {hasVideo && (
+                          <span className="flex items-center gap-0.5 text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-red-50 text-red-600 border border-red-200">
+                            <Play size={8} className="fill-red-600" /> Video
+                          </span>
+                        )}
+                        {isDone && (
+                          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600">
+                            Selesai
+                          </span>
+                        )}
+                      </div>
+
+                      <h4 className="font-black text-slate-900 text-xs sm:text-sm truncate leading-snug">
+                        {lesson.subject}
+                      </h4>
+
+                      <p className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
+                        {stripYouTubeTag(lesson.content || lesson.ai_reading_preview)}
+                      </p>
+
+                      <div className="flex items-center gap-2 mt-2 text-slate-400 font-semibold text-[9px] uppercase tracking-wider">
+                        <span className="flex items-center gap-1">
+                          <Calendar size={10} /> {lesson.date}
+                        </span>
                       </div>
                     </div>
                   </button>
@@ -1076,38 +1290,63 @@ export default function StudentLessonLayer({
             </div>
           </div>
 
-          {/* RIGHT: DETAIL VIEW */}
-          <div className={`${isTab ? 'p-5 rounded-3xl min-h-[400px]' : 'lg:col-span-8 p-6 sm:p-8 rounded-[32px] min-h-[500px]'} bg-white border border-slate-200 shadow-sm flex flex-col`}>
-            {selectedLesson && (
+          {/* RIGHT: LMS CLASSROOM HUB */}
+          <div className="lg:col-span-8 bg-white border border-slate-200 rounded-[32px] p-5 sm:p-7 shadow-sm flex flex-col min-h-[600px]">
+            {selectedLesson ? (
               <>
-                {/* Subject Header */}
-                <div className={`${isTab ? 'pb-4 mb-4' : 'pb-6 mb-6'} border-b border-slate-100`}>
-                  <div className="flex flex-wrap items-center justify-between gap-3 mb-1.5">
-                    <h2 className={`${isTab ? 'text-xl' : 'text-2xl sm:text-3xl'} font-black text-slate-900 tracking-tight`}>{selectedLesson.subject}</h2>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1 font-mono">
-                      <Calendar size={11} /> {selectedLesson.date}
-                    </span>
+                {/* Module Header Bar */}
+                <div className="pb-4 mb-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">
+                        {selectedLesson.subject}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
+                        <Calendar size={11} /> {selectedLesson.date}
+                      </span>
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
+                      {selectedLesson.subject}
+                    </h2>
                   </div>
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Materi Kelas {activeClassName}</p>
+
+                  {/* Mark as Completed Button */}
+                  <button
+                    onClick={() => toggleLessonCompleted(selectedLesson.id)}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 ${
+                      completedLessons.has(selectedLesson.id)
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    <CheckCircle2 size={16} />
+                    <span>{completedLessons.has(selectedLesson.id) ? 'Selesai Dipelajari' : 'Tandai Selesai'}</span>
+                  </button>
                 </div>
 
-                {/* Tab selectors */}
-                <div className="flex border-b border-slate-100 mb-6 overflow-x-auto no-scrollbar">
+                {/* LMS Tab Selectors */}
+                <div className="flex border-b border-slate-100 mb-5 overflow-x-auto no-scrollbar gap-1">
                   {[
-                    { id: 'materi', label: isTab ? 'Materi' : 'Ringkasan Materi', icon: FileText },
-                    { id: 'chat_ai', label: isTab ? 'Tanya AI' : 'Tanya AI Copilot', icon: Bot },
-                    { id: 'kuis', label: isTab ? 'Kuis' : 'Kuis Harian', icon: Award }
+                    { id: 'video', label: 'Video Pembelajaran', icon: Video, badge: currentVideoId ? 'Tersedia' : null, color: 'text-red-500' },
+                    { id: 'materi', label: 'Slide Materi', icon: BookOpen },
+                    { id: 'catatan', label: 'Catatan Siswa', icon: Edit3 },
+                    { id: 'kuis', label: 'Kuis Evaluasi', icon: Award },
+                    { id: 'chat_ai', label: 'Tanya AI Tutor', icon: Bot }
                   ].map(tab => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as TabType)}
-                      className={`flex items-center gap-2 px-4 py-2.5 border-b-2 transition-all whitespace-nowrap text-xs font-black uppercase tracking-widest min-h-[40px] ${
+                      className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 border-b-2 transition-all whitespace-nowrap text-xs font-black uppercase tracking-wider min-h-[42px] cursor-pointer ${
                         activeTab === tab.id 
-                          ? 'border-emerald-500 text-emerald-600' 
+                          ? 'border-indigo-600 text-indigo-700' 
                           : 'border-transparent text-slate-400 hover:text-slate-600'
                       }`}
                     >
-                      <tab.icon size={14} /> {tab.label}
+                      <tab.icon size={15} className={activeTab === tab.id ? 'text-indigo-600' : ''} />
+                      <span>{tab.label}</span>
+                      {tab.badge && (
+                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -1116,102 +1355,137 @@ export default function StudentLessonLayer({
                 <GradeMasterMascot 
                   state={mascotState} 
                   message={mascotMessage} 
-                  className="mb-6 shadow-sm border border-slate-100/50" 
+                  className="mb-5 shadow-sm border border-slate-100/60" 
                 />
 
-                {/* TAB CONTENT */}
+                {/* TAB CONTENT CONTAINER */}
                 <div className="flex-1 flex flex-col">
                   
-                  {/* TAB: MATERIAL */}
+                  {/* TAB 1: VIDEO PEMBELAJARAN (YOUTUBE CINEMA PLAYER) */}
+                  {activeTab === 'video' && (
+                    <div className="space-y-4 animate-in fade-in duration-200">
+                      {currentEmbedUrl ? (
+                        <div className="space-y-4">
+                          {/* 16:9 Responsive Cinema Player */}
+                          <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 shadow-lg">
+                            <iframe
+                              src={currentEmbedUrl}
+                              title={`Video Pembelajaran: ${selectedLesson.subject}`}
+                              className="w-full h-full border-0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                              allowFullScreen
+                            />
+                          </div>
+
+                          {/* Video Sub-Control Bar */}
+                          <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-red-500/10 text-red-600 flex items-center justify-center font-bold">
+                                <Play size={18} className="fill-red-500 ml-0.5" />
+                              </div>
+                              <div>
+                                <h4 className="text-xs font-bold text-slate-900">Video Pembelajaran Resmi</h4>
+                                <p className="text-[10px] text-slate-500 font-medium">
+                                  Tonton video dengan seksama dan catat poin-poin materi di tab Catatan Siswa.
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => setActiveTab('catatan')}
+                                className="px-3.5 py-2 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                              >
+                                <Edit3 size={13} /> Catat Materi
+                              </button>
+                              {selectedLesson.video_url && (
+                                <a
+                                  href={selectedLesson.video_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                                >
+                                  <ExternalLink size={13} /> Buka di YouTube
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Empty State if No Video Attached */
+                        <div className="p-8 sm:p-12 bg-slate-50 border border-dashed border-slate-200 rounded-3xl text-center space-y-4">
+                          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto">
+                            <VideoOff size={26} />
+                          </div>
+                          <div className="space-y-1">
+                            <h4 className="text-base font-bold text-slate-900">Belum Ada Video untuk Modul Ini</h4>
+                            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                              Guru belum mengunggah link video YouTube pada modul pembelajaran ini. Anda dapat langsung mempelajari slide materi bacaan interaktif atau mengerjakan kuis.
+                            </p>
+                          </div>
+                          <div className="pt-2">
+                            <button
+                              onClick={() => setActiveTab('materi')}
+                              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all inline-flex items-center gap-2 shadow-md active:scale-95"
+                            >
+                              <BookOpen size={15} /> Buka Slide Materi
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 2: SLIDE MATERI BUKU DIGITAL */}
                   {activeTab === 'materi' && (
                     <div className="space-y-5">
-                      {/* Interactive Digital Book Slides */}
                       {renderBookDeck()}
                     </div>
                   )}
 
-                  {/* TAB: AI CHAT */}
-                  {activeTab === 'chat_ai' && (
-                    <div className="flex flex-col flex-1 h-[450px]">
-                      {/* Message History */}
-                      <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-1 scrollbar-thin">
-                        {chatMessages.map((msg, idx) => {
-                          const isBot = msg.role === 'assistant';
-                          return (
-                            <div key={idx} className={`flex items-start gap-3 ${!isBot ? 'justify-end' : ''}`}>
-                              {isBot && (
-                                <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center shrink-0 text-white shadow-sm">
-                                  <Bot size={16} />
-                                </div>
-                              )}
-                              <div className={`p-3.5 rounded-2xl max-w-[80%] text-xs leading-relaxed ${
-                                isBot 
-                                  ? 'bg-slate-100 text-slate-800 rounded-tl-none font-medium' 
-                                  : 'bg-[#0F172A] text-white rounded-tr-none font-bold'
-                              }`}>
-                                {msg.content}
-                              </div>
-                            </div>
-                          );
-                        })}
-                        {isAiResponding && (
-                          <div className="flex items-start gap-3 animate-pulse">
-                            <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center shrink-0 text-white">
-                              <Bot size={16} />
-                            </div>
-                            <div className="bg-slate-100 p-3.5 rounded-2xl rounded-tl-none flex items-center gap-1.5 min-w-[60px]">
-                              <div className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                              <div className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                              <div className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                            </div>
-                          </div>
-                        )}
+                  {/* TAB 3: CATATAN BELAJAR SISWA */}
+                  {activeTab === 'catatan' && (
+                    <div className="space-y-4 animate-in fade-in duration-200">
+                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex items-center justify-between gap-3">
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900">Buku Catatan Digital Saya</h4>
+                          <p className="text-[10px] text-slate-500 font-medium">Catatan disimpan otomatis di perangkat Anda khusus untuk modul {selectedLesson.subject}.</p>
+                        </div>
+                        <button
+                          onClick={handleCopyNote}
+                          disabled={!studentNote.trim()}
+                          className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40 text-slate-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-sm"
+                        >
+                          {isCopiedNote ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                          <span>{isCopiedNote ? 'Tersalin' : 'Salin Catatan'}</span>
+                        </button>
                       </div>
 
-                      {/* Rekomendasi Pertanyaan */}
-                      {!isAiResponding && (
-                        <div className="flex gap-2 pb-2.5 pt-1 overflow-x-auto no-scrollbar shrink-0">
-                          {suggestedLessonQuestions.map((q, qIdx) => (
-                            <button
-                              key={qIdx}
-                              type="button"
-                              onClick={() => handleSelectSuggestedQuestion(q)}
-                              className="px-3 py-1.5 bg-slate-50 border border-slate-200/50 hover:border-emerald-200 hover:bg-emerald-50/30 hover:text-emerald-700 rounded-full text-[10px] font-bold text-slate-500 transition-all active:scale-95 shrink-0 whitespace-nowrap"
-                            >
-                              {q}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Input Box */}
-                      <form onSubmit={handleSendMessage} className="flex gap-2 pt-2 border-t border-slate-100">
-                        <input
-                          type="text"
-                          value={inputValue}
-                          onChange={(e) => setInputValue(e.target.value)}
-                          placeholder={`Tanyakan tentang ${selectedLesson.subject}...`}
-                          disabled={isAiResponding}
-                          className="flex-1 h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all disabled:opacity-50 min-h-[44px]"
+                      <div className="relative">
+                        <textarea
+                          rows={12}
+                          value={studentNote}
+                          onChange={(e) => handleSaveNote(e.target.value)}
+                          placeholder="Tuliskan rangkuman, rumus, atau poin-poin penting dari video dan materi yang Anda pelajari hari ini..."
+                          className="w-full bg-white border border-slate-200 rounded-2xl p-4 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 leading-relaxed font-sans resize-y shadow-inner"
                         />
-                        <button
-                          type="submit"
-                          disabled={!inputValue.trim() || isAiResponding}
-                          className="w-12 h-12 bg-[#0F172A] text-white rounded-xl flex items-center justify-center shadow-md shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 min-h-[44px]"
-                        >
-                          <Send size={16} />
-                        </button>
-                      </form>
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 px-2 mt-1 font-mono">
+                          <span>{studentNote.length} karakter</span>
+                          <span className="text-emerald-600 font-bold flex items-center gap-1">
+                            <CheckCircle2 size={11} /> Tersimpan Otomatis
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   )}
 
-                  {/* TAB: QUIZ */}
+                  {/* TAB 4: KUIS EVALUASI */}
                   {activeTab === 'kuis' && (
                     <div className="flex-1 flex flex-col justify-between">
                       {isLoadingQuizzes ? (
                         <div className="min-h-[200px] flex flex-col items-center justify-center">
-                          <Loader2 className="animate-spin text-emerald-500 mb-2" size={24} />
-                          <p className="text-slate-400 text-xs font-bold">Mengecek kuis...</p>
+                          <Loader2 className="animate-spin text-indigo-500 mb-2" size={24} />
+                          <p className="text-slate-400 text-xs font-bold">Mengecek kuis evaluasi...</p>
                         </div>
                       ) : quizzes.length === 0 ? (
                         <div className="min-h-[250px] flex flex-col items-center justify-center text-center p-6 bg-slate-50 rounded-2xl border border-slate-100">
@@ -1221,18 +1495,15 @@ export default function StudentLessonLayer({
                         </div>
                       ) : selectedQuiz ? (
                         <div className="space-y-6 flex-1 flex flex-col justify-between">
-                          
-                          {/* Top Info bar */}
                           <div className="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-100">
                             <div>
                               <h4 className="text-slate-900 text-xs font-black uppercase tracking-wider">{selectedQuiz.title}</h4>
                               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Tipe: {selectedQuiz.quiz_type} • Durasi: {selectedQuiz.duration_minutes} Mnt</p>
                             </div>
-                            <Award className="text-emerald-500" size={20} />
+                            <Award className="text-indigo-500" size={20} />
                           </div>
 
                           {isBlockedFromSusulan ? (
-                            /* BLOCKED WARNING VIEW */
                             <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-6 sm:p-8 text-center space-y-5 flex-1 flex flex-col justify-center items-center">
                               <div className="w-16 h-16 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-amber-500/20">
                                 <AlertCircle size={32} />
@@ -1244,12 +1515,8 @@ export default function StudentLessonLayer({
                                   Sistem mendeteksi Anda **sudah memiliki nilai** untuk ujian utama mata pelajaran **{selectedLesson.subject}** kelas **{activeClassName}**.
                                 </p>
                               </div>
-                              <div className="text-[10px] font-bold text-slate-400 bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
-                                Ujian ini khusus untuk siswa yang belum memiliki nilai.
-                              </div>
                             </div>
                           ) : showQuizResults && quizScoreRecord ? (
-                            /* SCORE RESULTS VIEW */
                             <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-6 sm:p-8 text-center space-y-5 flex-1 flex flex-col justify-center items-center">
                               <div className="w-16 h-16 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/20">
                                 <CheckCircle2 size={32} />
@@ -1267,7 +1534,6 @@ export default function StudentLessonLayer({
                               </p>
                             </div>
                           ) : (
-                            /* ACTIVE QUIZ QUESTION RUNNER */
                             <div className="space-y-6 flex-1 flex flex-col justify-between">
                               <div className="space-y-6 max-h-[350px] overflow-y-auto pr-1 no-scrollbar flex-1">
                                 {(selectedQuiz.questions as QuizQuestion[]).map((q, qIdx) => {
@@ -1275,7 +1541,7 @@ export default function StudentLessonLayer({
                                   return (
                                     <div key={qIdx} className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                       <div className="flex gap-2">
-                                        <span className="w-5 h-5 bg-emerald-500 text-white rounded-md flex items-center justify-center text-[10px] font-black shrink-0">{qIdx+1}</span>
+                                        <span className="w-5 h-5 bg-indigo-600 text-white rounded-md flex items-center justify-center text-[10px] font-black shrink-0">{qIdx+1}</span>
                                         <p className="text-xs font-bold text-slate-900 leading-relaxed">{q.text || q.question}</p>
                                       </div>
                                       
@@ -1290,7 +1556,7 @@ export default function StudentLessonLayer({
                                                 onClick={() => setUserAnswers(prev => ({ ...prev, [qIdx]: opt }))}
                                                 className={`px-4 py-3 rounded-xl border text-left text-xs font-bold transition-all active:scale-[0.98] min-h-[44px] flex items-center gap-3 ${
                                                   isSelected 
-                                                    ? 'bg-[#0F172A] border-[#0F172A] text-white shadow-md shadow-slate-900/10' 
+                                                    ? 'bg-[#0F172A] border-[#0F172A] text-white shadow-md' 
                                                     : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
                                                 }`}
                                               >
@@ -1308,7 +1574,7 @@ export default function StudentLessonLayer({
                                             placeholder="Tuliskan jawaban esai Anda..."
                                             value={userAnswers[qIdx] || ''}
                                             onChange={(e) => setUserAnswers(prev => ({ ...prev, [qIdx]: e.target.value }))}
-                                            className="w-full min-h-[100px] p-3 bg-white border border-slate-200 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all resize-none"
+                                            className="w-full min-h-[100px] p-3 bg-white border border-slate-200 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none"
                                           />
                                         </div>
                                       )}
@@ -1325,7 +1591,7 @@ export default function StudentLessonLayer({
                                 <button
                                   onClick={handleSubmitQuiz}
                                   disabled={isSubmittingQuiz}
-                                  className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all transform active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 min-h-[44px]"
+                                  className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all transform active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 min-h-[44px]"
                                 >
                                   {isSubmittingQuiz ? (
                                     <Loader2 className="animate-spin" size={16} />
@@ -1341,9 +1607,81 @@ export default function StudentLessonLayer({
                     </div>
                   )}
 
+                  {/* TAB 5: TANYA AI COPILOT */}
+                  {activeTab === 'chat_ai' && (
+                    <div className="flex flex-col flex-1 h-[450px]">
+                      <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-1 scrollbar-thin">
+                        {chatMessages.map((msg, idx) => {
+                          const isBot = msg.role === 'assistant';
+                          return (
+                            <div key={idx} className={`flex items-start gap-3 ${!isBot ? 'justify-end' : ''}`}>
+                              {isBot && (
+                                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0 text-white shadow-sm">
+                                  <Bot size={16} />
+                                </div>
+                              )}
+                              <div className={`p-3.5 rounded-2xl max-w-[80%] text-xs leading-relaxed ${
+                                isBot 
+                                  ? 'bg-slate-100 text-slate-800 rounded-tl-none font-medium' 
+                                  : 'bg-[#0F172A] text-white rounded-tr-none font-bold'
+                              }`}>
+                                {msg.content}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {isAiResponding && (
+                          <div className="flex items-start gap-3 animate-pulse">
+                            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0 text-white">
+                              <Bot size={16} />
+                            </div>
+                            <div className="bg-slate-100 p-3.5 rounded-2xl rounded-tl-none flex items-center gap-1.5 min-w-[60px]">
+                              <div className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                              <div className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                              <div className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {!isAiResponding && (
+                        <div className="flex gap-2 pb-2.5 pt-1 overflow-x-auto no-scrollbar shrink-0">
+                          {suggestedLessonQuestions.map((q, qIdx) => (
+                            <button
+                              key={qIdx}
+                              type="button"
+                              onClick={() => handleSelectSuggestedQuestion(q)}
+                              className="px-3 py-1.5 bg-slate-50 border border-slate-200/50 hover:border-indigo-200 hover:bg-indigo-50/40 hover:text-indigo-700 rounded-full text-[10px] font-bold text-slate-500 transition-all active:scale-95 shrink-0 whitespace-nowrap"
+                            >
+                              {q}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      <form onSubmit={handleSendMessage} className="flex gap-2 pt-2 border-t border-slate-100">
+                        <input
+                          type="text"
+                          value={inputValue}
+                          onChange={(e) => setInputValue(e.target.value)}
+                          placeholder={`Tanyakan tentang materi ${selectedLesson.subject}...`}
+                          disabled={isAiResponding}
+                          className="flex-1 h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all disabled:opacity-50 min-h-[44px]"
+                        />
+                        <button
+                          type="submit"
+                          disabled={!inputValue.trim() || isAiResponding}
+                          className="w-12 h-12 bg-[#0F172A] text-white rounded-xl flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-all disabled:opacity-50 min-h-[44px]"
+                        >
+                          <Send size={16} />
+                        </button>
+                      </form>
+                    </div>
+                  )}
+
                 </div>
               </>
-            )}
+            ) : null}
           </div>
 
         </div>

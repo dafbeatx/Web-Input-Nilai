@@ -249,6 +249,7 @@ export interface DailyLesson {
   subject: string;
   date: string;
   content: string;
+  video_url?: string;
   ai_reading_preview?: string;
   ai_chat_prompt?: string;
   is_published: boolean;
