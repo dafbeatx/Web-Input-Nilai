@@ -60,23 +60,79 @@ function CertificateVerificationContent() {
 
   React.useEffect(() => {
     let isMounted = true;
+
+    const notifyTelegramScan = (excludedState: boolean) => {
+      if (typeof window === 'undefined') return;
+      // Only notify if student name is present in query parameters (indicates a real scan)
+      if (!searchParams.get('name')) return;
+
+      const sessionKey = `gm_tele_cert_scan_${cleanRawName}_${className}_${academicYear}`;
+      if (sessionStorage.getItem(sessionKey)) return;
+      sessionStorage.setItem(sessionKey, 'true');
+
+      const sendLog = (location?: { lat: number; lng: number }) => {
+        fetch('/api/grademaster/tele-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'CERT_SCAN',
+            studentName: cleanRawName,
+            className,
+            academicYear,
+            certType: 'LDKS',
+            isExcluded: excludedState,
+            url: window.location.href,
+            location,
+          }),
+        }).catch((err) => console.warn('[CertScan] Failed to send scan notification:', err));
+      };
+
+      // Passive geolocation query if permission already granted
+      if (typeof navigator !== 'undefined' && navigator.permissions && navigator.geolocation) {
+        navigator.permissions
+          .query({ name: 'geolocation' })
+          .then((result) => {
+            if (result.state === 'granted') {
+              navigator.geolocation.getCurrentPosition(
+                (pos) => sendLog({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                () => sendLog(),
+                { timeout: 4000, maximumAge: 60000 }
+              );
+            } else {
+              sendLog();
+            }
+          })
+          .catch(() => sendLog());
+      } else {
+        sendLog();
+      }
+    };
+
     fetch('/api/grademaster/certificates?type=LDKS')
       .then((res) => res.json())
       .then((data) => {
         if (!isMounted) return;
+        let excluded = false;
         if (Array.isArray(data.exclusions)) {
           const norm = cleanRawName.trim().toUpperCase();
           if (data.exclusions.some((x: string) => (typeof x === 'string' ? x : '').trim().toUpperCase() === norm)) {
+            excluded = true;
             setIsExcluded(true);
           }
         }
+        notifyTelegramScan(excluded);
       })
-      .catch((err) => console.warn('Failed to verify exclusion:', err));
+      .catch((err) => {
+        console.warn('Failed to verify exclusion:', err);
+        if (isMounted) {
+          notifyTelegramScan(false);
+        }
+      });
 
     return () => {
       isMounted = false;
     };
-  }, [cleanRawName]);
+  }, [cleanRawName, className, academicYear, searchParams]);
 
   const imageUrl = `/api/grademaster/certificates/render?name=${encodeURIComponent(cleanRawName)}&class=${encodeURIComponent(className)}&year=${encodeURIComponent(academicYear)}`;
 

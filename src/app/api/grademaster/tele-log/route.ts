@@ -6,14 +6,14 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { type, name, role, error, stack, location } = body;
 
-    const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || '127.0.0.1';
     const ua = req.headers.get('user-agent') || 'Unknown';
     
     // Simple User-Agent parsing
     const isMobile = /Mobile|Android|iPhone/i.test(ua);
-    const browser = ua.includes('Chrome') ? 'Chrome' : ua.includes('Firefox') ? 'Firefox' : ua.includes('Safari') && !ua.includes('Chrome') ? 'Safari' : 'Other';
+    const browser = ua.includes('Chrome') ? 'Chrome' : ua.includes('Firefox') ? 'Firefox' : ua.includes('Safari') && !ua.includes('Chrome') ? 'Safari' : ua.includes('Edge') ? 'Edge' : 'Other';
     const os = ua.includes('Windows') ? 'Windows' : ua.includes('Android') ? 'Android' : ua.includes('iPhone') ? 'iOS' : ua.includes('Mac') ? 'macOS' : 'Linux';
-    const deviceType = isMobile ? '📱 Mobile' : '💻 Desktop';
+    const deviceType = isMobile ? '📱 Smartphone/Mobile' : '💻 Komputer/Desktop';
 
     const timestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
 
@@ -28,6 +28,22 @@ export async function POST(req: NextRequest) {
       message += `❌ <b>Error:</b> ${error || 'Unknown Error'}\n`;
       if (stack) {
         message += `<code>${stack.substring(0, 800)}</code>\n\n`;
+      }
+    } else if (type === 'CERT_SCAN' || type === 'CERTIFICATE_SCAN') {
+      const studentName = body.studentName || name || 'Siswa Peserta';
+      const className = body.className || 'SMP';
+      const academicYear = body.academicYear || '2026/2027';
+      const certType = body.certType || 'LDKS';
+      const isRevoked = body.isExcluded || body.status === 'REVOKED';
+
+      message += `📜 <b>SCAN BARCODE SERTIFIKAT TERDETEKSI</b>\n\n`;
+      message += `🎓 <b>Penerima:</b> <b>${studentName}</b>\n`;
+      message += `🏫 <b>Kelas:</b> ${className}\n`;
+      message += `📅 <b>Tahun Ajaran:</b> ${academicYear}\n`;
+      message += `📄 <b>Dokumen:</b> Sertifikat ${certType}\n`;
+      message += `🛡️ <b>Status Verifikasi:</b> ${isRevoked ? '❌ <b>DITARIK / TIDAK AKTIF</b>' : '✅ <b>ASLI & TERDAFTAR RESMI</b>'}\n`;
+      if (body.url) {
+        message += `🔗 <b>Tautan Dokumen:</b> <a href="${body.url}">Buka Halaman Verifikasi</a>\n`;
       }
     } else {
       message += `ℹ️ <b>SISTEM LOG</b>\n\n`;
@@ -46,8 +62,9 @@ export async function POST(req: NextRequest) {
     await sendAdminNotification(message);
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    console.error('Tele-log error:', err);
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Tele-log error:', errorMessage);
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
 }
