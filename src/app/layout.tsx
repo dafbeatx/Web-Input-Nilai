@@ -21,6 +21,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import SafeStorageScript from '@/components/SafeStorageScript';
 import AICopilot from '@/components/grademaster/AICopilot';
 import DeploymentGuard from '@/components/grademaster/DeploymentGuard';
+import IntroSplashVideo from '@/components/grademaster/IntroSplashVideo';
 
 
 export default function RootLayout({
@@ -48,6 +49,7 @@ export default function RootLayout({
       </head>
       <body className="font-sans text-slate-900 antialiased selection:bg-primary/30 flex flex-col min-h-dvh">
         <SafeStorageScript />
+        <IntroSplashVideo />
         <StarBackground />
 
         <ErrorBoundary>
