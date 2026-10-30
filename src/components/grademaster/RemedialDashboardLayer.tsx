@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { 
   Clock, RotateCcw, X, Save, User, CheckSquare, FileText, Sliders, Sparkles, AlertCircle, HelpCircle,
   Shield, ShieldCheck, Activity, Terminal, ChevronDown, ChevronUp, Cpu, Eye, Monitor, Copy,
-  AlertTriangle, Ban, Undo2
+  AlertTriangle, Ban, Undo2, ArrowLeft, Search
 } from 'lucide-react';
 import { GradedStudent, ScoringConfig, SessionMeta, RemedialMcqQuestion, isImageUrl } from '@/lib/grademaster/types';
 import { parseRemedialMcq, formatRemedialMcq } from '@/lib/grademaster/parser';
@@ -139,6 +139,8 @@ export default function RemedialDashboardLayer({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'WAITING' | 'DONE' | 'ISSUE'>('ALL');
+  const [activeDetailTab, setActiveDetailTab] = useState<Record<string, 'answers' | 'security'>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [editorTab, setEditorTab] = useState<'mcq' | 'essay' | 'settings'>('mcq');
   const [localTimer, setLocalTimer] = useState<number>(remedialTimer);
@@ -332,7 +334,7 @@ export default function RemedialDashboardLayer({
     onSessionSelect?.(session);
   };
 
-  const remedialStudents = useMemo(() => {
+  const allRemedialStudents = useMemo(() => {
     return gradedStudents.filter(s => 
       s.remedialStatus && s.remedialStatus !== 'NONE' && !deletedIds.includes(s.id)
     ).filter(s => 
@@ -340,11 +342,25 @@ export default function RemedialDashboardLayer({
     );
   }, [gradedStudents, deletedIds, searchQuery]);
 
+  const remedialStudents = useMemo(() => {
+    if (statusFilter === 'WAITING') {
+      return allRemedialStudents.filter(s => s.remedialStatus === 'REMEDIAL' && !s.teacherReviewed);
+    }
+    if (statusFilter === 'DONE') {
+      return allRemedialStudents.filter(s => s.remedialStatus === 'COMPLETED' || s.remedialStatus === 'SUBMITTED' || s.teacherReviewed);
+    }
+    if (statusFilter === 'ISSUE') {
+      return allRemedialStudents.filter(s => s.remedialStatus === 'CHEATED' || s.remedialStatus === 'TIME_UP' || s.remedialStatus === 'TIMEOUT' || s.remedialStatus === 'FAILED_EFFORT');
+    }
+    return allRemedialStudents;
+  }, [allRemedialStudents, statusFilter]);
+
   const stats = useMemo(() => ({
-    total: remedialStudents.length,
-    waitingReview: remedialStudents.filter(s => s.remedialStatus === 'REMEDIAL' && !s.teacherReviewed).length,
-    issue: remedialStudents.filter(s => s.remedialStatus === 'CHEATED' || s.remedialStatus === 'TIME_UP' || s.remedialStatus === 'TIMEOUT').length
-  }), [remedialStudents]);
+    total: allRemedialStudents.length,
+    waitingReview: allRemedialStudents.filter(s => s.remedialStatus === 'REMEDIAL' && !s.teacherReviewed).length,
+    done: allRemedialStudents.filter(s => s.remedialStatus === 'COMPLETED' || s.remedialStatus === 'SUBMITTED' || s.teacherReviewed).length,
+    issue: allRemedialStudents.filter(s => s.remedialStatus === 'CHEATED' || s.remedialStatus === 'TIME_UP' || s.remedialStatus === 'TIMEOUT' || s.remedialStatus === 'FAILED_EFFORT').length
+  }), [allRemedialStudents]);
 
   const isDeadlineExpired = useMemo(() => {
     return Boolean(scoringConfig.remedialDeadline && new Date() > new Date(scoringConfig.remedialDeadline));
@@ -726,1081 +742,1016 @@ Kunci: B`;
   };
 
   const getStatusBadge = (status: string, teacherReviewed?: boolean) => {
-    const config: Record<string, { label: string, color: string, icon: string }> = {
-      'INITIATED': { label: 'MENUNGGU', color: 'text-blue-400 bg-blue-400/10', icon: 'hourglass_empty' },
-      'SUBMITTED': { label: 'SELESAI', color: 'text-tertiary bg-tertiary/10', icon: 'check_circle' },
-      'COMPLETED': { label: 'SELESAI', color: 'text-tertiary bg-tertiary/10', icon: 'check_circle' },
-      'ACTIVE': { label: 'MENGERJAKAN', color: 'text-amber-400 bg-amber-400/10 animate-pulse', icon: 'clock_loader_40' },
-      'IN_PROGRESS': { label: 'PROSES', color: 'text-amber-400 bg-amber-400/10', icon: 'clock_loader_40' },
-      'CHEATED': { label: 'CURANG', color: 'text-error bg-error/10', icon: 'security_update_warning' },
-      'FAILED_EFFORT': { label: 'TIDAK VALID', color: 'text-error bg-error/10', icon: 'report' },
-      'TIME_UP': { label: 'TIMEOUT', color: 'text-on-surface-variant bg-surface-variant', icon: 'timer_off' },
+    const config: Record<string, { label: string, color: string, border: string, icon: string }> = {
+      'INITIATED': { label: 'Menunggu', color: 'text-sky-700 bg-sky-50 dark:text-sky-300 dark:bg-sky-950/40', border: 'border-sky-200 dark:border-sky-800/40', icon: 'hourglass_empty' },
+      'SUBMITTED': { label: 'Selesai', color: 'text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-950/40', border: 'border-emerald-200 dark:border-emerald-800/40', icon: 'check_circle' },
+      'COMPLETED': { label: 'Selesai', color: 'text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-950/40', border: 'border-emerald-200 dark:border-emerald-800/40', icon: 'check_circle' },
+      'ACTIVE': { label: 'Mengerjakan', color: 'text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/40 animate-pulse', border: 'border-amber-200 dark:border-amber-800/40', icon: 'clock_loader_40' },
+      'IN_PROGRESS': { label: 'Proses', color: 'text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/40', border: 'border-amber-200 dark:border-amber-800/40', icon: 'clock_loader_40' },
+      'CHEATED': { label: 'Curang', color: 'text-rose-700 bg-rose-50 dark:text-rose-300 dark:bg-rose-950/40', border: 'border-rose-200 dark:border-rose-800/40', icon: 'security_update_warning' },
+      'FAILED_EFFORT': { label: 'Tidak Valid', color: 'text-rose-700 bg-rose-50 dark:text-rose-300 dark:bg-rose-950/40', border: 'border-rose-200 dark:border-rose-800/40', icon: 'report' },
+      'TIME_UP': { label: 'Timeout', color: 'text-slate-700 bg-slate-100 dark:text-slate-300 dark:bg-slate-800', border: 'border-slate-200 dark:border-slate-700', icon: 'timer_off' },
       'REMEDIAL': { 
-        label: teacherReviewed ? 'DIKOREKSI' : 'ANTREAN', 
-        color: teacherReviewed ? 'text-tertiary bg-tertiary/10' : 'text-amber-400 bg-amber-400/10',
+        label: teacherReviewed ? 'Dikoreksi' : 'Antrean Review', 
+        color: teacherReviewed ? 'text-teal-700 bg-teal-50 dark:text-teal-300 dark:bg-teal-950/40' : 'text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/40',
+        border: teacherReviewed ? 'border-teal-200 dark:border-teal-800/40' : 'border-amber-200 dark:border-amber-800/40',
         icon: teacherReviewed ? 'done_all' : 'pending_actions'
       }
     };
 
-    const s = config[status] || { label: status, color: 'text-on-surface-variant bg-surface-variant', icon: 'info' };
+    const s = config[status] || { label: status, color: 'text-slate-700 bg-slate-100 dark:text-slate-300 dark:bg-slate-800', border: 'border-slate-200 dark:border-slate-700', icon: 'info' };
     
     return (
-      <div className={`px-2 py-1 rounded-lg border border-outline-variant flex items-center gap-1.5 ${s.color}`}>
-        <span className="material-symbols-outlined text-[12px] font-bold">{s.icon}</span>
-        <span className="text-[9px] font-black uppercase tracking-widest leading-none">{s.label}</span>
+      <div className={`px-2.5 py-0.5 rounded-lg border flex items-center gap-1.5 text-xs font-semibold ${s.color} ${s.border}`}>
+        <span className="material-symbols-outlined text-[13px]">{s.icon}</span>
+        <span className="leading-none">{s.label}</span>
       </div>
     );
   };
 
   return (
-    <div className="font-body text-on-surface selection:bg-tertiary/30 min-h-dvh flex flex-col bg-surface relative overflow-x-hidden">
+    <div className="font-body text-on-surface selection:bg-primary/20 min-h-dvh flex flex-col bg-surface relative overflow-x-hidden">
       
       {/* Editorial TopBar */}
-      <header className="fixed top-0 w-full z-50 bg-surface-container/80 backdrop-blur-xl flex justify-between items-center px-6 h-16 border-b border-outline-variant/10">
+      <header className="sticky top-0 w-full z-40 bg-surface/95 backdrop-blur-md border-b border-outline-variant/20 px-4 sm:px-8 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-1 hover:bg-surface-variant rounded-lg transition-colors">
-            <span className="material-symbols-outlined text-primary">arrow_back</span>
+          <button 
+            onClick={activeSessionId ? () => onClearActiveSession?.() : onBack}
+            className="p-2 hover:bg-surface-container-high rounded-xl text-on-surface-variant hover:text-primary transition-all flex items-center gap-1.5 text-xs font-bold"
+            title={activeSessionId ? "Kembali ke Daftar Sesi" : "Kembali ke Menu Utama"}
+          >
+            <ArrowLeft size={18} />
+            <span className="hidden sm:inline">{activeSessionId ? "Daftar Sesi" : "Menu Utama"}</span>
           </button>
-          <h1 className="font-headline font-bold text-lg tracking-tight text-primary uppercase">Remedial Center</h1>
+          <div className="h-4 w-[1px] bg-outline-variant/30 hidden sm:block" />
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nawasena</span>
+              <span className="text-slate-600 dark:text-slate-400">•</span>
+              <h1 className="text-sm font-extrabold text-on-surface uppercase tracking-wide">Pusat Data Remedial</h1>
+            </div>
+            {activeSessionId && (
+              <p className="text-[11px] font-medium text-on-surface-variant truncate">
+                {subject} — {displayClass} ({semester} {academicYear})
+              </p>
+            )}
+          </div>
         </div>
-        <div className="h-8 w-8 rounded-xl overflow-hidden border border-outline-variant/30 bg-surface-bright flex items-center justify-center">
-            <User size={18} className="text-on-surface-variant" />
+
+        <div className="flex items-center gap-2">
+          {activeSessionId && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="px-3.5 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95"
+            >
+              <Sliders size={14} />
+              <span className="hidden sm:inline">Konfigurasi Soal</span>
+            </button>
+          )}
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 pt-20 pb-32 px-4 sm:px-6 lg:px-10 flex flex-col gap-6 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <main className="flex-1 py-6 px-4 sm:px-6 lg:px-10 flex flex-col gap-6 max-w-7xl mx-auto w-full animate-in fade-in duration-500">
         
-        {/* Editorial Header & Session Picker */}
-        <section className="flex flex-col gap-4">
-          {activeSessionId && (
-            <button 
-              onClick={() => onClearActiveSession?.()}
-              className="self-start flex items-center gap-2 px-4 py-2 bg-surface-container hover:bg-surface-container-high border border-outline-variant/20 rounded-xl text-on-surface-variant hover:text-primary transition-all text-xs font-bold font-outfit tracking-wide"
-            >
-              <span className="material-symbols-outlined text-sm font-black">arrow_back</span>
-              Kembali ke Daftar Sesi
-            </button>
-          )}
-
-          <div className="space-y-3">
-            <span className="font-label text-[10px] uppercase tracking-[0.15em] text-tertiary-dim font-black">Data Management</span>
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-              <h2 className="font-headline text-2xl font-black tracking-tight leading-tight uppercase">
-                PUSAT DATA REMEDIAL
-              </h2>
-              
-              {/* Dropdown Pemilihan Sesi */}
-              <div className="relative min-w-[260px] w-full sm:w-auto z-20">
-                <select 
-                  className="w-full bg-surface-container border border-outline-variant/30 text-primary font-bold text-xs py-3.5 px-4 rounded-xl appearance-none outline-none focus:ring-2 focus:ring-primary/20 shadow-sm cursor-pointer transition-all hover:bg-surface-container-high"
-                  onChange={(e) => {
-                    const selected = sessions.find(s => s.id === e.target.value);
-                    if (selected && onSessionSelect) {
-                       // Reset searchQuery and local states if needed
-                       setSearchQuery('');
-                       onSessionSelect(selected);
-                    }
-                  }}
-                  value={activeSessionId || ""}
-                  disabled={!isAdmin}
-                >
-                  <option value="" disabled className="text-on-surface-variant/40 bg-surface-container-high">-- Pilih Kelas & Sesi --</option>
-                  {Object.entries(groupedSessions).map(([className, classSessions]) => (
-                    <optgroup key={className} label={`KELAS ${className.toUpperCase()}`} className="font-extrabold text-[10px] tracking-wider text-slate-400 bg-slate-900 border-b border-white/5 py-1">
-                      {classSessions.map(s => {
-                        // Create clean display values: e.g. "Matematika — UTS • Sem. Ganjil (2025/2026)"
-                        const cleanExam = s.exam_type || 'Ujian';
-                        const cleanSem = s.semester || 'I';
-                        const cleanYear = s.academic_year || '2025/2026';
-                        return (
-                          <option key={s.id} value={s.id} className="text-xs font-semibold text-slate-200 bg-slate-950 py-1.5 px-3">
-                            {s.subject} — {cleanExam} • Sem. {cleanSem} ({cleanYear})
-                          </option>
-                        );
-                      })}
-                    </optgroup>
-                  ))}
-                </select>
-                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Advanced Filters Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 relative">
-            {[
-              { label: 'Kelas', value: displayClass },
-              { label: 'Tahun', value: academicYear.replace('20', '') },
-              { label: 'Semester', value: semester },
-              { label: 'Subjek', value: subject },
-            ].map(f => (
-              <div key={f.label} className="bg-surface-container-low p-3 rounded-2xl flex flex-col gap-1 items-start border border-white/[0.03]">
-                <span className="font-label text-[9px] text-on-surface-variant uppercase font-black tracking-widest leading-none">{f.label}</span>
-                <div className="flex items-center justify-between w-full">
-                  <span className="text-xs font-bold text-primary truncate pr-1">{f.value}</span>
+        {/* Active Session Overview Banner */}
+        {activeSessionId ? (
+          <section className="bg-surface-container border border-outline-variant/20 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="px-2.5 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-extrabold tracking-wide uppercase">
+                    Kelas {displayClass}
+                  </span>
+                  <span className="text-xs text-on-surface-variant font-medium">
+                    Semester {semester} • Th. {academicYear}
+                  </span>
                 </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Dynamic Stats Cards */}
-        <section className="grid grid-cols-3 gap-3">
-          {(!activeSessionId ? [
-            { label: 'Total Sesi', value: sessions.length, color: 'text-primary' },
-            { label: 'Telah Dikonfigurasi', value: sessions.filter(s => (s.scoring_config?.remedialQuestions?.length || 0) > 0).length, color: 'text-emerald-500' },
-            { label: 'Belum Dikonfigurasi', value: sessions.filter(s => !(s.scoring_config?.remedialQuestions?.length || 0)).length, color: 'text-amber-500' },
-          ] : [
-            { label: 'Total', value: stats.total, color: 'text-primary' },
-            { label: 'Antrean', value: stats.waitingReview, color: 'text-slate-400' },
-            { label: 'Isu', value: stats.issue, color: 'text-error' },
-          ]).map(st => (
-            <div key={st.label} className="bg-surface-container p-4 rounded-3xl flex flex-col gap-1 items-center border border-white/[0.03] shadow-sm">
-              <span className={`text-3xl font-headline font-black ${st.color}`}>{st.value}</span>
-              <span className="font-label text-[9px] uppercase tracking-[0.15em] text-on-surface-variant/60 font-black">{st.label}</span>
-            </div>
-          ))}
-        </section>
-
-        {/* Batas Waktu Remedial & Zero-Score Management */}
-        {activeSessionId && (
-          <section className="bg-surface-container-lowest border border-white/[0.05] rounded-3xl p-5 shadow-sm space-y-4 animate-in fade-in duration-300">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5">
-                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center border shrink-0 ${
-                  isDeadlineExpired
-                    ? 'bg-rose-500/15 border-rose-500/30 text-rose-400'
-                    : scoringConfig.remedialDeadline
-                    ? 'bg-amber-400/15 border-amber-400/30 text-amber-300'
-                    : 'bg-surface-container border-white/[0.05] text-on-surface-variant/40'
-                }`}>
-                  <Clock className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-primary">
-                      Batas Waktu Remedial &amp; Kebijakan Nilai 0
-                    </h4>
-                    {scoringConfig.remedialDeadline && (
-                      <span className={`text-[8px] font-mono font-black uppercase px-2 py-0.5 rounded-full border ${
-                        isDeadlineExpired
-                          ? 'bg-rose-500/15 border-rose-500/30 text-rose-400'
-                          : 'bg-amber-400/15 border-amber-400/30 text-amber-300'
-                      }`}>
-                        {isDeadlineExpired ? 'Tenggat Terlewati' : 'Tenggat Aktif'}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-on-surface-variant/70 font-medium mt-1 leading-relaxed">
-                    {scoringConfig.remedialDeadline ? (
-                      <>
-                        Tenggat: <strong className="text-primary">{new Date(scoringConfig.remedialDeadline).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</strong> •{' '}
-                        <span className="text-rose-400 font-bold">{pendingDeadlineStudents.length} siswa belum mengerjakan</span>
-                        {zeroedStudents.length > 0 && (
-                          <span className="text-amber-400 font-bold"> • {zeroedStudents.length} siswa bernilai 0</span>
-                        )}
-                      </>
-                    ) : (
-                      'Batas waktu remedial belum ditentukan. Atur tenggat pada tab Pengaturan Soal.'
-                    )}
-                  </p>
+                <h2 className="text-2xl font-black text-on-surface tracking-tight">
+                  {subject}
+                </h2>
+                <div className="flex items-center gap-4 text-xs font-medium text-on-surface-variant mt-2 flex-wrap">
+                  <span>Standar KKM: <strong className="text-primary font-bold">{kkm}</strong></span>
+                  <span>•</span>
+                  <span>Durasi Ujian: <strong className="text-primary font-bold">{remedialTimer} Menit</strong></span>
+                  <span>•</span>
+                  <span>Bank Soal: <strong className="text-primary font-bold">{(scoringConfig.remedialQuestions?.length || 0) + (scoringConfig.remedialMcqQuestions?.length || 0)} Soal</strong></span>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleOpenZeroDeadlineModal()}
-                  disabled={!isAdmin || pendingDeadlineStudents.length === 0}
-                  className="px-3.5 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 shadow-sm"
-                  title="Jadikan nilai 0 bagi siswa yang belum tuntas melewati batas waktu"
-                >
-                  <Ban className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-                  <span>Jadikan Nilai 0 ({pendingDeadlineStudents.length})</span>
-                </button>
-
-                {zeroedStudents.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleRestoreAllOriginalScores}
-                    disabled={!isAdmin || isRestoringAllSubmitting}
-                    className="px-3.5 py-2.5 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 text-teal-700 dark:text-teal-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all disabled:opacity-30 active:scale-95 shadow-sm"
-                    title="Pulihkan semua siswa bernilai 0 ke nilai asli masing-masing"
+              {/* Quick Session Dropdown */}
+              <div className="flex items-center gap-2 self-start lg:self-center w-full lg:w-auto">
+                <div className="relative w-full sm:w-72">
+                  <select
+                    className="w-full bg-surface-container-high border border-outline-variant/30 text-on-surface font-semibold text-xs py-2.5 pl-3.5 pr-8 rounded-xl appearance-none outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer transition-all"
+                    onChange={(e) => {
+                      const selected = sessions.find(s => s.id === e.target.value);
+                      if (selected && onSessionSelect) {
+                        setSearchQuery('');
+                        onSessionSelect(selected);
+                      }
+                    }}
+                    value={activeSessionId || ""}
+                    disabled={!isAdmin}
                   >
-                    <Undo2 className={`w-3.5 h-3.5 text-teal-600 dark:text-teal-400 ${isRestoringAllSubmitting ? 'animate-spin' : ''}`} />
-                    <span>{isRestoringAllSubmitting ? 'Memulihkan...' : `Pulihkan Nilai Asli (${zeroedStudents.length})`}</span>
-                  </button>
-                )}
+                    <option value="" disabled>-- Ganti Sesi Ujian --</option>
+                    {Object.entries(groupedSessions).map(([className, classSessions]) => (
+                      <optgroup key={className} label={`KELAS ${className.toUpperCase()}`}>
+                        {classSessions.map(s => (
+                          <option key={s.id} value={s.id}>
+                            {s.subject} ({s.class_name}) — {s.exam_type || 'Ujian'}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none" />
+                </div>
+              </div>
+            </div>
+
+            {/* 4 Quick Metrics Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-outline-variant/15">
+              <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/10 flex flex-col">
+                <span className="text-[11px] font-semibold text-on-surface-variant">Total Peserta</span>
+                <span className="text-2xl font-black text-on-surface mt-0.5">{stats.total}</span>
+              </div>
+              <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/10 flex flex-col">
+                <span className="text-[11px] font-semibold text-amber-500">Antrean Koreksi</span>
+                <span className="text-2xl font-black text-amber-500 mt-0.5">{stats.waitingReview}</span>
+              </div>
+              <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/10 flex flex-col">
+                <span className="text-[11px] font-semibold text-emerald-500">Lulus / Tuntas</span>
+                <span className="text-2xl font-black text-emerald-500 mt-0.5">{stats.done}</span>
+              </div>
+              <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/10 flex flex-col">
+                <span className="text-[11px] font-semibold text-rose-500">Isu / Pelanggaran</span>
+                <span className="text-2xl font-black text-rose-500 mt-0.5">{stats.issue}</span>
+              </div>
+            </div>
+          </section>
+        ) : (
+          <section className="bg-surface-container border border-outline-variant/20 rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span className="text-xs font-bold text-primary uppercase tracking-wider">Manajemen Remedial</span>
+                <h2 className="text-2xl font-black text-on-surface tracking-tight mt-1">
+                  Pusat Data Remedial Siswa
+                </h2>
+                <p className="text-xs text-on-surface-variant mt-1.5 max-w-xl leading-relaxed">
+                  Pilih salah satu sesi ujian di bawah untuk memantau pengerjaan remedial, memeriksa jawaban essay, meninjau sensor kecurangan AI, atau mengatur bank soal.
+                </p>
+              </div>
+
+              {/* Stats overview for sessions */}
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/15 text-center min-w-[90px]">
+                  <span className="text-2xl font-black text-on-surface block">{sessions.length}</span>
+                  <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Total Sesi</span>
+                </div>
+                <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/15 text-center min-w-[90px]">
+                  <span className="text-2xl font-black text-emerald-500 block">
+                    {sessions.filter(s => (s.scoring_config?.remedialQuestions?.length || 0) + (s.scoring_config?.remedialMcqQuestions?.length || 0) > 0).length}
+                  </span>
+                  <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Siap Pakai</span>
+                </div>
               </div>
             </div>
           </section>
         )}
 
-        {/* Editorial Search Bar */}
-        <div className="relative group">
-          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-tertiary transition-colors">search</span>
-          <input 
-            type="text"
-            placeholder={activeSessionId ? "Cari nama siswa..." : "Cari sesi remedial (mata pelajaran, kelas, dll)..."}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            disabled={!isAdmin}
-            className="w-full bg-surface-container-low border-none rounded-2xl py-4.5 pl-12 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-tertiary/20 transition-all shadow-sm outline-none disabled:opacity-50" 
-          />
-        </div>
-
-        {/* Main Content List Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          {!activeSessionId ? (
-            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-              {filteredSessions.length === 0 ? (
-                <div className="md:col-span-2 flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-outline-variant/30 rounded-3xl bg-surface-container-lowest animate-in fade-in duration-300">
-                  <div className="w-16 h-16 rounded-3xl bg-surface-container-high text-on-surface-variant flex items-center justify-center mb-6">
-                    <span className="material-symbols-outlined text-4xl">inventory_2</span>
-                  </div>
-                  <h3 className="font-headline text-lg font-bold text-on-surface mb-2 uppercase tracking-tight">Data Sesi Kosong</h3>
-                  <p className="text-on-surface-variant/70 text-[11px] font-bold max-w-[250px] leading-relaxed uppercase tracking-widest">
-                    Belum ada sesi ujian yang cocok dengan filter atau pencarian Anda.
-                  </p>
+        {/* Batas Waktu Remedial & Zero-Score Management (Hanya saat sesi aktif) */}
+        {activeSessionId && (
+          <div className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+            isDeadlineExpired
+              ? 'bg-rose-500/10 border-rose-500/25'
+              : scoringConfig.remedialDeadline
+              ? 'bg-amber-500/10 border-amber-500/25'
+              : 'bg-surface-container border-outline-variant/20'
+          }`}>
+            <div className="flex items-center gap-3.5">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                isDeadlineExpired
+                  ? 'bg-rose-500/20 border-rose-500/30 text-rose-500 dark:text-rose-400'
+                  : scoringConfig.remedialDeadline
+                  ? 'bg-amber-500/20 border-amber-500/30 text-amber-500 dark:text-amber-400'
+                  : 'bg-surface-container-high border-outline-variant/30 text-on-surface-variant'
+              }`}>
+                <Clock size={18} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-xs font-bold text-on-surface">
+                    Batas Waktu Pengerjaan &amp; Kebijakan Nilai
+                  </h4>
+                  {scoringConfig.remedialDeadline && (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      isDeadlineExpired ? 'bg-rose-500/20 text-rose-500 dark:text-rose-400' : 'bg-amber-500/20 text-amber-500 dark:text-amber-400'
+                    }`}>
+                      {isDeadlineExpired ? 'Tenggat Terlewati' : 'Tenggat Berjalan'}
+                    </span>
+                  )}
                 </div>
-              ) : (
-                filteredSessions.map((session) => {
-                  const qCount = session.scoring_config?.remedialQuestions?.length || 0;
-                  const isConfigured = qCount > 0;
-                  
-                  return (
-                    <div 
-                      key={session.id}
-                      className="bg-surface-container border border-white/[0.03] hover:border-tertiary/10 rounded-[28px] p-6 flex flex-col justify-between gap-6 transition-all group hover:shadow-lg hover:bg-surface-container-high animate-in fade-in slide-in-from-bottom-2 duration-300"
-                    >
-                      {/* Top Row: Session Title and Status Badge */}
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40 leading-none">
-                              {session.academic_year || "2025/2026"} • Sem. {session.semester || "Ganjil"}
-                            </span>
-                            <h4 className="font-headline font-bold text-base text-primary uppercase tracking-tight mt-1 truncate group-hover:text-tertiary transition-colors">
-                              {session.session_name}
-                            </h4>
-                          </div>
-                          <div className={`shrink-0 px-2.5 py-1 rounded-xl border text-[9px] font-black uppercase tracking-widest leading-none ${
-                            isConfigured 
-                              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' 
-                              : 'bg-amber-500/10 border-amber-500/20 text-amber-500'
-                          }`}>
-                            {isConfigured ? 'Telah Dikonfigurasi' : 'Belum Dikonfigurasi'}
-                          </div>
-                        </div>
+                <p className="text-xs text-on-surface-variant mt-0.5">
+                  {scoringConfig.remedialDeadline ? (
+                    <>
+                      Tenggat: <strong>{new Date(scoringConfig.remedialDeadline).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</strong> •{' '}
+                      <span className="text-rose-500 dark:text-rose-400 font-semibold">{pendingDeadlineStudents.length} siswa belum tuntas</span>
+                      {zeroedStudents.length > 0 && (
+                        <span className="text-amber-500 dark:text-amber-400 font-semibold"> • {zeroedStudents.length} siswa terkunci nilai 0</span>
+                      )}
+                    </>
+                  ) : (
+                    'Tenggat waktu belum diatur. Anda dapat mengaturnya pada menu Konfigurasi Soal.'
+                  )}
+                </p>
+              </div>
+            </div>
 
-                        {/* Middle Row: Meta Information (Subject, Class, Timer) */}
-                        <div className="grid grid-cols-2 gap-3 pt-2">
-                          <div className="bg-surface-container-low p-3 rounded-2xl flex items-center gap-2.5">
-                            <span className="material-symbols-outlined text-tertiary-dim text-base">book</span>
-                            <div className="min-w-0">
-                              <p className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/40 leading-none mb-1">Mata Pelajaran / Kelas</p>
-                              <p className="text-[10px] font-bold text-on-surface-variant truncate">
-                                {session.subject} ({session.class_name})
-                              </p>
-                            </div>
-                          </div>
-                          <div className="bg-surface-container-low p-3 rounded-2xl flex items-center gap-2.5">
-                            <span className="material-symbols-outlined text-tertiary-dim text-base">hourglass_empty</span>
-                            <div className="min-w-0">
-                              <p className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/40 leading-none mb-1">Durasi / Jumlah Soal</p>
-                              <p className="text-[10px] font-bold text-on-surface-variant">
-                                {session.remedial_timer || 15} Menit • {qCount} Soal
-                              </p>
-                            </div>
-                          </div>
-                        </div>
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+              <button
+                type="button"
+                onClick={() => handleOpenZeroDeadlineModal()}
+                disabled={!isAdmin || pendingDeadlineStudents.length === 0}
+                className="px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Terapkan nilai 0 untuk siswa yang belum tuntas melewati batas waktu"
+              >
+                <Ban size={14} />
+                <span>Jadikan Nilai 0 ({pendingDeadlineStudents.length})</span>
+              </button>
 
-                        {/* Deadline info */}
-                        {session.scoring_config?.remedialDeadline && (
-                          <div className="flex items-center gap-1.5 px-3 py-2 bg-error/5 border border-error/10 text-error rounded-xl text-[10px] font-bold">
-                            <span className="material-symbols-outlined text-[12px]">alarm</span>
-                            <span>Tenggat: {new Date(session.scoring_config.remedialDeadline).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Bottom Row: Actions */}
-                      <div className="flex items-center gap-2.5 pt-2 border-t border-white/[0.03]">
-                        <button
-                          onClick={() => onSessionSelect?.(session)}
-                          className="flex-1 h-11 bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/30 text-primary rounded-xl font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
-                        >
-                          <span className="material-symbols-outlined text-base">visibility</span>
-                          Lihat Detail
-                        </button>
-                        
-                        <button
-                          onClick={() => handleEditSession(session)}
-                          className="flex-1 h-11 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
-                        >
-                          <span className="material-symbols-outlined text-base">edit</span>
-                          Edit Soal
-                        </button>
-                        
-                        <button
-                          onClick={() => onDeleteSession?.(session.id, session.session_name)}
-                          className="h-11 px-4 bg-error/10 hover:bg-error/20 text-error border border-error/20 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center"
-                          title="Hapus Sesi Ujian"
-                        >
-                          <span className="material-symbols-outlined text-base">delete</span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
+              {zeroedStudents.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleRestoreAllOriginalScores}
+                  disabled={!isAdmin || isRestoringAllSubmitting}
+                  className="px-3.5 py-2 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 text-teal-600 dark:text-teal-400 text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-30"
+                >
+                  <Undo2 size={14} className={isRestoringAllSubmitting ? 'animate-spin' : ''} />
+                  <span>{isRestoringAllSubmitting ? 'Memulihkan...' : `Pulihkan Nilai Asli (${zeroedStudents.length})`}</span>
+                </button>
               )}
             </div>
-          ) : remedialStudents.length === 0 ? (
-            <div className="lg:col-span-2 flex flex-col items-center justify-center py-16 text-center">
-               <div className="relative mb-6">
-                <div className="absolute inset-0 bg-tertiary/5 blur-[60px] rounded-full scale-150"></div>
-                <div className="relative h-20 w-20 bg-surface-container-high rounded-full flex items-center justify-center border border-outline-variant/10">
-                  <span className="material-symbols-outlined text-4xl text-tertiary/30 animate-pulse">radar</span>
-                </div>
-              </div>
-              <h3 className="font-headline text-lg font-bold text-on-surface mb-1 uppercase tracking-tight">Data Kosong</h3>
-              <p className="text-on-surface-variant/50 text-[11px] font-bold max-w-[200px] leading-relaxed uppercase tracking-widest">
-                Belum ada records untuk filter yang aktif.
-              </p>
+          </div>
+        )}
+
+        {/* Search & Filter Toolbar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
+            <input 
+              type="text"
+              placeholder={activeSessionId ? "Cari nama siswa..." : "Cari sesi remedial (mata pelajaran, kelas, dll)..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-surface-container border border-outline-variant/30 rounded-xl py-2.5 pl-10 pr-4 text-xs font-medium text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all" 
+            />
+          </div>
+
+          {activeSessionId && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              <button
+                onClick={() => setStatusFilter('ALL')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 ${
+                  statusFilter === 'ALL'
+                    ? 'bg-primary text-on-primary shadow-sm'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                }`}
+              >
+                Semua ({stats.total})
+              </button>
+              <button
+                onClick={() => setStatusFilter('WAITING')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 ${
+                  statusFilter === 'WAITING'
+                    ? 'bg-amber-500 text-white shadow-sm'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                }`}
+              >
+                Antrean Review ({stats.waitingReview})
+              </button>
+              <button
+                onClick={() => setStatusFilter('DONE')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 ${
+                  statusFilter === 'DONE'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                }`}
+              >
+                Tuntas ({stats.done})
+              </button>
+              <button
+                onClick={() => setStatusFilter('ISSUE')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 ${
+                  statusFilter === 'ISSUE'
+                    ? 'bg-rose-600 text-white shadow-sm'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                }`}
+              >
+                Pelanggaran ({stats.issue})
+              </button>
             </div>
-          ) : (
-            remedialStudents.map((student) => {
-              const isSelected = selectedStudentId === student.id;
-              return (
-                <div 
-                  key={student.id}
-                  className={`bg-surface-container rounded-3xl border transition-all duration-300 overflow-hidden ${
-                    isSelected ? 'ring-1 ring-tertiary/20 border-tertiary/10 bg-surface-container-high' : 'border-white/[0.03] active:bg-surface-container-low'
-                  }`}
-                >
-                   {/* Card Basic Info */}
-                   <div 
-                    className="p-4 flex items-center justify-between gap-3 cursor-pointer"
-                    onClick={() => setSelectedStudentId(isSelected ? null : student.id)}
-                   >
-                      <div className="flex items-center gap-3.5">
-                        <div className="relative">
-                          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden border ${
-                            student.remedialStatus === 'CHEATED' ? 'border-error/30' : 'border-outline-variant/20'
-                          }`}>
-                             {student.remedialPhoto && isImageUrl(student.remedialPhoto) ? (
-                               <Image src={student.remedialPhoto} alt={student.name} width={44} height={44} className="w-full h-full object-cover" unoptimized />
-                             ) : (
-                               <User size={20} className="text-on-surface-variant/40" />
-                             )}
+          )}
+        </div>
+
+        {/* Content Section: Session Cards or Student List */}
+        {!activeSessionId ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+            {filteredSessions.length === 0 ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-outline-variant/30 rounded-2xl bg-surface-container-low">
+                <div className="w-14 h-14 rounded-2xl bg-surface-container-high text-on-surface-variant flex items-center justify-center mb-4">
+                  <span className="material-symbols-outlined text-3xl">inventory_2</span>
+                </div>
+                <h3 className="font-bold text-base text-on-surface mb-1">Tidak Ada Sesi yang Cocok</h3>
+                <p className="text-on-surface-variant text-xs max-w-sm">
+                  Tidak ditemukan sesi ujian yang sesuai dengan kata kunci pencarian Anda.
+                </p>
+              </div>
+            ) : (
+              filteredSessions.map((session) => {
+                const mcqCount = session.scoring_config?.remedialMcqQuestions?.length || 0;
+                const essayCount = session.scoring_config?.remedialQuestions?.length || 0;
+                const totalQuestions = mcqCount + essayCount;
+                const isConfigured = totalQuestions > 0;
+                
+                return (
+                  <div 
+                    key={session.id}
+                    className="bg-surface-container border border-outline-variant/20 hover:border-primary/40 rounded-2xl p-5 flex flex-col justify-between gap-4 transition-all hover:shadow-md hover:bg-surface-container-high group"
+                  >
+                    <div>
+                      {/* Top Badges */}
+                      <div className="flex items-center justify-between gap-2 mb-2.5">
+                        <span className="px-2.5 py-0.5 rounded-md bg-surface-container-highest text-on-surface-variant text-[11px] font-bold">
+                          Kelas {session.class_name || 'Umum'}
+                        </span>
+                        <div className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                          isConfigured 
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                        }`}>
+                          {isConfigured ? 'Terkonfigurasi' : 'Belum Ada Soal'}
+                        </div>
+                      </div>
+
+                      {/* Subject and Session Name */}
+                      <h4 className="font-extrabold text-base text-on-surface group-hover:text-primary transition-colors">
+                        {session.subject}
+                      </h4>
+                      <p className="text-xs text-on-surface-variant mt-0.5 truncate font-medium">
+                        {session.session_name} • Sem. {session.semester || 'Ganjil'} ({session.academic_year || '2025/2026'})
+                      </p>
+
+                      {/* Details row */}
+                      <div className="flex items-center gap-3 text-xs text-on-surface-variant/80 mt-3 pt-3 border-t border-outline-variant/15 flex-wrap">
+                        <span className="flex items-center gap-1">
+                          <span className="material-symbols-outlined text-sm">assignment</span>
+                          <strong>{totalQuestions} Soal</strong> ({mcqCount} PG, {essayCount} Essay)
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <span className="material-symbols-outlined text-sm">schedule</span>
+                          <strong>{session.remedial_timer || 15} Menit</strong>
+                        </span>
+                      </div>
+
+                      {session.scoring_config?.remedialDeadline && (
+                        <div className="mt-2.5 flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg text-[11px] font-medium">
+                          <Clock size={12} />
+                          <span>Tenggat: {new Date(session.scoring_config.remedialDeadline).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-outline-variant/15">
+                      <button
+                        onClick={() => onSessionSelect?.(session)}
+                        className="flex-1 py-2 bg-primary text-on-primary hover:bg-primary/90 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                      >
+                        <Eye size={14} />
+                        <span>Buka Siswa</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => handleEditSession(session)}
+                        className="py-2 px-3 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/30 text-on-surface rounded-xl font-bold text-xs flex items-center justify-center gap-1 transition-colors"
+                        title="Edit Bank Soal Sesi Ini"
+                      >
+                        <Sliders size={14} />
+                        <span>Soal</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => onDeleteSession?.(session.id, session.session_name)}
+                        className="py-2 px-2.5 text-rose-500 hover:bg-rose-500/10 rounded-xl transition-colors"
+                        title="Hapus Sesi Ujian"
+                      >
+                        <span className="material-symbols-outlined text-base">delete</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        ) : (
+          /* Student List Section (When Session Active) */
+          <div className="flex flex-col gap-3">
+            {remedialStudents.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-outline-variant/30 rounded-2xl bg-surface-container-low">
+                <div className="w-14 h-14 rounded-2xl bg-surface-container-high text-on-surface-variant flex items-center justify-center mb-3">
+                  <span className="material-symbols-outlined text-3xl">person_search</span>
+                </div>
+                <h3 className="font-bold text-base text-on-surface mb-1">Tidak Ada Data Siswa</h3>
+                <p className="text-xs text-on-surface-variant max-w-xs">
+                  Tidak ada siswa yang sesuai dengan filter atau kata kunci pencarian pada sesi ini.
+                </p>
+              </div>
+            ) : (
+              remedialStudents.map((student, idx) => {
+                const isSelected = selectedStudentId === student.id;
+                const isZeroed = student.remedialStatus === 'TIME_UP' && (student.finalScoreLocked === 0 || student.finalScore === 0);
+                const currentScore = student.finalScoreLocked !== undefined && student.finalScoreLocked !== null ? student.finalScoreLocked : student.finalScore;
+                const isPassed = currentScore >= kkm;
+                const currentMode = studentModes[student.id] || student.examMode || 'STRICT';
+                const detailTab = activeDetailTab[student.id] || 'answers';
+
+                return (
+                  <div 
+                    key={student.id}
+                    className={`bg-surface-container rounded-2xl border transition-all duration-200 overflow-hidden shadow-sm ${
+                      isSelected 
+                        ? 'border-primary/50 ring-1 ring-primary/20 bg-surface-container-high' 
+                        : 'border-outline-variant/25 hover:border-outline-variant/50'
+                    }`}
+                  >
+                    {/* Main Student Header Row (Spacious & Clean) */}
+                    <div 
+                      className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer"
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedStudentId(null);
+                        } else {
+                          setSelectedStudentId(student.id);
+                          setReviewScore(student.essayScoreManual?.toString() || student.remedialScore?.toString() || '');
+                        }
+                      }}
+                    >
+                      {/* Left: Identity */}
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <span className="text-xs font-bold text-on-surface-variant/50 w-5 text-center shrink-0">
+                          {idx + 1}
+                        </span>
+
+                        <div className="relative shrink-0">
+                          <div className={`w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden border ${
+                            student.isCheated ? 'border-rose-500/50 ring-2 ring-rose-500/20' : 'border-outline-variant/30'
+                          } bg-surface-container-low`}>
+                            {student.remedialPhoto && isImageUrl(student.remedialPhoto) ? (
+                              <Image src={student.remedialPhoto} alt={student.name} width={44} height={44} className="w-full h-full object-cover" unoptimized />
+                            ) : (
+                              <User size={22} className="text-on-surface-variant/50" />
+                            )}
                           </div>
                           {student.isCheated && (
-                            <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-error text-on-surface rounded-full flex items-center justify-center border-2 border-surface shadow-lg">
-                               <span className="material-symbols-outlined text-[10px] font-black">gpp_maybe</span>
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white rounded-full flex items-center justify-center text-[9px] font-black shadow-md">
+                              !
                             </div>
                           )}
                         </div>
-                        <div className="min-w-0">
-                          <h4 className="font-headline font-bold text-sm text-primary uppercase tracking-tight truncate max-w-[150px]">{student.name}</h4>
-                          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                             {getStatusBadge(student.remedialStatus || '', student.teacherReviewed)}
-                             {student.cheatingFlags && student.cheatingFlags.some(f => typeof f === 'string' && (f.includes('Nilai remedial ditahan') || f.includes('menunggu'))) && (
-                               <span className="px-2 py-0.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[8.5px] font-black uppercase tracking-wider flex items-center gap-1">
-                                 <span className="material-symbols-outlined text-[10px]">hourglass_top</span>
-                                 <span>Menunggu Teman</span>
-                               </span>
-                             )}
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-bold text-sm sm:text-base text-on-surface truncate">
+                              {student.name}
+                            </h4>
+                            {getStatusBadge(student.remedialStatus || '', student.teacherReviewed)}
+                            {student.cheatingFlags && student.cheatingFlags.some(f => typeof f === 'string' && (f.includes('Nilai remedial ditahan') || f.includes('menunggu'))) && (
+                              <span className="px-2 py-0.5 rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[11px]">hourglass_top</span>
+                                <span>Menunggu Teman</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-3 text-xs text-on-surface-variant mt-1 flex-wrap">
+                            {student.originalScore !== undefined && student.originalScore !== null && (
+                              <span>Nilai Awal: <strong className="font-semibold text-on-surface">{student.originalScore}</strong></span>
+                            )}
+                            {student.remedialScore !== undefined && student.remedialScore !== null && (
+                              <>
+                                <span>•</span>
+                                <span>Skor Remedial: <strong className="font-semibold text-on-surface">{student.remedialScore}</strong></span>
+                              </>
+                            )}
+                            {student.remedialLocation && (
+                              <>
+                                <span>•</span>
+                                <span className="text-on-surface-variant/70">{student.remedialLocation}</span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                         <div className="text-right flex flex-col items-end">
-                            {student.remedialStatus === 'TIME_UP' && (student.finalScoreLocked === 0 || student.finalScore === 0) ? (
-                              <>
-                                <span className="text-[8px] font-black text-rose-400 uppercase tracking-widest mb-0.5">Nilai 0 (Batas Waktu)</span>
-                                <span className="text-lg font-headline font-black text-rose-500 leading-none">0</span>
-                                {student.originalScore !== undefined && student.originalScore !== null && (
-                                  <span className="text-[8px] font-mono text-on-surface-variant/70 mt-0.5">Asli: {student.originalScore}</span>
-                                )}
-                              </>
-                            ) : (
-                              <>
-                                <span className="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-widest mb-0.5">Final Score</span>
-                                <span className="text-lg font-headline font-black text-primary leading-none">
-                                  {student.finalScoreLocked || student.finalScore}
-                                </span>
-                              </>
-                            )}
-                         </div>
+                      {/* Right: Score & Expand Toggle */}
+                      <div className="flex items-center justify-between md:justify-end gap-4 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-outline-variant/15">
+                        {/* Score Box */}
+                        <div className="flex items-center gap-2">
+                          {isZeroed ? (
+                            <div className="px-3.5 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/25 flex flex-col items-end">
+                              <span className="text-[10px] font-bold text-rose-500 leading-none">Nilai: 0</span>
+                              <span className="text-[9px] text-on-surface-variant mt-0.5 leading-none">Batas Waktu</span>
+                            </div>
+                          ) : (
+                            <div className={`px-4 py-1.5 rounded-xl border flex flex-col items-end ${
+                              isPassed
+                                ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-400'
+                                : 'bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400'
+                            }`}>
+                              <span className="text-[10px] font-medium leading-none">Nilai Akhir</span>
+                              <span className="text-lg font-black leading-tight mt-0.5">{currentScore}</span>
+                            </div>
+                          )}
+                        </div>
 
-                         {/* Tombol Pulihkan ke Nilai Asli (jika berstatus nilai 0 / TIME_UP) */}
-                         {student.remedialStatus === 'TIME_UP' && (student.finalScoreLocked === 0 || student.finalScore === 0) && (
-                           <button
-                             onClick={(e) => handleRestoreOriginalScore(e, student.id, student.name, student.originalScore)}
-                             disabled={!isAdmin || restoringStudentId === student.id}
-                             className="px-3 py-1.5 rounded-xl bg-teal-500/15 border border-teal-500/30 text-teal-700 dark:text-teal-300 hover:bg-teal-600 hover:text-white transition-all font-extrabold text-[9px] uppercase tracking-widest flex items-center gap-1.5 disabled:opacity-30 active:scale-95 shadow-sm"
-                             title={`Kembalikan ke nilai asli (${student.originalScore ?? 'awal'})`}
-                           >
-                             <Undo2 size={12} className={restoringStudentId === student.id ? "animate-spin" : ""} />
-                             <span className="leading-none">
-                               {restoringStudentId === student.id ? "Memulihkan..." : "Reset ke Nilai Asli"}
-                             </span>
-                           </button>
-                         )}
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                          <span className="hidden sm:inline">{isSelected ? 'Tutup Detail' : 'Koreksi & Aksi'}</span>
+                          <div className={`p-1.5 rounded-lg bg-surface-container-high transition-transform duration-200 ${isSelected ? 'rotate-180' : ''}`}>
+                            <ChevronDown size={16} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-                         {/* Tombol Jadikan Nilai 0 (hanya untuk siswa yang belum pernah selesai mengerjakan remedial dan tidak exempt) */}
-                         {!isStudentExemptFromZero(student) && 
-                          !(student.remedialStatus === 'TIME_UP' && (student.finalScoreLocked === 0 || student.finalScore === 0)) && (
-                           <button
-                             onClick={(e) => { e.stopPropagation(); handleOpenZeroDeadlineModal({ id: student.id, name: student.name }); }}
-                             disabled={!isAdmin}
-                             className="px-2.5 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 hover:bg-rose-600 hover:text-white transition-all font-extrabold text-[9px] uppercase tracking-widest flex items-center gap-1 disabled:opacity-30 active:scale-95"
-                             title="Terapkan sanksi nilai 0 karena belum mengerjakan remedial setelah batas waktu"
-                           >
-                             <Ban size={12} />
-                             <span className="leading-none">Set 0</span>
-                           </button>
-                         )}
+                    {/* Quick Action Toolbar (Separated neatly inside the card) */}
+                    <div 
+                      className="px-4 py-2.5 bg-surface-container-low/70 border-t border-outline-variant/15 flex items-center justify-between gap-2 flex-wrap"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Mode Kamera / Terbatas Toggle */}
+                        <button 
+                          onClick={(e) => handleToggleExamMode(e, student.id, student.name, student.examMode)}
+                          disabled={!isAdmin || togglingModeStudentId === student.id}
+                          className={`px-3 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-40 ${
+                            currentMode === 'LIMITED'
+                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-on-surface'
+                          }`}
+                          title={currentMode === 'LIMITED' ? 'Mode Terbatas Aktif: Klik untuk jadikan Wajib Kamera' : 'Wajib Kamera Aktif: Klik untuk izinkan Mode Terbatas'}
+                        >
+                          <span className="material-symbols-outlined text-[15px]">
+                            {currentMode === 'LIMITED' ? 'no_photography' : 'videocam'}
+                          </span>
+                          <span>
+                            {togglingModeStudentId === student.id ? 'Menyimpan...' : currentMode === 'LIMITED' ? 'Mode Terbatas' : 'Wajib Kamera'}
+                          </span>
+                        </button>
 
-                         {(student.remedialStatus === 'TIMEOUT' || student.remedialStatus === 'TIME_UP' || student.remedialStatus === 'ACTIVE') && (
-                           <button 
+                        {/* Tambah Waktu */}
+                        {(student.remedialStatus === 'TIMEOUT' || student.remedialStatus === 'TIME_UP' || student.remedialStatus === 'ACTIVE') && (
+                          <button 
                             onClick={(e) => handleExtendTimePrompt(e, student.id, student.name)}
                             disabled={!isAdmin || extendingTimeStudentId === student.id}
-                            className="px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 flex items-center gap-1.5 text-primary hover:bg-primary hover:text-white transition-all disabled:opacity-30 active:scale-95"
-                            title="Tambah waktu remedial siswa"
-                           >
-                              {extendingTimeStudentId === student.id ? <Clock size={12} className="animate-spin" /> : <Clock size={12} />}
-                              <span className="text-[9px] font-black uppercase tracking-widest leading-none">
-                                {extendingTimeStudentId === student.id ? "Menambah waktu..." : "Tambah Waktu"}
-                              </span>
-                           </button>
-                         )}
-
-                         <button 
-                           onClick={(e) => handleToggleExamMode(e, student.id, student.name, student.examMode)}
-                           disabled={!isAdmin || togglingModeStudentId === student.id}
-                           className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all disabled:opacity-30 active:scale-95 ${
-                             (studentModes[student.id] || student.examMode) === 'LIMITED'
-                               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-                               : 'bg-surface-container-high border-outline-variant/30 text-on-surface-variant hover:text-white'
-                           }`}
-                           title={(studentModes[student.id] || student.examMode) === 'LIMITED' ? 'Mode Terbatas Aktif (Klik untuk kembalikan ke Mode Kamera)' : 'Mode Kamera Wajib (Klik untuk aktifkan Mode Terbatas)'}
-                         >
-                            <span className="material-symbols-outlined text-[13px]">
-                              {(studentModes[student.id] || student.examMode) === 'LIMITED' ? 'no_photography' : 'videocam'}
-                            </span>
-                            <span className="text-[9px] font-black uppercase tracking-widest leading-none">
-                              {togglingModeStudentId === student.id 
-                                ? "Menyimpan..." 
-                                : (studentModes[student.id] || student.examMode) === 'LIMITED' 
-                                ? "Mode Terbatas" 
-                                : "Kamera Wajib"}
-                            </span>
-                         </button>
-
-                         <button 
-                          onClick={(e) => handleResetRemedial(e, student.id, student.name)}
-                          disabled={!isAdmin || resettingStudentId === student.id}
-                          className="px-3 py-1.5 rounded-xl bg-error/10 border border-error/20 flex items-center gap-1.5 text-error hover:bg-error hover:text-on-error transition-all disabled:opacity-30 active:scale-95"
-                          title="Berikan kesempatan ulang kepada siswa ini"
-                         >
-                            {resettingStudentId === student.id ? <Clock size={12} className="animate-spin" /> : <RotateCcw size={12} strokeWidth={3} />}
-                            <span className="text-[9px] font-black uppercase tracking-widest leading-none">
-                              {resettingStudentId === student.id ? "Reset remedial..." : "Set Ulang"}
-                            </span>
-                         </button>
-                      </div>
-                   </div>
-
-                   {/* Card Expanded Details */}
-                   {isSelected && (
-                     <div className="px-4 pb-6 pt-2 border-t border-white/[0.05] animate-in slide-in-from-top-2 duration-300">
-                        
-                        {/* Cheating Alerts */}
-                        {student.isCheated && student.cheatingFlags && student.cheatingFlags.length > 0 && (
-                          <div className="mb-6 p-4 bg-error/5 border border-error/10 rounded-2xl flex gap-3">
-                             <span className="material-symbols-outlined text-error text-xl shrink-0">security_update_warning</span>
-                             <div>
-                               <h5 className="text-[10px] font-black uppercase tracking-widest text-error mb-1.5">Indikasi Pelanggaran</h5>
-                               <ul className="space-y-1">
-                                 {student.cheatingFlags.map((flag, idx) => (
-                                   <li key={idx} className="text-[10px] font-bold text-error/70 flex items-center gap-1.5 lowercase">
-                                      <div className="w-1 h-1 rounded-full bg-error/40" /> {flag}
-                                   </li>
-                                 ))}
-                               </ul>
-                             </div>
-                          </div>
+                            className="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-primary text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-40"
+                            title="Tambahkan waktu pengerjaan siswa"
+                          >
+                            <Clock size={13} className={extendingTimeStudentId === student.id ? 'animate-spin' : ''} />
+                            <span>{extendingTimeStudentId === student.id ? 'Menambah...' : '+ Waktu'}</span>
+                          </button>
                         )}
 
-                        {/* Location / Meta */}
-                        <div className="grid grid-cols-2 gap-3 mb-6">
-                           <div className="bg-surface-container-low p-3 rounded-2xl flex items-center gap-3">
-                              <span className="material-symbols-outlined text-tertiary/60 text-lg">location_on</span>
-                              <div className="min-w-0">
-                                <p className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/40 leading-none mb-1">Location</p>
-                                <p className="text-[10px] font-bold text-on-surface-variant truncate">{student.remedialLocation || 'N/A'}</p>
-                              </div>
-                           </div>
-                           <div className="bg-surface-container-low p-3 rounded-2xl flex items-center gap-3">
-                              <span className="material-symbols-outlined text-tertiary/60 text-lg">description</span>
-                              <div className="min-w-0">
-                                <p className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/40 leading-none mb-1">Soal Essay</p>
-                                <p className="text-[10px] font-bold text-on-surface-variant">{scoringConfig.remedialQuestions?.length || 0} Records</p>
-                              </div>
-                           </div>
+                        {/* Set 0 (jika belum selesai dan tenggat) */}
+                        {!isStudentExemptFromZero(student) && !isZeroed && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleOpenZeroDeadlineModal({ id: student.id, name: student.name }); }}
+                            disabled={!isAdmin}
+                            className="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-40"
+                            title="Terapkan sanksi nilai 0"
+                          >
+                            <Ban size={13} />
+                            <span>Set Nilai 0</span>
+                          </button>
+                        )}
+
+                        {/* Pulihkan Nilai Asli (jika sudah nilai 0) */}
+                        {isZeroed && (
+                          <button
+                            onClick={(e) => handleRestoreOriginalScore(e, student.id, student.name, student.originalScore)}
+                            disabled={!isAdmin || restoringStudentId === student.id}
+                            className="px-3 py-1.5 rounded-lg bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 text-teal-600 dark:text-teal-400 text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-40"
+                            title="Kembalikan ke nilai asli awal"
+                          >
+                            <Undo2 size={13} className={restoringStudentId === student.id ? 'animate-spin' : ''} />
+                            <span>{restoringStudentId === student.id ? 'Memulihkan...' : 'Reset ke Nilai Asli'}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Reset Remedial Button */}
+                      <button 
+                        onClick={(e) => handleResetRemedial(e, student.id, student.name)}
+                        disabled={!isAdmin || resettingStudentId === student.id}
+                        className="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-40"
+                        title="Reset seluruh progres remedial siswa ini"
+                      >
+                        <RotateCcw size={13} className={resettingStudentId === student.id ? 'animate-spin' : ''} />
+                        <span>{resettingStudentId === student.id ? 'Mereset...' : 'Set Ulang'}</span>
+                      </button>
+                    </div>
+
+                    {/* Expanded Drawer (Jawaban, Evaluasi Guru, Audit Sensor AI) */}
+                    {isSelected && (
+                      <div className="p-4 sm:p-6 border-t border-outline-variant/15 bg-surface-container-low/40 space-y-6 animate-in slide-in-from-top-1 duration-200">
+                        {/* Tab Switcher inside Expanded Card */}
+                        <div className="flex items-center gap-2 border-b border-outline-variant/20 pb-3">
+                          <button
+                            type="button"
+                            onClick={() => setActiveDetailTab(prev => ({ ...prev, [student.id]: 'answers' }))}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                              detailTab === 'answers'
+                                ? 'bg-primary text-on-primary shadow-sm'
+                                : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                            }`}
+                          >
+                            <FileText size={14} />
+                            <span>Koreksi Jawaban &amp; Nilai</span>
+                            {student.remedialAnswers && student.remedialAnswers.length > 0 && (
+                              <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-[10px]">
+                                {student.remedialAnswers.length}
+                              </span>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setActiveDetailTab(prev => ({ ...prev, [student.id]: 'security' }))}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                              detailTab === 'security'
+                                ? 'bg-primary text-on-primary shadow-sm'
+                                : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                            }`}
+                          >
+                            <Shield size={14} />
+                            <span>Audit Sensor &amp; Keamanan AI</span>
+                            {student.isCheated && (
+                              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                            )}
+                          </button>
                         </div>
 
-                        {/* AI Cyber-Forensics Telemetry Brain Widget */}
-                        <div className="mb-6 bg-surface-container-lowest border border-white/[0.06] rounded-3xl p-5 shadow-2xl relative overflow-hidden">
-                          {/* Top ambient highlight */}
-                          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-tertiary/30 to-transparent"></div>
-
-                          {/* Widget Header */}
-                          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-xl bg-tertiary/10 border border-tertiary/20 flex items-center justify-center">
-                                <Shield className="w-4 h-4 text-tertiary animate-pulse" />
-                              </div>
-                              <div className="text-left">
-                                <div className="flex items-center gap-2">
-                                  <h5 className="text-[11px] font-black uppercase tracking-widest text-primary leading-none">
-                                    AI Cyber-Forensics Telemetry Brain
-                                  </h5>
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[7px] font-mono font-bold bg-tertiary/15 text-tertiary border border-tertiary/30">
-                                    <span className="w-1 h-1 rounded-full bg-tertiary animate-ping"></span>
-                                    LIVE SENSORS
-                                  </span>
-                                </div>
-                                <p className="text-[8px] font-bold text-on-surface-variant/50 uppercase tracking-widest mt-1">
-                                  Audit Multi-Vektor Integritas Sesi & Sensor Telemetri
-                                </p>
-                              </div>
-                            </div>
-                            {aiForensicResult[student.id] && (
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[8px] font-mono font-black uppercase tracking-widest px-2.5 py-1 rounded-lg bg-surface-container border border-white/[0.08] text-on-surface-variant flex items-center gap-1.5">
-                                  <Cpu className="w-3 h-3 text-tertiary" />
-                                  {aiForensicResult[student.id].engine_model || (aiForensicResult[student.id].is_ai_analysis ? 'Qwen-27B AI' : 'Heuristic')}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Initial Pre-scan Card */}
-                          {!aiForensicResult[student.id] && loadingSecurityAnalysis !== student.id && (
-                            <div className="p-5 text-left bg-surface-container-low/50 rounded-2xl border border-white/[0.04] space-y-4">
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[8px] font-bold text-on-surface-variant/70 uppercase tracking-wider">
-                                <div className="p-2.5 rounded-xl bg-surface-container-lowest/80 border border-white/[0.03] flex items-center gap-2">
-                                  <Monitor className="w-3.5 h-3.5 text-tertiary shrink-0" />
-                                  <span>Tab & Focus Blur</span>
-                                </div>
-                                <div className="p-2.5 rounded-xl bg-surface-container-lowest/80 border border-white/[0.03] flex items-center gap-2">
-                                  <Eye className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                                  <span>Vision Proctoring</span>
-                                </div>
-                                <div className="p-2.5 rounded-xl bg-surface-container-lowest/80 border border-white/[0.03] flex items-center gap-2">
-                                  <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                  <span>Temporal Velocity</span>
-                                </div>
-                                <div className="p-2.5 rounded-xl bg-surface-container-lowest/80 border border-white/[0.03] flex items-center gap-2">
-                                  <Copy className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                                  <span>Clipboard Guard</span>
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-between pt-1">
-                                <p className="text-[9px] font-medium text-on-surface-variant/60 max-w-[340px] leading-relaxed">
-                                  Sistem akan menganalisis rekaman sensor telemetri dari database dan memvalidasi kejanggalan menggunakan Groq Qwen-27B Cyber-Forensics Engine.
-                                </p>
-                                <button
-                                  onClick={() => runAiForensic(student.id)}
-                                  disabled={loadingSecurityAnalysis !== null}
-                                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-tertiary to-emerald-400 text-neutral-950 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 active:scale-95 transition-all shadow-[0_0_20px_rgba(155,255,206,0.15)] hover:shadow-[0_0_25px_rgba(155,255,206,0.25)] disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                                >
-                                  <Terminal className="w-3.5 h-3.5" />
-                                  Jalankan Audit AI
-                                </button>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Loading Terminal Scanner */}
-                          {loadingSecurityAnalysis === student.id && (
-                            <div className="bg-[#07090e] border border-[#1b2333] rounded-2xl p-4 font-mono text-[9px] text-[#5eead4] shadow-2xl relative overflow-hidden">
-                              <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.3)_50%),linear-gradient(90deg,rgba(0,255,200,0.03),rgba(0,255,100,0.01),rgba(0,150,255,0.03))] bg-[size:100%_4px,3px_100%] pointer-events-none opacity-60"></div>
-                              <div className="flex justify-between items-center border-b border-[#1b2333] pb-2 mb-3 relative z-10">
-                                <span className="uppercase tracking-widest font-bold text-[#5eead4] flex items-center gap-1.5">
-                                  <Activity className="w-3.5 h-3.5 animate-spin" />
-                                  Telemetric Forensics Stream Active
-                                </span>
-                                <span className="text-[8px] text-white/40">GROQ_ENGINE: QWEN-27B</span>
-                              </div>
-                              <div className="space-y-1.5 max-h-[160px] overflow-y-auto custom-scrollbar relative z-10 text-left">
-                                {forensicConsoleLogs.map((log, index) => (
-                                  <div key={index} className="flex gap-2 leading-relaxed">
-                                    <span className="text-[#5eead4]/40 shrink-0 font-bold">&gt;&gt;</span>
-                                    <span className="break-all text-white/90">{log}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Completed Forensic Report */}
-                          {aiForensicResult[student.id] && (
-                            <div className="space-y-4 animate-in fade-in duration-300 text-left">
-                              {/* Row 1: Risk Probability & System Verdict */}
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                {/* Risk Score Gauge */}
-                                <div className="bg-surface-container-low p-4 rounded-2xl flex flex-col items-center justify-center border border-white/[0.04] relative">
-                                  <div className="relative w-18 h-18 flex items-center justify-center">
-                                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                                      <path
-                                        className="text-white/[0.06]"
-                                        strokeWidth="3.2"
-                                        stroke="currentColor"
-                                        fill="none"
-                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                      />
-                                      <path
-                                        className={`transition-all duration-1000 ${
-                                          aiForensicResult[student.id].risk_level === 'TINGGI'
-                                            ? 'text-rose-500'
-                                            : aiForensicResult[student.id].risk_level === 'SEDANG'
-                                            ? 'text-amber-400'
-                                            : 'text-tertiary'
-                                        }`}
-                                        strokeDasharray={`${aiForensicResult[student.id].risk_score}, 100`}
-                                        strokeWidth="3.4"
-                                        strokeLinecap="round"
-                                        stroke="currentColor"
-                                        fill="none"
-                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                      />
-                                    </svg>
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                      <span className="text-base font-headline font-black text-primary leading-none">
-                                        {aiForensicResult[student.id].risk_score}%
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/50 mt-2 leading-none">
-                                    Skor Resiko Anomali
-                                  </span>
-                                </div>
-
-                                {/* Verdict Details */}
-                                <div className="sm:col-span-2 bg-surface-container-low p-4 rounded-2xl flex flex-col justify-between border border-white/[0.04]">
-                                  <div>
-                                    <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/40 mb-1.5 block leading-none">
-                                      System Verdict & Status
-                                    </span>
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <div className={`px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-widest ${
-                                        aiForensicResult[student.id].risk_level === 'TINGGI'
-                                          ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-                                          : aiForensicResult[student.id].risk_level === 'SEDANG'
-                                          ? 'bg-amber-400/10 border-amber-400/30 text-amber-300'
-                                          : 'bg-tertiary/10 border-tertiary/30 text-tertiary'
-                                      }`}>
-                                        {aiForensicResult[student.id].ai_verdict}
-                                      </div>
-                                      <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${
-                                        aiForensicResult[student.id].risk_level === 'TINGGI'
-                                          ? 'text-rose-400 bg-rose-500/15'
-                                          : aiForensicResult[student.id].risk_level === 'SEDANG'
-                                          ? 'text-amber-300 bg-amber-400/15'
-                                          : 'text-tertiary bg-tertiary/15'
-                                      }`}>
-                                        Tingkat: {aiForensicResult[student.id].risk_level}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="mt-2 text-[8px] font-medium text-on-surface-variant/60 flex items-center justify-between border-t border-white/[0.04] pt-2">
-                                    <span>Engine: <strong className="text-primary">{aiForensicResult[student.id].engine_model || 'Groq AI'}</strong></span>
-                                    <span>Database Sensor: <strong className="text-tertiary">gm_attempt_logs</strong></span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Row 2: Real Telemetry Metrics Counters */}
-                              {aiForensicResult[student.id].telemetry_metrics && (
-                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                                  <div className="bg-surface-container-low p-2.5 rounded-xl border border-white/[0.03]">
-                                    <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/40 block leading-none mb-1">
-                                      Durasi Sesi
-                                    </span>
-                                    <p className="text-[11px] font-black text-primary font-mono leading-none">
-                                      {aiForensicResult[student.id].telemetry_metrics?.duration_minutes}m{' '}
-                                      <span className="text-[8px] text-on-surface-variant/50 font-normal">
-                                        / {aiForensicResult[student.id].telemetry_metrics?.allocated_minutes}m
-                                      </span>
-                                    </p>
-                                    <span className="text-[7px] font-mono text-tertiary block mt-1">
-                                      {aiForensicResult[student.id].telemetry_metrics?.speed_ratio}x alokasi
-                                    </span>
-                                  </div>
-
-                                  <div className="bg-surface-container-low p-2.5 rounded-xl border border-white/[0.03]">
-                                    <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/40 block leading-none mb-1">
-                                      Pindah Tab / Blur
-                                    </span>
-                                    <p className={`text-[11px] font-black font-mono leading-none ${
-                                      (aiForensicResult[student.id].telemetry_metrics?.tab_switches ?? 0) > 0 ? 'text-amber-400' : 'text-primary'
-                                    }`}>
-                                      {aiForensicResult[student.id].telemetry_metrics?.tab_switches}x
-                                    </p>
-                                    <span className="text-[7px] text-on-surface-variant/50 block mt-1">
-                                      {(aiForensicResult[student.id].telemetry_metrics?.tab_switches ?? 0) === 0 ? 'Fokus terjaga' : 'Keluar viewport'}
-                                    </span>
-                                  </div>
-
-                                  <div className="bg-surface-container-low p-2.5 rounded-xl border border-white/[0.03]">
-                                    <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/40 block leading-none mb-1">
-                                      Page Reload
-                                    </span>
-                                    <p className={`text-[11px] font-black font-mono leading-none ${
-                                      (aiForensicResult[student.id].telemetry_metrics?.reloads ?? 0) > 1 ? 'text-rose-400' : 'text-primary'
-                                    }`}>
-                                      {aiForensicResult[student.id].telemetry_metrics?.reloads}x
-                                    </p>
-                                    <span className="text-[7px] text-on-surface-variant/50 block mt-1">
-                                      {(aiForensicResult[student.id].telemetry_metrics?.reloads ?? 0) > 1 ? 'Refresh berulang' : 'Normal'}
-                                    </span>
-                                  </div>
-
-                                  <div className="bg-surface-container-low p-2.5 rounded-xl border border-white/[0.03]">
-                                    <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/40 block leading-none mb-1">
-                                      Copy / Paste
-                                    </span>
-                                    <p className={`text-[11px] font-black font-mono leading-none ${
-                                      (aiForensicResult[student.id].telemetry_metrics?.copy_pastes ?? 0) > 0 ? 'text-rose-400' : 'text-primary'
-                                    }`}>
-                                      {aiForensicResult[student.id].telemetry_metrics?.copy_pastes}x
-                                    </p>
-                                    <span className="text-[7px] text-on-surface-variant/50 block mt-1">
-                                      {(aiForensicResult[student.id].telemetry_metrics?.copy_pastes ?? 0) > 0 ? 'Intersepsi input' : 'Bersih'}
-                                    </span>
-                                  </div>
-
-                                  <div className="bg-surface-container-low p-2.5 rounded-xl border border-white/[0.03]">
-                                    <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/40 block leading-none mb-1">
-                                      Sensor Logs
-                                    </span>
-                                    <p className="text-[11px] font-black text-tertiary font-mono leading-none">
-                                      {aiForensicResult[student.id].telemetry_metrics?.total_events}
-                                    </p>
-                                    <span className="text-[7px] text-on-surface-variant/50 block mt-1">
-                                      {aiForensicResult[student.id].telemetry_metrics?.vision_violations ?? 0} anomali kamera
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Row 3: 4 Multi-Vector Threat Scorecards */}
-                              {((aiForensicResult[student.id].threat_vectors?.length ?? 0) > 0) && (
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <h6 className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/60">
-                                      Evaluasi 4 Vektor Ancaman
-                                    </h6>
-                                    <span className="text-[7px] text-tertiary/80 font-mono">MULTI-VECTOR TELEMETRY</span>
-                                  </div>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    {aiForensicResult[student.id].threat_vectors!.map((vec, vIdx) => {
-                                      const statusColor = 
-                                        vec.status === 'KRITIS' ? 'text-rose-400 bg-rose-500/10 border-rose-500/30' :
-                                        vec.status === 'WASPADA' ? 'text-amber-400 bg-amber-400/10 border-amber-400/30' :
-                                        'text-tertiary bg-tertiary/10 border-tertiary/30';
-                                      const barColor = 
-                                        vec.status === 'KRITIS' ? 'bg-rose-500' :
-                                        vec.status === 'WASPADA' ? 'bg-amber-400' :
-                                        'bg-tertiary';
-
-                                      return (
-                                        <div key={vIdx} className="bg-surface-container-low/70 p-3 rounded-2xl border border-white/[0.03] space-y-2">
-                                          <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-1.5 min-w-0">
-                                              {vIdx === 0 && <Monitor className="w-3.5 h-3.5 text-primary shrink-0" />}
-                                              {vIdx === 1 && <Eye className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
-                                              {vIdx === 2 && <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
-                                              {vIdx === 3 && <Copy className="w-3.5 h-3.5 text-purple-400 shrink-0" />}
-                                              <span className="text-[9px] font-bold text-primary truncate leading-none">
-                                                {vec.name}
-                                              </span>
-                                            </div>
-                                            <span className={`text-[7px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${statusColor} shrink-0`}>
-                                              {vec.status} ({vec.score}%)
-                                            </span>
-                                          </div>
-                                          {/* Score bar */}
-                                          <div className="w-full h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                                            <div 
-                                              className={`h-full rounded-full transition-all duration-700 ${barColor}`} 
-                                              style={{ width: `${Math.min(100, Math.max(5, vec.score))}%` }}
-                                            />
-                                          </div>
-                                          <p className="text-[8px] text-on-surface-variant/70 leading-relaxed font-medium">
-                                            {vec.summary}
-                                          </p>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Row 4: Modus Operandi & Forensic Timeline */}
-                              <div className="bg-surface-container-low/50 p-4 rounded-2xl border border-white/[0.03]">
-                                <h6 className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/50 mb-1.5 leading-none">
-                                  Sintesis Forensik & Modus Operandi
-                                </h6>
-                                <p className="text-[10px] font-medium text-on-surface-variant/90 leading-relaxed">
-                                  {aiForensicResult[student.id]?.threat_vector_summary}
-                                </p>
-                              </div>
-
-                              {/* Chronological Timeline */}
-                              {((aiForensicResult[student.id]?.forensic_timeline?.length ?? 0) > 0) && (
-                                <div className="space-y-2.5">
-                                  <h6 className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/50 mb-1 leading-none">
-                                    Kronologi Anomali Sesi
-                                  </h6>
-                                  <div className="border-l border-white/[0.08] pl-3 ml-2 space-y-2.5 relative">
-                                    {(aiForensicResult[student.id]?.forensic_timeline || []).map((evt, eidx) => (
-                                      <div key={eidx} className="relative flex flex-col gap-0.5">
-                                        <div className={`absolute -left-[16px] top-1 w-2.5 h-2.5 rounded-full border-2 border-surface-container-lowest ${
-                                          evt.risk_points > 50
-                                            ? 'bg-rose-500'
-                                            : evt.risk_points > 25
-                                            ? 'bg-amber-400'
-                                            : 'bg-tertiary'
-                                        }`} />
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-[8px] font-mono font-bold text-tertiary leading-none">{evt.time}</span>
-                                          <span className="text-[8px] font-black uppercase tracking-widest text-primary leading-none truncate max-w-[200px]">{evt.action}</span>
-                                          <span className={`text-[7px] font-black px-1.5 py-0.2 rounded ${
-                                            evt.risk_points > 50 ? 'bg-rose-500/15 text-rose-400' : evt.risk_points > 25 ? 'bg-amber-400/15 text-amber-300' : 'bg-tertiary/15 text-tertiary'
-                                          }`}>+{evt.risk_points} pts</span>
-                                        </div>
-                                        <p className="text-[8px] font-medium text-on-surface-variant/70 leading-relaxed mt-0.5">
-                                          {evt.description}
-                                        </p>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Rekomendasi Guru */}
-                              {((aiForensicResult[student.id]?.mitigation_actions?.length ?? 0) > 0) && (
-                                <div className="p-4 bg-tertiary/5 border border-tertiary/15 rounded-2xl">
-                                  <h6 className="text-[8px] font-black uppercase tracking-widest text-tertiary mb-2 leading-none flex items-center gap-1.5">
-                                    <ShieldCheck className="w-3 h-3 text-tertiary" />
-                                    Rekomendasi Tindakan Guru
-                                  </h6>
-                                  <ul className="space-y-1.5">
-                                    {(aiForensicResult[student.id]?.mitigation_actions || []).map((act, aidx) => (
-                                      <li key={aidx} className="text-[9px] font-medium text-on-surface-variant/80 flex items-start gap-1.5">
-                                        <span className="text-tertiary shrink-0 mt-0.5">•</span>
-                                        <span>{act}</span>
+                        {/* TAB 1: KOREKSI JAWABAN & EVALUASI GURU */}
+                        {detailTab === 'answers' && (
+                          <div className="space-y-6">
+                            {/* Cheating Alert Banner if present */}
+                            {student.isCheated && student.cheatingFlags && student.cheatingFlags.length > 0 && (
+                              <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-start gap-3 text-left">
+                                <span className="material-symbols-outlined text-rose-500 text-xl shrink-0 mt-0.5">security_update_warning</span>
+                                <div>
+                                  <h5 className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">Indikasi Pelanggaran Ujian</h5>
+                                  <ul className="mt-1 space-y-1">
+                                    {student.cheatingFlags.map((flag, fIdx) => (
+                                      <li key={fIdx} className="text-xs text-rose-600/80 dark:text-rose-400/80 flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500/50" />
+                                        <span>{flag}</span>
                                       </li>
                                     ))}
                                   </ul>
                                 </div>
-                              )}
+                              </div>
+                            )}
 
-                              {/* Row 5: Raw Telemetry Stream Inspector (Collapsible) */}
-                              <div className="border border-white/[0.04] rounded-2xl overflow-hidden bg-surface-container-low/30">
-                                <button
-                                  type="button"
-                                  onClick={() => setExpandedRawLogs(prev => ({ ...prev, [student.id]: !prev[student.id] }))}
-                                  className="w-full px-4 py-2.5 flex items-center justify-between text-left hover:bg-white/[0.02] transition-colors"
-                                >
+                            {/* Evaluasi Guru Card */}
+                            {(student.remedialStatus === 'REMEDIAL' || student.remedialStatus === 'COMPLETED' || student.remedialAnswers?.length) && (
+                              <div className="bg-surface-container border border-outline-variant/25 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+                                <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
-                                    <Terminal className="w-3.5 h-3.5 text-on-surface-variant/60" />
-                                    <span className="text-[9px] font-mono font-bold text-on-surface-variant uppercase tracking-wider">
-                                      Inspeksi Raw Event Telemetri ({aiForensicResult[student.id].raw_events?.length || 0} events)
-                                    </span>
+                                    <span className="material-symbols-outlined text-primary text-lg">edit_note</span>
+                                    <h5 className="text-xs font-extrabold uppercase tracking-wide text-on-surface">
+                                      Penilaian &amp; Evaluasi Guru
+                                    </h5>
                                   </div>
-                                  {expandedRawLogs[student.id] ? (
-                                    <ChevronUp className="w-3.5 h-3.5 text-on-surface-variant/60" />
-                                  ) : (
-                                    <ChevronDown className="w-3.5 h-3.5 text-on-surface-variant/60" />
+                                  {student.teacherReviewed && (
+                                    <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold">
+                                      Telah Diperiksa
+                                    </span>
                                   )}
-                                </button>
+                                </div>
 
-                                {expandedRawLogs[student.id] && (
-                                  <div className="p-3 border-t border-white/[0.04] bg-[#07090e] font-mono text-[8px] max-h-[180px] overflow-y-auto custom-scrollbar">
-                                    {(!aiForensicResult[student.id].raw_events || aiForensicResult[student.id].raw_events!.length === 0) ? (
-                                      <p className="text-white/40 italic py-2 text-center">
-                                        Tidak ada event mencurigakan atau perpindahan tab yang tercatat pada database sesi ini.
-                                      </p>
-                                    ) : (
-                                      <div className="space-y-1.5">
-                                        {aiForensicResult[student.id].raw_events!.map((rev, rIdx) => (
-                                          <div key={rIdx} className="flex items-center justify-between border-b border-white/[0.03] pb-1 gap-2">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                              <span className="text-white/40 shrink-0">{rev.time}</span>
-                                              <span className={`px-1 rounded text-[7px] font-bold ${
-                                                rev.severity === 'HIGH' ? 'bg-rose-500/20 text-rose-400' :
-                                                rev.severity === 'MEDIUM' ? 'bg-amber-400/20 text-amber-300' :
-                                                'bg-white/10 text-white/70'
-                                              }`}>
-                                                {rev.event}
-                                              </span>
-                                              <span className="text-white/70 truncate">{rev.details || '-'}</span>
-                                            </div>
-                                            <span className="text-[7px] text-white/30 shrink-0">{rev.severity}</span>
-                                          </div>
-                                        ))}
-                                      </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                                  <div className="sm:col-span-2 space-y-1.5">
+                                    <label className="text-xs font-bold text-on-surface-variant block">
+                                      Nilai Remedial Guru (Skala 0 - 100)
+                                    </label>
+                                    <input 
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      className="w-full bg-surface-container-high border border-outline-variant/30 rounded-xl px-4 py-2.5 text-sm font-bold text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all disabled:opacity-50"
+                                      placeholder="Masukkan nilai akhir (0-100)..."
+                                      value={reviewScore || (student.remedialScore || '')}
+                                      onChange={(e) => setReviewScore(e.target.value)}
+                                      disabled={!isAdmin || student.remedialStatus === 'COMPLETED' || isSubmitting}
+                                    />
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    <button 
+                                      onClick={() => submitReview(student.id, 'review')}
+                                      disabled={!isAdmin || isSubmitting || !reviewScore || reviewingStudentId === student.id}
+                                      className="flex-1 py-2.5 px-4 bg-surface-container-highest hover:bg-outline-variant/30 text-on-surface text-xs font-bold rounded-xl border border-outline-variant/30 transition-all disabled:opacity-40"
+                                    >
+                                      {reviewingStudentId === student.id ? "Menyimpan..." : "Simpan Nilai"}
+                                    </button>
+
+                                    {student.teacherReviewed && (
+                                      <button 
+                                        onClick={() => submitReview(student.id, 'finalize')}
+                                        disabled={!isAdmin || isSubmitting || finalizingStudentId === student.id}
+                                        className="flex-1 py-2.5 px-4 bg-primary text-on-primary text-xs font-bold rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-40"
+                                      >
+                                        {finalizingStudentId === student.id ? "Finalisasi..." : "Finalisasi"}
+                                      </button>
                                     )}
                                   </div>
+                                </div>
+
+                                {student.teacherReviewed && student.remedialStatus !== 'COMPLETED' && (
+                                  <p className="text-xs text-teal-600 dark:text-teal-400 font-semibold italic">
+                                    Catatan: Nilai telah tersimpan. Klik tombol <strong>Finalisasi</strong> untuk memasukkan siswa ini ke batas KKM ({kkm}).
+                                  </p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Daftar Jawaban Essay Siswa */}
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <h5 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5">
+                                  <span>Jawaban Soal Essay Siswa</span>
+                                  {student.remedialAnswers && (
+                                    <span className="text-on-surface-variant/60 font-normal">({student.remedialAnswers.length} Soal)</span>
+                                  )}
+                                </h5>
+                                {student.essayScoreAuto !== undefined && (
+                                  <span className="text-xs font-bold text-primary">
+                                    Auto-Score Similarity: {student.essayScoreAuto}
+                                  </span>
                                 )}
                               </div>
 
-                              {/* Footer Actions */}
-                              <div className="flex justify-between items-center pt-2">
-                                <span className="text-[7px] font-mono text-on-surface-variant/40">
-                                  Live audit source: PostgreSQL / gm_attempt_logs
-                                </span>
+                              {(!student.remedialAnswers || student.remedialAnswers.length === 0) ? (
+                                <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/15 text-center text-xs text-on-surface-variant">
+                                  Belum ada jawaban essay yang diserahkan oleh siswa ini.
+                                </div>
+                              ) : (
+                                student.remedialAnswers.map((ans, aIdx) => {
+                                  const detail = student.essayAutoDetails?.[aIdx];
+                                  return (
+                                    <div key={aIdx} className="bg-surface-container rounded-xl p-4 border border-outline-variant/20 space-y-2.5 text-left">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="px-2 py-0.5 rounded-md bg-surface-container-high text-xs font-bold text-on-surface-variant">
+                                          Soal #{aIdx + 1}
+                                        </span>
+                                        {detail && (
+                                          <div className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                                            detail.similarity > 0.7 
+                                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+                                              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                                          }`}>
+                                            Tingkat Kemiripan: {Math.round(detail.similarity * 100)}%
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      <p className="text-xs font-semibold text-on-surface leading-relaxed">
+                                        {scoringConfig.remedialQuestions?.[aIdx] || `Pertanyaan ${aIdx + 1}`}
+                                      </p>
+
+                                      <div className="bg-surface-container-low p-3 rounded-xl border border-outline-variant/15 text-xs text-on-surface leading-relaxed font-mono">
+                                        <span className="text-[10px] font-bold text-on-surface-variant/60 block mb-1 font-body uppercase tracking-wider">Jawaban Siswa:</span>
+                                        {ans || <em className="text-on-surface-variant/40">Jawaban kosong</em>}
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* TAB 2: AUDIT SENSOR & KEAMANAN AI (CYBER-FORENSICS) */}
+                        {detailTab === 'security' && (
+                          <div className="bg-surface-container border border-outline-variant/20 rounded-2xl p-5 shadow-sm space-y-5 text-left">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                                  <Shield className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <h5 className="text-xs font-black uppercase tracking-wider text-on-surface">
+                                    AI Cyber-Forensics Telemetry Brain
+                                  </h5>
+                                  <p className="text-[11px] text-on-surface-variant">
+                                    Audit multi-vektor sensor sesi ujian &amp; telemetri browser
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => runAiForensic(student.id)}
-                                  className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant/50 hover:text-primary transition-colors flex items-center gap-1.5"
+                                  disabled={loadingSecurityAnalysis !== null}
+                                  className="px-3.5 py-1.5 rounded-xl bg-primary text-on-primary text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-50"
                                 >
-                                  <RotateCcw className="w-3 h-3" />
-                                  Audit Ulang AI
+                                  <Terminal size={13} />
+                                  <span>{loadingSecurityAnalysis === student.id ? 'Memindai...' : 'Jalankan Audit AI'}</span>
                                 </button>
                               </div>
                             </div>
-                          )}
-                        </div>
 
+                            {/* Loading State */}
+                            {loadingSecurityAnalysis === student.id && (
+                              <div className="bg-[#07090e] border border-cyan-900/50 rounded-xl p-4 font-mono text-xs text-cyan-400 space-y-2">
+                                <div className="flex items-center gap-2 font-bold pb-2 border-b border-cyan-900/50">
+                                  <Activity size={14} className="animate-spin" />
+                                  <span>Memproses Log Sensor Telemetri Siswa...</span>
+                                </div>
+                                <div className="space-y-1 text-[11px] text-slate-300 max-h-36 overflow-y-auto custom-scrollbar">
+                                  {forensicConsoleLogs.map((log, lIdx) => (
+                                    <div key={lIdx} className="leading-relaxed">&gt;&gt; {log}</div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
 
-                        {/* Evaluasi Guru Section */}
-                        {(student.remedialStatus === 'REMEDIAL' || student.remedialStatus === 'COMPLETED') && !student.isCheated && (
-                          <section className="mb-6">
-                            <h5 className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 mb-3 flex items-center gap-2">
-                              <span className="material-symbols-outlined text-sm">edit_note</span> Evaluasi Akademik
-                            </h5>
-                            <div className="bg-surface-container-low p-4 rounded-3xl border border-white/[0.03]">
-                               <div className="flex flex-col gap-4">
-                                  <div className="w-full">
-                                     <label className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/40 mb-2 block pl-1">Input Nilai Remedial (0-100)</label>
-                                     <input 
-                                       type="number"
-                                       className="w-full bg-surface-container-lowest border-none rounded-2xl p-4 text-sm font-black text-primary placeholder:text-on-surface-variant/20 focus:ring-1 focus:ring-tertiary/30 outline-none disabled:opacity-50"
-                                       placeholder="Murni..."
-                                       value={reviewScore || (student.remedialScore || '')}
-                                       onChange={(e) => setReviewScore(e.target.value)}
-                                       disabled={!isAdmin || student.remedialStatus === 'COMPLETED' || isSubmitting}
-                                     />
+                            {/* Initial Pre-scan Cards */}
+                            {!aiForensicResult[student.id] && loadingSecurityAnalysis !== student.id && (
+                              <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant/15 space-y-3">
+                                <p className="text-xs text-on-surface-variant leading-relaxed">
+                                  Tekan <strong>Jalankan Audit AI</strong> untuk menganalisis rekaman sensor perpindahan tab, stabilitas kamera, kecepatan pengerjaan, dan riwayat clipboard siswa ini.
+                                </p>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-semibold text-on-surface-variant">
+                                  <div className="p-2.5 rounded-lg bg-surface-container flex items-center gap-2 border border-outline-variant/10">
+                                    <Monitor size={14} className="text-primary" />
+                                    <span>Pindah Tab / Blur</span>
                                   </div>
-                                  {student.remedialStatus === 'REMEDIAL' && (
-                                    <div className="flex gap-2">
-                                       <button 
-                                         onClick={() => submitReview(student.id, 'review')}
-                                         disabled={!isAdmin || isSubmitting || !reviewScore || reviewingStudentId === student.id}
-                                         className="flex-1 py-3 bg-surface-bright text-primary text-[10px] font-black uppercase tracking-widest rounded-2xl disabled:opacity-30 border border-outline-variant active:scale-95 transition-transform disabled:cursor-not-allowed"
-                                       >
-                                         {reviewingStudentId === student.id ? "Menyimpan review..." : "Update"}
-                                       </button>
-                                       {student.teacherReviewed && (
-                                         <button 
-                                           onClick={() => submitReview(student.id, 'finalize')}
-                                           disabled={!isAdmin || isSubmitting || finalizingStudentId === student.id}
-                                           className="flex-1 py-3 bg-tertiary text-on-tertiary text-[10px] font-black uppercase tracking-widest rounded-2xl disabled:opacity-30 active:scale-95 transition-transform shadow-[0_0_20px_rgba(155,255,206,0.15)] disabled:cursor-not-allowed"
-                                         >
-                                           {finalizingStudentId === student.id ? "Finalisasi nilai..." : "Finalisasi"}
-                                         </button>
-                                       )}
+                                  <div className="p-2.5 rounded-lg bg-surface-container flex items-center gap-2 border border-outline-variant/10">
+                                    <Eye size={14} className="text-cyan-500" />
+                                    <span>Vision Proctoring</span>
+                                  </div>
+                                  <div className="p-2.5 rounded-lg bg-surface-container flex items-center gap-2 border border-outline-variant/10">
+                                    <Clock size={14} className="text-amber-500" />
+                                    <span>Kecepatan Jawab</span>
+                                  </div>
+                                  <div className="p-2.5 rounded-lg bg-surface-container flex items-center gap-2 border border-outline-variant/10">
+                                    <Copy size={14} className="text-purple-500" />
+                                    <span>Guard Clipboard</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Completed Forensic Report */}
+                            {aiForensicResult[student.id] && (
+                              <div className="space-y-4 animate-in fade-in duration-300">
+                                {/* Risk & Verdict Strip */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                  <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/15 flex flex-col items-center justify-center">
+                                    <span className="text-2xl font-black text-on-surface">
+                                      {aiForensicResult[student.id].risk_score}%
+                                    </span>
+                                    <span className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider mt-1">
+                                      Skor Risiko Anomali
+                                    </span>
+                                  </div>
+
+                                  <div className="sm:col-span-2 bg-surface-container-low p-4 rounded-xl border border-outline-variant/15 flex flex-col justify-between">
+                                    <div>
+                                      <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">
+                                        Hasil Analisis AI
+                                      </span>
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                                          aiForensicResult[student.id].risk_level === 'TINGGI'
+                                            ? 'bg-rose-500/15 text-rose-500 dark:text-rose-400'
+                                            : aiForensicResult[student.id].risk_level === 'SEDANG'
+                                            ? 'bg-amber-500/15 text-amber-500 dark:text-amber-400'
+                                            : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                        }`}>
+                                          {aiForensicResult[student.id].ai_verdict}
+                                        </span>
+                                        <span className="text-xs text-on-surface-variant">
+                                          Tingkat Risiko: <strong>{aiForensicResult[student.id].risk_level}</strong>
+                                        </span>
+                                      </div>
                                     </div>
-                                  )}
-                               </div>
-                               {student.teacherReviewed && student.remedialStatus !== 'COMPLETED' && (
-                                 <p className="mt-3 text-[9px] text-tertiary/70 font-bold tracking-tight text-center italic leading-tight">
-                                   Status: Koreksi tersimpan. Klik Finalisasi untuk memasukkan ke KKM ({kkm}).
-                                 </p>
-                               )}
-                            </div>
-                          </section>
-                        )}
+                                    <span className="text-[10px] text-on-surface-variant/60 font-mono mt-2">
+                                      Engine: {aiForensicResult[student.id].engine_model || 'Groq AI'}
+                                    </span>
+                                  </div>
+                                </div>
 
-                        {/* Answers List */}
-                        <section className="space-y-4">
-                           <h5 className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 flex justify-between items-center">
-                              <span>Jawaban Siswa</span>
-                              <span className="text-tertiary-dim lowercase">Auto Score: {student.essayScoreAuto || 0}</span>
-                           </h5>
-                           {student.remedialAnswers?.map((ans, idx) => {
-                             const detail = student.essayAutoDetails?.[idx];
-                             return (
-                               <div key={idx} className="bg-surface-container-lowest p-4 rounded-3xl border border-white/[0.03]">
-                                  <div className="flex justify-between items-center mb-3">
-                                     <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/30">Soal {idx + 1}</span>
-                                     {detail && (
-                                       <div className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${
-                                         detail.similarity > 0.7 ? 'bg-tertiary/10 text-tertiary' : 'bg-error/10 text-error'
-                                       }`}>
-                                          Matches: {Math.round(detail.similarity * 100)}%
-                                       </div>
-                                     )}
+                                {/* Telemetry Metrics Grid */}
+                                {aiForensicResult[student.id].telemetry_metrics && (
+                                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+                                    <div className="bg-surface-container-low p-3 rounded-xl border border-outline-variant/10">
+                                      <span className="text-[10px] text-on-surface-variant font-medium block">Durasi Sesi</span>
+                                      <span className="font-bold text-on-surface mt-0.5 block">
+                                        {aiForensicResult[student.id].telemetry_metrics?.duration_minutes}m / {aiForensicResult[student.id].telemetry_metrics?.allocated_minutes}m
+                                      </span>
+                                    </div>
+                                    <div className="bg-surface-container-low p-3 rounded-xl border border-outline-variant/10">
+                                      <span className="text-[10px] text-on-surface-variant font-medium block">Pindah Tab / Blur</span>
+                                      <span className={`font-bold mt-0.5 block ${
+                                        (aiForensicResult[student.id].telemetry_metrics?.tab_switches ?? 0) > 0 ? 'text-amber-500' : 'text-on-surface'
+                                      }`}>
+                                        {aiForensicResult[student.id].telemetry_metrics?.tab_switches}x
+                                      </span>
+                                    </div>
+                                    <div className="bg-surface-container-low p-3 rounded-xl border border-outline-variant/10">
+                                      <span className="text-[10px] text-on-surface-variant font-medium block">Page Reload</span>
+                                      <span className="font-bold text-on-surface mt-0.5 block">
+                                        {aiForensicResult[student.id].telemetry_metrics?.reloads}x
+                                      </span>
+                                    </div>
+                                    <div className="bg-surface-container-low p-3 rounded-xl border border-outline-variant/10">
+                                      <span className="text-[10px] text-on-surface-variant font-medium block">Copy / Paste</span>
+                                      <span className="font-bold text-on-surface mt-0.5 block">
+                                        {aiForensicResult[student.id].telemetry_metrics?.copy_pastes}x
+                                      </span>
+                                    </div>
+                                    <div className="bg-surface-container-low p-3 rounded-xl border border-outline-variant/10">
+                                      <span className="text-[10px] text-on-surface-variant font-medium block">Kamera Anomali</span>
+                                      <span className="font-bold text-on-surface mt-0.5 block">
+                                        {aiForensicResult[student.id].telemetry_metrics?.vision_violations ?? 0}
+                                      </span>
+                                    </div>
                                   </div>
-                                  <p className="text-[11px] font-bold text-on-surface-variant/60 leading-relaxed mb-3">&quot;{scoringConfig.remedialQuestions?.[idx]}&quot;</p>
-                                  <div className="bg-surface-container-high/40 p-3 rounded-2xl text-[11px] font-medium text-primary italic leading-relaxed border-l-2 border-tertiary/40">
-                                     &quot;{ans || 'Kosong'}&quot;
+                                )}
+
+                                {/* Threat summary */}
+                                {aiForensicResult[student.id]?.threat_vector_summary && (
+                                  <div className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant/15 text-xs">
+                                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">
+                                      Sintesis Forensik:
+                                    </span>
+                                    <p className="text-on-surface leading-relaxed">
+                                      {aiForensicResult[student.id]?.threat_vector_summary}
+                                    </p>
                                   </div>
-                               </div>
-                             );
-                           })}
-                        </section>
-                     </div>
-                   )}
-                </div>
-              );
-            })
-          )}
-        </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
       </main>
 
-      {/* Sticky Bottom Actions */}
+      {/* Sticky Bottom Actions (Saat Sesi Aktif) */}
       {activeSessionId && (
-        <div className="fixed bottom-0 w-full z-40 px-6 pb-6 pt-4 bg-gradient-to-t from-surface via-surface/90 to-transparent pointer-events-none">
-           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 flex flex-col md:flex-row gap-3 pointer-events-auto items-center">
-              <div className="flex gap-3 w-full md:w-auto flex-1">
-                <button 
-                  onClick={() => setIsEditing(true)}
-                  disabled={!activeSessionId}
-                  className="flex-1 h-14 bg-gradient-to-br from-[#f9f9f9] to-[#a0a1a1] text-on-primary-container rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 premium-shadow active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale"
-                >
-                  <span className="material-symbols-outlined">auto_fix_high</span>
-                  Atur Soal
-                </button>
-                <button 
-                  onClick={generateAndCopyPendingList}
-                  disabled={!activeSessionId || isEditing}
-                  className={`flex-1 h-14 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50 premium-shadow ${
-                    copied 
-                      ? 'bg-tertiary text-on-tertiary' 
-                      : 'bg-surface-container border-2 border-error/40 text-error hover:bg-error/10'
-                  }`}
-                >
-                  <span className="material-symbols-outlined">{copied ? 'check_circle' : 'content_copy'}</span>
-                  {copied ? 'Tersalin' : 'Tagih Siswa'}
-                </button>
-              </div>
+        <div className="fixed bottom-0 w-full z-40 px-4 sm:px-6 pb-5 pt-3 bg-gradient-to-t from-surface via-surface/90 to-transparent pointer-events-none">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row gap-3 pointer-events-auto items-center justify-between">
+            <div className="flex gap-2.5 w-full sm:w-auto flex-1">
               <button 
-                onClick={onBack}
-                className="w-full md:w-auto px-6 py-4 text-on-surface-variant/70 hover:text-primary transition-colors text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 bg-surface-container hover:bg-surface-container-high rounded-2xl"
+                onClick={() => setIsEditing(true)}
+                disabled={!activeSessionId}
+                className="flex-1 sm:flex-initial px-5 py-3 bg-primary text-on-primary rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
               >
-                 <span className="material-symbols-outlined text-sm">arrow_back</span>
-                 Menu Utama
+                <Sliders size={15} />
+                <span>Atur Soal Remedial</span>
               </button>
-           </div>
+              <button 
+                onClick={generateAndCopyPendingList}
+                disabled={!activeSessionId || isEditing}
+                className={`flex-1 sm:flex-initial px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md ${
+                  copied 
+                    ? 'bg-emerald-600 text-white' 
+                    : 'bg-surface-container border border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10'
+                }`}
+              >
+                <Copy size={15} />
+                <span>{copied ? 'Tersalin!' : 'Tagih Siswa (Salin)'}</span>
+              </button>
+            </div>
+
+            <button 
+              onClick={onBack}
+              className="w-full sm:w-auto px-4 py-3 text-on-surface-variant hover:text-on-surface transition-colors text-xs font-bold flex items-center justify-center gap-2 bg-surface-container hover:bg-surface-container-high rounded-xl border border-outline-variant/20"
+            >
+              <ArrowLeft size={14} />
+              <span>Menu Utama</span>
+            </button>
+          </div>
         </div>
       )}
 
