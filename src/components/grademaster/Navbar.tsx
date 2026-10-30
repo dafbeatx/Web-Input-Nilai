@@ -61,8 +61,41 @@ export default function Navbar() {
     () => false
   );
 
-  // Hidden in iframe/embed mode, behavior page (uses its own nav), exam, auth, and student profile/lesson layers
-  const isHidden = isEmbedMode || pathname?.startsWith('/behavior') || ['login', 'student_login', 'student_claim', 'teacher_claim', 'remedial', 'lesson_management', 'grading', 'student_profile', 'student_lesson'].includes(layer);
+  // Synchronously track browser hash for instantaneous zero-flicker routing
+  const currentHash = useSyncExternalStore(
+    (callback) => {
+      if (typeof window === 'undefined') return () => {};
+      window.addEventListener('hashchange', callback);
+      window.addEventListener('popstate', callback);
+      return () => {
+        window.removeEventListener('hashchange', callback);
+        window.removeEventListener('popstate', callback);
+      };
+    },
+    () => (typeof window !== 'undefined' ? window.location.hash.replace('#', '') : ''),
+    () => ''
+  );
+
+  // Dedicated full-screen workspaces / classrooms / auth screens that must NEVER display the desktop sidebar
+  const DEDICATED_FULLSCREEN_LAYERS = [
+    'login',
+    'student_login',
+    'student_claim',
+    'teacher_claim',
+    'remedial',
+    'lesson_management',
+    'remedial_management',
+    'data_center',
+    'grading',
+    'student_profile',
+    'student_lesson',
+    'oral_exams',
+    'game_management',
+    'certificate_management'
+  ];
+
+  const isDedicatedLayer = DEDICATED_FULLSCREEN_LAYERS.includes(layer) || DEDICATED_FULLSCREEN_LAYERS.includes(currentHash);
+  const isHidden = isEmbedMode || pathname?.startsWith('/behavior') || isDedicatedLayer;
 
   useEffect(() => {
     if (!isHidden) {
