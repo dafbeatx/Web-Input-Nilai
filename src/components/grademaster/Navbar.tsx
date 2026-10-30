@@ -169,11 +169,11 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Floating Desktop Menu Trigger (Only visible on non-dedicated pages when drawer is closed) */}
+      {/* Floating Desktop Menu Trigger — pinned to top-right corner, never overlaps page content */}
       {!isDesktopSidebarOpen && (
         <button
           onClick={() => setIsDesktopSidebarOpen(true)}
-          className="hidden md:flex fixed top-4 left-4 z-40 items-center gap-2 px-3.5 py-2 bg-white/95 hover:bg-white text-slate-700 hover:text-slate-900 rounded-2xl shadow-lg border border-slate-200/80 backdrop-blur-md transition-all duration-200 hover:scale-105 active:scale-95 text-xs font-bold font-outfit cursor-pointer"
+          className="hidden md:flex fixed top-4 right-4 z-40 items-center gap-2 px-3.5 py-2 bg-white/95 hover:bg-white text-slate-700 hover:text-slate-900 rounded-2xl shadow-lg border border-slate-200/80 backdrop-blur-md transition-all duration-200 hover:scale-105 active:scale-95 text-xs font-bold font-outfit cursor-pointer"
           title="Buka Menu Navigasi"
         >
           <Menu size={16} />

@@ -522,7 +522,7 @@ export default function HomeLayer(props: HomeLayerProps) {
   }, [expandedGroup]);
 
   return (
-    <main className="flex-1 min-h-screen pt-2 md:pt-[env(safe-area-inset-top,20px)] mt-2 md:mt-24 pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-32 px-3 sm:px-6 lg:px-8 flex flex-col gap-4 md:gap-6 max-w-7xl 2xl:max-w-[1536px] mx-auto w-full animate-in fade-in transition-all duration-300">
+    <main className="flex-1 min-h-screen pt-2 md:pt-[env(safe-area-inset-top,20px)] mt-2 md:mt-4 pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-32 px-3 sm:px-6 lg:px-8 flex flex-col gap-4 md:gap-6 max-w-7xl 2xl:max-w-[1536px] mx-auto w-full animate-in fade-in transition-all duration-300">
       
       {/* Personalized Identity Section with Academic Year */}
       {!expandedGroup && (
