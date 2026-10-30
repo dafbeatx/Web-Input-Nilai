@@ -43,7 +43,6 @@ export function exportToPDF(data: ExportData) {
 
   const totalStudents = gradedStudents.length;
   const passCount = gradedStudents.filter(s => s.finalScore >= kkm).length;
-  const remCount = totalStudents - passCount;
   const passPercent = totalStudents > 0 ? Math.round((passCount / totalStudents) * 100) : 0;
 
   // Header Title and Logo
@@ -309,7 +308,6 @@ export function exportToDOCX(data: ExportData) {
 
   const totalStudents = gradedStudents.length;
   const passCount = gradedStudents.filter(s => s.finalScore >= kkm).length;
-  const remCount = totalStudents - passCount;
   const passPercent = totalStudents > 0 ? Math.round((passCount / totalStudents) * 100) : 0;
 
   // Create student list rows HTML
