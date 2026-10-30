@@ -1,77 +1,44 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ArrowLeft, 
   Sparkles, 
   CheckCircle2, 
-  FileText, 
-  Loader2,
-  Send,
-  CloudUpload,
-  Bot,
-  Search,
-  Trash2,
-  X,
-  Play,
-  Video,
-  ExternalLink
+  BookOpen, 
+  Loader2, 
+  Search, 
+  Trash2, 
+  X, 
+  Play, 
+  Video, 
+  VideoOff, 
+  ExternalLink, 
+  Plus, 
+  Filter, 
+  Calendar, 
+  Layers, 
+  Check, 
+  HelpCircle,
+  Eye,
+  Edit2
 } from 'lucide-react';
-import { DailyLesson, Quiz, ToastType } from '@/lib/grademaster/types';
+import { DailyLesson, ToastType } from '@/lib/grademaster/types';
 import { supabase } from '@/lib/supabase/client';
 import { 
-  generateAILessonContent, 
   createLesson, 
   fetchAllLessons, 
-  deleteLesson 
+  deleteLesson,
+  generateAILessonContent
 } from '@/lib/grademaster/lessonActions';
 import { parseLessonToSlides } from '@/lib/grademaster/lessonParser';
-import { extractYouTubeId, getYouTubeEmbedUrl, getYouTubeThumbnailUrl, injectYouTubeTag, stripYouTubeTag } from '@/lib/grademaster/youtubeHelper';
-
-const getSubjectExample = (subject: string): { daily: string; quiz: string } => {
-  const examples: Record<string, { daily: string; quiz: string }> = {
-    'Matematika': {
-      daily: 'Aljabar dasar dan persamaan linear',
-      quiz: '5 soal pilihan ganda tentang persamaan linear satu variabel'
-    },
-    'Bahasa Indonesia': {
-      daily: 'Struktur teks deskripsi dan unsur kebahasaannya',
-      quiz: '5 soal pilihan ganda mengenai struktur teks deskripsi'
-    },
-    'IPA': {
-      daily: 'Klasifikasi makhluk hidup atau sistem tata surya',
-      quiz: '5 soal pilihan ganda tentang klasifikasi makhluk hidup'
-    },
-    'IPS': {
-      daily: 'Kondisi geografis Indonesia dan interaksi antarruang',
-      quiz: '5 soal pilihan ganda tentang kondisi geografis Indonesia'
-    },
-    'Bahasa Inggris': {
-      daily: 'Introducing oneself and greeting others in formal situations',
-      quiz: '5 multiple choice questions on self-introduction greetings'
-    },
-    'PAI': {
-      daily: 'Perilaku jujur, amanah, dan istiqamah dalam kehidupan sehari-hari',
-      quiz: '5 soal pilihan ganda tentang perilaku jujur dan amanah'
-    },
-    'PJOK': {
-      daily: 'Teknik dasar sepak bola seperti passing dan dribbling',
-      quiz: '5 soal pilihan ganda tentang teknik dasar sepak bola'
-    },
-    'Seni Budaya': {
-      daily: 'Menggambar flora, fauna, dan benda alam dengan teknik arsir',
-      quiz: '5 soal pilihan ganda tentang teknik menggambar flora dan fauna'
-    },
-    'Informatika': {
-      daily: 'Pengenalan algoritma pemrograman dan flowchart dasar',
-      quiz: '5 soal pilihan ganda tentang algoritma dan flowchart dasar'
-    }
-  };
-  return examples[subject] || {
-    daily: 'Topik materi pelajaran yang ingin diajarkan hari ini',
-    quiz: 'Cakupan materi soal yang ingin diujikan'
-  };
-};
+import { 
+  extractYouTubeId, 
+  getYouTubeEmbedUrl, 
+  getYouTubeThumbnailUrl, 
+  injectYouTubeTag, 
+  stripYouTubeTag 
+} from '@/lib/grademaster/youtubeHelper';
 
 interface LessonManagementLayerProps {
   onBack: () => void;
@@ -82,1213 +49,884 @@ interface LessonManagementLayerProps {
   semester?: string;
 }
 
-interface QuizQuestion {
-  question?: string;
-  text?: string;
-  options?: string[];
-  correctAnswer?: string;
-  answer?: string;
-  type?: 'mcq' | 'essay';
-}
-
-interface AiResultData {
-  preview: string;
-  chatPrompt: string;
-  questions: QuizQuestion[];
-}
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  options?: { label: string; action?: () => void; actionType?: string; payload?: string }[];
-  fileUpload?: boolean;
-}
-
-const getWelcomeMessage = (): ChatMessage => ({
-  role: 'assistant',
-  content: `Halo Guru/Admin! Saya adalah **Asisten Kurikulum AI GradeMaster**. 🤖🎓\n\nSaya di sini untuk membantu Anda membuat materi pelajaran harian, kuis interaktif, atau merangkum naskah dokumen menggunakan mesin cerdas Groq Llama.\n\nSilakan pilih opsi kerja yang ingin Anda lakukan hari ini:`,
-  options: [
-    { label: "📘 Buat Pelajaran Harian", actionType: 'START_FLOW', payload: 'daily' },
-    { label: "📝 Manajemen Ulangan Harian", actionType: 'START_FLOW', payload: 'quiz' },
-    { label: "📂 NotebookLM (Upload PDF/DOCX)", actionType: 'START_FLOW', payload: 'notebook' },
-    { label: "🎓 Ujian Susulan UTS / UAS", actionType: 'START_FLOW', payload: 'susulan' }
-  ]
-});
+const DEFAULT_SUBJECTS = [
+  'Matematika', 
+  'Bahasa Indonesia', 
+  'IPA', 
+  'IPS', 
+  'Bahasa Inggris', 
+  'PAI', 
+  'PJOK', 
+  'Seni Budaya', 
+  'Informatika'
+];
 
 export default function LessonManagementLayer({
   onBack,
   setToast,
   academicYear = '2025/2026',
-  schoolLevel = 'SMA',
+  schoolLevel = 'SMP',
   semester = 'Ganjil'
 }: LessonManagementLayerProps) {
-  // Conversational Flow States
-  const [messages, setMessages] = useState<ChatMessage[]>([getWelcomeMessage()]);
-  const [inputValue, setInputValue] = useState('');
-  const [isAiResponding, setIsAiResponding] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [historyLessons, setHistoryLessons] = useState<DailyLesson[]>([]);
-  const [historySearchQuery, setHistorySearchQuery] = useState('');
-  const [youtubeUrl, setYoutubeUrl] = useState('');
-  const [editVideoUrl, setEditVideoUrl] = useState('');
+  // Lessons data state
+  const [lessons, setLessons] = useState<DailyLesson[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Filter & Search states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedClassFilter, setSelectedClassFilter] = useState('ALL');
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('ALL');
+  const [selectedVideoFilter, setSelectedVideoFilter] = useState<'ALL' | 'WITH_VIDEO' | 'NO_VIDEO'>('ALL');
+
+  // Modals state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [previewLesson, setPreviewLesson] = useState<DailyLesson | null>(null);
+  const [editVideoLesson, setEditVideoLesson] = useState<DailyLesson | null>(null);
+  const [editVideoUrlInput, setEditVideoUrlInput] = useState('');
   const [isUpdatingVideo, setIsUpdatingVideo] = useState(false);
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
 
-  // Selected config during chat
-  const [flowType, setFlowType] = useState<'daily' | 'quiz' | 'notebook' | 'susulan' | null>(null);
-  const [selectedClass, setSelectedClass] = useState<string>('');
-  const [selectedSubject, setSelectedSubject] = useState<string>('');
-  const [extractedText, setExtractedText] = useState<string>('');
-  
-  // Susulan specific configuration
-  const [selectedYear, setSelectedYear] = useState(academicYear);
-  const [susulanType, setSusulanType] = useState<'Susulan UTS' | 'Susulan UAS' | null>(null);
-  const [awaitingCustomYear, setAwaitingCustomYear] = useState(false);
+  // Create Form State
+  const defaultClasses = schoolLevel === 'SMA' 
+    ? ['Kelas 10', 'Kelas 11', 'Kelas 12'] 
+    : ['Kelas 7', 'Kelas 8', 'Kelas 9'];
 
-  // AI Generated Results (Pending Publish/Draft)
-  const [aiResult, setAiResult] = useState<AiResultData | null>(null);
+  const [formClass, setFormClass] = useState(defaultClasses[0]);
+  const [formSubject, setFormSubject] = useState(DEFAULT_SUBJECTS[0]);
+  const [formTopic, setFormTopic] = useState('');
+  const [formYoutubeUrl, setFormYoutubeUrl] = useState('');
+  const [formContent, setFormContent] = useState('');
+  const [formIsPublished, setFormIsPublished] = useState(true);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Ref to store the latest states and avoid stale closures in saved state actions
-  const chatStateRef = useRef({
-    flowType: null as 'daily' | 'quiz' | 'notebook' | 'susulan' | null,
-    selectedClass: '',
-    selectedSubject: '',
-    extractedText: '',
-    aiResult: null as AiResultData | null,
-    selectedYear: academicYear,
-    susulanType: null as 'Susulan UTS' | 'Susulan UAS' | null,
-    youtubeUrl: ''
-  });
-
-  // Keep ref in sync with state
-  useEffect(() => {
-    chatStateRef.current = {
-      flowType,
-      selectedClass,
-      selectedSubject,
-      extractedText,
-      aiResult,
-      selectedYear,
-      susulanType,
-      youtubeUrl
-    };
-  }, [flowType, selectedClass, selectedSubject, extractedText, aiResult, selectedYear, susulanType, youtubeUrl]);
-
-  // Lesson Preview Modal
-  const [previewingLesson, setPreviewingLesson] = useState<DailyLesson | null>(null);
-  const [previewingQuizzes, setPreviewingQuizzes] = useState<Quiz[]>([]);
-  const [isLoadingPreviewQuizzes, setIsLoadingPreviewQuizzes] = useState(false);
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const aiResultRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const subjects = [
-    'Matematika', 'Bahasa Indonesia', 'IPA', 'IPS', 
-    'Bahasa Inggris', 'PAI', 'PJOK', 'Seni Budaya', 'Informatika'
-  ];
-
-  // Auto-scroll chat to bottom or to aiResult when generated
-  useEffect(() => {
-    if (aiResult) {
-      setTimeout(() => {
-        aiResultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-    } else if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, isAiResponding, aiResult]);
-
-  const loadHistory = async () => {
+  // Load lessons from DB
+  const loadLessons = async () => {
+    setIsLoading(true);
     try {
       const data = await fetchAllLessons();
-      setHistoryLessons(data);
+      setLessons(data);
     } catch (err) {
-      console.error("Gagal memuat riwayat pelajaran:", err);
+      console.error("Gagal memuat modul:", err);
+      setToast({ message: "Gagal memuat daftar modul pelajaran", type: 'error' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const resetChatToInit = () => {
-    setFlowType(null);
-    setSelectedClass('');
-    setSelectedSubject('');
-    setExtractedText('');
-    setAiResult(null);
-    setSelectedYear(academicYear);
-    setSusulanType(null);
-    setAwaitingCustomYear(false);
-    setYoutubeUrl('');
-    chatStateRef.current = {
-      flowType: null,
-      selectedClass: '',
-      selectedSubject: '',
-      extractedText: '',
-      aiResult: null,
-      selectedYear: academicYear,
-      susulanType: null,
-      youtubeUrl: ''
-    };
-    setMessages([getWelcomeMessage()]);
-  };
-
-  // Load history list on mount (safely using active-flag clean-up pattern)
   useEffect(() => {
-    let active = true;
-    const fetchHistory = async () => {
-      try {
-        const data = await fetchAllLessons();
-        if (active) {
-          setHistoryLessons(data);
-        }
-      } catch (err) {
-        console.error("Gagal memuat riwayat pelajaran:", err);
-      }
-    };
-    fetchHistory();
-    return () => {
-      active = false;
-    };
+    loadLessons();
   }, []);
 
-  const handleOptionClick = (actionType: string, payload: string | undefined, label: string) => {
-    if (!payload && actionType !== 'RESET' && actionType !== 'CUSTOM_YEAR') return;
-    switch (actionType) {
-      case 'START_FLOW':
-        startFlow(payload as 'daily' | 'quiz' | 'notebook' | 'susulan', label);
-        break;
-      case 'SELECT_CLASS':
-        selectClass(payload as string);
-        break;
-      case 'SELECT_SUBJECT':
-        selectSubject(payload as string);
-        break;
-      case 'SELECT_YEAR':
-        selectYear(payload as string);
-        break;
-      case 'CUSTOM_YEAR':
-        startCustomYearInput();
-        break;
-      case 'SELECT_SUSULAN_TYPE':
-        selectSusulanType(payload as 'Susulan UTS' | 'Susulan UAS');
-        break;
-      case 'RESET':
-        resetChatToInit();
-        break;
-      default:
-        break;
-    }
-  };
+  // Filtered lessons
+  const filteredLessons = useMemo(() => {
+    return lessons.filter((lesson) => {
+      const matchSearch = !searchQuery.trim() || 
+        lesson.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lesson.class_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (lesson.content && lesson.content.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  const startFlow = (type: 'daily' | 'quiz' | 'notebook' | 'susulan', label: string) => {
-    setFlowType(type);
-    chatStateRef.current.flowType = type;
-    setMessages(prev => [
-      ...prev,
-      { role: 'user', content: label },
-      {
-        role: 'assistant',
-        content: type === 'susulan' 
-          ? "Baik, silakan tentukan tingkatan kelas untuk Ujian Susulan ini:" 
-          : type === 'notebook'
-          ? "Baik, silakan tentukan tingkatan kelas materi dokumen:"
-          : type === 'quiz'
-          ? "Baik, silakan tentukan tingkatan kelas kuis:"
-          : "Bagus! Silakan pilih tingkatan kelas pelajaran ini:",
-        options: schoolLevel === 'SMA' ? [
-          { label: "Kelas 10", actionType: 'SELECT_CLASS', payload: 'Kelas 10' },
-          { label: "Kelas 11", actionType: 'SELECT_CLASS', payload: 'Kelas 11' },
-          { label: "Kelas 12", actionType: 'SELECT_CLASS', payload: 'Kelas 12' }
-        ] : [
-          { label: "Kelas 7", actionType: 'SELECT_CLASS', payload: 'Kelas 7' },
-          { label: "Kelas 8", actionType: 'SELECT_CLASS', payload: 'Kelas 8' },
-          { label: "Kelas 9", actionType: 'SELECT_CLASS', payload: 'Kelas 9' }
-        ]
-      }
-    ]);
-  };
+      const matchClass = selectedClassFilter === 'ALL' || lesson.class_name === selectedClassFilter;
+      const matchSubject = selectedSubjectFilter === 'ALL' || lesson.subject === selectedSubjectFilter;
 
-  const selectClass = (cls: string) => {
-    setSelectedClass(cls);
-    chatStateRef.current.selectedClass = cls;
-    setMessages(prev => [
-      ...prev,
-      { role: 'user', content: cls },
-      {
-        role: 'assistant',
-        content: `Materi berlaku untuk semua section di **${cls}**. Sekarang, pilih mata pelajaran:`,
-        options: subjects.map(sub => ({
-          label: sub,
-          actionType: 'SELECT_SUBJECT',
-          payload: sub
-        }))
-      }
-    ]);
-  };
+      const hasVideo = Boolean(extractYouTubeId(lesson.video_url || lesson.content));
+      const matchVideo = 
+        selectedVideoFilter === 'ALL' || 
+        (selectedVideoFilter === 'WITH_VIDEO' && hasVideo) || 
+        (selectedVideoFilter === 'NO_VIDEO' && !hasVideo);
 
-  const selectYear = (year: string) => {
-    setSelectedYear(year);
-    chatStateRef.current.selectedYear = year;
-    setMessages(prev => [
-      ...prev,
-      { role: 'user', content: `Tahun Ajaran: ${year}` },
-      {
-        role: 'assistant',
-        content: "Silakan pilih jenis Ujian Susulan yang ingin dibuat:",
-        options: [
-          { label: "Susulan UTS (Tengah Semester)", actionType: 'SELECT_SUSULAN_TYPE', payload: 'Susulan UTS' },
-          { label: "Susulan UAS (Akhir Semester)", actionType: 'SELECT_SUSULAN_TYPE', payload: 'Susulan UAS' }
-        ]
-      }
-    ]);
-  };
+      return matchSearch && matchClass && matchSubject && matchVideo;
+    });
+  }, [lessons, searchQuery, selectedClassFilter, selectedSubjectFilter, selectedVideoFilter]);
 
-  const startCustomYearInput = () => {
-    setAwaitingCustomYear(true);
-    setMessages(prev => [
-      ...prev,
-      { role: 'user', content: "Ketik Tahun Ajaran Lain" },
-      {
-        role: 'assistant',
-        content: "Silakan ketik tahun ajaran baru di kolom chat di bawah ini (contoh: 2026/2027 atau 2027/2028):"
-      }
-    ]);
-  };
+  // Statistics
+  const totalCount = lessons.length;
+  const withVideoCount = lessons.filter(l => extractYouTubeId(l.video_url || l.content)).length;
+  const publishedCount = lessons.filter(l => l.is_published).length;
+  const draftCount = totalCount - publishedCount;
 
-  const selectSusulanType = (type: 'Susulan UTS' | 'Susulan UAS') => {
-    setSusulanType(type);
-    chatStateRef.current.susulanType = type;
-    
-    const activeSubject = chatStateRef.current.selectedSubject;
-    const activeClass = chatStateRef.current.selectedClass;
-    const activeYear = chatStateRef.current.selectedYear;
-    const example = getSubjectExample(activeSubject);
-
-    setMessages(prev => [
-      ...prev,
-      { role: 'user', content: type },
-      {
-        role: 'assistant',
-        content: `Mata Pelajaran: ${activeSubject} • Kelas: ${activeClass} • Tahun Ajaran: ${activeYear} • Jenis Ujian: ${type}\n\nSilakan tuliskan topik, deskripsi kisi-kisi atau upload naskah dokumen soal untuk Ujian Susulan ini (contoh: ${example.quiz}):`
-      }
-    ]);
-  };
-
-  const selectSubject = (sub: string) => {
-    setSelectedSubject(sub);
-    chatStateRef.current.selectedSubject = sub;
-    
-    const activeFlow = chatStateRef.current.flowType;
-    const activeClass = chatStateRef.current.selectedClass;
-    const example = getSubjectExample(sub);
-
-    if (activeFlow === 'susulan') {
-      setMessages(prev => [
-        ...prev,
-        { role: 'user', content: sub },
-        {
-          role: 'assistant',
-          content: `Baik, Anda memilih ${sub} untuk ${activeClass}.\n\nTahun ajaran aktif saat ini adalah **${academicYear}**. Apakah Anda ingin menggunakan tahun ajaran ini atau mengubahnya?`,
-          options: [
-            { label: `Gunakan ${academicYear}`, actionType: 'SELECT_YEAR', payload: academicYear },
-            { label: "Ketik Tahun Ajaran Lain", actionType: 'CUSTOM_YEAR' }
-          ]
-        }
-      ]);
+  // Auto-generate lesson content using AI
+  const handleGenerateAI = async () => {
+    if (!formTopic.trim()) {
+      setToast({ message: "Silakan isi topik/materi terlebih dahulu untuk dirangkum AI", type: 'error' });
       return;
     }
- 
-    let nextContent = '';
-    let fileUploadRequired = false;
- 
-    if (activeFlow === 'daily') {
-      nextContent = `Baik, Anda memilih ${sub} untuk ${activeClass}.\n\nSilakan tuliskan topik atau deskripsi singkat materi yang ingin dibuat (contoh: ${example.daily}).`;
-    } else if (activeFlow === 'quiz') {
-      nextContent = `Baik, Anda memilih ${sub} untuk ${activeClass}.\n\nSilakan tuliskan cakupan topik ujian atau kisi-kisi soal yang Anda inginkan (contoh: ${example.quiz}).`;
-    } else if (activeFlow === 'notebook') {
-      nextContent = `Baik, Anda memilih ${sub} untuk ${activeClass}.\n\nSilakan unggah dokumen materi Anda (.pdf, .docx, atau .txt) untuk diolah AI:`;
-      fileUploadRequired = true;
-    }
 
-    setMessages(prev => [
-      ...prev,
-      { role: 'user', content: sub },
-      {
-        role: 'assistant',
-        content: nextContent,
-        fileUpload: fileUploadRequired
+    setIsGeneratingAI(true);
+    try {
+      const prompt = `Topik: ${formTopic.trim()}\nMata Pelajaran: ${formSubject}\nKelas: ${formClass}`;
+      const result = await generateAILessonContent(prompt, formSubject, 'daily');
+      
+      if (result && result.preview) {
+        setFormContent(result.preview);
+        setToast({ message: "Rangkuman materi berhasil dibuat oleh AI! ✨", type: 'success' });
       }
-    ]);
+    } catch (err) {
+      console.error(err);
+      setToast({ message: "Gagal menyusun materi dengan AI", type: 'error' });
+    } finally {
+      setIsGeneratingAI(false);
+    }
   };
 
-  // Handle standard user text submit (during prompt input)
-  const handleFormSubmit = async (e: React.FormEvent) => {
+  // Submit new lesson
+  const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || isAiResponding) return;
-
-    const userText = inputValue.trim();
-    setInputValue('');
-
-    if (awaitingCustomYear) {
-      setAwaitingCustomYear(false);
-      selectYear(userText);
+    if (!formTopic.trim() && !formContent.trim()) {
+      setToast({ message: "Harap isi topik atau materi pembelajaran", type: 'error' });
       return;
     }
 
-    setMessages(prev => [
-      ...prev,
-      { role: 'user', content: userText }
-    ]);
-
-    setIsAiResponding(true);
-
-    const activeFlow = chatStateRef.current.flowType;
-    const activeSubject = chatStateRef.current.selectedSubject;
-
+    setIsSubmitting(true);
     try {
-      if (activeFlow === 'daily' || activeFlow === 'quiz' || activeFlow === 'susulan') {
-        const result = await generateAILessonContent(userText, activeSubject, activeFlow === 'susulan' ? 'quiz' : activeFlow);
-        setAiResult(result);
-        chatStateRef.current.aiResult = result;
-
-        let successContent = '';
-        if (activeFlow === 'daily') {
-          successContent = `✨ **Groq AI berhasil merumuskan materi pelajaran!**\n\nSilakan tinjau draf materi di bawah ini sebelum mempublikasikannya ke siswa.`;
-        } else if (activeFlow === 'quiz') {
-          successContent = `✨ **Groq AI berhasil merumuskan kuis / soal evaluasi!**\n\nSilakan tinjau draf kuis di bawah ini sebelum mempublikasikannya ke siswa.`;
-        } else {
-          successContent = `✨ **Groq AI berhasil merumuskan materi ujian susulan!**\n\nSilakan tinjau draf kuis di bawah ini sebelum mempublikasikannya ke siswa.`;
-        }
-
-        setMessages(prev => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: successContent
-          }
-        ]);
-      }
-    } catch (err) {
-      console.error(err);
-      const errMsg = err instanceof Error ? err.message : "Terjadi kesalahan";
-      setMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: `⚠️ Gagal memproses AI: ${errMsg}` }
-      ]);
-    } finally {
-      setIsAiResponding(false);
-    }
-  };
-
-  // Handle Notebook File Upload & Extraction
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    setMessages(prev => [
-      ...prev,
-      { role: 'user', content: `Mengunggah berkas: ${file.name}` }
-    ]);
-
-    const activeSubject = chatStateRef.current.selectedSubject;
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const res = await fetch('/api/grademaster/lessons/parse-content', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Gagal membaca isi dokumen.');
-
-      setExtractedText(data.text);
-      chatStateRef.current.extractedText = data.text;
-      setMessages(prev => [
-        ...prev,
-        { 
-          role: 'assistant', 
-          content: `📄 **File berhasil dibaca!**\nEkstraksi: ${data.charCount} karakter dari file *${file.name}*.\n\nSedang merangkum dan membuat kuis dengan Groq Llama AI...` 
-        }
-      ]);
-
-      setIsAiResponding(true);
-      const result = await generateAILessonContent(data.text.substring(0, 15000), activeSubject, 'notebook'); // Safety slice text length
-      setAiResult(result);
-      chatStateRef.current.aiResult = result;
-
-      setMessages(prev => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: `✨ **Materi berbasis dokumen berhasil disusun oleh Groq AI!**\nSilakan cek rangkuman dan kuis di bawah ini.`
-        }
-      ]);
-    } catch (err) {
-      console.error(err);
-      const errMsg = err instanceof Error ? err.message : "Terjadi kesalahan";
-      setMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: `⚠️ Gagal mengekstrak berkas: ${errMsg}` }
-      ]);
-    } finally {
-      setIsUploading(false);
-      setIsAiResponding(false);
-      // Reset file input so the same file can be re-uploaded
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  // Publish or Save Draft Action
-  const handleSaveAction = async (publish: boolean) => {
-    const activeAiResult = chatStateRef.current.aiResult;
-    const activeClass = chatStateRef.current.selectedClass;
-    const activeSubject = chatStateRef.current.selectedSubject;
-    const activeText = chatStateRef.current.extractedText;
-
-    if (!activeAiResult || !activeClass || !activeSubject) return;
-
-    setIsAiResponding(true);
-    try {
-      // 1. Create Daily Lesson Row
+      const finalContent = formContent.trim() || `Pembahasan materi ${formSubject} topik: ${formTopic.trim()}`;
+      
       const newLesson = await createLesson({
-        class_name: activeClass,
-        subject: activeSubject,
+        class_name: formClass,
+        subject: formSubject,
         date: new Date().toISOString().split('T')[0],
-        content: activeText || `Pembahasan materi mata pelajaran ${activeSubject} kelas ${activeClass}`,
-        video_url: chatStateRef.current.youtubeUrl || undefined,
-        ai_reading_preview: activeAiResult.preview,
-        ai_chat_prompt: activeAiResult.chatPrompt,
-        is_published: publish,
-        academic_year: chatStateRef.current.selectedYear,
+        content: finalContent,
+        video_url: formYoutubeUrl.trim() || undefined,
+        ai_reading_preview: finalContent,
+        is_published: formIsPublished,
+        academic_year: academicYear,
         semester: semester
       });
 
-      // 2. Create Quizzes Row if AI returned questions
-      if (newLesson && activeAiResult.questions && activeAiResult.questions.length > 0) {
-        const formattedQuestions = activeAiResult.questions.map((q) => ({
-          question: q.text || q.question || "",
-          text: q.text || q.question || "",
-          options: q.options || [],
-          correctAnswer: q.answer || q.correctAnswer || "",
-          answer: q.answer || q.correctAnswer || "",
-          type: q.type || 'mcq'
-        }));
-
-        const isSusulan = chatStateRef.current.flowType === 'susulan';
-        const targetTitle = isSusulan && chatStateRef.current.susulanType
-          ? `Ujian ${chatStateRef.current.susulanType} - ${activeSubject}`
-          : `Kuis Evaluasi - ${activeSubject}`;
-        const targetQuizType = isSusulan && chatStateRef.current.susulanType
-          ? (chatStateRef.current.susulanType === 'Susulan UTS' ? 'ASTS' : 'ASAJ')
-          : 'DAILY';
-
-        const { error: quizError } = await supabase
-          .from('quizzes')
-          .insert({
-            lesson_id: newLesson.id,
-            title: targetTitle,
-            quiz_type: targetQuizType,
-            duration_minutes: 15,
-            questions: formattedQuestions
-          });
-
-        if (quizError) {
-          throw new Error("Gagal mengaitkan Kuis AI: " + quizError.message);
-        }
+      if (newLesson) {
+        setToast({ 
+          message: formIsPublished 
+            ? "Modul berhasil diterbitkan ke tampilan siswa! 🎉" 
+            : "Modul berhasil disimpan sebagai draf.", 
+          type: 'success' 
+        });
+        setIsCreateModalOpen(false);
+        // Reset form
+        setFormTopic('');
+        setFormYoutubeUrl('');
+        setFormContent('');
+        loadLessons();
       }
-
-      setToast({
-        message: publish 
-          ? "Pelajaran & Kuis berhasil dipublikasikan ke semua section siswa!" 
-          : "Draf pelajaran berhasil disimpan!",
-        type: 'success'
-      });
-
-      setMessages(prev => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: `✅ **Pelajaran berhasil ${publish ? 'diterbitkan secara live!' : 'disimpan sebagai draft.'}**\n\nRiwayat pelajaran Anda telah diperbarui. Apakah ada hal lain yang ingin Anda kerjakan?`,
-          options: [
-            { label: "Mulai Percakapan Baru", action: () => resetChatToInit() }
-          ]
-        }
-      ]);
-
-      setAiResult(null);
-      chatStateRef.current.aiResult = null;
-      loadHistory();
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : "Terjadi kesalahan";
-      setToast({ message: "Gagal menyimpan: " + errMsg, type: 'error' });
-    } finally {
-      setIsAiResponding(false);
-    }
-  };  // Open Preview Modal of old lesson
-  const handleOpenPreview = async (lesson: DailyLesson) => {
-    setPreviewingLesson(lesson);
-    const extractedYt = extractYouTubeId(lesson.video_url || lesson.content);
-    setEditVideoUrl(extractedYt ? (lesson.video_url || `https://www.youtube.com/watch?v=${extractedYt}`) : '');
-    setIsLoadingPreviewQuizzes(true);
-    setPreviewingQuizzes([]);
-
-    try {
-      const { data, error } = await supabase
-        .from('quizzes')
-        .select('*')
-        .eq('lesson_id', lesson.id);
-
-      if (error) throw error;
-      setPreviewingQuizzes(data || []);
     } catch (err) {
       console.error(err);
+      setToast({ message: "Gagal membuat modul pembelajaran", type: 'error' });
     } finally {
-      setIsLoadingPreviewQuizzes(false);
+      setIsSubmitting(false);
     }
   };
 
-
-  const handleUpdateVideoUrl = async () => {
-    if (!previewingLesson) return;
+  // Save YouTube video link update
+  const handleSaveVideoUpdate = async () => {
+    if (!editVideoLesson) return;
     setIsUpdatingVideo(true);
     try {
-      const cleanUrl = editVideoUrl.trim();
+      const cleanUrl = editVideoUrlInput.trim();
       const updatedContent = cleanUrl 
-        ? injectYouTubeTag(previewingLesson.content || '', cleanUrl)
-        : stripYouTubeTag(previewingLesson.content || '');
+        ? injectYouTubeTag(editVideoLesson.content || '', cleanUrl)
+        : stripYouTubeTag(editVideoLesson.content || '');
 
       const { error } = await supabase
         .from('daily_lessons')
         .update({ content: updatedContent })
-        .eq('id', previewingLesson.id);
+        .eq('id', editVideoLesson.id);
 
       if (error) throw error;
 
       setToast({ message: "Link video pembelajaran berhasil disimpan!", type: 'success' });
-      setPreviewingLesson(prev => prev ? { ...prev, content: updatedContent, video_url: cleanUrl || undefined } : null);
-      loadHistory();
+      setEditVideoLesson(null);
+      loadLessons();
     } catch (err) {
       console.error(err);
-      setToast({ message: "Gagal menyimpan link video", type: 'error' });
+      setToast({ message: "Gagal memperbarui link video", type: 'error' });
     } finally {
       setIsUpdatingVideo(false);
     }
   };
 
-  // Delete lesson from history
-  const handleDeleteLesson = async (lessonId: string, subjectName: string) => {
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus materi "${subjectName}" beserta kuisnya? Tindakan ini permanen.`)) return;
-
+  // Delete lesson
+  const handleDelete = async (lesson: DailyLesson) => {
+    if (!window.confirm(`Hapus modul "${lesson.subject}" (${lesson.class_name})? Tindakan ini tidak dapat dibatalkan.`)) return;
+    
+    setIsDeletingId(lesson.id);
     try {
-      await deleteLesson(lessonId);
-      setToast({ message: "Materi berhasil dihapus dari sistem", type: 'success' });
-      setPreviewingLesson(null);
-      loadHistory();
+      await deleteLesson(lesson.id);
+      setToast({ message: "Modul berhasil dihapus", type: 'success' });
+      loadLessons();
     } catch (err) {
-      const errMsg = err instanceof Error ? err.message : "Terjadi kesalahan";
-      setToast({ message: "Gagal menghapus: " + errMsg, type: 'error' });
+      console.error(err);
+      setToast({ message: "Gagal menghapus modul", type: 'error' });
+    } finally {
+      setIsDeletingId(null);
     }
   };
 
-  // Filter History Lessons
-  const filteredHistory = historyLessons.filter(lesson => 
-    lesson.subject.toLowerCase().includes(historySearchQuery.toLowerCase()) ||
-    lesson.class_name.toLowerCase().includes(historySearchQuery.toLowerCase())
-  );
-
   return (
-    <div 
-      className="fixed inset-0 z-40 h-[100dvh] max-h-[100dvh] w-full bg-[#000000] text-white flex flex-col font-sans overflow-hidden"
-      style={{ 
-        fontFamily: '-apple-system-body, ui-sans-serif, -apple-system, system-ui, Segoe UI, Helvetica, Arial, sans-serif',
-        fontSize: '14px',
-        lineHeight: '20px',
-        fontWeight: 400
-      }}
-    >
+    <div className="min-h-dvh flex flex-col bg-slate-50/70 font-outfit text-slate-900 selection:bg-indigo-500/20">
       
-      {/* Background ambient accents */}
-      <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-[#d25e28]/5 blur-[120px] rounded-full pointer-events-none" />
-
-      {/* Header */}
-      <header className="h-16 shrink-0 border-b border-white/10 bg-[#000000]/80 backdrop-blur-xl px-4 sm:px-6 flex items-center justify-between z-30">
-        <div className="flex items-center gap-2 sm:gap-3">
+      {/* TOP EDITORIAL NAVBAR */}
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 py-3.5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
           <button 
             onClick={onBack}
-            className="p-2 bg-white/5 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-[#d25e28] text-[#afafaf] hover:text-white rounded-lg transition-all min-w-[36px] min-h-[36px] flex items-center justify-center outline-none"
-            title="Kembali"
+            className="p-2 hover:bg-slate-100 rounded-xl text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5 text-xs font-bold"
+            title="Kembali ke Menu Utama"
           >
             <ArrowLeft size={16} />
+            <span className="hidden sm:inline">Menu Utama</span>
           </button>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white truncate max-w-[110px] xs:max-w-none">Manajemen Pelajaran</h1>
-            <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest bg-[#d25e28]/10 border border-[#d25e28]/20 text-[#d25e28] px-1.5 sm:px-2 py-0.5 rounded-md shrink-0">AI Agent</span>
+          
+          <div className="h-4 w-[1px] bg-slate-200 hidden sm:block" />
+
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
+                Nawasena LMS
+              </span>
+              <span className="text-slate-400 text-xs hidden sm:inline">•</span>
+              <span className="text-xs font-bold text-slate-500 hidden sm:inline">
+                Pusat Kurikulum & Video Pembelajaran
+              </span>
+            </div>
+            <h1 className="text-sm sm:text-base font-black text-slate-900 tracking-tight leading-none mt-0.5">
+              Manajemen Modul Pembelajaran Guru
+            </h1>
           </div>
         </div>
+
         <div className="flex items-center gap-2 sm:gap-3">
-          <span className="hidden xs:inline text-[10px] sm:text-xs font-bold text-[#afafaf] bg-white/5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-white/10 uppercase tracking-wider font-mono">
-            {academicYear}
+          <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 hidden md:inline">
+            T.A. {academicYear} • Semester {semester}
           </span>
-          <button 
-            onClick={onBack}
-            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 h-9 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wider transition-all duration-150 active:scale-95 shadow-md shadow-rose-500/5 group focus-visible:ring-2 focus-visible:ring-rose-500 outline-none"
-            title="Keluar ke Beranda"
+
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
           >
-            <X size={14} className="group-hover:rotate-90 transition-transform duration-150" />
-            <span className="hidden sm:inline">Keluar ke Beranda</span>
-            <span className="sm:hidden">Keluar</span>
+            <Plus size={16} />
+            <span>Buat Modul Baru</span>
           </button>
         </div>
       </header>
 
-      {/* Main Workspace split */}
-      <main className="flex-1 min-h-0 flex overflow-hidden relative z-10">
+      {/* MAIN CONTAINER */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-8 space-y-6">
         
-        {/* LEFT COLUMN: HISTORY SIDEBAR */}
-        <section className="w-80 border-r border-white/10 bg-[#171717] shrink-0 hidden md:flex flex-col min-h-0">
-          <div className="p-4 border-b border-white/10 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-[10px] font-bold text-[#afafaf] uppercase tracking-widest pl-1">Riwayat Pelajaran</h3>
-              <button 
-                onClick={resetChatToInit}
-                className="px-2.5 py-1 text-[9px] font-black uppercase tracking-wider bg-white/5 hover:bg-white/10 text-white rounded-md border border-white/10 transition-colors focus-visible:ring-2 focus-visible:ring-[#d25e28] outline-none"
-                title="Mulai Percakapan Baru"
+        {/* KPI METRIC CARDS */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Modul</p>
+              <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mt-0.5">{totalCount}</h3>
+              <p className="text-[11px] text-slate-500 font-medium mt-0.5">Modul pembelajaran tersimpan</p>
+            </div>
+            <div className="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <BookOpen size={20} />
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Video YouTube</p>
+              <h3 className="text-2xl sm:text-3xl font-black text-red-600 mt-0.5">{withVideoCount}</h3>
+              <p className="text-[11px] text-slate-500 font-medium mt-0.5">Modul dilengkapi video interaktif</p>
+            </div>
+            <div className="w-11 h-11 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+              <Video size={20} />
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Modul Terbit</p>
+              <h3 className="text-2xl sm:text-3xl font-black text-emerald-600 mt-0.5">{publishedCount}</h3>
+              <p className="text-[11px] text-slate-500 font-medium mt-0.5">Dapat diakses oleh siswa</p>
+            </div>
+            <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <CheckCircle2 size={20} />
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Draf</p>
+              <h3 className="text-2xl sm:text-3xl font-black text-slate-700 mt-0.5">{draftCount}</h3>
+              <p className="text-[11px] text-slate-500 font-medium mt-0.5">Belum dipublikasikan</p>
+            </div>
+            <div className="w-11 h-11 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
+              <Layers size={20} />
+            </div>
+          </div>
+        </div>
+
+        {/* SEARCH & FILTER CONTROLS */}
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          {/* Search bar */}
+          <div className="relative flex-1 min-w-[240px]">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Cari berdasarkan judul, topik, atau mata pelajaran..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+            />
+          </div>
+
+          {/* Filter Group */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Class filter */}
+            <select
+              value={selectedClassFilter}
+              onChange={(e) => setSelectedClassFilter(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="ALL">Semua Kelas</option>
+              {defaultClasses.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+
+            {/* Subject filter */}
+            <select
+              value={selectedSubjectFilter}
+              onChange={(e) => setSelectedSubjectFilter(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="ALL">Semua Mata Pelajaran</option>
+              {DEFAULT_SUBJECTS.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+
+            {/* Video filter pills */}
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200">
+              <button
+                onClick={() => setSelectedVideoFilter('ALL')}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                  selectedVideoFilter === 'ALL'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
               >
-                Percakapan Baru
+                Semua
+              </button>
+              <button
+                onClick={() => setSelectedVideoFilter('WITH_VIDEO')}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 ${
+                  selectedVideoFilter === 'WITH_VIDEO'
+                    ? 'bg-white text-red-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Play size={10} className="fill-red-500 text-red-500" /> Ada Video
               </button>
             </div>
-            <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#afafaf] group-focus-within:text-[#d25e28] transition-colors" size={14} />
-              <input 
-                type="text" 
-                placeholder="Cari materi / kelas..."
-                value={historySearchQuery}
-                onChange={(e) => setHistorySearchQuery(e.target.value)}
-                className="w-full h-9 bg-[#212121] border border-white/10 rounded-xl pl-9 pr-4 text-xs font-medium text-white placeholder:text-[#afafaf] focus:border-[#d25e28]/50 focus-visible:ring-2 focus-visible:ring-[#d25e28] outline-none transition-all"
-              />
+          </div>
+        </div>
+
+        {/* LESSONS GRID */}
+        {isLoading ? (
+          <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center shadow-sm flex flex-col items-center justify-center min-h-[300px]">
+            <Loader2 size={36} className="animate-spin text-indigo-600 mb-3" />
+            <p className="text-slate-500 font-bold text-sm">Memuat kurikulum dan video LMS...</p>
+          </div>
+        ) : filteredLessons.length === 0 ? (
+          <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center shadow-sm flex flex-col items-center justify-center min-h-[320px] space-y-3">
+            <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 text-slate-300 flex items-center justify-center">
+              <BookOpen size={30} />
             </div>
+            <h3 className="text-lg font-black text-slate-900">Belum Ada Modul Pelajaran Ditemukan</h3>
+            <p className="text-slate-400 text-xs max-w-sm">
+              {searchQuery || selectedClassFilter !== 'ALL' || selectedSubjectFilter !== 'ALL'
+                ? "Tidak ada modul yang sesuai dengan kriteria pencarian/filter."
+                : "Mulai buat modul pelajaran pertama Anda lengkap dengan video YouTube untuk siswa."}
+            </p>
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 mt-2"
+            >
+              <Plus size={15} /> Buat Modul Baru
+            </button>
           </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {filteredLessons.map((lesson) => {
+              const ytId = extractYouTubeId(lesson.video_url || lesson.content);
+              const ytThumb = ytId ? getYouTubeThumbnailUrl(ytId) : null;
+              const cleanText = stripYouTubeTag(lesson.content || lesson.ai_reading_preview);
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-1 no-scrollbar">
-            {filteredHistory.length === 0 ? (
-              <div className="text-center py-10 text-[#afafaf] text-xs font-bold">
-                Tidak ada materi terbit.
-              </div>
-            ) : (
-              filteredHistory.map((lesson) => (
-                <button
-                  key={lesson.id}
-                  onClick={() => handleOpenPreview(lesson)}
-                  className="w-full p-3 rounded-xl bg-transparent hover:bg-white/5 text-left transition-all duration-150 flex items-center gap-3.5 group hover:scale-[1.01] active:scale-[0.99] relative focus:outline-none focus:ring-2 focus:ring-[#d25e28]"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-white/5 text-[#afafaf] flex items-center justify-center shrink-0 group-hover:bg-[#d25e28]/10 group-hover:text-[#d25e28] transition-colors">
-                    <FileText size={16} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-xs font-bold text-white group-hover:text-[#d25e28] transition-colors truncate uppercase tracking-wide leading-normal">
-                      {lesson.subject}
-                    </h4>
-                    <p className="text-[8px] font-bold text-[#afafaf] uppercase tracking-widest mt-1 leading-normal">
-                      {lesson.class_name} • {lesson.date}
-                    </p>
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        </section>
-
-        {/* RIGHT COLUMN: AI CONVERSATION */}
-        <section className="flex-1 min-h-0 flex flex-col bg-[#000000] overflow-hidden">
-          
-          {/* Chat Window Messages */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-8 max-w-3xl mx-auto w-full flex flex-col custom-scrollbar">
-            {messages.map((msg, idx) => {
-              const isAI = msg.role === 'assistant';
               return (
                 <div 
-                  key={idx} 
-                  className={`flex gap-3 sm:gap-4 max-w-[90%] sm:max-w-[85%] ${isAI ? 'self-start w-full' : 'self-end ml-auto flex-row-reverse'}`}
+                  key={lesson.id}
+                  className="bg-white border border-slate-200/90 hover:border-indigo-300 rounded-3xl p-5 shadow-sm transition-all duration-200 flex flex-col justify-between group"
                 >
-                  {isAI ? (
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#d25e28]/10 border border-[#d25e28]/20 text-[#d25e28] flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(210,94,40,0.1)] mt-0.5">
-                      <Bot className="w-4 h-4" />
-                    </div>
-                  ) : (
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#2f2f2f] border border-white/10 text-[#afafaf] flex items-center justify-center shrink-0 mt-0.5 text-[9px] font-black">
-                      ME
-                    </div>
-                  )}
-
-                  <div className="flex flex-col gap-2.5 flex-1">
-                    {/* Speech Bubble */}
-                    <div className={`text-sm leading-relaxed whitespace-pre-line text-left transition-all ${
-                      isAI 
-                        ? 'text-[#ececf1] font-normal px-1'
-                        : 'bg-[#212121] text-white border border-white/5 rounded-2xl rounded-tr-none font-normal px-4 py-3 shadow-md'
-                    }`}>
-                      {msg.content}
-                    </div>
-
-                    {/* Quick options/reply chips */}
-                    {isAI && msg.options && msg.options.length > 0 && (
-                      <div className="flex flex-wrap gap-2 pt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                        {msg.options.map((opt, oIdx) => (
-                          <button
-                            key={oIdx}
-                            onClick={() => {
-                              if (opt.action) {
-                                opt.action();
-                              } else if (opt.actionType) {
-                                handleOptionClick(opt.actionType, opt.payload, opt.label);
-                              }
-                            }}
-                            disabled={isAiResponding}
-                            className="px-3.5 py-2 bg-[#171717] hover:bg-[#d25e28]/10 hover:text-[#d25e28] border border-white/10 hover:border-[#d25e28]/30 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-150 active:scale-95 disabled:opacity-40 min-h-[40px] flex items-center justify-center text-center focus-visible:ring-2 focus-visible:ring-[#d25e28] outline-none"
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
+                  <div className="space-y-3.5">
+                    {/* Top tags */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200/70 px-2.5 py-0.5 rounded-lg">
+                          {lesson.class_name}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg">
+                          {lesson.subject}
+                        </span>
                       </div>
-                    )}
 
-                    {/* Document Upload Input */}
-                    {isAI && msg.fileUpload && (
-                      <div className="p-6 border border-dashed border-white/15 rounded-2xl bg-[#171717]/50 flex flex-col items-center justify-center text-center gap-3 hover:bg-[#171717] hover:border-[#d25e28]/50 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d25e28] outline-none"
-                           onClick={() => fileInputRef.current?.click()}>
-                        <input 
-                          type="file" 
-                          ref={fileInputRef} 
-                          onChange={handleFileUpload} 
-                          accept=".pdf,.docx,.txt" 
-                          className="hidden" 
+                      <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${
+                        lesson.is_published 
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                          : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {lesson.is_published ? 'Terbit' : 'Draf'}
+                      </span>
+                    </div>
+
+                    {/* YouTube Video Preview / Banner */}
+                    {ytId ? (
+                      <div 
+                        onClick={() => setPreviewLesson(lesson)}
+                        className="relative aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 cursor-pointer group/thumb"
+                      >
+                        <img 
+                          src={ytThumb || ''} 
+                          alt="Video Thumbnail" 
+                          className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-300 opacity-90"
                         />
-                        {isUploading ? (
-                          <>
-                            <Loader2 className="animate-spin text-[#d25e28]" size={28} />
-                            <span className="text-xs font-bold text-[#afafaf]">Mengekstraksi konten file...</span>
-                          </>
-                        ) : (
-                          <>
-                            <CloudUpload className="text-[#d25e28]" size={32} />
-                            <div>
-                              <span className="text-xs font-bold uppercase tracking-wider text-white">Unggah Berkas</span>
-                              <p className="text-[10px] text-[#afafaf] mt-1">Mendukung PDF, DOCX, dan TXT (Maks. 10MB)</p>
-                            </div>
-                          </>
-                        )}
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg group-hover/thumb:scale-110 transition-transform">
+                            <Play size={18} className="fill-white ml-0.5" />
+                          </div>
+                        </div>
+                        <span className="absolute bottom-2 left-2 text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-black/70 text-white backdrop-blur-sm">
+                          Video YouTube Aktif
+                        </span>
+                      </div>
+                    ) : (
+                      <div 
+                        onClick={() => {
+                          setEditVideoLesson(lesson);
+                          setEditVideoUrlInput('');
+                        }}
+                        className="py-4 px-3 bg-slate-50 border border-dashed border-slate-200 hover:border-indigo-300 rounded-2xl flex items-center justify-center gap-2 text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer text-xs font-bold"
+                      >
+                        <Plus size={14} />
+                        <span>Tambahkan Link Video YouTube</span>
                       </div>
                     )}
+
+                    {/* Topic title & description */}
+                    <div>
+                      <h3 className="font-black text-slate-900 text-sm leading-snug line-clamp-1">
+                        {lesson.subject}
+                      </h3>
+                      <p className="text-slate-500 text-xs line-clamp-2 mt-1 leading-relaxed">
+                        {cleanText || "Pembahasan materi pelajaran interaktif."}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
+                      <Calendar size={11} /> {lesson.date}
+                    </div>
+                  </div>
+
+                  {/* Bottom Actions */}
+                  <div className="flex items-center justify-between gap-2 pt-4 border-t border-slate-100 mt-4">
+                    <button
+                      onClick={() => setPreviewLesson(lesson)}
+                      className="flex-1 py-2 px-3 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <Eye size={13} />
+                      <span>Pratinjau</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setEditVideoLesson(lesson);
+                        const existingId = extractYouTubeId(lesson.video_url || lesson.content);
+                        setEditVideoUrlInput(existingId ? `https://www.youtube.com/watch?v=${existingId}` : '');
+                      }}
+                      className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs transition-all"
+                      title="Edit Link Video YouTube"
+                    >
+                      <Video size={15} />
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(lesson)}
+                      disabled={isDeletingId === lesson.id}
+                      className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs transition-all disabled:opacity-50"
+                      title="Hapus Modul"
+                    >
+                      {isDeletingId === lesson.id ? (
+                        <Loader2 size={15} className="animate-spin" />
+                      ) : (
+                        <Trash2 size={15} />
+                      )}
+                    </button>
                   </div>
                 </div>
               );
             })}
-
-            {/* AI Response Loader */}
-            {isAiResponding && !isUploading && (
-              <div className="flex gap-4 max-w-[80%] self-start animate-pulse w-full">
-                <div className="w-8 h-8 rounded-full bg-[#d25e28]/10 border border-[#d25e28]/20 text-[#d25e28] flex items-center justify-center shrink-0">
-                  <Bot size={16} />
-                </div>
-                <div className="p-1 text-[#afafaf] flex items-center gap-2">
-                  <Loader2 className="animate-spin text-[#d25e28]" size={14} />
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#afafaf]">AI sedang memproses...</span>
-                </div>
-              </div>
-            )}
-
-            {/* AI Result Review Panel inside Chat */}
-            {aiResult && (
-              <div ref={aiResultRef} className="border border-white/10 bg-[#171717] rounded-3xl p-5 sm:p-6 space-y-6 shadow-2xl animate-in zoom-in-95 duration-200 mt-4 relative overflow-hidden text-left">
-                <div className="flex items-center justify-between pb-4 border-b border-white/10">
-                  <h3 className="flex items-center gap-2 text-xs sm:text-sm font-bold uppercase tracking-wider text-[#d25e28]">
-                    <Sparkles size={16} /> Hasil Formulasi Groq AI
-                  </h3>
-                  <span className="text-[9px] font-bold px-2 py-0.5 bg-[#d25e28]/15 text-[#d25e28] border border-[#d25e28]/35 rounded-md">
-                    Groq AI
-                  </span>
-                </div>
-
-                <div className="space-y-5">
-                  {/* Material summary preview */}
-                  <div>
-                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#afafaf] mb-2 flex items-center justify-between">
-                      <span>1. Preview Buku Pelajaran ({parseLessonToSlides(aiResult.preview).length} Slide)</span>
-                      <span className="text-[#d25e28] text-[9px] font-mono">Format Slide Buku Aktif</span>
-                    </h4>
-                    <div className="bg-[#212121] p-4 rounded-xl border border-white/5 max-h-96 overflow-y-auto custom-scrollbar space-y-4">
-                      {parseLessonToSlides(aiResult.preview).map((slide, sIdx) => (
-                        <div key={sIdx} className="space-y-2 pb-4 border-b border-white/10 last:border-b-0 last:pb-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-[#d25e28]/20 text-[#d25e28] border border-[#d25e28]/30">
-                              Slide {sIdx + 1}
-                            </span>
-                            <h5 className="text-xs font-bold text-white uppercase tracking-wider">
-                              {slide.title}
-                            </h5>
-                          </div>
-                          <div className="space-y-2 pl-2">
-                            {slide.paragraphs.map((p, pIdx) => (
-                              <p key={pIdx} className="text-slate-300 text-xs leading-relaxed font-normal">
-                                {p}
-                              </p>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  
-                  {/* YouTube Video URL Input for Teacher */}
-                  <div className="bg-[#212121] p-4 rounded-xl border border-white/5 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#afafaf] flex items-center gap-1.5">
-                        <Play size={13} className="text-red-500 fill-red-500" /> Link Video Pembelajaran (YouTube - Opsional)
-                      </h4>
-                      {extractYouTubeId(youtubeUrl) && (
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                          <CheckCircle2 size={11} /> Video Terdeteksi
-                        </span>
-                      )}
-                    </div>
-
-                    <input
-                      type="url"
-                      value={youtubeUrl}
-                      onChange={(e) => {
-                        setYoutubeUrl(e.target.value);
-                        chatStateRef.current.youtubeUrl = e.target.value;
-                      }}
-                      placeholder="Tempel link YouTube (contoh: https://www.youtube.com/watch?v=... atau https://youtu.be/...)"
-                      className="w-full h-11 bg-[#171717] border border-white/10 rounded-xl px-4 text-xs font-medium text-white placeholder:text-slate-500 focus:outline-none focus:border-[#d25e28]"
-                    />
-
-                    {extractYouTubeId(youtubeUrl) && (
-                      <div className="flex items-center gap-3 p-2.5 bg-black/40 rounded-xl border border-white/5">
-                        <img
-                          src={getYouTubeThumbnailUrl(youtubeUrl) || ''}
-                          alt="Thumbnail"
-                          className="w-24 h-14 object-cover rounded-lg border border-white/10"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-white">Video YouTube Terhubung</p>
-                          <p className="text-[10px] text-slate-400 truncate mt-0.5">{youtubeUrl}</p>
-                          <p className="text-[9px] text-emerald-400 mt-1">Video akan otomatis disematkan dan tampil di LMS siswa.</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* MCQ & Essay Questions preview */}
-                  {aiResult.questions && aiResult.questions.length > 0 && (
-                    <div>
-                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#afafaf] mb-2">2. Butir Soal Kuis AI ({aiResult.questions.length})</h4>
-                      <div className="space-y-3 max-h-48 overflow-y-auto no-scrollbar pr-1">
-                        {aiResult.questions.map((q, qIdx) => (
-                          <div key={qIdx} className="bg-[#212121] border border-white/5 p-3 rounded-xl space-y-2 text-xs">
-                            <p className="font-bold text-white">{qIdx+1}. {q.text || q.question}</p>
-                            {q.type === 'mcq' && q.options && (
-                              <div className="grid grid-cols-1 xs:grid-cols-2 gap-1.5 pl-2 sm:pl-4">
-                                {q.options.map((opt: string) => (
-                                  <span key={opt} className={`text-[10px] p-2 rounded-lg border ${
-                                    opt === q.answer ? 'bg-[#d25e28]/10 border-[#d25e28]/30 text-[#d25e28] font-bold' : 'bg-white/5 border-transparent text-[#afafaf]'
-                                  }`}>
-                                    {opt}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Final actions inside review card */}
-                <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-white/10">
-                  <button
-                    onClick={() => handleSaveAction(true)}
-                    disabled={isAiResponding}
-                    className="w-full sm:flex-1 h-11 bg-[#d25e28] hover:bg-[#c15321] text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-[#d25e28]/25 flex items-center justify-center gap-2 order-1 sm:order-2 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#d25e28] outline-none cursor-pointer"
-                  >
-                    <CheckCircle2 size={16} /> Terbitkan (Publish)
-                  </button>
-                  <button
-                    onClick={() => handleSaveAction(false)}
-                    disabled={isAiResponding}
-                    className="w-full sm:flex-1 h-11 bg-[#2f2f2f] hover:bg-[#3f3f3f] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-colors border border-white/10 order-2 sm:order-1 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-white outline-none cursor-pointer"
-                  >
-                    Simpan Draft
-                  </button>
-                  <button
-                    onClick={() => {
-                      setAiResult(null);
-                      resetChatToInit();
-                    }}
-                    disabled={isAiResponding}
-                    className="w-full sm:w-auto sm:px-6 h-11 bg-transparent hover:bg-white/5 text-[#afafaf] hover:text-white border border-white/10 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors order-3 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-white outline-none cursor-pointer"
-                  >
-                    Batal
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
           </div>
+        )}
 
-          {/* Bottom Bar: Pinned Action Bar when AI Result is ready, or Quick Input Capsule otherwise */}
-          {aiResult ? (
-            <div className="shrink-0 p-3 sm:p-4 bg-[#141414] border-t border-white/15 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-4 shadow-2xl z-20 animate-in slide-in-from-bottom-2 duration-200">
-              <div className="max-w-3xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                  <div className="w-8 h-8 rounded-lg bg-[#d25e28]/20 flex items-center justify-center text-[#d25e28] shrink-0">
-                    <Sparkles size={16} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-white uppercase tracking-wider truncate">Draf Formulasi Siap</p>
-                    <p className="text-[10px] text-[#afafaf] truncate">Tinjau preview di atas lalu publikasikan ke siswa</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
-                  <button
-                    onClick={() => {
-                      setAiResult(null);
-                      resetChatToInit();
-                    }}
-                    disabled={isAiResponding}
-                    className="px-3 sm:px-4 h-10 bg-transparent hover:bg-white/5 text-[#afafaf] hover:text-white border border-white/10 rounded-xl font-bold text-xs uppercase tracking-wider transition-all active:scale-95 focus-visible:ring-2 focus-visible:ring-white outline-none cursor-pointer"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    onClick={() => handleSaveAction(false)}
-                    disabled={isAiResponding}
-                    className="px-4 sm:px-5 h-10 bg-[#262626] hover:bg-[#333333] text-white border border-white/10 rounded-xl font-bold text-xs uppercase tracking-wider transition-all active:scale-95 focus-visible:ring-2 focus-visible:ring-white outline-none cursor-pointer"
-                  >
-                    Simpan Draft
-                  </button>
-                  <button
-                    onClick={() => handleSaveAction(true)}
-                    disabled={isAiResponding}
-                    className="flex-1 sm:flex-initial px-5 sm:px-6 h-10 bg-[#d25e28] hover:bg-[#e06b32] text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-[#d25e28]/30 flex items-center justify-center gap-2 active:scale-95 focus-visible:ring-2 focus-visible:ring-[#d25e28] outline-none cursor-pointer"
-                  >
-                    <CheckCircle2 size={16} /> Terbitkan (Publish)
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="shrink-0 p-4 bg-[#000000] border-t border-white/10 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-6">
-              <form onSubmit={handleFormSubmit} className="flex gap-2 max-w-3xl mx-auto w-full relative">
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder={
-                    !flowType 
-                      ? "Pilih opsi di atas untuk memulai..." 
-                      : isAiResponding 
-                      ? "Asisten sedang memproses..." 
-                      : "Ketik pesan untuk asisten kurikulum..."
-                  }
-                  disabled={!flowType || isAiResponding}
-                  className="w-full h-12 bg-[#212121] border border-white/10 rounded-2xl pl-4 pr-14 text-sm font-medium text-white placeholder:text-[#afafaf] focus:border-[#d25e28]/50 focus-visible:ring-2 focus-visible:ring-[#d25e28] outline-none transition-all disabled:opacity-40"
-                />
-                <button
-                  type="submit"
-                  disabled={!inputValue.trim() || isAiResponding || !flowType}
-                  className="absolute right-1.5 top-1.5 w-9 h-9 bg-[#d25e28] hover:bg-[#c15321] text-white rounded-xl flex items-center justify-center shadow-md transition-all disabled:opacity-20 disabled:bg-[#2f2f2f] focus-visible:ring-2 focus-visible:ring-[#d25e28] outline-none"
-                >
-                  <Send size={14} />
-                </button>
-              </form>
-            </div>
-          )}
-        </section>
       </main>
 
-      {/* DETAILED LESSON PREVIEW MODAL */}
-      {previewingLesson && (
-        <div className="fixed inset-0 z-[999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-150" onClick={() => setPreviewingLesson(null)}>
+      {/* MODAL 1: CREATE NEW LESSON MODULE */}
+      {isCreateModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150"
+          onClick={() => setIsCreateModalOpen(false)}
+        >
           <div 
-            className="w-full max-w-2xl bg-[#171717] border border-white/10 rounded-3xl p-5 sm:p-6 md:p-8 shadow-2xl animate-in zoom-in-95 duration-150 max-h-[85vh] overflow-y-auto flex flex-col gap-4 sm:gap-6 custom-scrollbar relative text-left"
+            className="w-full max-w-2xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            
-            <div className="flex justify-between items-start border-b border-white/10 pb-4">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4 mb-5">
               <div>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#d25e28]">
-                  {previewingLesson.class_name} • {previewingLesson.date}
+                <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                  Modul Baru
                 </span>
-                <h3 className="font-sans font-bold text-lg sm:text-xl text-white uppercase tracking-tight mt-1">
-                  {previewingLesson.subject}
-                </h3>
+                <h2 className="text-xl font-black text-slate-900 tracking-tight mt-1">
+                  Buat Modul Pelajaran & Video LMS
+                </h2>
+                <p className="text-xs text-slate-500 font-medium">Lengkapi materi dan sematkan link video YouTube untuk ditampilkan di akun siswa.</p>
               </div>
               <button 
-                onClick={() => setPreviewingLesson(null)} 
-                className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-transform"
+                onClick={() => setIsCreateModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <div className="space-y-5 sm:space-y-6">
-              
-              {/* YouTube Video in Preview Modal */}
-              {previewingLesson && (
-                <div className="bg-[#212121] rounded-2xl p-4 sm:p-5 border border-white/5 space-y-3">
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#afafaf] flex items-center justify-between">
-                    <span className="flex items-center gap-1.5"><Play size={14} className="text-red-500 fill-red-500" /> Video Pembelajaran (YouTube)</span>
-                    {extractYouTubeId(previewingLesson.video_url || previewingLesson.content) && (
-                      <span className="text-[9px] text-emerald-400 font-mono">Video Aktif</span>
-                    )}
-                  </h4>
+            <form onSubmit={handleCreateSubmit} className="space-y-4">
+              {/* Class & Subject dropdowns */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Tingkatan Kelas</label>
+                  <select
+                    value={formClass}
+                    onChange={(e) => setFormClass(e.target.value)}
+                    className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  >
+                    {defaultClasses.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
 
-                  {extractYouTubeId(previewingLesson.video_url || previewingLesson.content) && (
-                    <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-white/10 shadow-md">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Mata Pelajaran</label>
+                  <select
+                    value={formSubject}
+                    onChange={(e) => setFormSubject(e.target.value)}
+                    className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  >
+                    {DEFAULT_SUBJECTS.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Topic Title */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Topik / Judul Pembelajaran
+                </label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Persamaan Linear Satu Variabel / Struktur Teks Deskripsi"
+                  value={formTopic}
+                  onChange={(e) => setFormTopic(e.target.value)}
+                  className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+
+              {/* YouTube Link Input with Live Preview */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Play size={14} className="fill-red-600 text-red-600" /> Link Video Pembelajaran (YouTube)
+                  </label>
+                  {extractYouTubeId(formYoutubeUrl) && (
+                    <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                      <CheckCircle2 size={12} /> Video Valid
+                    </span>
+                  )}
+                </div>
+
+                <input
+                  type="url"
+                  placeholder="Tempel link YouTube: https://www.youtube.com/watch?v=... atau https://youtu.be/..."
+                  value={formYoutubeUrl}
+                  onChange={(e) => setFormYoutubeUrl(e.target.value)}
+                  className="w-full h-11 bg-white border border-slate-200 rounded-xl px-4 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+
+                {/* Instant Live Player Preview */}
+                {extractYouTubeId(formYoutubeUrl) && (
+                  <div className="space-y-2 pt-1 animate-in fade-in duration-200">
+                    <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-900 border border-slate-300 shadow-md">
                       <iframe
-                        src={getYouTubeEmbedUrl(previewingLesson.video_url || previewingLesson.content) || ''}
-                        title="Preview Video"
+                        src={getYouTubeEmbedUrl(formYoutubeUrl) || ''}
+                        title="Live Preview"
                         className="w-full h-full border-0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
                       />
                     </div>
-                  )}
-
-                  <div className="flex gap-2 pt-1">
-                    <input
-                      type="url"
-                      value={editVideoUrl}
-                      onChange={(e) => setEditVideoUrl(e.target.value)}
-                      placeholder="Ubah / tambahkan link YouTube..."
-                      className="flex-1 h-10 bg-[#171717] border border-white/10 rounded-xl px-3 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-[#d25e28]"
-                    />
-                    <button
-                      onClick={handleUpdateVideoUrl}
-                      disabled={isUpdatingVideo}
-                      className="px-4 h-10 bg-[#d25e28] hover:bg-[#c15321] text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 shrink-0"
-                    >
-                      {isUpdatingVideo ? 'Menyimpan...' : 'Simpan Video'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Summary as Book Slides */}
-              {previewingLesson.ai_reading_preview && (
-                <div className="bg-[#d25e28]/5 rounded-2xl p-4 sm:p-5 border border-[#d25e28]/15 space-y-3">
-                  <h4 className="text-[#d25e28] text-xs font-bold uppercase tracking-widest mb-1.5 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5"><Sparkles size={14} /> Buku Materi Digital ({parseLessonToSlides(previewingLesson.ai_reading_preview).length} Slide)</span>
-                    <span className="text-[9px] font-mono text-[#d25e28]">Format Slide</span>
-                  </h4>
-                  <div className="space-y-4 max-h-72 overflow-y-auto custom-scrollbar pr-1">
-                    {parseLessonToSlides(previewingLesson.ai_reading_preview).map((slide, sIdx) => (
-                      <div key={sIdx} className="space-y-2 pb-3 border-b border-white/10 last:border-b-0 last:pb-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-[#d25e28]/20 text-[#d25e28] border border-[#d25e28]/30">
-                            Slide {sIdx + 1}
-                          </span>
-                          <h5 className="text-xs font-bold text-white uppercase tracking-wider">
-                            {slide.title}
-                          </h5>
-                        </div>
-                        <div className="space-y-2 pl-2">
-                          {slide.paragraphs.map((p, pIdx) => (
-                            <p key={pIdx} className="text-slate-300 text-xs leading-relaxed font-normal">
-                              {p}
-                            </p>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Full Content */}
-              <div className="space-y-2">
-                <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#afafaf]">Cakupan Isi Materi</h4>
-                <div className="bg-[#212121] border border-white/5 p-4 sm:p-5 rounded-2xl text-xs leading-relaxed text-slate-300 whitespace-pre-wrap max-h-60 overflow-y-auto custom-scrollbar font-medium">
-                  {previewingLesson.content}
-                </div>
-              </div>
-
-              {/* Quizzes list inside modal */}
-              <div className="space-y-3">
-                <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#afafaf]">Kuis Evaluasi AI</h4>
-                
-                {isLoadingPreviewQuizzes ? (
-                  <div className="flex items-center gap-2 py-4 justify-center">
-                    <Loader2 size={16} className="animate-spin text-[#d25e28]" />
-                    <span className="text-[10px] font-bold text-[#afafaf] uppercase tracking-wider">Memuat kuis...</span>
-                  </div>
-                ) : previewingQuizzes.length === 0 ? (
-                  <p className="text-[#afafaf] text-xs font-bold italic">Kuis evaluasi tidak dilampirkan pada materi ini.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {previewingQuizzes.map((quiz) => (
-                      <div key={quiz.id} className="bg-[#212121] border border-white/5 p-4 rounded-xl space-y-3">
-                        <div className="flex justify-between items-center text-[10px] font-bold text-[#afafaf] uppercase tracking-wider">
-                          <span>{quiz.title}</span>
-                          <span>Durasi: {quiz.duration_minutes} Menit</span>
-                        </div>
-                        <div className="space-y-2.5">
-                          {(quiz.questions as unknown as QuizQuestion[] || []).map((q, qIdx: number) => (
-                            <div key={qIdx} className="bg-white/5 p-3 rounded-lg text-xs space-y-1">
-                              <p className="font-bold text-white">{qIdx+1}. {q.text || q.question}</p>
-                              {q.type === 'mcq' && q.options && (
-                                <div className="grid grid-cols-1 xs:grid-cols-2 gap-1.5 pl-2 sm:pl-4 pt-1">
-                                  {q.options.map((opt: string) => (
-                                    <span key={opt} className={`text-[10px] px-2 py-1 rounded border ${
-                                      opt === q.answer ? 'bg-[#d25e28]/10 border-[#d25e28]/20 text-[#d25e28] font-bold' : 'bg-transparent border-transparent text-[#afafaf]'
-                                    }`}>
-                                      {opt}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                    <p className="text-[10px] text-slate-500 font-medium italic">
+                      Video ini akan otomatis muncul di bagian pemutar video LMS tampilan siswa.
+                    </p>
                   </div>
                 )}
               </div>
+
+              {/* Content / Material Notes */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700">
+                    Rangkuman Materi & Catatan Bahan Ajar
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateAI}
+                    disabled={isGeneratingAI || !formTopic.trim()}
+                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 disabled:opacity-40 flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-all"
+                  >
+                    {isGeneratingAI ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <Sparkles size={12} />
+                    )}
+                    <span>{isGeneratingAI ? 'Menyusun materi...' : '✨ Buat dengan AI'}</span>
+                  </button>
+                </div>
+                <textarea
+                  rows={6}
+                  value={formContent}
+                  onChange={(e) => setFormContent(e.target.value)}
+                  placeholder="Tuliskan rangkuman materi pembelajaran atau klik 'Buat dengan AI' untuk merangkum secara instan..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 leading-relaxed resize-y"
+                />
+              </div>
+
+              {/* Publish Checkbox */}
+              <label className="flex items-center gap-2 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={formIsPublished}
+                  onChange={(e) => setFormIsPublished(e.target.checked)}
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                />
+                <span className="text-xs font-bold text-slate-700">
+                  Langsung terbitkan ke portal siswa sekarang
+                </span>
+              </label>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {isSubmitting ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <CheckCircle2 size={15} />
+                  )}
+                  <span>{formIsPublished ? 'Simpan & Terbitkan' : 'Simpan Draf'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: PREVIEW LESSON & VIDEO */}
+      {previewLesson && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150"
+          onClick={() => setPreviewLesson(null)}
+        >
+          <div 
+            className="w-full max-w-3xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-md">
+                    {previewLesson.class_name} • {previewLesson.subject}
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400">
+                    {previewLesson.date}
+                  </span>
+                </div>
+                <h3 className="text-xl font-black text-slate-900 mt-1">
+                  {previewLesson.subject}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setPreviewLesson(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center"
+              >
+                <X size={16} />
+              </button>
             </div>
 
-            <div className="flex gap-3 pt-4 border-t border-white/10 justify-between">
+            {/* Video Player in Preview */}
+            {extractYouTubeId(previewLesson.video_url || previewLesson.content) ? (
+              <div className="space-y-2">
+                <div className="relative aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 shadow-lg">
+                  <iframe
+                    src={getYouTubeEmbedUrl(previewLesson.video_url || previewLesson.content) || ''}
+                    title="Video LMS"
+                    className="w-full h-full border-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-500 px-1 font-medium">
+                  <span className="text-emerald-600 font-bold flex items-center gap-1">
+                    <CheckCircle2 size={13} /> Video YouTube Tersemat & Aktif
+                  </span>
+                  {previewLesson.video_url && (
+                    <a 
+                      href={previewLesson.video_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:underline flex items-center gap-1 text-[11px]"
+                    >
+                      Buka Tautan Asli <ExternalLink size={12} />
+                    </a>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center space-y-2">
+                <VideoOff size={24} className="mx-auto text-slate-400" />
+                <p className="text-xs font-bold text-slate-700">Belum Ada Video Tersemat pada Modul Ini</p>
+                <button
+                  onClick={() => {
+                    setEditVideoLesson(previewLesson);
+                    setEditVideoUrlInput('');
+                    setPreviewLesson(null);
+                  }}
+                  className="px-3.5 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm inline-flex items-center gap-1"
+                >
+                  <Plus size={13} /> Tambah Video YouTube
+                </button>
+              </div>
+            )}
+
+            {/* Content Slide Reader */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">
+                Isi Materi Digital
+              </h4>
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs sm:text-sm text-slate-800 leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap font-medium">
+                {stripYouTubeTag(previewLesson.content || previewLesson.ai_reading_preview)}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-100">
               <button
-                onClick={() => handleDeleteLesson(previewingLesson.id, previewingLesson.subject)}
-                className="px-3 sm:px-4 h-11 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wider transition-colors flex items-center gap-2 active:scale-95 duration-150 focus-visible:ring-2 focus-visible:ring-rose-500 outline-none"
+                onClick={() => setPreviewLesson(null)}
+                className="px-5 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold"
               >
-                <Trash2 size={14} /> Hapus Materi
-              </button>
-              <button
-                onClick={() => setPreviewingLesson(null)}
-                className="px-5 sm:px-6 h-11 bg-[#2f2f2f] hover:bg-[#3f3f3f] text-white rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-widest transition-colors border border-white/10 active:scale-95 duration-150 focus-visible:ring-2 focus-visible:ring-white outline-none"
-              >
-                Tutup
+                Tutup Pratinjau
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Styled scrollbar classes */}
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
+      {/* MODAL 3: EDIT VIDEO YOUTUBE LINK */}
+      {editVideoLesson && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setEditVideoLesson(null)}
+        >
+          <div 
+            className="w-full max-w-lg bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900">
+                  Ubah Link Video Pembelajaran
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {editVideoLesson.subject} • {editVideoLesson.class_name}
+                </p>
+              </div>
+              <button 
+                onClick={() => setEditVideoLesson(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-slate-700">
+                URL / Link YouTube
+              </label>
+              <input
+                type="url"
+                value={editVideoUrlInput}
+                onChange={(e) => setEditVideoUrlInput(e.target.value)}
+                placeholder="https://www.youtube.com/watch?v=... atau https://youtu.be/..."
+                className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              />
+
+              {extractYouTubeId(editVideoUrlInput) && (
+                <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-900 border border-slate-300">
+                  <iframe
+                    src={getYouTubeEmbedUrl(editVideoUrlInput) || ''}
+                    title="Preview"
+                    className="w-full h-full border-0"
+                    allowFullScreen
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                onClick={() => setEditVideoLesson(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSaveVideoUpdate}
+                disabled={isUpdatingVideo}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {isUpdatingVideo ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Check size={14} />
+                )}
+                <span>Simpan Link Video</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

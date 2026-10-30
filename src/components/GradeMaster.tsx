@@ -1106,8 +1106,8 @@ export default function GradeMaster() {
   const isHomeScrollLocked = layer === 'home' && homeView === 'ai';
 
   return (
-    <div className={`relative flex flex-col ${isHomeScrollLocked || layer === 'lesson_management' ? 'h-dvh overflow-hidden' : 'min-h-[100dvh] pb-safe'} transition-colors duration-500`}>
-      <div className={`w-full ${isHomeScrollLocked || layer === 'lesson_management' ? 'h-full flex flex-col min-h-0' : ''} font-outfit`}>
+    <div className={`relative flex flex-col ${isHomeScrollLocked ? 'h-dvh overflow-hidden' : 'min-h-[100dvh] pb-safe'} transition-colors duration-500`}>
+      <div className={`w-full ${isHomeScrollLocked ? 'h-full flex flex-col min-h-0' : ''} font-outfit`}>
         {layer === "home" && (
         <HomeLayer
           sessions={sessions}
