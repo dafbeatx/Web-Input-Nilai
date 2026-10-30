@@ -7,7 +7,6 @@ import {
   Sparkles, 
   Calendar, 
   CheckCircle2, 
-  FileText, 
   Bot, 
   Send, 
   Loader2, 
@@ -23,8 +22,6 @@ import {
   ExternalLink,
   Edit3,
   Search,
-  Filter,
-  CheckCircle,
   Copy,
   Check
 } from 'lucide-react';
@@ -198,7 +195,7 @@ export default function StudentLessonLayer({
   // Simplified AI Mode State
   const [learningMode, setLearningMode] = useState<'santai' | 'standar'>('santai');
   const [simplifiedSlides, setSimplifiedSlides] = useState<SimplifiedSlide[]>([]);
-  const [isLoadingSimplify, setIsLoadingSimplify] = useState(false);
+  const [, setIsLoadingSimplify] = useState(false);
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
   const [bookViewMode, setBookViewMode] = useState<'slide' | 'scroll'>('slide');
 
@@ -245,7 +242,10 @@ export default function StudentLessonLayer({
     try {
       const saved = localStorage.getItem(`nawasena_lms_completed_${activeClassName}`);
       if (saved) {
-        setCompletedLessons(new Set(JSON.parse(saved)));
+        const parsed = new Set<string>(JSON.parse(saved));
+        queueMicrotask(() => {
+          setCompletedLessons(parsed);
+        });
       }
     } catch {
       // Ignored
@@ -258,7 +258,9 @@ export default function StudentLessonLayer({
     const studentId = studentData?.id || 'guest';
     const noteKey = `nawasena_note_${studentId}_${selectedLesson.id}`;
     const saved = localStorage.getItem(noteKey) || '';
-    setStudentNote(saved);
+    queueMicrotask(() => {
+      setStudentNote(saved);
+    });
   }, [selectedLesson, studentData?.id]);
 
   const handleSaveNote = (newNote: string) => {

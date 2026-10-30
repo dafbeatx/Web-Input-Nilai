@@ -15,13 +15,10 @@ import {
   VideoOff, 
   ExternalLink, 
   Plus, 
-  Filter, 
   Calendar, 
   Layers, 
   Check, 
-  HelpCircle,
-  Eye,
-  Edit2
+  Eye
 } from 'lucide-react';
 import { DailyLesson, ToastType } from '@/lib/grademaster/types';
 import { supabase } from '@/lib/supabase/client';
@@ -31,7 +28,6 @@ import {
   deleteLesson,
   generateAILessonContent
 } from '@/lib/grademaster/lessonActions';
-import { parseLessonToSlides } from '@/lib/grademaster/lessonParser';
 import { 
   extractYouTubeId, 
   getYouTubeEmbedUrl, 
@@ -115,7 +111,10 @@ export default function LessonManagementLayer({
   };
 
   useEffect(() => {
-    loadLessons();
+    queueMicrotask(() => {
+      loadLessons();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Filtered lessons
@@ -487,6 +486,7 @@ export default function LessonManagementLayer({
                         onClick={() => setPreviewLesson(lesson)}
                         className="relative aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 cursor-pointer group/thumb"
                       >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img 
                           src={ytThumb || ''} 
                           alt="Video Thumbnail" 
