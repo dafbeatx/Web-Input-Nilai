@@ -47,6 +47,7 @@ export default function Navbar() {
   } = useGradeMaster();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
 
@@ -98,19 +99,26 @@ export default function Navbar() {
   const isHidden = isEmbedMode || pathname?.startsWith('/behavior') || isDedicatedLayer;
 
   useEffect(() => {
-    if (!isHidden) {
+    // Desktop layout is full width by default. Only add has-desktop-sidebar when explicitly opened
+    if (!isHidden && isDesktopSidebarOpen) {
       document.body.classList.add('has-desktop-sidebar');
     } else {
       document.body.classList.remove('has-desktop-sidebar');
     }
     return () => document.body.classList.remove('has-desktop-sidebar');
-  }, [isHidden]);
+  }, [isHidden, isDesktopSidebarOpen]);
 
   if (isHidden) return null;
 
-  const onOpenSettings = () => setModal("adminSettings");
+  const onOpenSettings = () => {
+    setIsDesktopSidebarOpen(false);
+    setIsMobileMenuOpen(false);
+    setModal("adminSettings");
+  };
 
   const handleNavigate = (targetLayer: Layer) => {
+    setIsDesktopSidebarOpen(false);
+    setIsMobileMenuOpen(false);
     if (pathname !== '/') {
       router.push(`/#${targetLayer}`);
     } else {
@@ -161,22 +169,55 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Desktop Left Sidebar */}
-      <nav className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 bg-surface/95 backdrop-blur-xl border-r border-outline-variant shadow-2xl z-[100]">
+      {/* Floating Desktop Menu Trigger (Only visible on non-dedicated pages when drawer is closed) */}
+      {!isDesktopSidebarOpen && (
+        <button
+          onClick={() => setIsDesktopSidebarOpen(true)}
+          className="hidden md:flex fixed top-4 left-4 z-40 items-center gap-2 px-3.5 py-2 bg-white/95 hover:bg-white text-slate-700 hover:text-slate-900 rounded-2xl shadow-lg border border-slate-200/80 backdrop-blur-md transition-all duration-200 hover:scale-105 active:scale-95 text-xs font-bold font-outfit cursor-pointer"
+          title="Buka Menu Navigasi"
+        >
+          <Menu size={16} />
+          <span>Menu</span>
+        </button>
+      )}
+
+      {/* Desktop Slide-over Backdrop (Overlay only, never pushes/blocks content) */}
+      {isDesktopSidebarOpen && (
+        <div 
+          className="hidden md:block fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[990] transition-opacity animate-in fade-in duration-200 cursor-pointer"
+          onClick={() => setIsDesktopSidebarOpen(false)}
+        />
+      )}
+
+      {/* Desktop Drawer Navigation */}
+      <nav 
+        className={`hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 bg-surface/98 backdrop-blur-2xl border-r border-outline-variant shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${
+          isDesktopSidebarOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
+        }`}
+      >
         <div className="flex flex-col h-full p-5">
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-10 mt-2">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden bg-slate-900/5">
-              <Image src="/logo.svg" alt="Nawasena Logo" width={36} height={36} priority className="object-contain" />
+          {/* Logo & Close Button */}
+          <div className="flex items-center justify-between mb-8 mt-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden bg-slate-900/5">
+                <Image src="/logo.svg" alt="Nawasena Logo" width={36} height={36} priority className="object-contain" />
+              </div>
+              <h1 className="text-lg font-black text-on-surface tracking-tight font-outfit uppercase leading-tight">Nawasena</h1>
             </div>
-            <h1 className="text-lg font-black text-on-surface tracking-tight font-outfit uppercase leading-tight">Nawasena</h1>
+            <button
+              onClick={() => setIsDesktopSidebarOpen(false)}
+              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+              title="Tutup Menu"
+            >
+              <X size={18} />
+            </button>
           </div>
 
           {/* Navigation Items */}
           <div className="flex flex-col gap-2.5 flex-1 overflow-y-auto pr-1 custom-scrollbar">
             <button
                 onClick={() => handleNavigate('home')}
-                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] ${
+                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] cursor-pointer ${
                   isActive('exam') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                 }`}
             >
@@ -184,7 +225,7 @@ export default function Navbar() {
             </button>
             <button
                 onClick={() => handleNavigate('behavior')}
-                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] ${
+                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] cursor-pointer ${
                   isActive('behavior') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                 }`}
             >
@@ -192,7 +233,7 @@ export default function Navbar() {
             </button>
             <button
                 onClick={() => handleNavigate('attendance')}
-                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] ${
+                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] cursor-pointer ${
                   isActive('attendance') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                 }`}
             >
@@ -204,7 +245,7 @@ export default function Navbar() {
                   <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider px-3 mb-1">Portal Siswa</span>
                   <button
                     onClick={() => handleNavigate('student_lesson')}
-                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] ${
+                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] cursor-pointer ${
                       isActive('student_lesson') ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                     }`}
                   >
@@ -213,6 +254,7 @@ export default function Navbar() {
                   {isStudent && (
                     <Link
                       href="/games"
+                      onClick={() => setIsDesktopSidebarOpen(false)}
                       className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] ${
                         isActive('games') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                       }`}
@@ -228,48 +270,48 @@ export default function Navbar() {
                   <div className="my-2 border-t border-slate-200/60"></div>
                   <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider px-3 mb-1">Admin Panel</span>
                   <button
-                    onClick={() => onNavigate('oral_exams')}
-                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                    onClick={() => handleNavigate('oral_exams')}
+                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 cursor-pointer ${
                       layer === 'oral_exams' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                     }`}
                   >
                     <Mic size={18} /> Ujian Lisan
                   </button>
                   <button
-                    onClick={() => onNavigate('game_management')}
-                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                    onClick={() => handleNavigate('game_management')}
+                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 cursor-pointer ${
                       layer === 'game_management' ? 'bg-amber-600 text-white shadow-md shadow-amber-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                     }`}
                   >
                     <Gamepad2 size={18} /> Manajemen Game
                   </button>
                   <button
-                    onClick={() => onNavigate('lesson_management')}
-                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                    onClick={() => handleNavigate('lesson_management')}
+                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 cursor-pointer ${
                       layer === 'lesson_management' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                     }`}
                   >
                     <BookOpen size={18} /> Pelajaran
                   </button>
                   <button
-                    onClick={() => onNavigate('data_center')}
-                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                    onClick={() => handleNavigate('data_center')}
+                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 cursor-pointer ${
                       layer === 'data_center' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                     }`}
                   >
                     <Database size={18} /> Pusat Data
                   </button>
                   <button
-                    onClick={() => onNavigate('student_accounts')}
-                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                    onClick={() => handleNavigate('student_accounts')}
+                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 cursor-pointer ${
                       layer === 'student_accounts' ? 'bg-sky-600 text-white shadow-md shadow-sky-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                     }`}
                   >
                     <Users size={18} /> Akun Siswa
                   </button>
                   <button
-                    onClick={() => onNavigate('remedial_dashboard')}
-                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                    onClick={() => handleNavigate('remedial_dashboard')}
+                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 cursor-pointer ${
                       layer === 'remedial_dashboard' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                     }`}
                   >
@@ -277,7 +319,7 @@ export default function Navbar() {
                   </button>
                   <button
                     onClick={() => handleNavigate('certificate_management')}
-                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 ${
+                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 cursor-pointer ${
                       layer === 'certificate_management' ? 'bg-amber-600 text-white shadow-md shadow-amber-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                     }`}
                   >
