@@ -252,6 +252,10 @@ body.hide-mobile-header #mobile-bottom-nav {
   body.has-desktop-sidebar .main-content-wrapper {
     padding-left: 0 !important;
   }
+  /* Desktop topbar is 3.5rem (h-14) — push content below it */
+  .main-content-wrapper {
+    padding-top: 3.5rem;
+  }
 }
 
 /* ── MOBILE SHELL & INTERACTION OPTIMIZATIONS ── */

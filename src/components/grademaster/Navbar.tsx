@@ -47,8 +47,6 @@ export default function Navbar() {
   } = useGradeMaster();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(false);
-  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
 
   const isEmbedMode = useSyncExternalStore(
@@ -77,7 +75,7 @@ export default function Navbar() {
     () => ''
   );
 
-  // Dedicated full-screen workspaces / classrooms / auth screens that must NEVER display the desktop sidebar
+  // These layers must NEVER show the desktop sidebar — fullscreen workspaces, auth flows, etc.
   const DEDICATED_FULLSCREEN_LAYERS = [
     'login',
     'student_login',
@@ -95,29 +93,25 @@ export default function Navbar() {
     'certificate_management'
   ];
 
-  const isDedicatedLayer = DEDICATED_FULLSCREEN_LAYERS.includes(layer) || DEDICATED_FULLSCREEN_LAYERS.includes(currentHash);
+  // Use hash as primary signal — avoids flicker when React layer state lags behind URL
+  const effectiveLayer = currentHash || layer;
+  const isDedicatedLayer = DEDICATED_FULLSCREEN_LAYERS.includes(effectiveLayer);
   const isHidden = isEmbedMode || pathname?.startsWith('/behavior') || isDedicatedLayer;
 
   useEffect(() => {
-    // Desktop layout is full width by default. Only add has-desktop-sidebar when explicitly opened
-    if (!isHidden && isDesktopSidebarOpen) {
-      document.body.classList.add('has-desktop-sidebar');
-    } else {
-      document.body.classList.remove('has-desktop-sidebar');
-    }
+    // Topbar replaces sidebar — no layout shift needed
+    document.body.classList.remove('has-desktop-sidebar');
     return () => document.body.classList.remove('has-desktop-sidebar');
-  }, [isHidden, isDesktopSidebarOpen]);
+  }, [isHidden]);
 
   if (isHidden) return null;
 
   const onOpenSettings = () => {
-    setIsDesktopSidebarOpen(false);
     setIsMobileMenuOpen(false);
     setModal("adminSettings");
   };
 
   const handleNavigate = (targetLayer: Layer) => {
-    setIsDesktopSidebarOpen(false);
     setIsMobileMenuOpen(false);
     if (pathname !== '/') {
       router.push(`/#${targetLayer}`);
@@ -157,7 +151,6 @@ export default function Navbar() {
       setToast({ message: data.message, type: 'success' });
       // Configure context with matched DB data along with indicating link status
       setStudentData({ ...studentData, ...data.student, isGoogleLinked: true });
-      setIsProfileDropdownOpen(false);
       onNavigate('dashboard');
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : "Terjadi kesalahan";
@@ -169,257 +162,168 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Floating Desktop Menu Trigger — pinned to top-right corner, never overlaps page content */}
-      {!isDesktopSidebarOpen && (
-        <button
-          onClick={() => setIsDesktopSidebarOpen(true)}
-          className="hidden md:flex fixed top-4 right-4 z-40 items-center gap-2 px-3.5 py-2 bg-white/95 hover:bg-white text-slate-700 hover:text-slate-900 rounded-2xl shadow-lg border border-slate-200/80 backdrop-blur-md transition-all duration-200 hover:scale-105 active:scale-95 text-xs font-bold font-outfit cursor-pointer"
-          title="Buka Menu Navigasi"
-        >
-          <Menu size={16} />
-          <span>Menu</span>
-        </button>
-      )}
-
-      {/* Desktop Slide-over Backdrop (Overlay only, never pushes/blocks content) */}
-      {isDesktopSidebarOpen && (
-        <div 
-          className="hidden md:block fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[990] transition-opacity animate-in fade-in duration-200 cursor-pointer"
-          onClick={() => setIsDesktopSidebarOpen(false)}
-        />
-      )}
-
-      {/* Desktop Drawer Navigation */}
-      <nav 
-        className={`hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 bg-surface/98 backdrop-blur-2xl border-r border-outline-variant shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${
-          isDesktopSidebarOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
-        }`}
-      >
-        <div className="flex flex-col h-full p-5">
-          {/* Logo & Close Button */}
-          <div className="flex items-center justify-between mb-8 mt-2">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden bg-slate-900/5">
-                <Image src="/logo.svg" alt="Nawasena Logo" width={36} height={36} priority className="object-contain" />
-              </div>
-              <h1 className="text-lg font-black text-on-surface tracking-tight font-outfit uppercase leading-tight">Nawasena</h1>
-            </div>
-            <button
-              onClick={() => setIsDesktopSidebarOpen(false)}
-              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
-              title="Tutup Menu"
-            >
-              <X size={18} />
-            </button>
+      {/* Desktop Top Navigation Bar — horizontal, never overlaps content */}
+      <header className="hidden md:flex fixed top-0 left-0 right-0 z-[100] h-14 bg-white/95 backdrop-blur-2xl border-b border-slate-200/70 shadow-sm items-center px-5 gap-4">
+        {/* Logo */}
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden bg-slate-900/5">
+            <Image src="/logo.svg" alt="Nawasena" width={28} height={28} priority className="object-contain" />
           </div>
-
-          {/* Navigation Items */}
-          <div className="flex flex-col gap-1.5 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-            {/* ── Umum ── */}
-            <button
-                onClick={() => handleNavigate('home')}
-                className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 min-h-[44px] cursor-pointer ${
-                  isActive('exam') ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-            >
-                <Home size={16} className={isActive('exam') ? 'text-white' : 'text-slate-400'} /> Beranda
-            </button>
-            <button
-                onClick={() => handleNavigate('behavior')}
-                className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 min-h-[44px] cursor-pointer ${
-                  isActive('behavior') ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-            >
-                <ShieldCheck size={16} className={isActive('behavior') ? 'text-white' : 'text-orange-400'} /> Sikap
-            </button>
-            <button
-                onClick={() => handleNavigate('attendance')}
-                className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 min-h-[44px] cursor-pointer ${
-                  isActive('attendance') ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-            >
-                <Calendar size={16} className={isActive('attendance') ? 'text-white' : 'text-sky-400'} /> Kehadiran
-            </button>
-            {(isStudent || isParent) && (
-                <>
-                  <div className="my-2 h-px bg-slate-200/70" />
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.12em] px-3.5 pb-0.5">Portal Siswa</span>
-                  <button
-                    onClick={() => handleNavigate('student_lesson')}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 min-h-[44px] cursor-pointer ${
-                      isActive('student_lesson') ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                  >
-                    <BookOpen size={16} className={isActive('student_lesson') ? 'text-white' : 'text-emerald-500'} /> Pelajaran Saya
-                  </button>
-                  {isStudent && (
-                    <Link
-                      href="/games"
-                      onClick={() => setIsDesktopSidebarOpen(false)}
-                      className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 min-h-[44px] ${
-                        isActive('games') ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                      }`}
-                    >
-                      <Gamepad2 size={16} className={isActive('games') ? 'text-white' : 'text-purple-500'} /> Games
-                    </Link>
-                  )}
-                </>
-            )}
-
-            {isAdmin && (
-                <>
-                  <div className="my-2 h-px bg-slate-200/70" />
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.12em] px-3.5 pb-0.5">Admin Panel</span>
-                  <button
-                    onClick={() => handleNavigate('oral_exams')}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 cursor-pointer ${
-                      layer === 'oral_exams' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                  >
-                    <Mic size={16} className={layer === 'oral_exams' ? 'text-white' : 'text-indigo-400'} /> Ujian Lisan
-                  </button>
-                  <button
-                    onClick={() => handleNavigate('game_management')}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 cursor-pointer ${
-                      layer === 'game_management' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                  >
-                    <Gamepad2 size={16} className={layer === 'game_management' ? 'text-white' : 'text-purple-400'} /> Manajemen Game
-                  </button>
-                  <button
-                    onClick={() => handleNavigate('lesson_management')}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 cursor-pointer ${
-                      layer === 'lesson_management' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                  >
-                    <BookOpen size={16} className={layer === 'lesson_management' ? 'text-white' : 'text-emerald-500'} /> Pelajaran
-                  </button>
-                  <button
-                    onClick={() => handleNavigate('data_center')}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 cursor-pointer ${
-                      layer === 'data_center' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                  >
-                    <Database size={16} className={layer === 'data_center' ? 'text-white' : 'text-amber-500'} /> Pusat Data
-                  </button>
-                  <button
-                    onClick={() => handleNavigate('student_accounts')}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 cursor-pointer ${
-                      layer === 'student_accounts' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                  >
-                    <Users size={16} className={layer === 'student_accounts' ? 'text-white' : 'text-sky-500'} /> Akun Siswa
-                  </button>
-                  <button
-                    onClick={() => handleNavigate('remedial_dashboard')}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 cursor-pointer ${
-                      layer === 'remedial_dashboard' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                  >
-                    <Settings size={16} className={layer === 'remedial_dashboard' ? 'text-white' : 'text-rose-400'} /> Remedial
-                  </button>
-                  <button
-                    onClick={() => handleNavigate('certificate_management')}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 cursor-pointer ${
-                      layer === 'certificate_management' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                  >
-                    <Award size={16} className={layer === 'certificate_management' ? 'text-white' : 'text-amber-500'} /> Sertifikat LDKS
-                  </button>
-                </>
-            )}
-          </div>
-
-          {/* User Profile / Auth */}
-          <div className="mt-auto pt-4 border-t border-outline-variant">
-            {isAdmin ? (
-               <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-3 px-3 py-2 bg-surface-container rounded-xl border border-surface-container-high mb-2">
-                     <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center">
-                        <CheckCircle2 size={16} />
-                     </div>
-                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Admin</p>
-                          <span className="text-[9px] font-black text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
-                            {academicYear}
-                          </span>
-                        </div>
-                        <p className="text-sm font-black text-on-surface truncate leading-tight">{adminUser || 'Admin'}</p>
-                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                     <button onClick={onOpenSettings} className="flex-1 py-2 rounded-xl bg-surface-variant text-on-surface-variant hover:text-primary hover:bg-surface-container-highest flex items-center justify-center transition-colors border border-outline-variant">
-                       <Settings size={16} />
-                     </button>
-                     <button onClick={onLogout} className="flex-1 py-2 rounded-xl text-rose-500 hover:bg-rose-500/10 flex items-center justify-center transition-colors border border-transparent hover:border-rose-500/20">
-                       <LogOut size={16} />
-                     </button>
-                  </div>
-               </div>
-            ) : (isStudent && studentData?.isGoogleLinked) || isParent ? (
-               <div className="relative">
-                  <button 
-                    onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                    className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-surface-variant border border-transparent hover:border-outline-variant transition-all text-left"
-                  >
-                    {studentData?.photo_url ? (
-                      <Image src={studentData.photo_url} alt="Profile" width={40} height={40} className="w-10 h-10 rounded-full shadow-md object-cover border border-outline-variant flex-shrink-0" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold flex-shrink-0">
-                        {studentData?.name?.[0] || 'U'}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                       <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider truncate">{isParent ? 'Orang Tua' : 'Siswa'}</p>
-                       <p className="text-sm font-black text-on-surface truncate leading-tight">{studentData?.name}</p>
-                    </div>
-                  </button>
-
-                  {isProfileDropdownOpen && (
-                    <div className="absolute bottom-full left-0 w-full mb-2 bg-surface premium-shadow border border-outline-variant rounded-2xl p-2 animate-in fade-in slide-in-from-bottom-2 duration-200 z-50">
-                      {!isParent && (
-                        <button 
-                          onClick={handleLinkGoogleStudent}
-                          disabled={isLinking}
-                          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-emerald-500/10 hover:text-emerald-600 text-on-surface-variant transition-colors text-sm font-bold text-left disabled:opacity-50"
-                        >
-                          {isLinking ? <Loader2 size={16} className="animate-spin" /> : <GraduationCap size={16} />} 
-                          Siswa / Mahasiswa
-                        </button>
-                      )}
-                      <button 
-                        onClick={() => {
-                           onNavigate('student_profile');
-                           setIsProfileDropdownOpen(false);
-                        }}
-                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-surface-variant text-on-surface-variant transition-colors text-sm font-bold text-left mt-1"
-                      >
-                        <User size={16} /> {isParent ? 'Profil Siswa' : 'Profil Saya'}
-                      </button>
-
-                      <div className="border-t border-outline-variant mt-2 pt-2">
-                        <button 
-                          onClick={() => { onLogout(); setIsProfileDropdownOpen(false); }}
-                          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-colors text-sm font-bold text-left"
-                        >
-                          <LogOut size={16} /> Logout Global
-                        </button>
-                      </div>
-                    </div>
-                  )}
-               </div>
-            ) : (
-               <button 
-                 onClick={() => onNavigate('student_login')}
-                 className="w-full py-3 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
-               >
-                 <LogIn size={16} /> Login
-               </button>
-            )}
-          </div>
+          <span className="text-sm font-black text-slate-900 tracking-tight font-outfit uppercase">Nawasena</span>
         </div>
-      </nav>
+
+        {/* Nav Items */}
+        <nav className="flex items-center gap-1 flex-1 overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => handleNavigate('home')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
+              isActive('exam') ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <Home size={14} /> Beranda
+          </button>
+          <button
+            onClick={() => handleNavigate('behavior')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
+              isActive('behavior') ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <ShieldCheck size={14} className={isActive('behavior') ? '' : 'text-orange-400'} /> Sikap
+          </button>
+          <button
+            onClick={() => handleNavigate('attendance')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
+              isActive('attendance') ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <Calendar size={14} className={isActive('attendance') ? '' : 'text-sky-400'} /> Kehadiran
+          </button>
+
+          {(isStudent || isParent) && (
+            <button
+              onClick={() => handleNavigate('student_lesson')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                isActive('student_lesson') ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <BookOpen size={14} className={isActive('student_lesson') ? '' : 'text-emerald-500'} /> Pelajaran Saya
+            </button>
+          )}
+          {isStudent && (
+            <Link
+              href="/games"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-all ${
+                isActive('games') ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <Gamepad2 size={14} className={isActive('games') ? '' : 'text-purple-500'} /> Games
+            </Link>
+          )}
+
+          {isAdmin && (
+            <>
+              <div className="w-px h-5 bg-slate-200 mx-1 flex-shrink-0" />
+              <button
+                onClick={() => handleNavigate('oral_exams')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  layer === 'oral_exams' ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                <Mic size={14} className={layer === 'oral_exams' ? '' : 'text-indigo-400'} /> Ujian Lisan
+              </button>
+              <button
+                onClick={() => handleNavigate('game_management')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  layer === 'game_management' ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                <Gamepad2 size={14} className={layer === 'game_management' ? '' : 'text-purple-400'} /> Game
+              </button>
+              <button
+                onClick={() => handleNavigate('lesson_management')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  layer === 'lesson_management' ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                <BookOpen size={14} className={layer === 'lesson_management' ? '' : 'text-emerald-500'} /> Pelajaran
+              </button>
+              <button
+                onClick={() => handleNavigate('data_center')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  layer === 'data_center' ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                <Database size={14} className={layer === 'data_center' ? '' : 'text-amber-500'} /> Pusat Data
+              </button>
+              <button
+                onClick={() => handleNavigate('student_accounts')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  layer === 'student_accounts' ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                <Users size={14} className={layer === 'student_accounts' ? '' : 'text-sky-500'} /> Akun Siswa
+              </button>
+              <button
+                onClick={() => handleNavigate('remedial_dashboard')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  layer === 'remedial_dashboard' ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                <Settings size={14} className={layer === 'remedial_dashboard' ? '' : 'text-rose-400'} /> Remedial
+              </button>
+              <button
+                onClick={() => handleNavigate('certificate_management')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  layer === 'certificate_management' ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                <Award size={14} className={layer === 'certificate_management' ? '' : 'text-amber-500'} /> Sertifikat
+              </button>
+            </>
+          )}
+        </nav>
+
+        {/* Right: Profile / Auth */}
+        <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+          {isAdmin ? (
+            <>
+              <span className="text-[11px] font-bold text-slate-500 hidden lg:block">{adminUser || 'Admin'}</span>
+              <button onClick={onOpenSettings} className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors cursor-pointer" title="Pengaturan">
+                <Settings size={15} />
+              </button>
+              <button onClick={onLogout} className="w-8 h-8 rounded-lg text-rose-400 hover:bg-rose-50 flex items-center justify-center transition-colors cursor-pointer" title="Logout">
+                <LogOut size={15} />
+              </button>
+            </>
+          ) : (isStudent && studentData?.isGoogleLinked) || isParent ? (
+            <button
+              onClick={() => { onNavigate('student_profile'); }}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-slate-100 transition-all text-left cursor-pointer"
+            >
+              {studentData?.photo_url ? (
+                <Image src={studentData.photo_url} alt="Profile" width={28} height={28} className="w-7 h-7 rounded-full object-cover border border-slate-200 flex-shrink-0" />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                  {studentData?.name?.[0] || 'U'}
+                </div>
+              )}
+              <span className="text-[12px] font-bold text-slate-700 hidden lg:block truncate max-w-[120px]">{studentData?.name}</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => onNavigate('student_login')}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-violet-600 text-white rounded-lg text-[12px] font-bold hover:bg-violet-700 transition-all cursor-pointer"
+            >
+              <LogIn size={14} /> Login
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* Desktop Slide-over Backdrop (kept for potential future use but hidden) */}
+
+      {/* Desktop Drawer Navigation (removed — replaced by topbar above) */}
+      <nav className="hidden" aria-hidden="true"></nav>
 
       {/* ═══════════════════════════════════════════════════════════
           MOBILE TOP HEADER — Frosted Glass, Safe Area Aware
