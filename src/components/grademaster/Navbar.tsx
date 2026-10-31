@@ -214,52 +214,53 @@ export default function Navbar() {
           </div>
 
           {/* Navigation Items */}
-          <div className="flex flex-col gap-2.5 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+          <div className="flex flex-col gap-1.5 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+            {/* ── Umum ── */}
             <button
                 onClick={() => handleNavigate('home')}
-                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] cursor-pointer ${
-                  isActive('exam') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 min-h-[44px] cursor-pointer ${
+                  isActive('exam') ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
             >
-                <Home size={18} /> Beranda
+                <Home size={16} className={isActive('exam') ? 'text-white' : 'text-slate-400'} /> Beranda
             </button>
             <button
                 onClick={() => handleNavigate('behavior')}
-                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] cursor-pointer ${
-                  isActive('behavior') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 min-h-[44px] cursor-pointer ${
+                  isActive('behavior') ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
             >
-                <ShieldCheck size={18} /> Sikap
+                <ShieldCheck size={16} className={isActive('behavior') ? 'text-white' : 'text-orange-400'} /> Sikap
             </button>
             <button
                 onClick={() => handleNavigate('attendance')}
-                className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] cursor-pointer ${
-                  isActive('attendance') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 min-h-[44px] cursor-pointer ${
+                  isActive('attendance') ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
             >
-                <Calendar size={18} /> Kehadiran
+                <Calendar size={16} className={isActive('attendance') ? 'text-white' : 'text-sky-400'} /> Kehadiran
             </button>
             {(isStudent || isParent) && (
                 <>
-                  <div className="my-2 border-t border-slate-200/60"></div>
-                  <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider px-3 mb-1">Portal Siswa</span>
+                  <div className="my-2 h-px bg-slate-200/70" />
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.12em] px-3.5 pb-0.5">Portal Siswa</span>
                   <button
                     onClick={() => handleNavigate('student_lesson')}
-                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] cursor-pointer ${
-                      isActive('student_lesson') ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 min-h-[44px] cursor-pointer ${
+                      isActive('student_lesson') ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                   >
-                    <BookOpen size={18} /> Pelajaran Saya
+                    <BookOpen size={16} className={isActive('student_lesson') ? 'text-white' : 'text-emerald-500'} /> Pelajaran Saya
                   </button>
                   {isStudent && (
                     <Link
                       href="/games"
                       onClick={() => setIsDesktopSidebarOpen(false)}
-                      className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 min-h-[44px] ${
-                        isActive('games') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                      className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 min-h-[44px] ${
+                        isActive('games') ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                       }`}
                     >
-                      <Gamepad2 size={18} /> Games
+                      <Gamepad2 size={16} className={isActive('games') ? 'text-white' : 'text-purple-500'} /> Games
                     </Link>
                   )}
                 </>
@@ -267,63 +268,63 @@ export default function Navbar() {
 
             {isAdmin && (
                 <>
-                  <div className="my-2 border-t border-slate-200/60"></div>
-                  <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider px-3 mb-1">Admin Panel</span>
+                  <div className="my-2 h-px bg-slate-200/70" />
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.12em] px-3.5 pb-0.5">Admin Panel</span>
                   <button
                     onClick={() => handleNavigate('oral_exams')}
-                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 cursor-pointer ${
-                      layer === 'oral_exams' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 cursor-pointer ${
+                      layer === 'oral_exams' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                   >
-                    <Mic size={18} /> Ujian Lisan
+                    <Mic size={16} className={layer === 'oral_exams' ? 'text-white' : 'text-indigo-400'} /> Ujian Lisan
                   </button>
                   <button
                     onClick={() => handleNavigate('game_management')}
-                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 cursor-pointer ${
-                      layer === 'game_management' ? 'bg-amber-600 text-white shadow-md shadow-amber-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 cursor-pointer ${
+                      layer === 'game_management' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                   >
-                    <Gamepad2 size={18} /> Manajemen Game
+                    <Gamepad2 size={16} className={layer === 'game_management' ? 'text-white' : 'text-purple-400'} /> Manajemen Game
                   </button>
                   <button
                     onClick={() => handleNavigate('lesson_management')}
-                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 cursor-pointer ${
-                      layer === 'lesson_management' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 cursor-pointer ${
+                      layer === 'lesson_management' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                   >
-                    <BookOpen size={18} /> Pelajaran
+                    <BookOpen size={16} className={layer === 'lesson_management' ? 'text-white' : 'text-emerald-500'} /> Pelajaran
                   </button>
                   <button
                     onClick={() => handleNavigate('data_center')}
-                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 cursor-pointer ${
-                      layer === 'data_center' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 cursor-pointer ${
+                      layer === 'data_center' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                   >
-                    <Database size={18} /> Pusat Data
+                    <Database size={16} className={layer === 'data_center' ? 'text-white' : 'text-amber-500'} /> Pusat Data
                   </button>
                   <button
                     onClick={() => handleNavigate('student_accounts')}
-                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 cursor-pointer ${
-                      layer === 'student_accounts' ? 'bg-sky-600 text-white shadow-md shadow-sky-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 cursor-pointer ${
+                      layer === 'student_accounts' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                   >
-                    <Users size={18} /> Akun Siswa
+                    <Users size={16} className={layer === 'student_accounts' ? 'text-white' : 'text-sky-500'} /> Akun Siswa
                   </button>
                   <button
                     onClick={() => handleNavigate('remedial_dashboard')}
-                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 cursor-pointer ${
-                      layer === 'remedial_dashboard' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 cursor-pointer ${
+                      layer === 'remedial_dashboard' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                   >
-                    <Settings size={18} /> Remedial
+                    <Settings size={16} className={layer === 'remedial_dashboard' ? 'text-white' : 'text-rose-400'} /> Remedial
                   </button>
                   <button
                     onClick={() => handleNavigate('certificate_management')}
-                    className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-3.5 cursor-pointer ${
-                      layer === 'certificate_management' ? 'bg-amber-600 text-white shadow-md shadow-amber-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 flex items-center gap-3 cursor-pointer ${
+                      layer === 'certificate_management' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                   >
-                    <Award size={18} className={layer === 'certificate_management' ? 'text-white' : 'text-amber-600'} /> Sertifikat LDKS
+                    <Award size={16} className={layer === 'certificate_management' ? 'text-white' : 'text-amber-500'} /> Sertifikat LDKS
                   </button>
                 </>
             )}
