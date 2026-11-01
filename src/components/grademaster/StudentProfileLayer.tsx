@@ -13,7 +13,7 @@ import {
   Settings, LogOut, Share2, Trophy, TrendingUp,
   Home, BookOpen, Upload, GraduationCap, Bug, ArrowRight, Info, Scroll,
   Smartphone, Laptop, RefreshCw, Mic, CheckCircle2, XCircle, ChevronDown, ChevronUp, Award,
-  Gamepad2, Camera
+  Gamepad2, Camera, Zap
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, Tooltip, 
@@ -101,6 +101,7 @@ export default function StudentProfileLayer({
   const [totalPoints, setTotalPoints] = useState(initialPoints);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(avatarUrl);
   const [activeTab, setActiveTab] = useState<'HOME' | 'GRADES' | 'LESSON' | 'ATTENDANCE' | 'ACCOUNT' | 'GAMES'>('HOME');
+  const [selectedGameId, setSelectedGameId] = useState<'chess' | 'quick_quiz' | 'word_scramble' | null>(null);
   const [activeClass, setActiveClass] = useState(className);
   const [activeYear, setActiveYear] = useState(academicYear);
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
@@ -1884,7 +1885,13 @@ export default function StudentProfileLayer({
         {/* Main Content Area */}
         {activeTab === 'GAMES' ? (
           <div className="flex-1 overflow-y-auto no-scrollbar pt-safe">
-            <GamesLayer onBack={() => setActiveTab('HOME')} />
+            <GamesLayer 
+              onBack={() => {
+                setActiveTab('HOME');
+                setSelectedGameId(null);
+              }}
+              initialGameId={selectedGameId}
+            />
           </div>
         ) : activeTab !== 'LESSON' ? (
           <main className="flex-1 overflow-y-auto px-3.5 py-3 space-y-3.5 no-scrollbar pb-28">
@@ -2206,6 +2213,78 @@ export default function StudentProfileLayer({
                     <p className="text-[11px] text-slate-500 font-medium mt-1 leading-tight">Rapor & sertifikat resmi</p>
                   </div>
                 </button>
+              </div>
+
+              {/* Game Edukasi (Hanya Icon & Nama Game di Bawahnya) */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-sm text-left space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                      <Gamepad2 size={16} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-800 uppercase tracking-wide font-outfit">
+                        Game Edukasi
+                      </h4>
+                      <p className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">
+                        Pilih game untuk bermain & belajar
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 justify-items-center pt-1">
+                  {/* Catur Pintar */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedGameId('chess');
+                      setActiveTab('GAMES');
+                    }}
+                    className="flex flex-col items-center gap-2 group cursor-pointer focus:outline-none w-full max-w-[90px]"
+                  >
+                    <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-slate-900 flex items-center justify-center shadow-md shadow-indigo-600/25 border border-indigo-400/30 group-hover:scale-105 group-active:scale-95 transition-all duration-200">
+                      <Gamepad2 size={30} className="text-white drop-shadow-sm" />
+                    </div>
+                    <span className="text-[11px] sm:text-xs font-extrabold text-slate-800 text-center tracking-tight leading-tight group-hover:text-indigo-600 transition-colors">
+                      Catur Pintar
+                    </span>
+                  </button>
+
+                  {/* Kuis Kilat */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedGameId('quick_quiz');
+                      setActiveTab('GAMES');
+                    }}
+                    className="flex flex-col items-center gap-2 group cursor-pointer focus:outline-none w-full max-w-[90px]"
+                  >
+                    <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-gradient-to-br from-amber-500 via-orange-600 to-rose-700 flex items-center justify-center shadow-md shadow-amber-500/25 border border-amber-400/30 group-hover:scale-105 group-active:scale-95 transition-all duration-200">
+                      <Zap size={30} className="text-white drop-shadow-sm" />
+                    </div>
+                    <span className="text-[11px] sm:text-xs font-extrabold text-slate-800 text-center tracking-tight leading-tight group-hover:text-amber-600 transition-colors">
+                      Kuis Kilat
+                    </span>
+                  </button>
+
+                  {/* Susun Kata */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedGameId('word_scramble');
+                      setActiveTab('GAMES');
+                    }}
+                    className="flex flex-col items-center gap-2 group cursor-pointer focus:outline-none w-full max-w-[90px]"
+                  >
+                    <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-900 flex items-center justify-center shadow-md shadow-sky-500/25 border border-sky-400/30 group-hover:scale-105 group-active:scale-95 transition-all duration-200">
+                      <BookOpen size={30} className="text-white drop-shadow-sm" />
+                    </div>
+                    <span className="text-[11px] sm:text-xs font-extrabold text-slate-800 text-center tracking-tight leading-tight group-hover:text-sky-600 transition-colors">
+                      Susun Kata
+                    </span>
+                  </button>
+                </div>
               </div>
 
               {/* Ringkasan Ujian Lisan Siswa (BTQ, Hafalan & Bahasa) */}
