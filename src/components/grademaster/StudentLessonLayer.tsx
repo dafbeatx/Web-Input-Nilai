@@ -23,7 +23,8 @@ import {
   Edit3,
   Search,
   Copy,
-  Check
+  Check,
+  Flame
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useGradeMaster } from '@/context/GradeMasterContext';
@@ -1082,68 +1083,91 @@ export default function StudentLessonLayer({
           </button>
         )}
 
-        {/* Title, Class, and Badges */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
-                Nawasena LMS
-              </span>
-              <span className="text-slate-300">•</span>
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Ruang Belajar Digital
-              </span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              {isParent ? 'Kurikulum & Video Pembelajaran Ananda' : 'Pusat Pembelajaran & Video Interaktif'}
-            </h1>
-            <p className="text-slate-500 text-xs font-medium">
-              Kelas {activeClassName} • Tahun Ajaran {academicYear} • Semester {semester}
-            </p>
-          </div>
-
-          {/* Quick Metrics Bar */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
-            <div className="flex-1 sm:flex-none flex items-center gap-2 px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs">
-              <BookOpen size={16} className="text-indigo-600" />
-              <div>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Modul</p>
-                <p className="font-black text-slate-800 leading-tight mt-0.5">{totalModules} Modul</p>
+        {/* Professional LMS Hero Header */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+          {/* Top Section: Title & Metadata */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  Nawasena LMS
+                </span>
+                <span className="text-slate-300">•</span>
+                <span className="text-xs font-semibold text-slate-500">
+                  Kelas {activeClassName} • TA {academicYear} • Semester {semester}
+                </span>
               </div>
+              <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight font-outfit">
+                {isParent ? 'Kurikulum & Video Pembelajaran Ananda' : 'Pusat Pembelajaran & Video Interaktif'}
+              </h1>
             </div>
 
-            <div className="flex-1 sm:flex-none flex items-center gap-2 px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs">
-              <Video size={16} className="text-red-500" />
-              <div>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Video Materi</p>
-                <p className="font-black text-slate-800 leading-tight mt-0.5">{videoModulesCount} Video</p>
-              </div>
-            </div>
-
-            <div className="flex-1 sm:flex-none flex items-center gap-2 px-3.5 py-2 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs">
-              <CheckCircle2 size={16} className="text-emerald-600" />
-              <div>
-                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none">Tuntas</p>
-                <p className="font-black text-emerald-800 leading-tight mt-0.5">{completedCount} ({completionPercent}%)</p>
-              </div>
-            </div>
-
-            <div className="flex-1 sm:flex-none flex items-center gap-2 px-3.5 py-2 bg-amber-50 border border-amber-200 rounded-2xl text-xs">
-              <span className="text-sm">🔥</span>
-              <div>
-                <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest leading-none">Streak Belajar</p>
-                <p className="font-black text-amber-900 leading-tight mt-0.5">{streakCount} Hari</p>
+            {/* Quick Completion Badge */}
+            <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50/80 border border-emerald-200/70 self-start sm:self-auto">
+              <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+              <div className="text-left">
+                <p className="text-[9px] font-bold text-emerald-700 uppercase tracking-wider leading-none">Progres Modul</p>
+                <p className="text-xs font-black text-emerald-900 leading-tight mt-0.5">{completionPercent}% Tuntas</p>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Progress Bar of Course Completion */}
-        <div className="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all duration-500 ease-out rounded-full"
-            style={{ width: `${completionPercent}%` }}
-          />
+          {/* Symmetrical, Professional 4-Column Metric Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {/* 1. Total Modul */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/70 border border-slate-200/70">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
+                <BookOpen size={16} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider truncate">Total Modul</p>
+                <p className="text-sm font-black text-slate-900 leading-tight truncate">{totalModules} Modul</p>
+              </div>
+            </div>
+
+            {/* 2. Video Materi */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/70 border border-slate-200/70">
+              <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0 border border-red-100">
+                <Video size={16} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider truncate">Video Materi</p>
+                <p className="text-sm font-black text-slate-900 leading-tight truncate">{videoModulesCount} Video</p>
+              </div>
+            </div>
+
+            {/* 3. Tuntas */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/70 border border-slate-200/70">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+                <CheckCircle2 size={16} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider truncate">Modul Tuntas</p>
+                <p className="text-sm font-black text-slate-900 leading-tight truncate">{completedCount} ({completionPercent}%)</p>
+              </div>
+            </div>
+
+            {/* 4. Streak Belajar */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/70 border border-slate-200/70">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100">
+                <Flame size={16} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider truncate">Streak Belajar</p>
+                <p className="text-sm font-black text-slate-900 leading-tight truncate">{streakCount} Hari</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Integrated Slim Progress Bar */}
+          <div className="pt-1">
+            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all duration-500 ease-out rounded-full"
+                style={{ width: `${completionPercent}%` }}
+              />
+            </div>
+          </div>
         </div>
       </header>
 
