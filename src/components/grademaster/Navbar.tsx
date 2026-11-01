@@ -96,7 +96,7 @@ export default function Navbar() {
   // Use hash as primary signal — avoids flicker when React layer state lags behind URL
   const effectiveLayer = currentHash || layer;
   const isDedicatedLayer = DEDICATED_FULLSCREEN_LAYERS.includes(effectiveLayer);
-  const isHidden = isEmbedMode || pathname?.startsWith('/behavior') || isDedicatedLayer;
+  const isHidden = isEmbedMode || pathname?.startsWith('/behavior') || pathname?.startsWith('/game') || isDedicatedLayer;
 
   useEffect(() => {
     // Topbar replaces sidebar — no layout shift needed
@@ -237,7 +237,7 @@ export default function Navbar() {
                   layer === 'game_management' ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
-                <Gamepad2 size={14} className={layer === 'game_management' ? '' : 'text-purple-400'} /> Game
+                <Gamepad2 size={14} className={layer === 'game_management' ? '' : 'text-purple-400'} /> Game PID
               </button>
               <button
                 onClick={() => handleNavigate('lesson_management')}
@@ -543,8 +543,8 @@ export default function Navbar() {
                       <Gamepad2 size={18} className="text-amber-500" />
                     </div>
                     <div>
-                      <span className="text-[11px] font-bold text-on-surface block leading-tight">Manajemen Game</span>
-                      <span className="text-[9px] font-medium text-on-surface-variant">Bank soal catur & kuis duel</span>
+                      <span className="text-[11px] font-bold text-on-surface block leading-tight">Game PID</span>
+                      <span className="text-[9px] font-medium text-on-surface-variant">Papan Interaktif Digital & Bank Soal</span>
                     </div>
                   </button>
 

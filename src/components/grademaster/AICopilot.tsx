@@ -201,7 +201,7 @@ export default function AICopilot() {
       data_center: "Pusat Data Terpadu",
       oral_exams: "Penilaian Ujian Lisan",
       games: "Zona Games Edukasi",
-      game_management: "Manajemen Game & Bank Soal",
+      game_management: "Game PID (Papan Interaktif Guru)",
       certificate_management: "Manajemen Sertifikat LDKS"
     };
 

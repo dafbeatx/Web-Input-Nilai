@@ -2,13 +2,14 @@
 
 import React, { useState } from "react";
 import { 
-  Gamepad2, Zap, BookOpen, ArrowLeft
+  Gamepad2, Zap, BookOpen, ArrowLeft, Compass
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import ChessGame from "./games/ChessGame";
 import QuickQuizGame from "./games/QuickQuizGame";
 import WordScrambleGame from "./games/WordScrambleGame";
 
-type ActiveGameId = 'chess' | 'quick_quiz' | 'word_scramble' | null;
+type ActiveGameId = 'chess' | 'quick_quiz' | 'word_scramble' | 'ilrp' | null;
 
 interface GamesLayerProps {
   onBack?: () => void;
@@ -16,7 +17,7 @@ interface GamesLayerProps {
 }
 
 interface GameItem {
-  id: 'chess' | 'quick_quiz' | 'word_scramble';
+  id: 'chess' | 'quick_quiz' | 'word_scramble' | 'ilrp';
   name: string;
   icon: React.ElementType;
   gradient: string;
@@ -25,6 +26,14 @@ interface GameItem {
 }
 
 const GAMES: GameItem[] = [
+  {
+    id: 'ilrp',
+    name: 'Indonesian RP',
+    icon: Compass,
+    gradient: 'from-emerald-600 via-teal-700 to-slate-900',
+    shadow: 'shadow-teal-600/30',
+    border: 'border-emerald-400/30',
+  },
   {
     id: 'chess',
     name: 'Catur Pintar',
@@ -52,6 +61,7 @@ const GAMES: GameItem[] = [
 ];
 
 export default function GamesLayer({ onBack, initialGameId = null }: GamesLayerProps) {
+  const router = useRouter();
   const [activeGameId, setActiveGameId] = useState<ActiveGameId>(initialGameId);
 
   // If a game is active, render its screen
@@ -110,14 +120,20 @@ export default function GamesLayer({ onBack, initialGameId = null }: GamesLayerP
 
       {/* Grid of game icons with names underneath */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-sm">
-        <div className="grid grid-cols-3 gap-4 sm:gap-8 justify-items-center max-w-md mx-auto">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 justify-items-center max-w-lg mx-auto">
           {GAMES.map((game) => {
             const Icon = game.icon;
             return (
               <button
                 key={game.id}
                 type="button"
-                onClick={() => setActiveGameId(game.id)}
+                onClick={() => {
+                  if (game.id === 'ilrp') {
+                    router.push('/game');
+                  } else {
+                    setActiveGameId(game.id);
+                  }
+                }}
                 className="flex flex-col items-center gap-2.5 group cursor-pointer focus:outline-none w-full max-w-[100px] transition-all"
               >
                 <div
