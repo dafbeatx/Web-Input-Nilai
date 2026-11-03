@@ -281,19 +281,29 @@ export default function GameHUD({
             {activeModalTrigger.type === 'building_entrance' && (
               <div className="space-y-4">
                 <p className="text-sm text-slate-300 leading-relaxed">
-                  Selamat datang di <strong>SD Nusantara 01</strong>. Di area sekolah ini, warga dapat mengikuti pembelajaran, menguji wawasan kurikulum, atau mengikuti kuis edukasi.
+                  {typeof activeModalTrigger.data?.desc === 'string'
+                    ? activeModalTrigger.data.desc
+                    : 'Selamat datang di area SMP Terpadu Al-Ittihadiyah.'}
                 </p>
-                <div className="p-4 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl text-xs space-y-1 text-slate-300">
-                  <p className="font-bold text-indigo-300">Jadwal Sekolah:</p>
-                  <p>• Jam Pembelajaran: 07.00 - 13.00 WIB</p>
-                  <p>• Kegiatan Ekstrakurikuler: Pramuka, Karawitan, Sains AI</p>
+                {Array.isArray(activeModalTrigger.data?.features) && (
+                  <div className="p-3.5 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl text-xs space-y-1.5 text-slate-300">
+                    <p className="font-bold text-indigo-300">Fasilitas Unggulan:</p>
+                    {activeModalTrigger.data.features.map((feat, i) => (
+                      <p key={i}>• {String(feat)}</p>
+                    ))}
+                  </div>
+                )}
+                <div className="p-3.5 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl text-xs space-y-1 text-slate-300">
+                  <p className="font-bold text-indigo-300">Status Operasional:</p>
+                  <p>• Jam Pembelajaran: 07.00 - 15.30 WIB</p>
+                  <p>• Akses: Guru, Siswa, dan Tenaga Kependidikan</p>
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <button
                     onClick={onCloseModal}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all"
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all shadow-md"
                   >
-                    Masuk Ruang Kelas
+                    Masuk Fasilitas
                   </button>
                 </div>
               </div>
@@ -304,18 +314,25 @@ export default function GameHUD({
                 <div className="p-4 bg-cyan-950/40 border border-cyan-500/40 rounded-2xl">
                   <div className="flex items-center gap-2 mb-2 text-cyan-300 font-bold text-xs">
                     <Info size={16} />
-                    <span>Papan Informasi Digital Kota (Smart Board)</span>
+                    <span>{typeof activeModalTrigger.data?.title === 'string' ? activeModalTrigger.data.title : 'Papan Interaktif Digital (PID)'}</span>
                   </div>
-                  <ul className="text-xs text-slate-300 space-y-2 list-disc list-inside">
-                    <li>Pembangunan prototype Kota Nusantara Asri Fase 1 & 2 telah aktif.</li>
-                    <li>Sistem kontrol multiplatform (Android, PC, Smart Board) siap diuji.</li>
-                    <li>Koneksi multiplayer real-time Supabase sedang diinisialisasi untuk sinkronisasi avatar.</li>
-                  </ul>
+                  <p className="text-xs text-slate-300 mb-3 leading-relaxed">
+                    {typeof activeModalTrigger.data?.desc === 'string'
+                      ? activeModalTrigger.data.desc
+                      : 'Pusat interaksi dan modul edukasi interaktif sekolah.'}
+                  </p>
+                  {Array.isArray(activeModalTrigger.data?.features) && (
+                    <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+                      {activeModalTrigger.data.features.map((feat, i) => (
+                        <li key={i}>{String(feat)}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
                 <div className="flex justify-end pt-2">
                   <button
                     onClick={onCloseModal}
-                    className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded-xl transition-all"
+                    className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded-xl transition-all shadow-md"
                   >
                     Tutup Papan Informasi
                   </button>
@@ -326,17 +343,21 @@ export default function GameHUD({
             {activeModalTrigger.type === 'npc' && (
               <div className="space-y-4">
                 <p className="text-sm text-slate-300 leading-relaxed">
-                  Pak RT menyapa Anda dengan ramah di Balai Warga:
+                  {typeof activeModalTrigger.data?.desc === 'string'
+                    ? activeModalTrigger.data.desc
+                    : 'Petugas sekolah menyapa Anda dengan ramah:'}
                 </p>
                 <div className="p-4 bg-slate-800 rounded-2xl border border-slate-700 text-xs italic text-slate-200">
-                  &ldquo;Halo mas/mbak! Selamat datang di lingkungan RT 05 Kota Nusantara Asri. Jangan lupa jaga ketertiban, selalu gotong royong, dan belanja di warung Bu Siti ya!&rdquo;
+                  {typeof activeModalTrigger.data?.quote === 'string'
+                    ? activeModalTrigger.data.quote
+                    : '“Selamat beraktivitas di lingkungan SMP Terpadu Al-Ittihadiyah. Jaga sopan santun, ketertiban, dan kebersihan lingkungan sekolah!”'}
                 </div>
                 <div className="flex justify-end pt-2">
                   <button
                     onClick={onCloseModal}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all"
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all shadow-md"
                   >
-                    Siap, Pak RT!
+                    Siap, Mengerti!
                   </button>
                 </div>
               </div>

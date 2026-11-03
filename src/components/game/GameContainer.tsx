@@ -58,11 +58,16 @@ export default function GameContainer() {
       setActiveModalTrigger(trigger);
     });
 
+    game.events.on('scene:character-selected', (profile: CharacterProfile) => {
+      setCurrentCharacter(profile);
+    });
+
     return () => {
       game.events.off('scene:ready');
       game.events.off('town:zone-change');
       game.events.off('town:interaction-prompt');
       game.events.off('town:open-modal');
+      game.events.off('scene:character-selected');
       game.destroy(true);
       gameRef.current = null;
     };

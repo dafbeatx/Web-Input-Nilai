@@ -35,6 +35,10 @@ export class BootScene extends Phaser.Scene {
     // -------------------------------------------------------------
     // LOAD HIGH-FIDELITY ASSETS FROM /assets/game/
     // -------------------------------------------------------------
+    // Tilemap & Atlas (SMP Terpadu Al-Ittihadiyah)
+    this.load.tilemapTiledJSON('school_map', '/assets/maps/school_map.json');
+    this.load.image('school_atlas', '/assets/maps/school_atlas.png');
+
     // Tilesets
     this.load.image('tile_grass', '/assets/game/tilesets/tile_grass.png');
     this.load.image('tile_road', '/assets/game/tilesets/tile_road.png');
@@ -71,7 +75,7 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     this.createAllCharacterAnimations();
-    this.scene.start('MainTownScene');
+    this.scene.start('SchoolMapScene');
   }
 
   private createAllCharacterAnimations(): void {

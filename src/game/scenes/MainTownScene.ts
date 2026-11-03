@@ -258,6 +258,10 @@ export class MainTownScene extends Phaser.Scene {
     // When interact is triggered (keyboard or touch), open modal if near trigger
     this.inputManager.onInteract(() => {
       if (this.currentNearTrigger) {
+        if (this.currentNearTrigger.id === 'trigger-school') {
+          this.scene.start('SchoolMapScene');
+          return;
+        }
         this.game.events.emit('town:open-modal', this.currentNearTrigger);
       }
     });

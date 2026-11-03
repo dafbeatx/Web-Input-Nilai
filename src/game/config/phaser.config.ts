@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { BootScene } from '../scenes/BootScene';
+import { SchoolMapScene } from '../scenes/SchoolMapScene';
 import { MainTownScene } from '../scenes/MainTownScene';
 
 export function createPhaserConfig(parentElement: HTMLElement): Phaser.Types.Core.GameConfig {
@@ -22,7 +23,7 @@ export function createPhaserConfig(parentElement: HTMLElement): Phaser.Types.Cor
         debug: false,
       },
     },
-    scene: [BootScene, MainTownScene],
+    scene: [BootScene, SchoolMapScene, MainTownScene],
     fps: {
       target: 60,
       forceSetTimeOut: true,
