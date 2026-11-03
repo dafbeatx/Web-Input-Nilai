@@ -4,7 +4,7 @@ import { PlayerMovementState } from '@/lib/game/types';
 export class Player extends Phaser.Physics.Arcade.Sprite {
   public characterId: string;
   public characterName: string;
-  public baseSpeed: number = 160;
+  public baseSpeed: number = 175;
   public sprintMultiplier: number = 1.6;
 
   private nameTag: Phaser.GameObjects.Text;
@@ -12,7 +12,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private currentDirection: 'up' | 'down' | 'left' | 'right' = 'down';
 
   constructor(scene: Phaser.Scene, x: number, y: number, name: string = 'Warga Baru') {
-    super(scene, x, y, 'player_front');
+    super(scene, x, y, 'char_teacher', 0);
 
     this.characterId = 'local-player';
     this.characterName = name;
@@ -20,14 +20,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    // Set Arcade physics body - 2.5D RPG style collision box (feet only)
+    // 2.5D RPG collision box - feet only for realistic obstacle collision
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setSize(24, 18);
-    body.setOffset(8, 36);
+    body.setSize(22, 14);
+    body.setOffset(21, 46);
     body.setCollideWorldBounds(true);
 
     // Floating Name Tag above head
-    this.nameTag = scene.add.text(x, y - 36, name, {
+    this.nameTag = scene.add.text(x, y - 40, name, {
       fontFamily: 'Outfit, Inter, sans-serif',
       fontSize: '11px',
       color: '#ffffff',
@@ -37,10 +37,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }).setOrigin(0.5, 0.5).setDepth(100);
 
     // Role badge
-    this.roleTag = scene.add.text(x, y - 24, 'Warga Sipil', {
+    this.roleTag = scene.add.text(x, y - 28, 'Guru Pendidik (PID)', {
       fontFamily: 'Outfit, Inter, sans-serif',
       fontSize: '9px',
-      color: '#67e8f9',
+      color: '#38bdf8',
       stroke: '#0f172a',
       strokeThickness: 2,
       align: 'center',
@@ -61,28 +61,47 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     const isMoving = Math.abs(vx) > 5 || Math.abs(vy) > 5;
 
-    // Update facing texture
-    if (Math.abs(vector.x) > Math.abs(vector.y)) {
-      if (vector.x < 0) {
-        this.currentDirection = 'left';
-        this.setTexture('player_left');
-      } else if (vector.x > 0) {
-        this.currentDirection = 'right';
-        this.setTexture('player_right');
+    // Determine direction and trigger animations
+    if (isMoving) {
+      if (Math.abs(vector.x) > Math.abs(vector.y)) {
+        if (vector.x < 0) {
+          this.currentDirection = 'left';
+          this.anims.play('walk_left', true);
+        } else if (vector.x > 0) {
+          this.currentDirection = 'right';
+          this.anims.play('walk_right', true);
+        }
+      } else {
+        if (vector.y < 0) {
+          this.currentDirection = 'up';
+          this.anims.play('walk_up', true);
+        } else if (vector.y > 0) {
+          this.currentDirection = 'down';
+          this.anims.play('walk_down', true);
+        }
       }
-    } else if (Math.abs(vector.y) > 0.05) {
-      if (vector.y < 0) {
-        this.currentDirection = 'up';
-        this.setTexture('player_back');
-      } else if (vector.y > 0) {
-        this.currentDirection = 'down';
-        this.setTexture('player_front');
+    } else {
+      // Stopped: stop animation and set idle frame
+      this.anims.stop();
+      switch (this.currentDirection) {
+        case 'down':
+          this.setFrame(0);
+          break;
+        case 'left':
+          this.setFrame(4);
+          break;
+        case 'right':
+          this.setFrame(8);
+          break;
+        case 'up':
+          this.setFrame(12);
+          break;
       }
     }
 
     // Keep nameplate and role tag attached smoothly to player
-    this.nameTag.setPosition(this.x, this.y - 36);
-    this.roleTag.setPosition(this.x, this.y - 24);
+    this.nameTag.setPosition(this.x, this.y - 40);
+    this.roleTag.setPosition(this.x, this.y - 28);
 
     // Depth sorting based on Y position for 2.5D layering
     this.setDepth(this.y);
@@ -97,7 +116,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       direction: this.currentDirection,
       isMoving,
       isSprinting: vector.isSprinting,
-      animKey: `player_${this.currentDirection}`,
+      animKey: `walk_${this.currentDirection}`,
     };
   }
 
@@ -116,4 +135,3 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     super.destroy(fromScene);
   }
 }
-

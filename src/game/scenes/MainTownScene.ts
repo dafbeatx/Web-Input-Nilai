@@ -35,7 +35,7 @@ export class MainTownScene extends Phaser.Scene {
     this.inputManager = new InputManager(this);
 
     // Spawn Player in Center of Nusantara Asri
-    this.player = new Player(this, 1164, 880, 'Warga Nusantara');
+    this.player = new Player(this, 1164, 880, 'Guru Nawasena');
 
     // Add collision between player and all buildings / props
     this.physics.add.collider(this.player, this.obstaclesGroup);
@@ -43,7 +43,7 @@ export class MainTownScene extends Phaser.Scene {
     // Setup Camera to smoothly follow player
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-    this.cameras.main.setZoom(1.2);
+    this.cameras.main.setZoom(1.25);
 
     // Handle React <-> Phaser Custom Event Bus
     this.setupReactEventBridge();
@@ -61,86 +61,92 @@ export class MainTownScene extends Phaser.Scene {
     this.add.tileSprite(worldWidth / 2, worldHeight / 2, worldWidth, worldHeight, 'tile_grass');
 
     // 2. Main East-West Road (Jl. Merdeka)
-    const roadY = 860;
-    this.add.tileSprite(worldWidth / 2, roadY, worldWidth, 96, 'tile_road');
+    const roadY = 880;
+    this.add.tileSprite(worldWidth / 2, roadY, worldWidth, 128, 'tile_road');
 
-    // Trotoar / Sidewalk along Jl. Merdeka
-    this.add.tileSprite(worldWidth / 2, roadY - 56, worldWidth, 24, 'tile_sidewalk');
-    this.add.tileSprite(worldWidth / 2, roadY + 56, worldWidth, 24, 'tile_sidewalk');
+    // Trotoar / Sidewalk with tactile paving along Jl. Merdeka
+    this.add.tileSprite(worldWidth / 2, roadY - 80, worldWidth, 32, 'tile_sidewalk');
+    this.add.tileSprite(worldWidth / 2, roadY + 80, worldWidth, 32, 'tile_sidewalk');
 
     // 3. North-South Avenue (Jl. Pemuda)
     const roadX = 1164;
-    this.add.tileSprite(roadX, worldHeight / 2, 96, worldHeight, 'tile_road');
-    this.add.tileSprite(roadX - 56, worldHeight / 2, 24, worldHeight, 'tile_sidewalk');
-    this.add.tileSprite(roadX + 56, worldHeight / 2, 24, worldHeight, 'tile_sidewalk');
+    const verticalRoad = this.add.tileSprite(roadX, worldHeight / 2, 128, worldHeight, 'tile_road');
+    verticalRoad.setAngle(90);
+
+    const leftSidewalk = this.add.tileSprite(roadX - 80, worldHeight / 2, 32, worldHeight, 'tile_sidewalk');
+    leftSidewalk.setAngle(90);
+    const rightSidewalk = this.add.tileSprite(roadX + 80, worldHeight / 2, 32, worldHeight, 'tile_sidewalk');
+    rightSidewalk.setAngle(90);
 
     // 4. Zebra Crossings at Intersection
-    this.add.sprite(roadX, roadY - 72, 'tile_crosswalk');
-    this.add.sprite(roadX, roadY + 72, 'tile_crosswalk');
-    this.add.sprite(roadX - 72, roadY, 'tile_crosswalk').setAngle(90);
-    this.add.sprite(roadX + 72, roadY, 'tile_crosswalk').setAngle(90);
+    this.add.sprite(roadX, roadY - 88, 'tile_crosswalk');
+    this.add.sprite(roadX, roadY + 88, 'tile_crosswalk');
+    this.add.sprite(roadX - 88, roadY, 'tile_crosswalk').setAngle(90);
+    this.add.sprite(roadX + 88, roadY, 'tile_crosswalk').setAngle(90);
   }
 
   private createObstacles(): void {
     this.obstaclesGroup = this.physics.add.staticGroup();
 
     // 1. Warung Bu Siti (West side of Jl. Pemuda)
-    this.add.sprite(950, 750, 'building_warung').setDepth(750);
-    const warungCollider = this.add.zone(950, 765, 120, 60);
+    this.add.sprite(920, 710, 'building_warung').setDepth(710);
+    const warungCollider = this.add.zone(920, 750, 200, 70);
     this.physics.add.existing(warungCollider, true);
     this.obstaclesGroup.add(warungCollider);
 
-    // 2. SD Nusantara 01 (East side of Jl. Pemuda)
-    this.add.sprite(1420, 730, 'building_school').setDepth(730);
-    const schoolCollider = this.add.zone(1420, 750, 190, 80);
+    // 2. SMP Terpadu Al-Ittihadiyah / Sekolah (East side of Jl. Pemuda)
+    this.add.sprite(1450, 680, 'building_school').setDepth(680);
+    const schoolCollider = this.add.zone(1450, 740, 310, 95);
     this.physics.add.existing(schoolCollider, true);
     this.obstaclesGroup.add(schoolCollider);
 
     // 3. Tiang Bendera Merah Putih in front of school
-    this.add.sprite(1300, 770, 'prop_flagpole').setDepth(770);
-    const flagCollider = this.add.zone(1300, 785, 20, 20);
+    this.add.sprite(1260, 750, 'prop_flagpole').setDepth(750);
+    const flagCollider = this.add.zone(1260, 800, 24, 24);
     this.physics.add.existing(flagCollider, true);
     this.obstaclesGroup.add(flagCollider);
 
-    // 4. Balai Warga / Kelurahan (South-West)
-    this.add.sprite(920, 1050, 'building_balai').setDepth(1050);
-    const balaiCollider = this.add.zone(920, 1070, 150, 70);
+    // 4. Balai Warga & Pelayanan Publik PID (South-West)
+    this.add.sprite(900, 1050, 'building_balai').setDepth(1050);
+    const balaiCollider = this.add.zone(900, 1100, 250, 80);
     this.physics.add.existing(balaiCollider, true);
     this.obstaclesGroup.add(balaiCollider);
 
-    // 5. Digital Smart Board (Papan Pengumuman Interaktif)
-    this.add.sprite(1164, 760, 'prop_board').setDepth(760);
-    const boardCollider = this.add.zone(1164, 770, 44, 20);
+    // 5. Digital Smart Board (Papan Pengumuman Interaktif PID)
+    this.add.sprite(1164, 740, 'prop_board').setDepth(740);
+    const boardCollider = this.add.zone(1164, 765, 48, 24);
     this.physics.add.existing(boardCollider, true);
     this.obstaclesGroup.add(boardCollider);
 
     // 6. Lush Banyan Trees around Alun-Alun / Park
     const treePositions = [
-      { x: 1350, y: 1040 },
-      { x: 1520, y: 1050 },
-      { x: 1440, y: 1180 },
-      { x: 820, y: 730 },
-      { x: 1620, y: 740 },
+      { x: 1380, y: 1040 },
+      { x: 1560, y: 1060 },
+      { x: 1470, y: 1200 },
+      { x: 760, y: 720 },
+      { x: 1680, y: 720 },
     ];
 
     treePositions.forEach(pos => {
       this.add.sprite(pos.x, pos.y, 'prop_tree_beringin').setDepth(pos.y);
-      const treeCollider = this.add.zone(pos.x, pos.y + 25, 30, 24);
+      const treeCollider = this.add.zone(pos.x, pos.y + 60, 36, 24);
       this.physics.add.existing(treeCollider, true);
       this.obstaclesGroup.add(treeCollider);
     });
 
     // 7. Street Lamps along sidewalk
     const lampPositions = [
-      { x: 1090, y: 820 },
-      { x: 1240, y: 820 },
-      { x: 1090, y: 950 },
-      { x: 1240, y: 950 },
+      { x: 1080, y: 830 },
+      { x: 1248, y: 830 },
+      { x: 1080, y: 940 },
+      { x: 1248, y: 940 },
+      { x: 920, y: 830 },
+      { x: 1450, y: 830 },
     ];
 
     lampPositions.forEach(lamp => {
       this.add.sprite(lamp.x, lamp.y, 'prop_lamp').setDepth(lamp.y);
-      const lampCollider = this.add.zone(lamp.x, lamp.y + 20, 16, 16);
+      const lampCollider = this.add.zone(lamp.x, lamp.y + 36, 16, 16);
       this.physics.add.existing(lampCollider, true);
       this.obstaclesGroup.add(lampCollider);
     });
@@ -155,9 +161,9 @@ export class MainTownScene extends Phaser.Scene {
       info: InteractiveTrigger;
     }> = [
       {
-        x: 950,
-        y: 810,
-        w: 110,
+        x: 920,
+        y: 800,
+        w: 120,
         h: 40,
         info: {
           id: 'trigger-warung',
@@ -175,50 +181,50 @@ export class MainTownScene extends Phaser.Scene {
         },
       },
       {
-        x: 1420,
-        y: 810,
-        w: 120,
+        x: 1450,
+        y: 800,
+        w: 140,
         h: 40,
         info: {
           id: 'trigger-school',
-          name: 'SD Nusantara 01',
+          name: 'SMP Terpadu Al-Ittihadiyah',
           type: 'building_entrance',
           promptText: 'Tekan [E] atau Ketuk untuk masuk ke Gedung Sekolah',
           data: {
-            title: 'SD Nusantara 01',
-            desc: 'Pusat pembelajaran dan kegiatan belajar mengajar warga Nusantara.',
+            title: 'SMP Terpadu Al-Ittihadiyah',
+            desc: 'Gedung utama pembelajaran, laboratorium komputer, dan ruang bimbingan guru.',
           },
         },
       },
       {
         x: 1164,
-        y: 800,
+        y: 785,
         w: 60,
         h: 40,
         info: {
           id: 'trigger-board',
-          name: 'Papan Interaktif Digital',
+          name: 'Papan Interaktif Digital (PID)',
           type: 'interactive_board',
-          promptText: 'Tekan [E] atau Ketuk untuk melihat Papan Informasi Digital',
+          promptText: 'Tekan [E] atau Ketuk untuk membuka Papan Informasi Digital',
           data: {
-            title: 'Sistem Informasi Kota Nusantara',
-            desc: 'Layar interaktif warga: Pengumuman kegiatan, jadwal ronda, dan lowongan pekerjaan.',
+            title: 'Papan Interaktif Digital (PID)',
+            desc: 'Pusat pengumuman sekolah, agenda kelas, dan simulasi interaktif guru & siswa.',
           },
         },
       },
       {
-        x: 920,
-        y: 1120,
-        w: 120,
+        x: 900,
+        y: 1150,
+        w: 140,
         h: 40,
         info: {
           id: 'trigger-balai',
-          name: 'Balai Warga',
+          name: 'Balai Warga & Pelayanan',
           type: 'npc',
-          promptText: 'Tekan [E] atau Ketuk untuk lapor ke Pak RT di Balai Warga',
+          promptText: 'Tekan [E] atau Ketuk untuk lapor layanan di Balai Warga',
           data: {
-            title: 'Balai Warga RW 05',
-            desc: 'Pusat administrasi kependudukan dan layanan warga.',
+            title: 'Balai Warga & Layanan Terpadu',
+            desc: 'Pusat administrasi kependudukan dan layanan publik warga Nusantara.',
           },
         },
       },
@@ -277,13 +283,13 @@ export class MainTownScene extends Phaser.Scene {
     // 3. Determine current street / zone based on player coordinates
     let currentZone = 'Jl. Merdeka (Pusat Kota)';
     if (this.player.y < 780 && this.player.x > 1300) {
-      currentZone = 'Halaman SD Nusantara 01';
+      currentZone = 'Halaman SMP Al-Ittihadiyah';
     } else if (this.player.y < 800 && this.player.x < 1050) {
       currentZone = 'Pelataran Warung Bu Siti';
     } else if (this.player.y > 980 && this.player.x > 1250) {
       currentZone = 'Taman & Alun-Alun Kota';
     } else if (this.player.y > 980 && this.player.x < 1050) {
-      currentZone = 'Balai Warga RW 05';
+      currentZone = 'Balai Warga & Pelayanan PID';
     } else if (Math.abs(this.player.x - 1164) < 70) {
       currentZone = 'Jl. Pemuda';
     }
