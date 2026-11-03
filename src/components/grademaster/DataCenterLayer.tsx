@@ -8,7 +8,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useGradeMaster } from '@/context/GradeMasterContext';
-import { Loader2, Search, Plus, Trash2, Download, Database, BookOpen, AlertCircle, Edit2, ShieldCheck, CheckCircle2, AlertTriangle, FileText, Check, ChevronRight, Info, Upload } from 'lucide-react';
+import { Loader2, Search, Plus, Trash2, Download, Database, BookOpen, AlertCircle, Edit2, ShieldCheck, CheckCircle2, AlertTriangle, FileText, Check, ChevronRight, Info, Upload, RefreshCw } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -81,7 +81,9 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
   const [downloadingAcademicId, setDownloadingAcademicId] = useState<string | null>(null);
   const [downloadingBehaviorId, setDownloadingBehaviorId] = useState<string | null>(null);
   const [deletingStudentKey, setDeletingStudentKey] = useState<string | null>(null);
-  const isAnyActionActive = isLoading || isSubmitting || isDownloadingClassAcademicPdf || isDownloadingClassBehaviorPdf || downloadingAcademicId !== null || downloadingBehaviorId !== null || deletingStudentKey !== null;
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
+  const [syncStats, setSyncStats] = useState<{ accountsCount: number; behaviorsCount: number; isFullyInSync: boolean } | null>(null);
+  const isAnyActionActive = isLoading || isSubmitting || isSyncingAll || isDownloadingClassAcademicPdf || isDownloadingClassBehaviorPdf || downloadingAcademicId !== null || downloadingBehaviorId !== null || deletingStudentKey !== null;
 
   // Signature Upload Modal State
   const [signatureModal, setSignatureModal] = useState<{
@@ -166,11 +168,41 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     }
   }, [setToast]);
 
+  const checkSyncStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/grademaster/data-center/sync');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && data.stats) {
+        setSyncStats(data.stats);
+      }
+    } catch (err) {
+      console.error('Gagal mengambil status sinkronisasi:', err);
+    }
+  }, []);
+
+  const handleSyncAllStudents = async () => {
+    setIsSyncingAll(true);
+    try {
+      const res = await fetch('/api/grademaster/data-center/sync', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setToast({ message: data.message || 'Sinkronisasi berhasil!', type: 'success' });
+      await Promise.all([fetchStudents(), checkSyncStatus()]);
+    } catch (err: any) {
+      setToast({ message: err.message || 'Gagal menyinkronkan data siswa', type: 'error' });
+    } finally {
+      setIsSyncingAll(false);
+    }
+  };
+
   useEffect(() => {
     queueMicrotask(() => {
       fetchStudents();
+      checkSyncStatus();
+      checkSyncStatus();
     });
-  }, [fetchStudents]);
+  }, [fetchStudents, checkSyncStatus]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -199,6 +231,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       setBulkNames('');
       setBulkClassName('');
       fetchStudents();
+      checkSyncStatus();
     } catch (err: any) {
       setToast({ message: err.message, type: 'error' });
     } finally {
@@ -444,6 +477,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       setMatchedRecords([]);
       setSheetMappings([]);
       fetchStudents();
+      checkSyncStatus();
     } catch (err: any) {
       setToast({ message: err.message, type: 'error' });
     } finally {
@@ -466,6 +500,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       if (!res.ok) throw new Error(data.error);
       setToast({ message: data.message, type: 'success' });
       fetchStudents();
+      checkSyncStatus();
     } catch (err: any) {
       setToast({ message: err.message, type: 'error' });
     } finally {
@@ -1278,9 +1313,23 @@ const matchesYear = s.academicYear === academicYear;
         
         {/* Academic Year Selector Panel */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-100 rounded-[2.5rem] p-5 shadow-sm text-left">
-          <div>
-            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Pilih Tahun Ajaran Aktif</h2>
-            <p className="text-[10px] font-semibold text-slate-450 mt-2 leading-none">Menampilkan data siswa, nilai akademik, dan catatan kedisiplinan pada tahun ajaran terpilih.</p>
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Pilih Tahun Ajaran Aktif</h2>
+              {syncStats && (
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                  syncStats.isFullyInSync 
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60' 
+                    : 'bg-amber-50 text-amber-700 border-amber-200/60'
+                }`}>
+                  <CheckCircle2 size={12} className={syncStats.isFullyInSync ? 'text-emerald-500' : 'text-amber-500'} />
+                  {syncStats.isFullyInSync 
+                    ? `Data 100% Sinkron (${syncStats.behaviorsCount} Siswa Terdaftar)` 
+                    : `Sinkronisasi Diperlukan (${syncStats.accountsCount}/${syncStats.behaviorsCount} Akun)`}
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] font-semibold text-slate-450 leading-none">Menampilkan data siswa, nilai akademik, dan catatan kedisiplinan pada tahun ajaran terpilih.</p>
           </div>
           <div className="flex flex-row flex-nowrap items-center gap-1.5 p-1 bg-slate-50 rounded-2xl border border-slate-200/50 shadow-inner overflow-x-auto no-scrollbar max-w-full sm:max-w-none">
             {['2024/2025', '2025/2026', '2026/2027', '2027/2028'].map((year) => (
@@ -1339,6 +1388,14 @@ const matchesYear = s.academicYear === academicYear;
                     </button>
                  </>
                )}
+               <button 
+                  onClick={handleSyncAllStudents}
+                  disabled={isAnyActionActive}
+                  className="clean-button bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200/60 font-semibold cursor-pointer"
+                  title="Sinkronkan seluruh data siswa antara Pusat Data, Sikap (Behavior), dan Akun Siswa"
+                >
+                   {isSyncingAll ? <Loader2 size={16} className="animate-spin text-sky-600" /> : <RefreshCw size={16} />} Sinkronkan Data
+                </button>
                <button 
                   onClick={() => {
                     setIsExcelImport(true);

@@ -2,8 +2,31 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getAdminSession } from '@/lib/grademaster/admin';
-import { checkRateLimit } from '@/lib/grademaster/security';
+import { checkRateLimit, hashPassword } from '@/lib/grademaster/security';
 import { logActivity } from '@/lib/grademaster/audit';
+
+function generateUsername(name: string, className: string): string {
+  const cleanName = (name || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '.');
+
+  const classSuffix = (className || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+
+  return `${cleanName || 'siswa'}.${classSuffix || 'kelas'}`;
+}
+
+function generatePassword(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let password = '';
+  for (let i = 0; i < 8; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -147,6 +170,61 @@ export async function POST(req: NextRequest) {
       throw upsertError;
     }
 
+    // Bidirectional sync: Automatically ensure accounts exist in gm_student_accounts
+    try {
+      const { data: existingAccounts } = await supabaseAdmin
+        .from('gm_student_accounts')
+        .select('student_name')
+        .eq('class_name', className)
+        .eq('academic_year', academicYear);
+
+      const existingNames = new Set(
+        ((existingAccounts as { student_name: string }[]) || []).map((a) => a.student_name.trim().toLowerCase())
+      );
+
+      const missingStudents = students.filter(
+        (name: string) => !existingNames.has(name.trim().toLowerCase())
+      );
+
+      if (missingStudents.length > 0) {
+        const { data: allUsernames } = await supabaseAdmin
+          .from('gm_student_accounts')
+          .select('username');
+        const usedUsernames = new Set(
+          ((allUsernames as { username: string }[]) || []).map((a) => a.username.toLowerCase())
+        );
+
+        const accountsPayload = await Promise.all(
+          missingStudents.map(async (name: string) => {
+            const baseUser = generateUsername(name, className);
+            let u = baseUser;
+            let counter = 1;
+            while (usedUsernames.has(u.toLowerCase())) {
+              u = `${baseUser}${counter}`;
+              counter++;
+            }
+            usedUsernames.add(u.toLowerCase());
+
+            const plainPassword = generatePassword();
+            const hashedPassword = await hashPassword(plainPassword);
+
+            return {
+              student_name: name.trim(),
+              class_name: className,
+              academic_year: academicYear,
+              username: u,
+              password_plain: plainPassword,
+              password_hash: hashedPassword
+            };
+          })
+        );
+
+        await supabaseAdmin.from('gm_student_accounts').insert(accountsPayload);
+      }
+    } catch (syncAccErr) {
+      console.warn('[POST Behaviors] Auto-sync student accounts warning:', syncAccErr);
+    }
+
     const { data: currentStudents, error: fetchErr } = await supabase
       .from('gm_behaviors')
       .select('*')
@@ -177,7 +255,6 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const supabase = await createClient();
     const adminSession = await getAdminSession();
     if (!adminSession) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });

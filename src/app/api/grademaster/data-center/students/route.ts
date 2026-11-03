@@ -57,10 +57,10 @@ export async function GET() {
 
     if (accError) throw accError;
 
-    // Fetch all exam scores
+    // Fetch all exam scores joined with session metadata
     const { data: scores, error: scoresError } = await supabase
       .from('gm_students')
-      .select('id, name, final_score, is_deleted, gm_sessions(subject, exam_type)')
+      .select('id, name, final_score, is_deleted, gm_sessions(subject, exam_type, class_name, academic_year)')
       .eq('is_deleted', false);
 
     if (scoresError) throw scoresError;
@@ -144,51 +144,62 @@ export async function GET() {
 
     // Add scores
     for (const score of (scores || [])) {
-      const session = score.gm_sessions as unknown as { subject: string; exam_type: string } | null;
+      const session = score.gm_sessions as unknown as { subject: string; exam_type: string; class_name?: string; academic_year?: string } | null;
       if (!session) continue;
 
       const scoreNameLower = score.name.trim().toLowerCase();
+      const sessionClassLower = (session.class_name || '').trim().toLowerCase();
       
-      // Try to find matching student record in the map by exact name matching
+      // 1. Try exact match by name + class
       let foundAcc: StudentData | null = null;
-      for (const [k, v] of studentsMap.entries()) {
-         const lastUnderscore = k.lastIndexOf('_');
-         if (lastUnderscore !== -1) {
+      if (sessionClassLower) {
+        const exactKey = `${scoreNameLower}_${sessionClassLower}`;
+        foundAcc = studentsMap.get(exactKey) || null;
+      }
+
+      // 2. If not found, match by name across classes
+      if (!foundAcc) {
+        for (const [k, v] of studentsMap.entries()) {
+          const lastUnderscore = k.lastIndexOf('_');
+          if (lastUnderscore !== -1) {
             const mapName = k.substring(0, lastUnderscore);
             if (mapName === scoreNameLower) {
-               foundAcc = v;
-               break;
+              foundAcc = v;
+              break;
             }
-         }
+          }
+        }
       }
 
       if (foundAcc) {
-         foundAcc.scores.push({
-           subject: session.subject,
-           type: session.exam_type,
-           score: score.final_score,
-           id: score.id
-         });
+        foundAcc.scores.push({
+          subject: session.subject,
+          type: session.exam_type,
+          score: score.final_score,
+          id: score.id
+        });
       } else {
-         // Create virtual record if not in gm_student_accounts and not in gm_behaviors
-         const vKey = `virtual_${score.name}`;
-         if (!studentsMap.has(vKey)) {
-            studentsMap.set(vKey, {
-              id: vKey,
-              name: score.name,
-              className: 'Unknown',
-              academicYear: 'Unknown',
-              scores: [],
-              behaviorPoints: 0,
-              isLinked: false
-            });
-         }
-         studentsMap.get(vKey)!.scores.push({
-           subject: session.subject,
-           type: session.exam_type,
-           score: score.final_score,
-           id: score.id
-         });
+        // Fallback with real class and year if available
+        const fallbackClass = session.class_name || 'Tanpa Kelas';
+        const fallbackYear = session.academic_year || '2026/2027';
+        const vKey = `${scoreNameLower}_${fallbackClass.toLowerCase()}`;
+        if (!studentsMap.has(vKey)) {
+          studentsMap.set(vKey, {
+            id: `score_${score.name}_${fallbackClass}`,
+            name: score.name,
+            className: fallbackClass,
+            academicYear: fallbackYear,
+            scores: [],
+            behaviorPoints: 0,
+            isLinked: true
+          });
+        }
+        studentsMap.get(vKey)!.scores.push({
+          subject: session.subject,
+          type: session.exam_type,
+          score: score.final_score,
+          id: score.id
+        });
       }
     }
 
@@ -199,6 +210,65 @@ export async function GET() {
 
   } catch (err: unknown) {
     console.error('Data Center Students error:', err);
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    const adminSession = await getAdminSession();
+    if (!adminSession) return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
+
+    const body = await req.json();
+    const { oldName, newName, oldClassName, newClassName, academicYear } = body;
+
+    if (!oldName || !newName || !oldClassName || !newClassName) {
+      return NextResponse.json({ error: 'Data perubahan tidak lengkap' }, { status: 400 });
+    }
+
+    const year = academicYear || '2026/2027';
+
+    // 1. Update gm_student_accounts
+    await supabaseAdmin
+      .from('gm_student_accounts')
+      .update({
+        student_name: newName.trim(),
+        class_name: newClassName.trim(),
+        academic_year: year,
+        updated_at: new Date().toISOString()
+      })
+      .ilike('student_name', oldName.trim())
+      .eq('class_name', oldClassName.trim());
+
+    // 2. Update gm_behaviors
+    await supabaseAdmin
+      .from('gm_behaviors')
+      .update({
+        student_name: newName.trim(),
+        class_name: newClassName.trim(),
+        academic_year: year,
+        updated_at: new Date().toISOString()
+      })
+      .ilike('student_name', oldName.trim())
+      .eq('class_name', oldClassName.trim());
+
+    // 3. Update scores name in gm_students if name changed
+    if (oldName.trim().toLowerCase() !== newName.trim().toLowerCase()) {
+      await supabaseAdmin
+        .from('gm_students')
+        .update({
+          name: newName.trim(),
+          updated_at: new Date().toISOString()
+        })
+        .ilike('name', oldName.trim());
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Data siswa ${oldName} berhasil diperbarui menjadi ${newName} (${newClassName}) secara tersinkronisasi.`
+    });
+  } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: msg }, { status: 500 });
   }
