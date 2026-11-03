@@ -62,6 +62,7 @@ export interface CharacterProfile {
   role: string;
   description: string;
   avatarBg: string;
+  avatarUrl: string;
   tag: string;
 }
 
@@ -73,6 +74,7 @@ export const CHARACTER_PROFILES: CharacterProfile[] = [
     role: 'Guru Pendidik (PID)',
     description: 'Pendidik berwibawa dengan kemeja batik resmi PGRI motif biru emas.',
     avatarBg: 'bg-blue-600',
+    avatarUrl: '/assets/game/characters/avatars/pak_guru_budi.png',
     tag: 'Guru',
   },
   {
@@ -82,6 +84,7 @@ export const CHARACTER_PROFILES: CharacterProfile[] = [
     role: 'Guru BK / Konselor',
     description: 'Konselor berhijab ramah berseragam batik toska siap mendampingi siswa.',
     avatarBg: 'bg-teal-600',
+    avatarUrl: '/assets/game/characters/avatars/bu_guru_siti.png',
     tag: 'Guru',
   },
   {
@@ -89,8 +92,9 @@ export const CHARACTER_PROFILES: CharacterProfile[] = [
     key: 'char_student',
     name: 'Rian Pratama',
     role: 'Siswa Kelas 8 SMP',
-    description: 'Pelajar aktif dengan seragam putih-biru lengkap berdasi.',
+    description: 'Pelajar aktif dengan seragam putih-biru lengkap berdasi dan tas ransel.',
     avatarBg: 'bg-indigo-600',
+    avatarUrl: '/assets/game/characters/avatars/rian_pratama.png',
     tag: 'Siswa',
   },
   {
@@ -98,8 +102,9 @@ export const CHARACTER_PROFILES: CharacterProfile[] = [
     key: 'char_siswi_hijab',
     name: 'Aisyah Putri',
     role: 'Siswi Kelas 8 SMP',
-    description: 'Pelajar berhijab teladan dengan seragam rok panjang rapi.',
+    description: 'Pelajar berhijab teladan dengan seragam rapi dan tas ransel.',
     avatarBg: 'bg-sky-600',
+    avatarUrl: '/assets/game/characters/avatars/aisyah_putri.png',
     tag: 'Siswa',
   },
   {
@@ -109,6 +114,7 @@ export const CHARACTER_PROFILES: CharacterProfile[] = [
     role: 'Keamanan Sekolah',
     description: 'Petugas keamanan berseragam cokelat dan topi pet menjaga ketertiban.',
     avatarBg: 'bg-amber-700',
+    avatarUrl: '/assets/game/characters/avatars/pak_joko.png',
     tag: 'Staf',
   },
 ];

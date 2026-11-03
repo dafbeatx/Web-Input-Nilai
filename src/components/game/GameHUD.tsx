@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import React, { useState } from 'react';
 import { DeviceMode, InteractiveTrigger, CharacterProfile, CHARACTER_PROFILES } from '@/lib/game/types';
 import {
@@ -99,11 +101,22 @@ export default function GameHUD({
           {/* Player Badge & Character Switcher */}
           <button
             onClick={() => setIsCharacterModalOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 text-white rounded-xl border border-slate-700/80 backdrop-blur-md shadow-lg cursor-pointer transition-colors active:scale-95 text-left"
+            className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 text-white rounded-xl border border-slate-700/80 backdrop-blur-md shadow-lg cursor-pointer transition-colors active:scale-95 text-left"
             title="Klik atau Ketuk untuk Ganti Karakter"
           >
-            <div className={`w-7 h-7 rounded-lg ${currentCharacter.avatarBg} flex items-center justify-center font-black text-xs text-white shadow-sm`}>
-              {currentCharacter.name.substring(0, 2).toUpperCase()}
+            <div className={`w-8 h-8 rounded-lg ${currentCharacter.avatarBg} flex items-center justify-center overflow-hidden border border-white/20 shadow-sm relative flex-shrink-0`}>
+              {currentCharacter.avatarUrl ? (
+                <img
+                  src={currentCharacter.avatarUrl}
+                  alt={currentCharacter.name}
+                  className="w-10 h-10 object-contain translate-y-1"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              ) : (
+                <span className="font-black text-xs text-white">
+                  {currentCharacter.name.substring(0, 2).toUpperCase()}
+                </span>
+              )}
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-black leading-tight flex items-center gap-1">
@@ -376,8 +389,19 @@ export default function GameHUD({
                         : 'bg-slate-800/60 border-slate-700/60 hover:bg-slate-800 hover:border-slate-600'
                     }`}
                   >
-                    <div className={`w-10 h-10 rounded-xl ${char.avatarBg} flex-shrink-0 flex items-center justify-center font-black text-sm text-white shadow-sm mt-0.5`}>
-                      {char.name.substring(0, 2).toUpperCase()}
+                    <div className={`w-12 h-12 rounded-2xl ${char.avatarBg} flex-shrink-0 flex items-center justify-center overflow-hidden border border-white/20 shadow-md relative mt-0.5`}>
+                      {char.avatarUrl ? (
+                        <img
+                          src={char.avatarUrl}
+                          alt={char.name}
+                          className="w-14 h-14 object-contain translate-y-1.5"
+                          style={{ imageRendering: 'pixelated' }}
+                        />
+                      ) : (
+                        <span className="font-black text-sm text-white">
+                          {char.name.substring(0, 2).toUpperCase()}
+                        </span>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0 pr-4">
                       <div className="flex items-center gap-1.5">
