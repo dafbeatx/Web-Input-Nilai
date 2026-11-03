@@ -326,3 +326,6 @@ export function calculateChecklistScore(correctCount: number): number {
   if (correctCount >= 15) return 100;
   return Math.round((correctCount / 15) * 100 * 100) / 100;
 }
+
+// Re-export Counseling types for universal access across Nawasena
+export * from '@/types/counseling';

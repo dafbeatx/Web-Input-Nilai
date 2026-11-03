@@ -13,7 +13,7 @@ import {
   Settings, LogOut, Share2, Trophy, TrendingUp,
   Home, BookOpen, Upload, GraduationCap, Bug, ArrowRight, Info, Scroll,
   Smartphone, Laptop, RefreshCw, Mic, CheckCircle2, XCircle, ChevronDown, ChevronUp, Award,
-  Gamepad2, Camera, Zap
+  Gamepad2, Camera, Zap, HeartHandshake
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, Tooltip, 
@@ -33,6 +33,9 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import StudentLessonLayer from './StudentLessonLayer';
 import GamesLayer from './GamesLayer';
+import StudentCounselingWidget from './StudentCounselingWidget';
+import { getStudentCounselingRecords, subscribeToStudentCounseling } from '@/lib/grademaster/services/counseling.service';
+import type { CounselingRecord } from '@/types/counseling';
 import { generateLdksCertificatePdf } from '@/lib/grademaster/certificateGenerator';
 import type { CertificateTemplate } from '@/app/api/grademaster/certificates/route';
 
@@ -100,13 +103,17 @@ export default function StudentProfileLayer({
   const { isParent, studentData, setStudentData } = useGradeMaster();
   const [totalPoints, setTotalPoints] = useState(initialPoints);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(avatarUrl);
-  const [activeTab, setActiveTab] = useState<'HOME' | 'GRADES' | 'LESSON' | 'ATTENDANCE' | 'ACCOUNT' | 'GAMES'>('HOME');
+  const [activeTab, setActiveTab] = useState<'HOME' | 'GRADES' | 'LESSON' | 'ATTENDANCE' | 'ACCOUNT' | 'GAMES' | 'COUNSELING'>('HOME');
   const [selectedGameId, setSelectedGameId] = useState<'chess' | 'quick_quiz' | 'word_scramble' | null>(null);
   const [activeClass, setActiveClass] = useState(className);
   const [activeYear, setActiveYear] = useState(academicYear);
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
   const [attendanceLogs, setAttendanceLogs] = useState<{ subject: string; date: string; status: string }[]>([]);
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
+  const [, setCounselingRecords] = useState<CounselingRecord[]>([]);
+  const [counselingCount, setCounselingCount] = useState<number>(0);
+  const [recentCounseling, setRecentCounseling] = useState<CounselingRecord | null>(null);
+  const [, setIsLoadingCounseling] = useState<boolean>(false);
   const [studentLogs, setStudentLogs] = useState<BehaviorLog[]>([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [studentSummary, setStudentSummary] = useState<{ attendance: any, academicHistory: any[], documents: any[], email?: string | null, enrollmentHistory?: any[] } | null>(null);
@@ -835,6 +842,30 @@ export default function StudentProfileLayer({
     }
   }, [studentName, activeYear, activeClass]);
 
+  const fetchCounseling = useCallback(async () => {
+    if (!studentId && !studentName) return;
+    setIsLoadingCounseling(true);
+    try {
+      const records = await getStudentCounselingRecords({
+        studentId,
+        studentName,
+        nisn: (studentData as any)?.nisn ? String((studentData as any).nisn) : undefined,
+        className: activeClass,
+      });
+      setCounselingRecords(records);
+      setCounselingCount(records.length);
+      if (records.length > 0) {
+        setRecentCounseling(records[0]);
+      } else {
+        setRecentCounseling(null);
+      }
+    } catch (err) {
+      console.warn("Gagal mengambil data bimbingan konseling (BK):", err);
+    } finally {
+      setIsLoadingCounseling(false);
+    }
+  }, [studentId, studentName, studentData, activeClass]);
+
   const fetchLoginLogs = useCallback(async () => {
     if (!studentName || !activeClass) return;
     setIsLoadingLoginLogs(true);
@@ -1098,13 +1129,33 @@ export default function StudentProfileLayer({
         fetchStudentLogs();
         fetchAttendanceLogs();
         fetchOralExams();
+        fetchCounseling();
         fetchLoginLogs();
         fetchActiveSessions();
         // fetchClassLeaderboard();
         fetchBehaviorSettings();
       });
     }
-  }, [studentId, studentName, activeClass, activeYear, isAdmin, fetchStudentSummary, fetchStudentLogs, fetchAttendanceLogs, fetchOralExams, fetchLoginLogs, fetchActiveSessions, fetchBehaviorSettings]);
+  }, [studentId, studentName, activeClass, activeYear, isAdmin, fetchStudentSummary, fetchStudentLogs, fetchAttendanceLogs, fetchOralExams, fetchCounseling, fetchLoginLogs, fetchActiveSessions, fetchBehaviorSettings]);
+
+  // Realtime listener for BK (Bimbingan Konseling) from Smart-Absensi-Guru
+  useEffect(() => {
+    if (!studentId && !studentName) return;
+    const unsub = subscribeToStudentCounseling(
+      {
+        studentId,
+        studentName,
+        nisn: (studentData as any)?.nisn ? String((studentData as any).nisn) : undefined,
+        className: activeClass,
+      },
+      () => {
+        fetchCounseling();
+      }
+    );
+    return () => {
+      unsub();
+    };
+  }, [studentId, studentName, studentData, activeClass, fetchCounseling]);
 
   const fetchClassLeaderboard = async () => {
     if (!activeClass) return;
@@ -1840,6 +1891,7 @@ export default function StudentProfileLayer({
                 {activeTab === 'ATTENDANCE' && "Kehadiran Siswa"}
                 {activeTab === 'ACCOUNT' && (isParent ? "Data Ananda & Rapor" : "Berkas & Profil")}
                 {activeTab === 'GAMES' && "Games Edukasi"}
+                {activeTab === 'COUNSELING' && "Bimbingan & Konseling (BK)"}
               </h2>
             </div>
           )}
@@ -1853,7 +1905,8 @@ export default function StudentProfileLayer({
                   fetchStudentSummary(),
                   fetchStudentLogs(),
                   fetchAttendanceLogs(),
-                  fetchOralExams()
+                  fetchOralExams(),
+                  fetchCounseling()
                 ]);
                 setToast({ message: "Data berhasil diperbarui ✨", type: "success" });
                 setIsRefreshingProfile(false);
@@ -2139,8 +2192,8 @@ export default function StudentProfileLayer({
                 );
               })()}
 
-              {/* Quick Action Grid (2 columns on mobile) */}
-              <div className="grid grid-cols-2 gap-2.5">
+              {/* Quick Action Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 {/* Tombol 1: Nilai & Remedial */}
                 <button
                   type="button"
@@ -2178,6 +2231,27 @@ export default function StudentProfileLayer({
                     <p className="text-sm sm:text-base text-emerald-600 font-black mt-1 font-outfit">{attPercent}</p>
                     <p className="text-[11px] text-slate-500 font-medium mt-1 leading-tight">Log kehadiran harian</p>
                   </div>
+                </button>
+
+                {/* Tombol 3: Bimbingan & Konseling (BK) */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('COUNSELING')}
+                  className="p-4 bg-white hover:bg-slate-50 active:scale-[0.99] border border-slate-200/90 rounded-xl flex flex-col items-start gap-2.5 text-left transition-all relative shadow-sm group min-h-[110px]"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                    <HeartHandshake size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-800 tracking-tight leading-none font-outfit">Bimbingan (BK)</h4>
+                    <p className="text-sm sm:text-base text-teal-600 font-black mt-1 font-outfit">{counselingCount} Catatan</p>
+                    <p className="text-[11px] text-slate-500 font-medium mt-1 leading-tight">Arahan & pendampingan</p>
+                  </div>
+                  {recentCounseling && recentCounseling.status === 'IN_PROGRESS' && (
+                    <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-amber-500 text-[9px] font-bold text-white shadow-sm">
+                      Aktif
+                    </span>
+                  )}
                 </button>
 
                 {/* Tombol 3: Prestasi Siswa */}
@@ -3711,6 +3785,20 @@ export default function StudentProfileLayer({
               )}
             </div>
           )}
+
+          {/* Tab: Bimbingan & Konseling (BK) */}
+          {activeTab === 'COUNSELING' && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <StudentCounselingWidget
+                studentId={studentId}
+                studentName={studentName}
+                studentNisn={(studentData as any)?.nisn ? String((studentData as any).nisn) : undefined}
+                className={activeClass}
+                isParent={isParent}
+                onBack={() => setActiveTab('HOME')}
+              />
+            </div>
+          )}
         </main>
         ) : (
           <div className="flex-1 overflow-y-auto no-scrollbar pt-safe">
@@ -3775,7 +3863,7 @@ export default function StudentProfileLayer({
           <button 
             type="button"
             onClick={() => setActiveTab('ATTENDANCE')}
-            className={`flex flex-col items-center justify-center gap-0.5 min-h-[46px] min-w-[50px] px-2 py-1 rounded-xl transition-all ${
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[46px] min-w-[46px] px-1 py-1 rounded-xl transition-all ${
               activeTab === 'ATTENDANCE' ? 'text-indigo-600 font-bold bg-indigo-50/60' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -3785,8 +3873,22 @@ export default function StudentProfileLayer({
 
           <button 
             type="button"
+            onClick={() => setActiveTab('COUNSELING')}
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[46px] min-w-[46px] px-1 py-1 rounded-xl transition-all relative ${
+              activeTab === 'COUNSELING' ? 'text-teal-600 font-bold bg-teal-50/60' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <HeartHandshake size={19} className={activeTab === 'COUNSELING' ? 'scale-105 stroke-[2.5]' : ''} />
+            <span className="text-[10px] font-bold tracking-tight">BK</span>
+            {counselingCount > 0 && (
+              <span className="absolute top-1 right-2 w-2 h-2 rounded-full bg-teal-500 ring-2 ring-white" />
+            )}
+          </button>
+
+          <button 
+            type="button"
             onClick={() => setActiveTab('ACCOUNT')}
-            className={`flex flex-col items-center justify-center gap-0.5 min-h-[46px] min-w-[50px] px-2 py-1 rounded-xl transition-all ${
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[46px] min-w-[46px] px-1 py-1 rounded-xl transition-all ${
               activeTab === 'ACCOUNT' ? 'text-indigo-600 font-bold bg-indigo-50/60' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
