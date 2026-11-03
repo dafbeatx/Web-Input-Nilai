@@ -53,60 +53,80 @@ export class BootScene extends Phaser.Scene {
     this.load.image('prop_lamp', '/assets/game/props/prop_street_lamp.png');
 
     // Character Spritesheets (4x4 = 16 frames, 64x64 each)
-    this.load.spritesheet('char_teacher', '/assets/game/characters/guru_spritesheet.png', {
-      frameWidth: 64,
-      frameHeight: 64,
-    });
-    this.load.spritesheet('char_student', '/assets/game/characters/siswa_spritesheet.png', {
-      frameWidth: 64,
-      frameHeight: 64,
+    const characters = [
+      { key: 'char_teacher', path: '/assets/game/characters/guru_spritesheet.png' },
+      { key: 'char_guru_wanita', path: '/assets/game/characters/guru_wanita_spritesheet.png' },
+      { key: 'char_student', path: '/assets/game/characters/siswa_spritesheet.png' },
+      { key: 'char_siswi_hijab', path: '/assets/game/characters/siswi_hijab_spritesheet.png' },
+      { key: 'char_satpam', path: '/assets/game/characters/satpam_spritesheet.png' },
+    ];
+
+    characters.forEach(char => {
+      this.load.spritesheet(char.key, char.path, {
+        frameWidth: 64,
+        frameHeight: 64,
+      });
     });
   }
 
   create(): void {
-    this.createCharacterAnimations();
+    this.createAllCharacterAnimations();
     this.scene.start('MainTownScene');
   }
 
-  private createCharacterAnimations(): void {
-    // Walk Down: Row 0 (frames 0, 1, 2, 3)
-    if (!this.anims.exists('walk_down')) {
-      this.anims.create({
-        key: 'walk_down',
-        frames: this.anims.generateFrameNumbers('char_teacher', { frames: [0, 1, 2, 3] }),
-        frameRate: 8,
-        repeat: -1,
-      });
-    }
+  private createAllCharacterAnimations(): void {
+    const characterKeys = [
+      'char_teacher',
+      'char_guru_wanita',
+      'char_student',
+      'char_siswi_hijab',
+      'char_satpam',
+    ];
 
-    // Walk Left: Row 1 (frames 4, 5, 6, 7)
-    if (!this.anims.exists('walk_left')) {
-      this.anims.create({
-        key: 'walk_left',
-        frames: this.anims.generateFrameNumbers('char_teacher', { frames: [4, 5, 6, 7] }),
-        frameRate: 8,
-        repeat: -1,
-      });
-    }
+    characterKeys.forEach(charKey => {
+      // Walk Down: Row 0 (frames 0, 1, 2, 3)
+      const downKey = `${charKey}_walk_down`;
+      if (!this.anims.exists(downKey)) {
+        this.anims.create({
+          key: downKey,
+          frames: this.anims.generateFrameNumbers(charKey, { frames: [0, 1, 2, 3] }),
+          frameRate: 8,
+          repeat: -1,
+        });
+      }
 
-    // Walk Right: Row 2 (frames 8, 9, 10, 11)
-    if (!this.anims.exists('walk_right')) {
-      this.anims.create({
-        key: 'walk_right',
-        frames: this.anims.generateFrameNumbers('char_teacher', { frames: [8, 9, 10, 11] }),
-        frameRate: 8,
-        repeat: -1,
-      });
-    }
+      // Walk Left: Row 1 (frames 4, 5, 6, 7)
+      const leftKey = `${charKey}_walk_left`;
+      if (!this.anims.exists(leftKey)) {
+        this.anims.create({
+          key: leftKey,
+          frames: this.anims.generateFrameNumbers(charKey, { frames: [4, 5, 6, 7] }),
+          frameRate: 8,
+          repeat: -1,
+        });
+      }
 
-    // Walk Up: Row 3 (frames 12, 13, 14, 15)
-    if (!this.anims.exists('walk_up')) {
-      this.anims.create({
-        key: 'walk_up',
-        frames: this.anims.generateFrameNumbers('char_teacher', { frames: [12, 13, 14, 15] }),
-        frameRate: 8,
-        repeat: -1,
-      });
-    }
+      // Walk Right: Row 2 (frames 8, 9, 10, 11)
+      const rightKey = `${charKey}_walk_right`;
+      if (!this.anims.exists(rightKey)) {
+        this.anims.create({
+          key: rightKey,
+          frames: this.anims.generateFrameNumbers(charKey, { frames: [8, 9, 10, 11] }),
+          frameRate: 8,
+          repeat: -1,
+        });
+      }
+
+      // Walk Up: Row 3 (frames 12, 13, 14, 15)
+      const upKey = `${charKey}_walk_up`;
+      if (!this.anims.exists(upKey)) {
+        this.anims.create({
+          key: upKey,
+          frames: this.anims.generateFrameNumbers(charKey, { frames: [12, 13, 14, 15] }),
+          frameRate: 8,
+          repeat: -1,
+        });
+      }
+    });
   }
 }

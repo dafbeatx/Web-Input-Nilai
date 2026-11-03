@@ -54,3 +54,61 @@ export interface InteractiveTrigger {
   data?: Record<string, unknown>;
   action?: () => void;
 }
+
+export interface CharacterProfile {
+  id: string;
+  key: string;
+  name: string;
+  role: string;
+  description: string;
+  avatarBg: string;
+  tag: string;
+}
+
+export const CHARACTER_PROFILES: CharacterProfile[] = [
+  {
+    id: 'guru_pria',
+    key: 'char_teacher',
+    name: 'Pak Guru Budi',
+    role: 'Guru Pendidik (PID)',
+    description: 'Pendidik berwibawa dengan kemeja batik resmi PGRI motif biru emas.',
+    avatarBg: 'bg-blue-600',
+    tag: 'Guru',
+  },
+  {
+    id: 'guru_wanita',
+    key: 'char_guru_wanita',
+    name: 'Bu Guru Siti',
+    role: 'Guru BK / Konselor',
+    description: 'Konselor berhijab ramah berseragam batik toska siap mendampingi siswa.',
+    avatarBg: 'bg-teal-600',
+    tag: 'Guru',
+  },
+  {
+    id: 'siswa_smp',
+    key: 'char_student',
+    name: 'Rian Pratama',
+    role: 'Siswa Kelas 8 SMP',
+    description: 'Pelajar aktif dengan seragam putih-biru lengkap berdasi.',
+    avatarBg: 'bg-indigo-600',
+    tag: 'Siswa',
+  },
+  {
+    id: 'siswi_hijab',
+    key: 'char_siswi_hijab',
+    name: 'Aisyah Putri',
+    role: 'Siswi Kelas 8 SMP',
+    description: 'Pelajar berhijab teladan dengan seragam rok panjang rapi.',
+    avatarBg: 'bg-sky-600',
+    tag: 'Siswa',
+  },
+  {
+    id: 'satpam',
+    key: 'char_satpam',
+    name: 'Pak Joko',
+    role: 'Keamanan Sekolah',
+    description: 'Petugas keamanan berseragam cokelat dan topi pet menjaga ketertiban.',
+    avatarBg: 'bg-amber-700',
+    tag: 'Staf',
+  },
+];

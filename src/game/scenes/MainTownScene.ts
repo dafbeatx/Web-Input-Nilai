@@ -251,6 +251,10 @@ export class MainTownScene extends Phaser.Scene {
       this.inputManager.triggerVirtualInteract();
     });
 
+    this.game.events.on('player:change-character', (data: { key: string; name: string; role: string }) => {
+      this.player.switchCharacter(data.key, data.name, data.role);
+    });
+
     // When interact is triggered (keyboard or touch), open modal if near trigger
     this.inputManager.onInteract(() => {
       if (this.currentNearTrigger) {
@@ -310,5 +314,6 @@ export class MainTownScene extends Phaser.Scene {
     this.game.events.off('input:joystick');
     this.game.events.off('input:sprint');
     this.game.events.off('input:interact');
+    this.game.events.off('player:change-character');
   }
 }

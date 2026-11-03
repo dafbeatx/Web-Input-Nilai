@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as Phaser from 'phaser';
 import { createPhaserConfig } from '@/game/config/phaser.config';
-import { DeviceMode, InteractiveTrigger } from '@/lib/game/types';
+import { DeviceMode, InteractiveTrigger, CharacterProfile, CHARACTER_PROFILES } from '@/lib/game/types';
 import { detectDeviceMode, saveDeviceMode } from '@/lib/game/deviceDetector';
 import GameHUD from './GameHUD';
 import VirtualControls from './VirtualControls';
@@ -17,11 +17,21 @@ export default function GameContainer() {
   const [nearTrigger, setNearTrigger] = useState<InteractiveTrigger | null>(null);
   const [activeModalTrigger, setActiveModalTrigger] = useState<InteractiveTrigger | null>(null);
   const [walletBalance, setWalletBalance] = useState<number>(50000);
+  const [currentCharacter, setCurrentCharacter] = useState<CharacterProfile>(CHARACTER_PROFILES[0]);
 
   const handleDeviceModeChange = (newMode: DeviceMode) => {
     setDeviceMode(newMode);
     saveDeviceMode(newMode);
   };
+
+  const handleSelectCharacter = useCallback((char: CharacterProfile) => {
+    setCurrentCharacter(char);
+    gameRef.current?.events.emit('player:change-character', {
+      key: char.key,
+      name: char.name,
+      role: char.role,
+    });
+  }, []);
 
   // Mount Phaser Game Instance
   useEffect(() => {
@@ -97,6 +107,8 @@ export default function GameContainer() {
         onCloseModal={() => setActiveModalTrigger(null)}
         walletBalance={walletBalance}
         onBuyItem={handleBuyItem}
+        currentCharacter={currentCharacter}
+        onSelectCharacter={handleSelectCharacter}
       />
 
       {/* Multiplatform Virtual Controls (Adaptive to Android / Smart Board / Desktop) */}

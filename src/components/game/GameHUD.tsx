@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { DeviceMode, InteractiveTrigger } from '@/lib/game/types';
+import { DeviceMode, InteractiveTrigger, CharacterProfile, CHARACTER_PROFILES } from '@/lib/game/types';
 import {
   Wallet,
   MapPin,
@@ -17,6 +17,9 @@ import {
   Building,
   Info,
   CheckCircle,
+  ChevronDown,
+  User,
+  Check,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -35,6 +38,8 @@ interface GameHUDProps {
   onCloseModal: () => void;
   walletBalance: number;
   onBuyItem: (item: { name: string; price: number }) => void;
+  currentCharacter?: CharacterProfile;
+  onSelectCharacter?: (char: CharacterProfile) => void;
 }
 
 export default function GameHUD({
@@ -46,8 +51,11 @@ export default function GameHUD({
   onCloseModal,
   walletBalance,
   onBuyItem,
+  currentCharacter = CHARACTER_PROFILES[0],
+  onSelectCharacter,
 }: GameHUDProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState<string | null>(null);
 
   const toggleFullscreen = () => {
@@ -88,16 +96,23 @@ export default function GameHUD({
             <span className="hidden sm:inline">Keluar</span>
           </Link>
 
-          {/* Player Badge */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 text-white rounded-xl border border-slate-700/80 backdrop-blur-md shadow-lg">
-            <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center font-black text-xs text-white">
-              WN
+          {/* Player Badge & Character Switcher */}
+          <button
+            onClick={() => setIsCharacterModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 text-white rounded-xl border border-slate-700/80 backdrop-blur-md shadow-lg cursor-pointer transition-colors active:scale-95 text-left"
+            title="Klik atau Ketuk untuk Ganti Karakter"
+          >
+            <div className={`w-7 h-7 rounded-lg ${currentCharacter.avatarBg} flex items-center justify-center font-black text-xs text-white shadow-sm`}>
+              {currentCharacter.name.substring(0, 2).toUpperCase()}
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-black leading-tight">Budi Santoso</span>
-              <span className="text-[9px] font-bold text-cyan-400 leading-none">Warga Sipil</span>
+              <span className="text-xs font-black leading-tight flex items-center gap-1">
+                {currentCharacter.name}
+                <ChevronDown size={11} className="text-slate-400" />
+              </span>
+              <span className="text-[9px] font-bold text-cyan-400 leading-none">{currentCharacter.role}</span>
             </div>
-          </div>
+          </button>
 
           {/* Wallet Balance */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/90 text-emerald-400 rounded-xl border border-slate-700/80 backdrop-blur-md shadow-lg font-mono font-bold text-xs">
@@ -313,6 +328,88 @@ export default function GameHUD({
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          CHARACTER SELECTION MODAL (Touch Friendly for PID & Mobile)
+         ═══════════════════════════════════════════════════════════ */}
+      {isCharacterModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 text-white shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+                  <User size={18} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black font-outfit text-white">Pilih Karakter Warga</h3>
+                  <p className="text-[11px] text-slate-400">Pilih profesi dan identitas di Indonesian Life RP</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCharacterModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Character Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto no-scrollbar pr-1">
+              {CHARACTER_PROFILES.map((char) => {
+                const isSelected = char.id === currentCharacter.id;
+                return (
+                  <button
+                    key={char.id}
+                    type="button"
+                    onClick={() => {
+                      if (onSelectCharacter) onSelectCharacter(char);
+                      setIsCharacterModalOpen(false);
+                    }}
+                    className={`flex items-start gap-3 p-3.5 rounded-2xl border text-left transition-all cursor-pointer min-h-[56px] relative group ${
+                      isSelected
+                        ? 'bg-indigo-950/50 border-indigo-500 shadow-md shadow-indigo-500/20'
+                        : 'bg-slate-800/60 border-slate-700/60 hover:bg-slate-800 hover:border-slate-600'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-xl ${char.avatarBg} flex-shrink-0 flex items-center justify-center font-black text-sm text-white shadow-sm mt-0.5`}>
+                      {char.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0 pr-4">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-white truncate">{char.name}</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-700/70 text-slate-300">
+                          {char.tag}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-semibold text-cyan-400 block truncate mt-0.5">{char.role}</span>
+                      <p className="text-[10px] text-slate-400 leading-snug line-clamp-2 mt-1">{char.description}</p>
+                    </div>
+                    {isSelected && (
+                      <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-white">
+                        <Check size={12} strokeWidth={3} />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
+              <span>Mode: <strong className="text-white">{deviceMode.toUpperCase()}</strong></span>
+              <button
+                type="button"
+                onClick={() => setIsCharacterModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all cursor-pointer min-h-[40px]"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}

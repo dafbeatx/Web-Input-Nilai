@@ -4,6 +4,7 @@ import { PlayerMovementState } from '@/lib/game/types';
 export class Player extends Phaser.Physics.Arcade.Sprite {
   public characterId: string;
   public characterName: string;
+  public characterKey: string = 'char_teacher';
   public baseSpeed: number = 175;
   public sprintMultiplier: number = 1.6;
 
@@ -11,11 +12,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private roleTag: Phaser.GameObjects.Text;
   private currentDirection: 'up' | 'down' | 'left' | 'right' = 'down';
 
-  constructor(scene: Phaser.Scene, x: number, y: number, name: string = 'Warga Baru') {
-    super(scene, x, y, 'char_teacher', 0);
+  constructor(scene: Phaser.Scene, x: number, y: number, name: string = 'Warga Baru', initialKey: string = 'char_teacher') {
+    super(scene, x, y, initialKey, 0);
 
     this.characterId = 'local-player';
     this.characterName = name;
+    this.characterKey = initialKey;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -66,18 +68,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       if (Math.abs(vector.x) > Math.abs(vector.y)) {
         if (vector.x < 0) {
           this.currentDirection = 'left';
-          this.anims.play('walk_left', true);
+          this.anims.play(`${this.characterKey}_walk_left`, true);
         } else if (vector.x > 0) {
           this.currentDirection = 'right';
-          this.anims.play('walk_right', true);
+          this.anims.play(`${this.characterKey}_walk_right`, true);
         }
       } else {
         if (vector.y < 0) {
           this.currentDirection = 'up';
-          this.anims.play('walk_up', true);
+          this.anims.play(`${this.characterKey}_walk_up`, true);
         } else if (vector.y > 0) {
           this.currentDirection = 'down';
-          this.anims.play('walk_down', true);
+          this.anims.play(`${this.characterKey}_walk_down`, true);
         }
       }
     } else {
@@ -116,8 +118,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       direction: this.currentDirection,
       isMoving,
       isSprinting: vector.isSprinting,
-      animKey: `walk_${this.currentDirection}`,
+      animKey: `${this.characterKey}_walk_${this.currentDirection}`,
     };
+  }
+
+  public switchCharacter(newKey: string, newName: string, newRole: string): void {
+    this.characterKey = newKey;
+    this.setTexture(newKey, 0);
+    this.setCharacterName(newName);
+    this.setRoleTitle(newRole);
   }
 
   public setCharacterName(newName: string): void {
