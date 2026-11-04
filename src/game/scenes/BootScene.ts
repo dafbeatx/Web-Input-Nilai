@@ -59,8 +59,8 @@ export class BootScene extends Phaser.Scene {
     modularProps.forEach(p => this.load.image(p, `/assets/props/${p}.png`));
 
     // Tilemap & Atlas (SMP Terpadu Al-Ittihadiyah)
-    // Loads live cloud database / dynamic map from API route with static fallback
-    this.load.tilemapTiledJSON('school_map', '/api/game/map');
+    // Loads live cloud database / dynamic map from API route with timestamp cache-buster
+    this.load.tilemapTiledJSON('school_map', `/api/game/map?t=${Date.now()}`);
     this.load.image('school_atlas', '/assets/maps/school_atlas.png');
 
     // Tilesets

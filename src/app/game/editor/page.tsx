@@ -22,6 +22,7 @@ import {
   MousePointer,
   Square,
   Download,
+  RotateCcw,
 } from 'lucide-react';
 
 interface MapObjectProperty {
@@ -122,34 +123,56 @@ export default function GameMapEditorPage() {
     }, 3500);
   }, []);
 
+  const mapDataRef = useRef<TiledMapData | null>(null);
+
+  useEffect(() => {
+    mapDataRef.current = mapData;
+  }, [mapData]);
+
+  const loadMapFromServer = useCallback(async (showNotification = false) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/game/map?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        },
+      });
+      if (!res.ok) throw new Error('Gagal memuat peta dari server');
+      const data: TiledMapData = await res.json();
+      setMapData(data);
+      mapDataRef.current = data;
+      try {
+        localStorage.setItem('school_map_draft', JSON.stringify(data));
+      } catch (_) {}
+      if (showNotification) {
+        const collCount = data.layers?.find(l => l.name === 'Collision')?.objects?.length ?? 0;
+        const interactCount = data.layers?.find(l => l.name === 'Interact')?.objects?.length ?? 0;
+        showToast(`🔄 Peta tersinkron: ${collCount} collider, ${interactCount} zona!`, 'success');
+      }
+    } catch (err) {
+      console.error(err);
+      try {
+        const savedDraft = localStorage.getItem('school_map_draft');
+        if (savedDraft) {
+          const parsedDraft: TiledMapData = JSON.parse(savedDraft);
+          setMapData(parsedDraft);
+          mapDataRef.current = parsedDraft;
+          showToast('⚠️ Gagal terhubung ke server. Menggunakan draf lokal browser.', 'error');
+          return;
+        }
+      } catch (_) {}
+      showToast('Gagal memuat data peta school_map.json', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
   // 1. Fetch Map Data on component mount
   useEffect(() => {
-    let isSubscribed = true;
-
-    async function loadInitialMap() {
-      try {
-        const res = await fetch('/api/game/map');
-        if (!res.ok) throw new Error('Gagal memuat peta');
-        const data: TiledMapData = await res.json();
-        if (isSubscribed) {
-          setMapData(data);
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error(err);
-        if (isSubscribed) {
-          setLoading(false);
-          setToastMessage({ text: 'Gagal memuat data peta school_map.json', type: 'error' });
-        }
-      }
-    }
-
-    loadInitialMap();
-
-    return () => {
-      isSubscribed = false;
-    };
-  }, []);
+    loadMapFromServer(false);
+  }, [loadMapFromServer]);
 
   // Helper getters
   const collisionLayer = mapData?.layers.find(l => l.name === 'Collision');
@@ -169,19 +192,24 @@ export default function GameMapEditorPage() {
 
   // 2. Save Updated Map Data to API
   const handleSaveMap = useCallback(async () => {
-    if (!mapData) return;
+    const dataToSave = mapDataRef.current || mapData;
+    if (!dataToSave) return;
     try {
       setSaving(true);
 
       // Always save draft to browser storage first
       try {
-        localStorage.setItem('school_map_draft', JSON.stringify(mapData));
+        localStorage.setItem('school_map_draft', JSON.stringify(dataToSave));
+        localStorage.setItem('school_map_draft_time', Date.now().toString());
       } catch (_) {}
 
       const res = await fetch('/api/game/map', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(mapData),
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        },
+        body: JSON.stringify(dataToSave),
       });
 
       const result = await res.json();
@@ -192,15 +220,20 @@ export default function GameMapEditorPage() {
 
       // Server saved successfully
       if (result.success && !result.warning) {
-        showToast(result.message || '✅ Peta berhasil disimpan ke Cloud Database!', 'success');
+        const collCount = dataToSave.layers.find(l => l.name === 'Collision')?.objects?.length ?? 0;
+        const interactCount = dataToSave.layers.find(l => l.name === 'Interact')?.objects?.length ?? 0;
+        showToast(
+          result.message || `✅ Peta berhasil disimpan! (${collCount} collider, ${interactCount} zona)`,
+          'success'
+        );
         return;
       }
 
       // Server is read-only / service role key missing in Vercel — auto-trigger download fallback
       if (result.warning) {
         showToast('⚠️ Server read-only: Berkas school_map.json diunduh otomatis ke komputer.', 'success');
-        const dataToSave = result.mapData ?? mapData;
-        const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(dataToSave, null, 2));
+        const fallbackData = result.mapData ?? dataToSave;
+        const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(fallbackData, null, 2));
         const a = document.createElement('a');
         a.setAttribute('href', dataStr);
         a.setAttribute('download', 'school_map.json');
@@ -357,53 +390,57 @@ export default function GameMapEditorPage() {
     }
 
     // Finish Drawing
-    if (isDrawing && currentDrawRect && mapData) {
+    if (isDrawing && currentDrawRect) {
       setIsDrawing(false);
       setDrawStart(null);
 
       // Only create if rectangle has reasonable dimension (>= 12px)
       if (currentDrawRect.w >= 12 && currentDrawRect.h >= 12) {
         const targetLayerName = activeTool === 'draw_collision' ? 'Collision' : 'Interact';
-        const newId = mapData.nextobjectid || Date.now();
 
-        const newObj: MapObject = {
-          id: newId,
-          name: targetLayerName === 'Collision' ? `Kotak Tabrakan #${newId}` : `Zona Interaksi #${newId}`,
-          x: currentDrawRect.x,
-          y: currentDrawRect.y,
-          width: currentDrawRect.w,
-          height: currentDrawRect.h,
-          rotation: 0,
-          visible: true,
-        };
+        setMapData(prev => {
+          if (!prev) return prev;
+          const newId = prev.nextobjectid || Date.now();
 
-        if (targetLayerName === 'Interact') {
-          newObj.properties = [
-            { name: 'label', type: 'string', value: `Fasilitas #${newId}` },
-            { name: 'interactionId', type: 'string', value: `fasilitas_${newId}` },
-          ];
-        }
+          const newObj: MapObject = {
+            id: newId,
+            name: targetLayerName === 'Collision' ? `Kotak Tabrakan #${newId}` : `Zona Interaksi #${newId}`,
+            x: currentDrawRect.x,
+            y: currentDrawRect.y,
+            width: currentDrawRect.w,
+            height: currentDrawRect.h,
+            rotation: 0,
+            visible: true,
+          };
 
-        const updatedLayers = mapData.layers.map(layer => {
-          if (layer.name === targetLayerName) {
-            return {
-              ...layer,
-              objects: [...(layer.objects || []), newObj],
-            };
+          if (targetLayerName === 'Interact') {
+            newObj.properties = [
+              { name: 'label', type: 'string', value: `Fasilitas #${newId}` },
+              { name: 'interactionId', type: 'string', value: `fasilitas_${newId}` },
+            ];
           }
-          return layer;
-        });
 
-        setMapData({
-          ...mapData,
-          nextobjectid: newId + 1,
-          layers: updatedLayers,
-        });
+          const updatedLayers = prev.layers.map(layer => {
+            if (layer.name === targetLayerName) {
+              return {
+                ...layer,
+                objects: [...(layer.objects || []), newObj],
+              };
+            }
+            return layer;
+          });
 
-        setSelectedObjectId(newId);
-        setSelectedLayerName(targetLayerName);
-        setActiveTool('select');
-        showToast(`Dibuat objek baru: ${newObj.name}`, 'success');
+          setSelectedObjectId(newId);
+          setSelectedLayerName(targetLayerName);
+          setActiveTool('select');
+          showToast(`Dibuat objek baru: ${newObj.name}`, 'success');
+
+          return {
+            ...prev,
+            nextobjectid: newId + 1,
+            layers: updatedLayers,
+          };
+        });
       }
 
       setCurrentDrawRect(null);
@@ -421,69 +458,76 @@ export default function GameMapEditorPage() {
   };
 
   // Update object properties in state
-  const updateObjectInState = (id: number, updates: Partial<MapObject>) => {
-    if (!mapData) return;
-    const updatedLayers = mapData.layers.map(layer => {
-      if (!layer.objects) return layer;
-      const updatedObjects = layer.objects.map(obj => {
-        if (obj.id === id) {
-          return { ...obj, ...updates };
-        }
-        return obj;
+  const updateObjectInState = useCallback((id: number, updates: Partial<MapObject>) => {
+    setMapData(prev => {
+      if (!prev) return prev;
+      const updatedLayers = prev.layers.map(layer => {
+        if (!layer.objects) return layer;
+        const updatedObjects = layer.objects.map(obj => {
+          if (obj.id === id) {
+            return { ...obj, ...updates };
+          }
+          return obj;
+        });
+        return { ...layer, objects: updatedObjects };
       });
-      return { ...layer, objects: updatedObjects };
+      return { ...prev, layers: updatedLayers };
     });
-
-    setMapData({ ...mapData, layers: updatedLayers });
-  };
+  }, []);
 
   // Delete object
   const handleDeleteObject = useCallback((id: number) => {
-    if (!mapData) return;
-    const updatedLayers = mapData.layers.map(layer => {
-      if (!layer.objects) return layer;
-      return {
-        ...layer,
-        objects: layer.objects.filter(obj => obj.id !== id),
-      };
-    });
-
-    setMapData({ ...mapData, layers: updatedLayers });
-    if (selectedObjectId === id) setSelectedObjectId(null);
-    showToast('Objek berhasil dihapus', 'success');
-  }, [mapData, selectedObjectId, showToast]);
-
-  // Duplicate object
-  const handleDuplicateObject = (obj: MapObject, layerName: string) => {
-    if (!mapData) return;
-    const newId = (mapData.nextobjectid || 100) + 1;
-    const duplicatedObj: MapObject = {
-      ...obj,
-      id: newId,
-      name: `${obj.name} (Salinan)`,
-      x: obj.x + 24,
-      y: obj.y + 24,
-    };
-
-    const updatedLayers = mapData.layers.map(layer => {
-      if (layer.name === layerName) {
+    setMapData(prev => {
+      if (!prev) return prev;
+      const updatedLayers = prev.layers.map(layer => {
+        if (!layer.objects) return layer;
         return {
           ...layer,
-          objects: [...(layer.objects || []), duplicatedObj],
+          objects: layer.objects.filter(obj => obj.id !== id),
         };
-      }
-      return layer;
+      });
+      return { ...prev, layers: updatedLayers };
     });
+    setSelectedObjectId(curr => (curr === id ? null : curr));
+    showToast('Objek berhasil dihapus', 'success');
+  }, [showToast]);
 
-    setMapData({
-      ...mapData,
-      nextobjectid: newId + 1,
-      layers: updatedLayers,
+  // Duplicate object
+  const handleDuplicateObject = useCallback((obj: MapObject, layerName: string) => {
+    let duplicatedName = '';
+    setMapData(prev => {
+      if (!prev) return prev;
+      const newId = (prev.nextobjectid || 100) + 1;
+      const duplicatedObj: MapObject = {
+        ...obj,
+        id: newId,
+        name: `${obj.name} (Salinan)`,
+        x: Math.min(MAP_WIDTH - obj.width, obj.x + 24),
+        y: Math.min(MAP_HEIGHT - obj.height, obj.y + 24),
+      };
+      duplicatedName = duplicatedObj.name;
+
+      const updatedLayers = prev.layers.map(layer => {
+        if (layer.name === layerName) {
+          return {
+            ...layer,
+            objects: [...(layer.objects || []), duplicatedObj],
+          };
+        }
+        return layer;
+      });
+
+      setSelectedObjectId(newId);
+      return {
+        ...prev,
+        nextobjectid: newId + 1,
+        layers: updatedLayers,
+      };
     });
-
-    setSelectedObjectId(newId);
-    showToast(`Objek disalin: ${duplicatedObj.name}`, 'success');
-  };
+    if (duplicatedName) {
+      showToast(`Objek disalin: ${duplicatedName}`, 'success');
+    }
+  }, [showToast]);
 
   // Keyboard shortcut listener (Delete, Esc, Ctrl+S)
   const saveMapRef = useRef(handleSaveMap);
@@ -569,6 +613,19 @@ export default function GameMapEditorPage() {
                 SMP Al-Ittihadiyah
               </span>
             </h1>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[10px] font-mono font-bold text-rose-400" title="Jumlah kotak tabrakan aktif">
+                🔴 {collisionLayer?.objects?.length ?? 0} Collider
+              </span>
+              <span className="text-slate-600 text-[10px]">•</span>
+              <span className="text-[10px] font-mono font-bold text-emerald-400" title="Jumlah zona interaksi aktif">
+                🟢 {interactLayer?.objects?.length ?? 0} Zona
+              </span>
+              <span className="text-slate-600 text-[10px]">•</span>
+              <span className="text-[10px] font-mono font-bold text-blue-400" title="Titik spawn pemain">
+                🔵 {spawnLayer?.objects?.length ?? 0} Spawn
+              </span>
+            </div>
           </div>
         </div>
 
@@ -657,6 +714,17 @@ export default function GameMapEditorPage() {
             aria-label="Toggle Grid 32x32 Tile"
           >
             <Grid size={16} />
+          </button>
+
+          {/* Sinkronkan dari Server */}
+          <button
+            onClick={() => loadMapFromServer(true)}
+            className="min-h-[44px] flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700/80 hover:border-slate-600 text-slate-200 font-semibold text-xs rounded-xl shadow transition-all active:scale-95"
+            title="Muat ulang data terbaru langsung dari Cloud Database / Server"
+            aria-label="Sinkronkan peta dari server"
+          >
+            <RotateCcw size={15} />
+            <span className="hidden sm:inline">Sinkron Server</span>
           </button>
 
           {/* Unduh JSON */}

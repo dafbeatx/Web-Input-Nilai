@@ -1,59 +1,96 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { supabaseAdmin } from '@/lib/supabase/admin';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { supabaseAdmin, getSupabaseFallback } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 const MAP_PATH_1 = path.join(process.cwd(), 'public', 'assets', 'maps', 'school_map.json');
 const MAP_PATH_2 = path.join(process.cwd(), 'public', 'assets', 'game', 'maps', 'school_map.json');
 
+const NO_CACHE_HEADERS = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+  'Pragma': 'no-cache',
+  'Expires': '0',
+};
+
+async function getAvailableSupabaseClients(): Promise<SupabaseClient[]> {
+  const clients: SupabaseClient[] = [];
+  try {
+    clients.push(supabaseAdmin);
+  } catch {}
+  try {
+    clients.push(getSupabaseFallback());
+  } catch {}
+  try {
+    const serverClient = await createServerClient();
+    clients.push(serverClient);
+  } catch {}
+  return clients;
+}
+
 export async function GET() {
   try {
-    // 1. Try reading from Supabase Cloud Database first (persistent across all environments)
-    try {
-      const { data: cloudConfig, error: cloudErr } = await supabaseAdmin
-        .from('gm_behavior_settings')
-        .select('reasons')
-        .eq('class_name', 'GAME_MAP_SCHOOL')
-        .maybeSingle();
+    const clients = await getAvailableSupabaseClients();
 
-      if (!cloudErr && cloudConfig?.reasons && typeof cloudConfig.reasons === 'object') {
-        const reasonsObj = cloudConfig.reasons as { layers?: unknown[] };
-        if (Array.isArray(reasonsObj.layers) && reasonsObj.layers.length > 0) {
-          return NextResponse.json(reasonsObj, {
-            headers: {
-              'Cache-Control': 'no-store, max-age=0',
-            },
-          });
+    // 1. Primary Cloud Storage: system_settings (key: 'game_school_map')
+    // Works across ALL environments (accessible with publishable & service_role key)
+    for (const client of clients) {
+      try {
+        const { data, error } = await client
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'game_school_map')
+          .maybeSingle();
+
+        if (!error && data?.value) {
+          const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+          if (parsed && Array.isArray(parsed.layers) && parsed.layers.length > 0) {
+            return NextResponse.json(parsed, { headers: NO_CACHE_HEADERS });
+          }
         }
-      }
-    } catch (cloudReadEx) {
-      console.warn('[GET /api/game/map] Cloud read exception, falling back to local file:', cloudReadEx);
+      } catch {}
     }
 
-    // 2. Fallback to local file system
+    // 2. Secondary Cloud Storage: gm_behavior_settings (class_name: 'GAME_MAP_SCHOOL')
+    for (const client of clients) {
+      try {
+        const { data: cloudConfig, error: cloudErr } = await client
+          .from('gm_behavior_settings')
+          .select('reasons')
+          .eq('class_name', 'GAME_MAP_SCHOOL')
+          .eq('academic_year', 'CONFIG')
+          .maybeSingle();
+
+        if (!cloudErr && cloudConfig?.reasons && typeof cloudConfig.reasons === 'object') {
+          const reasonsObj = cloudConfig.reasons as { layers?: unknown[] };
+          if (Array.isArray(reasonsObj.layers) && reasonsObj.layers.length > 0) {
+            return NextResponse.json(reasonsObj, { headers: NO_CACHE_HEADERS });
+          }
+        }
+      } catch {}
+    }
+
+    // 3. Fallback to local file system
     if (fs.existsSync(MAP_PATH_1)) {
       const content = fs.readFileSync(MAP_PATH_1, 'utf-8');
       const data = JSON.parse(content);
-      return NextResponse.json(data, {
-        headers: {
-          'Cache-Control': 'no-store, max-age=0',
-        },
-      });
+      return NextResponse.json(data, { headers: NO_CACHE_HEADERS });
     }
 
-    return NextResponse.json({ error: 'Berkas peta tidak ditemukan' }, { status: 404 });
+    return NextResponse.json({ error: 'Berkas peta tidak ditemukan' }, { status: 404, headers: NO_CACHE_HEADERS });
   } catch (error) {
     console.error('API Error [GET /api/game/map]:', error);
     try {
       if (fs.existsSync(MAP_PATH_1)) {
         const content = fs.readFileSync(MAP_PATH_1, 'utf-8');
-        return NextResponse.json(JSON.parse(content));
+        return NextResponse.json(JSON.parse(content), { headers: NO_CACHE_HEADERS });
       }
     } catch {}
-    return NextResponse.json({ error: 'Gagal membaca data peta' }, { status: 500 });
+    return NextResponse.json({ error: 'Gagal membaca data peta' }, { status: 500, headers: NO_CACHE_HEADERS });
   }
 }
 
@@ -62,64 +99,53 @@ export async function POST(req: NextRequest) {
     const updatedMap = await req.json();
 
     if (!updatedMap || !Array.isArray(updatedMap.layers)) {
-      return NextResponse.json({ error: 'Format data peta tidak valid: layers wajib berupa array' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Format data peta tidak valid: layers wajib berupa array' },
+        { status: 400, headers: NO_CACHE_HEADERS }
+      );
     }
 
-    const hasServiceKey = !!(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
+    const clients = await getAvailableSupabaseClients();
+    const mapJsonString = JSON.stringify(updatedMap);
 
-    // 1. Save to Supabase Cloud Database (requires SUPABASE_SERVICE_ROLE_KEY to bypass RLS)
-    let dbSuccess = false;
-    let dbErrorMsg = '';
-    if (hasServiceKey) {
+    // 1. Primary Save: system_settings table (key: 'game_school_map')
+    let sysSaved = false;
+    for (const client of clients) {
       try {
-        const { error: dbErr } = await supabaseAdmin
-          .from('gm_behavior_settings')
-          .upsert(
-            {
-              class_name: 'GAME_MAP_SCHOOL',
-              academic_year: 'CONFIG',
-              reasons: updatedMap,
-            },
-            { onConflict: 'class_name,academic_year' }
-          );
-
-        if (dbErr) {
-          dbErrorMsg = dbErr.message;
-          console.warn('[POST /api/game/map] Database upsert error:', dbErr.code, dbErr.message, dbErr.details);
-        } else {
-          dbSuccess = true;
-        }
-      } catch (dbEx) {
-        dbErrorMsg = dbEx instanceof Error ? dbEx.message : String(dbEx);
-        console.warn('[POST /api/game/map] Database exception:', dbEx);
-      }
-    } else {
-      dbErrorMsg = 'SUPABASE_SERVICE_ROLE_KEY tidak dikonfigurasi di environment ini';
-      console.warn('[POST /api/game/map]', dbErrorMsg);
-    }
-
-    // 1b. Fallback: Try with authenticated session cookie client if admin client couldn't write
-    if (!dbSuccess) {
-      try {
-        const serverClient = await createServerClient();
-        const { error: cookieDbErr } = await serverClient
-          .from('gm_behavior_settings')
-          .upsert(
-            {
-              class_name: 'GAME_MAP_SCHOOL',
-              academic_year: 'CONFIG',
-              reasons: updatedMap,
-            },
-            { onConflict: 'class_name,academic_year' }
-          );
-        if (!cookieDbErr) {
-          dbSuccess = true;
-          dbErrorMsg = '';
+        const { error } = await client.from('system_settings').upsert({
+          key: 'game_school_map',
+          value: mapJsonString,
+          description: 'Peta virtual campus SMP Al-Ittihadiyah (collision, interact, spawn layers)',
+        });
+        if (!error) {
+          sysSaved = true;
+          break;
         }
       } catch {}
     }
 
-    // 2. Best-effort write to local filesystem (works in local dev, skipped in serverless read-only)
+    // 2. Secondary Save: gm_behavior_settings table
+    let gmSaved = false;
+    for (const client of clients) {
+      try {
+        const { error } = await client
+          .from('gm_behavior_settings')
+          .upsert(
+            {
+              class_name: 'GAME_MAP_SCHOOL',
+              academic_year: 'CONFIG',
+              reasons: updatedMap,
+            },
+            { onConflict: 'class_name,academic_year' }
+          );
+        if (!error) {
+          gmSaved = true;
+          break;
+        }
+      } catch {}
+    }
+
+    // 3. Best-effort write to local filesystem (works in local dev, skipped in serverless read-only)
     let fsSuccess = false;
     try {
       const formattedContent = JSON.stringify(updatedMap, null, 2);
@@ -134,34 +160,50 @@ export async function POST(req: NextRequest) {
       console.info('[POST /api/game/map] Filesystem write tidak tersedia (read-only/serverless).');
     }
 
-    // 3. If both fail: return 200 with embedded map data so editor can offer a local download fallback
-    if (!dbSuccess && !fsSuccess) {
-      console.error('[POST /api/game/map] Both DB and FS writes failed. DB error:', dbErrorMsg);
+    // Extract statistics
+    const collLayer = updatedMap.layers?.find((l: { name?: string }) => l?.name === 'Collision');
+    const interactLayer = updatedMap.layers?.find((l: { name?: string }) => l?.name === 'Interact');
+    const spawnLayer = updatedMap.layers?.find((l: { name?: string }) => l?.name === 'Spawn');
+
+    const counts = {
+      collision: Array.isArray(collLayer?.objects) ? collLayer.objects.length : 0,
+      interact: Array.isArray(interactLayer?.objects) ? interactLayer.objects.length : 0,
+      spawn: Array.isArray(spawnLayer?.objects) ? spawnLayer.objects.length : 0,
+    };
+
+    // If all write targets failed:
+    if (!sysSaved && !gmSaved && !fsSuccess) {
+      console.error('[POST /api/game/map] Gagal menulis ke database maupun filesystem.');
       return NextResponse.json(
         {
           success: false,
           warning: true,
           message: 'Peta tidak dapat disimpan ke server. Unduh dan simpan file JSON secara manual.',
-          dbError: dbErrorMsg,
+          objectCount: counts,
           mapData: updatedMap,
           timestamp: new Date().toISOString(),
         },
-        // Return 200 so the editor can still handle the response gracefully
-        { status: 200 }
+        { status: 200, headers: NO_CACHE_HEADERS }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      message: dbSuccess
-        ? 'Peta sekolah dan collider berhasil disimpan ke Cloud Database!'
-        : 'Peta sekolah berhasil disimpan ke file lokal!',
-      storage: { db: dbSuccess, filesystem: fsSuccess },
-      timestamp: new Date().toISOString(),
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message: `Peta berhasil disimpan! (${counts.collision} collider, ${counts.interact} zona)`,
+        storage: {
+          systemSettings: sysSaved,
+          gmBehavior: gmSaved,
+          filesystem: fsSuccess,
+        },
+        objectCount: counts,
+        timestamp: new Date().toISOString(),
+      },
+      { headers: NO_CACHE_HEADERS }
+    );
   } catch (error) {
     console.error('API Error [POST /api/game/map]:', error);
     const msg = error instanceof Error ? error.message : 'Gagal menyimpan perubahan peta';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: 500, headers: NO_CACHE_HEADERS });
   }
 }
