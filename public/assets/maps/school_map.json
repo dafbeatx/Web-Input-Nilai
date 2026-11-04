@@ -1,17 +1,9 @@
 {
   "compressionlevel": -1,
   "height": 32,
-  "width": 48,
   "infinite": false,
   "layers": [
     {
-      "id": 1,
-      "name": "Ground",
-      "type": "tilelayer",
-      "x": 0,
-      "y": 0,
-      "width": 48,
-      "height": 32,
       "data": [
         1,
         2,
@@ -1550,765 +1542,557 @@
         1535,
         1536
       ],
+      "height": 32,
+      "id": 1,
+      "name": "Ground",
       "opacity": 1,
+      "type": "tilelayer",
       "visible": true,
-      "offsetx": 0,
-      "offsety": 0
+      "width": 48,
+      "x": 0,
+      "y": 0
     },
     {
+      "draworder": "topdown",
       "id": 2,
       "name": "Collision",
+      "opacity": 1,
       "type": "objectgroup",
-      "draworder": "topdown",
+      "visible": true,
+      "x": 0,
+      "y": 0,
       "objects": [
         {
           "id": 1,
-          "name": "Batas kiri",
+          "name": "Batas Atas (Pepohonan)",
           "type": "collision",
           "x": 0,
           "y": 0,
-          "width": 16,
-          "height": 1024,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "width": 1536,
+          "height": 50,
+          "visible": true
         },
         {
           "id": 2,
-          "name": "Batas kanan",
+          "name": "Batas Kiri (Pagar)",
           "type": "collision",
-          "x": 1520,
+          "x": 0,
           "y": 0,
-          "width": 16,
+          "width": 35,
           "height": 1024,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "visible": true
         },
         {
           "id": 3,
-          "name": "Batas atas",
+          "name": "Batas Kanan (Pagar)",
           "type": "collision",
-          "x": 0,
+          "x": 1500,
           "y": 0,
-          "width": 1536,
-          "height": 16,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "width": 36,
+          "height": 1024,
+          "visible": true
         },
         {
           "id": 4,
-          "name": "Batas bawah",
+          "name": "Pagar Depan Kiri",
           "type": "collision",
           "x": 0,
-          "y": 1008,
-          "width": 1536,
-          "height": 16,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "y": 845,
+          "width": 620,
+          "height": 95,
+          "visible": true
         },
         {
           "id": 5,
-          "name": "Lab - sisi kiri",
+          "name": "Pagar Depan Kanan",
           "type": "collision",
-          "x": 43,
-          "y": 118,
-          "width": 205,
-          "height": 70,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 915,
+          "y": 845,
+          "width": 620,
+          "height": 95,
+          "visible": true
         },
         {
           "id": 6,
-          "name": "Lab - sisi kanan",
+          "name": "Batas Luar Jalan Raya",
           "type": "collision",
-          "x": 300,
-          "y": 118,
-          "width": 60,
-          "height": 70,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 0,
+          "y": 985,
+          "width": 1536,
+          "height": 39,
+          "visible": true
         },
         {
           "id": 7,
-          "name": "Gedung utama - kiri",
+          "name": "Gedung Kelas VII",
           "type": "collision",
-          "x": 425,
-          "y": 126,
-          "width": 246,
-          "height": 88,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 50,
+          "y": 55,
+          "width": 380,
+          "height": 180,
+          "visible": true
         },
         {
           "id": 8,
-          "name": "Gedung utama - kanan",
+          "name": "Tangga Kelas VII",
           "type": "collision",
-          "x": 866,
-          "y": 126,
-          "width": 248,
-          "height": 88,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 60,
+          "y": 235,
+          "width": 360,
+          "height": 25,
+          "visible": true
         },
         {
           "id": 9,
-          "name": "Perpustakaan - kiri",
+          "name": "Gedung Kantor (Pusat Administrasi & TU)",
           "type": "collision",
-          "x": 1195,
-          "y": 120,
-          "width": 128,
-          "height": 76,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 540,
+          "y": 55,
+          "width": 520,
+          "height": 180,
+          "visible": true
         },
         {
           "id": 10,
-          "name": "Perpustakaan - kanan",
+          "name": "Tangga Depan Kantor",
           "type": "collision",
-          "x": 1395,
-          "y": 120,
-          "width": 110,
-          "height": 76,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 680,
+          "y": 235,
+          "width": 240,
+          "height": 25,
+          "visible": true
         },
         {
           "id": 11,
-          "name": "Ruang guru - kiri",
+          "name": "Gedung Kelas VIII",
           "type": "collision",
-          "x": 22,
-          "y": 337,
-          "width": 235,
-          "height": 70,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 1090,
+          "y": 55,
+          "width": 380,
+          "height": 180,
+          "visible": true
         },
         {
           "id": 12,
-          "name": "Ruang guru - kanan",
+          "name": "Tangga Kelas VIII",
           "type": "collision",
-          "x": 315,
-          "y": 337,
-          "width": 76,
-          "height": 70,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 1100,
+          "y": 235,
+          "width": 360,
+          "height": 25,
+          "visible": true
         },
         {
           "id": 13,
-          "name": "UKS - tengah",
+          "name": "Gedung Kelas IX",
           "type": "collision",
-          "x": 1245,
-          "y": 340,
-          "width": 260,
-          "height": 78,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 45,
+          "y": 290,
+          "width": 380,
+          "height": 170,
+          "visible": true
         },
         {
           "id": 14,
-          "name": "Kelas 7 - kiri",
+          "name": "Tangga Kelas IX",
           "type": "collision",
-          "x": 22,
-          "y": 480,
-          "width": 115,
-          "height": 58,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 60,
+          "y": 460,
+          "width": 350,
+          "height": 20,
+          "visible": true
         },
         {
           "id": 15,
-          "name": "Kelas 7 - tengah",
+          "name": "Taman Kiri Tiang Bendera",
           "type": "collision",
-          "x": 165,
-          "y": 480,
-          "width": 250,
-          "height": 58,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 440,
+          "y": 320,
+          "width": 200,
+          "height": 150,
+          "visible": true
         },
         {
           "id": 16,
-          "name": "Kelas 8 - kiri",
+          "name": "Fondasi Tiang Bendera",
           "type": "collision",
-          "x": 22,
-          "y": 610,
-          "width": 115,
-          "height": 62,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 745,
+          "y": 435,
+          "width": 50,
+          "height": 30,
+          "visible": true
         },
         {
           "id": 17,
-          "name": "Kelas 8 - tengah",
+          "name": "Taman Kanan Tiang Bendera",
           "type": "collision",
-          "x": 165,
-          "y": 610,
-          "width": 250,
-          "height": 62,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 875,
+          "y": 320,
+          "width": 200,
+          "height": 150,
+          "visible": true
         },
         {
           "id": 18,
-          "name": "Kelas 9 - kiri",
+          "name": "Gedung Laboratorium Informatika",
           "type": "collision",
-          "x": 1115,
-          "y": 480,
-          "width": 245,
-          "height": 60,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 1110,
+          "y": 290,
+          "width": 385,
+          "height": 170,
+          "visible": true
         },
         {
           "id": 19,
-          "name": "Kelas 9 - kanan",
+          "name": "Tangga Lab Informatika",
           "type": "collision",
-          "x": 1385,
-          "y": 480,
-          "width": 125,
-          "height": 60,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 1125,
+          "y": 460,
+          "width": 350,
+          "height": 20,
+          "visible": true
         },
         {
           "id": 20,
-          "name": "Kelas 8B - kiri",
+          "name": "Gedung Ruang Guru",
           "type": "collision",
-          "x": 1115,
-          "y": 610,
-          "width": 245,
-          "height": 62,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 45,
+          "y": 500,
+          "width": 380,
+          "height": 115,
+          "visible": true
         },
         {
           "id": 21,
-          "name": "Kelas 8B - kanan",
+          "name": "Pondok Pesantren As Salaam",
           "type": "collision",
-          "x": 1385,
-          "y": 610,
-          "width": 125,
-          "height": 62,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 470,
+          "y": 495,
+          "width": 600,
+          "height": 135,
+          "visible": true
         },
         {
           "id": 22,
-          "name": "Kantin - kiri",
+          "name": "Tangga Ponpes As Salaam",
           "type": "collision",
-          "x": 22,
-          "y": 755,
-          "width": 245,
-          "height": 95,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 715,
+          "y": 630,
+          "width": 110,
+          "height": 20,
+          "visible": true
         },
         {
           "id": 23,
-          "name": "Kantin - kanan",
+          "name": "Gedung Perpustakaan",
           "type": "collision",
-          "x": 355,
-          "y": 755,
-          "width": 60,
-          "height": 95,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 1110,
+          "y": 500,
+          "width": 385,
+          "height": 115,
+          "visible": true
         },
         {
           "id": 24,
-          "name": "Musala - kiri",
+          "name": "Musala Sekolah",
           "type": "collision",
-          "x": 1115,
-          "y": 810,
-          "width": 175,
-          "height": 68,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 45,
+          "y": 645,
+          "width": 220,
+          "height": 170,
+          "visible": true
         },
         {
           "id": 25,
-          "name": "Musala - kanan",
+          "name": "Gedung Kantin",
           "type": "collision",
-          "x": 1402,
-          "y": 810,
-          "width": 108,
-          "height": 68,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 285,
+          "y": 660,
+          "width": 235,
+          "height": 130,
+          "visible": true
         },
         {
           "id": 26,
-          "name": "Pohon taman kiri atas",
+          "name": "Bangku Taman Kantin",
           "type": "collision",
-          "x": 500,
-          "y": 340,
-          "width": 78,
-          "height": 88,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 300,
+          "y": 800,
+          "width": 190,
+          "height": 35,
+          "visible": true
         },
         {
           "id": 27,
-          "name": "Pohon taman kanan atas",
+          "name": "Ring Basket Lapangan Kiri",
           "type": "collision",
-          "x": 946,
-          "y": 340,
-          "width": 78,
-          "height": 88,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 555,
+          "y": 730,
+          "width": 20,
+          "height": 40,
+          "visible": true
         },
         {
           "id": 28,
-          "name": "Pohon taman kiri bawah",
+          "name": "Ring Basket Lapangan Kanan",
           "type": "collision",
-          "x": 470,
-          "y": 520,
-          "width": 72,
-          "height": 75,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 840,
+          "y": 730,
+          "width": 20,
+          "height": 40,
+          "visible": true
         },
         {
           "id": 29,
-          "name": "Pohon taman kanan bawah",
+          "name": "Gedung UKS",
           "type": "collision",
-          "x": 982,
-          "y": 520,
-          "width": 72,
-          "height": 75,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 1145,
+          "y": 665,
+          "width": 175,
+          "height": 135,
+          "visible": true
         },
         {
           "id": 30,
-          "name": "Pohon sisi kiri bawah",
+          "name": "Gazebo Taman Literasi",
           "type": "collision",
-          "x": 450,
-          "y": 790,
-          "width": 65,
-          "height": 70,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 1340,
+          "y": 675,
+          "width": 130,
+          "height": 125,
+          "visible": true
         },
         {
           "id": 31,
-          "name": "Pohon sisi kanan bawah",
+          "name": "Pilar Gerbang Kiri",
           "type": "collision",
-          "x": 1020,
-          "y": 790,
-          "width": 65,
-          "height": 70,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 610,
+          "y": 800,
+          "width": 90,
+          "height": 140,
+          "visible": true
         },
         {
           "id": 32,
-          "name": "Pondasi tiang bendera",
+          "name": "Pilar Gerbang Kanan",
           "type": "collision",
-          "x": 735,
-          "y": 450,
-          "width": 70,
-          "height": 55,
-          "rotation": 0,
-          "visible": true,
-          "properties": []
+          "x": 840,
+          "y": 800,
+          "width": 90,
+          "height": 140,
+          "visible": true
         }
-      ],
-      "opacity": 1,
-      "visible": false
+      ]
     },
     {
+      "draworder": "topdown",
       "id": 3,
       "name": "Interact",
+      "opacity": 1,
       "type": "objectgroup",
-      "draworder": "topdown",
+      "visible": true,
+      "x": 0,
+      "y": 0,
       "objects": [
         {
-          "id": 1,
-          "name": "lab_informatika",
-          "type": "interaction",
-          "x": 248,
-          "y": 162,
-          "width": 54,
-          "height": 44,
-          "rotation": 0,
-          "visible": true,
-          "properties": [
-            {
-              "name": "label",
-              "type": "string",
-              "value": "Laboratorium Informatika"
-            },
-            {
-              "name": "interactionId",
-              "type": "string",
-              "value": "lab_informatika"
-            }
-          ]
-        },
-        {
-          "id": 2,
-          "name": "gedung_utama",
-          "type": "interaction",
-          "x": 680,
-          "y": 210,
-          "width": 176,
-          "height": 54,
-          "rotation": 0,
-          "visible": true,
-          "properties": [
-            {
-              "name": "label",
-              "type": "string",
-              "value": "Gedung Utama"
-            },
-            {
-              "name": "interactionId",
-              "type": "string",
-              "value": "gedung_utama"
-            }
-          ]
-        },
-        {
-          "id": 3,
-          "name": "perpustakaan",
-          "type": "interaction",
-          "x": 1320,
-          "y": 160,
-          "width": 76,
-          "height": 48,
-          "rotation": 0,
-          "visible": true,
-          "properties": [
-            {
-              "name": "label",
-              "type": "string",
-              "value": "Perpustakaan"
-            },
-            {
-              "name": "interactionId",
-              "type": "string",
-              "value": "perpustakaan"
-            }
-          ]
-        },
-        {
-          "id": 4,
-          "name": "ruang_guru",
-          "type": "interaction",
-          "x": 255,
-          "y": 350,
-          "width": 64,
-          "height": 48,
-          "rotation": 0,
-          "visible": true,
-          "properties": [
-            {
-              "name": "label",
-              "type": "string",
-              "value": "Ruang Guru"
-            },
-            {
-              "name": "interactionId",
-              "type": "string",
-              "value": "ruang_guru"
-            }
-          ]
-        },
-        {
-          "id": 5,
-          "name": "uks",
-          "type": "interaction",
-          "x": 1176,
-          "y": 350,
-          "width": 68,
-          "height": 54,
-          "rotation": 0,
-          "visible": true,
-          "properties": [
-            {
-              "name": "label",
-              "type": "string",
-              "value": "UKS"
-            },
-            {
-              "name": "interactionId",
-              "type": "string",
-              "value": "uks"
-            }
-          ]
-        },
-        {
-          "id": 6,
+          "id": 101,
           "name": "kelas_7",
-          "type": "interaction",
-          "x": 45,
-          "y": 478,
-          "width": 64,
-          "height": 46,
-          "rotation": 0,
-          "visible": true,
-          "properties": [
-            {
-              "name": "label",
-              "type": "string",
-              "value": "Kelas 7"
-            },
-            {
-              "name": "interactionId",
-              "type": "string",
-              "value": "kelas_7"
-            }
-          ]
-        },
-        {
-          "id": 7,
-          "name": "kelas_8",
-          "type": "interaction",
-          "x": 45,
-          "y": 610,
+          "type": "trigger",
+          "x": 236,
+          "y": 265,
           "width": 64,
           "height": 48,
-          "rotation": 0,
-          "visible": true,
-          "properties": [
-            {
-              "name": "label",
-              "type": "string",
-              "value": "Kelas 8"
-            },
-            {
-              "name": "interactionId",
-              "type": "string",
-              "value": "kelas_8"
-            }
-          ]
+          "visible": true
         },
         {
-          "id": 8,
-          "name": "kelas_9",
-          "type": "interaction",
-          "x": 1384,
-          "y": 478,
-          "width": 70,
-          "height": 46,
-          "rotation": 0,
-          "visible": true,
-          "properties": [
-            {
-              "name": "label",
-              "type": "string",
-              "value": "Kelas 9"
-            },
-            {
-              "name": "interactionId",
-              "type": "string",
-              "value": "kelas_9"
-            }
-          ]
-        },
-        {
-          "id": 9,
-          "name": "kelas_8b",
-          "type": "interaction",
-          "x": 1380,
-          "y": 610,
-          "width": 76,
-          "height": 48,
-          "rotation": 0,
-          "visible": true,
-          "properties": [
-            {
-              "name": "label",
-              "type": "string",
-              "value": "Kelas 8B"
-            },
-            {
-              "name": "interactionId",
-              "type": "string",
-              "value": "kelas_8b"
-            }
-          ]
-        },
-        {
-          "id": 10,
-          "name": "kantin",
-          "type": "interaction",
-          "x": 270,
-          "y": 775,
+          "id": 102,
+          "name": "gedung_utama",
+          "type": "trigger",
+          "x": 796,
+          "y": 265,
           "width": 80,
-          "height": 60,
-          "rotation": 0,
-          "visible": true,
-          "properties": [
-            {
-              "name": "label",
-              "type": "string",
-              "value": "Kantin"
-            },
-            {
-              "name": "interactionId",
-              "type": "string",
-              "value": "kantin"
-            }
-          ]
+          "height": 48,
+          "visible": true
         },
         {
-          "id": 11,
-          "name": "mushola",
-          "type": "interaction",
-          "x": 1295,
-          "y": 795,
-          "width": 100,
-          "height": 72,
-          "rotation": 0,
-          "visible": true,
-          "properties": [
-            {
-              "name": "label",
-              "type": "string",
-              "value": "Musala"
-            },
-            {
-              "name": "interactionId",
-              "type": "string",
-              "value": "mushola"
-            }
-          ]
+          "id": 103,
+          "name": "kelas_8",
+          "type": "trigger",
+          "x": 1276,
+          "y": 265,
+          "width": 64,
+          "height": 48,
+          "visible": true
         },
         {
-          "id": 12,
-          "name": "lapangan",
-          "type": "interaction",
-          "x": 585,
-          "y": 625,
-          "width": 365,
-          "height": 140,
-          "rotation": 0,
-          "visible": true,
-          "properties": [
-            {
-              "name": "label",
-              "type": "string",
-              "value": "Lapangan Sekolah"
-            },
-            {
-              "name": "interactionId",
-              "type": "string",
-              "value": "lapangan"
-            }
-          ]
+          "id": 104,
+          "name": "kelas_9",
+          "type": "trigger",
+          "x": 227,
+          "y": 485,
+          "width": 64,
+          "height": 48,
+          "visible": true
         },
         {
-          "id": 13,
+          "id": 105,
           "name": "tiang_bendera",
-          "type": "interaction",
-          "x": 710,
+          "type": "trigger",
+          "x": 735,
           "y": 415,
-          "width": 115,
-          "height": 75,
-          "rotation": 0,
-          "visible": true,
-          "properties": [
-            {
-              "name": "label",
-              "type": "string",
-              "value": "Area Tiang Bendera"
-            },
-            {
-              "name": "interactionId",
-              "type": "string",
-              "value": "tiang_bendera"
-            }
-          ]
+          "width": 70,
+          "height": 60,
+          "visible": true
+        },
+        {
+          "id": 106,
+          "name": "lab_informatika",
+          "type": "trigger",
+          "x": 1310,
+          "y": 485,
+          "width": 80,
+          "height": 48,
+          "visible": true
+        },
+        {
+          "id": 107,
+          "name": "ruang_guru",
+          "type": "trigger",
+          "x": 219,
+          "y": 620,
+          "width": 64,
+          "height": 48,
+          "visible": true
+        },
+        {
+          "id": 108,
+          "name": "ponpes_as_salaam",
+          "type": "trigger",
+          "x": 770,
+          "y": 650,
+          "width": 90,
+          "height": 48,
+          "visible": true
+        },
+        {
+          "id": 109,
+          "name": "perpustakaan",
+          "type": "trigger",
+          "x": 1315,
+          "y": 620,
+          "width": 80,
+          "height": 48,
+          "visible": true
+        },
+        {
+          "id": 110,
+          "name": "mushola",
+          "type": "trigger",
+          "x": 150,
+          "y": 820,
+          "width": 70,
+          "height": 48,
+          "visible": true
+        },
+        {
+          "id": 111,
+          "name": "kantin",
+          "type": "trigger",
+          "x": 406,
+          "y": 795,
+          "width": 90,
+          "height": 48,
+          "visible": true
+        },
+        {
+          "id": 112,
+          "name": "lapangan",
+          "type": "trigger",
+          "x": 705,
+          "y": 745,
+          "width": 140,
+          "height": 60,
+          "visible": true
+        },
+        {
+          "id": 113,
+          "name": "uks",
+          "type": "trigger",
+          "x": 1231,
+          "y": 805,
+          "width": 70,
+          "height": 48,
+          "visible": true
+        },
+        {
+          "id": 114,
+          "name": "gazebo",
+          "type": "trigger",
+          "x": 1400,
+          "y": 805,
+          "width": 70,
+          "height": 48,
+          "visible": true
+        },
+        {
+          "id": 115,
+          "name": "gerbang_sekolah",
+          "type": "trigger",
+          "x": 768,
+          "y": 925,
+          "width": 110,
+          "height": 45,
+          "visible": true
         }
-      ],
-      "opacity": 1,
-      "visible": true
+      ]
     },
     {
+      "draworder": "topdown",
       "id": 4,
       "name": "Spawn",
+      "opacity": 1,
       "type": "objectgroup",
-      "draworder": "topdown",
+      "visible": true,
+      "x": 0,
+      "y": 0,
       "objects": [
         {
-          "id": 1,
+          "id": 201,
           "name": "player_spawn",
           "type": "spawn",
           "x": 768,
-          "y": 890,
+          "y": 870,
           "width": 0,
           "height": 0,
           "point": true,
-          "visible": true,
-          "properties": [
-            {
-              "name": "facing",
-              "type": "string",
-              "value": "up"
-            }
-          ]
+          "visible": true
         }
-      ],
-      "opacity": 1,
-      "visible": false
+      ]
     }
   ],
   "nextlayerid": 5,
-  "nextobjectid": 33,
+  "nextobjectid": 202,
   "orientation": "orthogonal",
   "renderorder": "right-down",
   "tiledversion": "1.10.2",
   "tileheight": 32,
   "tilesets": [
     {
-      "firstgid": 1,
-      "name": "school_atlas",
-      "tilewidth": 32,
-      "tileheight": 32,
-      "tilecount": 1536,
       "columns": 48,
+      "firstgid": 1,
       "image": "school_atlas.png",
-      "imagewidth": 1536,
       "imageheight": 1024,
+      "imagewidth": 1536,
       "margin": 0,
-      "spacing": 0
+      "name": "school_atlas",
+      "spacing": 0,
+      "tilecount": 1536,
+      "tileheight": 32,
+      "tilewidth": 32
     }
   ],
   "tilewidth": 32,
   "type": "map",
-  "version": "1.10"
+  "version": "1.10",
+  "width": 48
 }

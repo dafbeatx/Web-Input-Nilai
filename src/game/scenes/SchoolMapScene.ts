@@ -13,17 +13,60 @@ interface InteractionObjectConfig {
 }
 
 const INTERACTION_CONFIGS: Record<string, InteractionObjectConfig> = {
-  'main building': {
-    id: 'trigger-gedung-utama',
-    name: 'Gedung Utama (TU & Kepala Sekolah)',
+  // Row 1
+  kelas_7: {
+    id: 'trigger-kelas-7',
+    name: 'Ruang Kelas 7 (Fase D)',
     type: 'building_entrance',
-    promptText: 'Tekan [E] atau Ketuk untuk masuk ke Gedung Utama',
+    promptText: 'Tekan [E] atau Ketuk untuk masuk ke Kelas 7',
+    data: {
+      title: 'Ruang Kelas 7 SMP',
+      desc: 'Ruang kelas pembelajaran peserta didik baru tingkat 7 dengan modul pengenalan lingkungan sekolah dan adaptasi kurikulum.',
+    },
+  },
+  gedung_utama: {
+    id: 'trigger-gedung-utama',
+    name: 'Kantor & Gedung Pusat Administrasi (TU & Kepala Sekolah)',
+    type: 'building_entrance',
+    promptText: 'Tekan [E] atau Ketuk untuk masuk ke Kantor',
     data: {
       title: 'Gedung Pusat Administrasi & Kepemimpinan',
       desc: 'Pusat layanan tata usaha (TU), ruang Kepala Sekolah, kesiswaan, dan legalisir dokumen resmi sekolah.',
     },
   },
-  'computer lab': {
+  kelas_8: {
+    id: 'trigger-kelas-8',
+    name: 'Ruang Kelas 8',
+    type: 'building_entrance',
+    promptText: 'Tekan [E] atau Ketuk untuk masuk ke Kelas 8',
+    data: {
+      title: 'Ruang Kelas 8 SMP',
+      desc: 'Ruang kelas 8 fokus pada penguatan materi inti, proyek sains interaktif, dan kolaborasi kelompok P5.',
+    },
+  },
+
+  // Row 2
+  kelas_9: {
+    id: 'trigger-kelas-9',
+    name: 'Ruang Kelas 9 (Fase Kelulusan)',
+    type: 'building_entrance',
+    promptText: 'Tekan [E] atau Ketuk untuk masuk ke Kelas 9',
+    data: {
+      title: 'Ruang Kelas 9 SMP',
+      desc: 'Ruang kelas tingkat akhir pendalaman materi ujian kelulusan, asesmen sumatif akhir, dan bimbingan karir jenjang SMA/SMK.',
+    },
+  },
+  tiang_bendera: {
+    id: 'trigger-tiang-bendera',
+    name: 'Tiang Bendera Merah Putih',
+    type: 'interactive_board',
+    promptText: 'Tekan [E] atau Ketuk untuk hormat Bendera Merah Putih',
+    data: {
+      title: 'Monumen Bendera Merah Putih',
+      desc: 'Lambang persatuan bangsa dan pusat upacara bendera hari Senin di SMP Terpadu Al-Ittihadiyah.',
+    },
+  },
+  lab_informatika: {
     id: 'trigger-lab',
     name: 'Laboratorium Informatika & Komputer',
     type: 'interactive_board',
@@ -38,17 +81,9 @@ const INTERACTION_CONFIGS: Record<string, InteractionObjectConfig> = {
       ],
     },
   },
-  'library': {
-    id: 'trigger-perpustakaan',
-    name: 'Perpustakaan Literasi Al-Ittihadiyah',
-    type: 'building_entrance',
-    promptText: 'Tekan [E] atau Ketuk untuk membaca di Perpustakaan',
-    data: {
-      title: 'Perpustakaan Sekolah & E-Library',
-      desc: 'Menyediakan ribuan buku pelajaran Kurikulum Merdeka, karya sastra, ensiklopedia, dan ruang baca hening ber-AC.',
-    },
-  },
-  'teachers room': {
+
+  // Row 3
+  ruang_guru: {
     id: 'trigger-ruang-guru',
     name: 'Ruang Guru & Bimbingan Konseling (BK)',
     type: 'npc',
@@ -58,37 +93,29 @@ const INTERACTION_CONFIGS: Record<string, InteractionObjectConfig> = {
       desc: 'Tempat berkonsultasi dengan wali kelas, guru mata pelajaran, dan konselor BK untuk bimbingan akademik maupun pengembangan diri.',
     },
   },
-  'classroom vii': {
-    id: 'trigger-kelas-7',
-    name: 'Ruang Kelas 7 (Fase D)',
+  ponpes_as_salaam: {
+    id: 'trigger-ponpes',
+    name: 'Pondok Pesantren As Salaam',
     type: 'building_entrance',
-    promptText: 'Tekan [E] atau Ketuk untuk masuk ke Kelas 7',
+    promptText: 'Tekan [E] atau Ketuk untuk berkunjung ke Pondok Pesantren',
     data: {
-      title: 'Ruang Kelas 7 SMP',
-      desc: 'Ruang kelas pembelajaran peserta didik baru tingkat 7 dengan modul pengenalan lingkungan sekolah dan adaptasi kurikulum.',
+      title: 'Pondok Pesantren As Salaam',
+      desc: 'Pusat pendidikan kepesantrenan, asrama santri, kajian kitab kuning, tahfiz Al-Quran, dan pembinaan karakter akhlakul karimah.',
     },
   },
-  'classroom viii': {
-    id: 'trigger-kelas-8',
-    name: 'Ruang Kelas 8',
+  perpustakaan: {
+    id: 'trigger-perpustakaan',
+    name: 'Perpustakaan Literasi & E-Library',
     type: 'building_entrance',
-    promptText: 'Tekan [E] atau Ketuk untuk masuk ke Kelas 8',
+    promptText: 'Tekan [E] atau Ketuk untuk membaca di Perpustakaan',
     data: {
-      title: 'Ruang Kelas 8 SMP',
-      desc: 'Ruang kelas 8 fokus pada penguatan materi inti, proyek sains interaktif, dan kolaborasi kelompok P5.',
+      title: 'Perpustakaan Sekolah & E-Library',
+      desc: 'Menyediakan ribuan buku pelajaran Kurikulum Merdeka, karya sastra, ensiklopedia, dan ruang baca hening ber-AC.',
     },
   },
-  'classroom ix': {
-    id: 'trigger-kelas-9',
-    name: 'Ruang Kelas 9 (Fase Kelulusan)',
-    type: 'building_entrance',
-    promptText: 'Tekan [E] atau Ketuk untuk masuk ke Kelas 9',
-    data: {
-      title: 'Ruang Kelas 9 SMP',
-      desc: 'Ruang kelas tingkat akhir pendalaman materi ujian kelulusan, asesmen sumatif akhir, dan bimbingan karir jenjang SMA/SMK.',
-    },
-  },
-  'mosque': {
+
+  // Row 4
+  mushola: {
     id: 'trigger-mushola',
     name: 'Musala Sekolah Al-Ittihadiyah',
     type: 'building_entrance',
@@ -98,7 +125,7 @@ const INTERACTION_CONFIGS: Record<string, InteractionObjectConfig> = {
       desc: 'Pusat ibadah salat zuhur berjamaah, kegiatan rohani Islam, serta pembinaan adab santun warga sekolah.',
     },
   },
-  'canteen': {
+  kantin: {
     id: 'trigger-kantin',
     name: 'Kantin Sekolah Kejujuran',
     type: 'shop',
@@ -114,7 +141,17 @@ const INTERACTION_CONFIGS: Record<string, InteractionObjectConfig> = {
       ],
     },
   },
-  'uks clinic': {
+  lapangan: {
+    id: 'trigger-lapangan',
+    name: 'Lapangan Olahraga & Futsal',
+    type: 'interactive_board',
+    promptText: 'Tekan [E] atau Ketuk untuk olahraga di Lapangan',
+    data: {
+      title: 'Lapangan Olahraga Terpadu',
+      desc: 'Fasilitas lapangan multifungsi untuk senam pagi, pertandingan futsal, bola basket, dan senam kebugaran jasmani.',
+    },
+  },
+  uks: {
     id: 'trigger-uks',
     name: 'Unit Kesehatan Sekolah (UKS)',
     type: 'building_entrance',
@@ -124,9 +161,9 @@ const INTERACTION_CONFIGS: Record<string, InteractionObjectConfig> = {
       desc: 'Layanan medis pertolongan pertama, obat-obatan esensial, tempat istirahat siswa sakit, dan pemeriksaan kesehatan berkala.',
     },
   },
-  'gazebo': {
+  gazebo: {
     id: 'trigger-gazebo',
-    name: 'Gazebo & Pojok Diskusi Taman',
+    name: 'Gazebo Taman Literasi',
     type: 'interactive_board',
     promptText: 'Tekan [E] atau Ketuk untuk santai di Gazebo',
     data: {
@@ -134,9 +171,9 @@ const INTERACTION_CONFIGS: Record<string, InteractionObjectConfig> = {
       desc: 'Tempat teduh siswa dan guru berdiskusi santai, membaca buku, dan menikmati udara segar kampus asri.',
     },
   },
-  'gerbang sekolah': {
+  gerbang_sekolah: {
     id: 'trigger-exit-to-town',
-    name: 'Gerbang Luar Menuju Kota',
+    name: 'Gerbang Utama Menuju Kota',
     type: 'building_entrance',
     promptText: 'Tekan [E] atau Ketuk untuk keluar ke Jalan Raya Kota',
     data: {
@@ -147,7 +184,7 @@ const INTERACTION_CONFIGS: Record<string, InteractionObjectConfig> = {
   },
 };
 
-// 5 Autonomous Walking NPCs configured for 2048 x 1536 Modular World
+// 5 Autonomous Walking NPCs configured for 1536 x 1024 Campus
 const WALKING_NPC_CONFIGS: NPCConfig[] = [
   {
     id: 'npc-satpam',
@@ -157,10 +194,10 @@ const WALKING_NPC_CONFIGS: NPCConfig[] = [
     avatarUrl: '/assets/game/characters/avatars/pak_joko.png',
     speed: 55,
     waypoints: [
-      { x: 1024, y: 1385, waitTime: 3000 },
-      { x: 920, y: 1385, waitTime: 3500 },
-      { x: 1120, y: 1385, waitTime: 3500 },
-      { x: 1024, y: 1300, waitTime: 2500 },
+      { x: 768, y: 880, waitTime: 3000 },
+      { x: 680, y: 880, waitTime: 3500 },
+      { x: 860, y: 880, waitTime: 3500 },
+      { x: 768, y: 840, waitTime: 2500 },
     ],
     dialogue: {
       greeting: 'Pak Joko menyapa Anda dengan senyum ramah di pos gerbang sekolah:',
@@ -175,10 +212,10 @@ const WALKING_NPC_CONFIGS: NPCConfig[] = [
     avatarUrl: '/assets/game/characters/avatars/bu_guru_siti.png',
     speed: 60,
     waypoints: [
-      { x: 1650, y: 620, waitTime: 3500 },
-      { x: 1350, y: 500, waitTime: 2500 },
-      { x: 1024, y: 350, waitTime: 3500 },
-      { x: 1350, y: 500, waitTime: 2500 },
+      { x: 768, y: 650, waitTime: 3000 },
+      { x: 450, y: 650, waitTime: 3500 },
+      { x: 1080, y: 650, waitTime: 3500 },
+      { x: 768, y: 650, waitTime: 2500 },
     ],
     dialogue: {
       greeting: 'Bu Guru Siti menyapa Anda dengan hangat di koridor sekolah:',
@@ -193,10 +230,10 @@ const WALKING_NPC_CONFIGS: NPCConfig[] = [
     avatarUrl: '/assets/game/characters/avatars/rian_pratama.png',
     speed: 70,
     waypoints: [
-      { x: 650, y: 1200, waitTime: 3000 },
-      { x: 420, y: 870, waitTime: 2500 },
-      { x: 420, y: 620, waitTime: 3000 },
-      { x: 550, y: 750, waitTime: 2500 },
+      { x: 768, y: 265, waitTime: 3000 },
+      { x: 450, y: 265, waitTime: 3000 },
+      { x: 1080, y: 265, waitTime: 3000 },
+      { x: 768, y: 265, waitTime: 2500 },
     ],
     dialogue: {
       greeting: 'Rian melambaikan tangan saat sedang berjalan di lorong kelas:',
@@ -211,10 +248,10 @@ const WALKING_NPC_CONFIGS: NPCConfig[] = [
     avatarUrl: '/assets/game/characters/avatars/aisyah_putri.png',
     speed: 65,
     waypoints: [
-      { x: 1650, y: 310, waitTime: 4000 },
-      { x: 1650, y: 620, waitTime: 2500 },
-      { x: 1420, y: 1200, waitTime: 3000 },
-      { x: 1650, y: 870, waitTime: 2500 },
+      { x: 1250, y: 485, waitTime: 3500 },
+      { x: 1250, y: 630, waitTime: 3000 },
+      { x: 1350, y: 820, waitTime: 3000 },
+      { x: 1250, y: 630, waitTime: 2500 },
     ],
     dialogue: {
       greeting: 'Aisyah tersenyum santun sambil membawa buku pelajaran kurikulum:',
@@ -229,10 +266,10 @@ const WALKING_NPC_CONFIGS: NPCConfig[] = [
     avatarUrl: '/assets/game/characters/avatars/rian_pratama.png',
     speed: 80,
     waypoints: [
-      { x: 880, y: 720, waitTime: 1200 },
-      { x: 1160, y: 720, waitTime: 1200 },
-      { x: 1160, y: 850, waitTime: 1200 },
-      { x: 880, y: 850, waitTime: 1200 },
+      { x: 600, y: 685, waitTime: 1200 },
+      { x: 800, y: 685, waitTime: 1200 },
+      { x: 800, y: 800, waitTime: 1200 },
+      { x: 600, y: 800, waitTime: 1200 },
     ],
     dialogue: {
       greeting: 'Dedi menyapa Anda sambil pemanasan jogging di lapangan:',
@@ -240,42 +277,6 @@ const WALKING_NPC_CONFIGS: NPCConfig[] = [
     },
   },
 ];
-
-interface ModularObjectItem {
-  name?: string;
-  key: string;
-  x: number;
-  y: number;
-  width?: number;
-  height?: number;
-}
-
-interface ModularCollisionItem {
-  name?: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-interface ModularInteractionItem {
-  label: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  action?: string;
-  target?: string;
-}
-
-interface ModularMapObjectsData {
-  world: { width: number; height: number };
-  buildings: ModularObjectItem[];
-  props: ModularObjectItem[];
-  spawn: { x: number; y: number };
-  collision: ModularCollisionItem[];
-  interactions: ModularInteractionItem[];
-}
 
 export class SchoolMapScene extends Phaser.Scene {
   public player!: Player;
@@ -303,63 +304,48 @@ export class SchoolMapScene extends Phaser.Scene {
   }
 
   create(): void {
-    // 1. Create Tilemap Ground Layer (school_map_modular_phaser3)
-    const map = this.make.tilemap({ key: 'school-ground' });
-    const tiles = map.addTilesetImage('ground_tileset', 'ground-tiles', 32, 32, 0, 0);
-
-    if (tiles) {
-      const groundLayer = map.createLayer('Ground', tiles, 0, 0);
-      if (groundLayer) groundLayer.setDepth(0);
-    }
-
-    const worldWidth = map.widthInPixels || 2048;
-    const worldHeight = map.heightInPixels || 1536;
+    const worldWidth = 1536;
+    const worldHeight = 1024;
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
 
-    // 2. Load Modular Objects JSON
-    const objectsData = this.cache.json.get('school-objects') as ModularMapObjectsData;
+    // 1. High-fidelity Isometric Campus Map Background
+    const bg = this.add.image(0, 0, 'school_atlas');
+    bg.setOrigin(0, 0);
+    bg.setDepth(0);
 
-    // 3. Place Independent Modular Buildings (origin bottom-center, depth = Y footpoint)
-    if (objectsData?.buildings) {
-      for (const b of objectsData.buildings) {
-        this.add.image(b.x, b.y, b.key)
-          .setOrigin(0.5, 1)
-          .setDepth(b.y);
-      }
-    }
+    // 2. Load Tiled Map JSON for Collision, Interact & Spawn layers
+    const map = this.make.tilemap({ key: 'school_map' });
 
-    // 4. Place Independent Modular Props (trees, lamps, benches, court, etc.)
-    if (objectsData?.props) {
-      for (const p of objectsData.props) {
-        this.add.image(p.x, p.y, p.key)
-          .setOrigin(0.5, 1)
-          .setDepth(p.y);
-      }
-    }
-
-    // 5. Build 62 Collision Blockers on Footprints / Walls
+    // 3. Build Static Collision Obstacles from Map Layer
     this.blockers = [];
-    if (objectsData?.collision) {
-      for (const c of objectsData.collision) {
-        const blocker = this.add.rectangle(c.x, c.y, c.width, c.height, 0xff0044, 0);
-        blocker.setOrigin(0.5, 0.5);
-        this.physics.add.existing(blocker, true);
-        this.blockers.push(blocker);
-      }
+    const collisionObjects = map.getObjectLayer('Collision')?.objects ?? [];
+    for (const obj of collisionObjects) {
+      if (!obj.width || !obj.height || obj.x === undefined || obj.y === undefined) continue;
+
+      const centerX = obj.x + obj.width / 2;
+      const centerY = obj.y + obj.height / 2;
+
+      const blocker = this.add.rectangle(centerX, centerY, obj.width, obj.height, 0xff0044, 0);
+      blocker.setOrigin(0.5, 0.5);
+      this.physics.add.existing(blocker, true);
+      this.blockers.push(blocker);
     }
 
-    // 6. Spawn Player Entity at data.spawn (1024, 1385)
-    const startX = objectsData?.spawn?.x ?? 1024;
-    const startY = objectsData?.spawn?.y ?? 1385;
+    // 4. Resolve Player Spawn Point
+    const spawnObj = map.getObjectLayer('Spawn')?.objects?.find(o => o.name === 'player_spawn');
+    const startX = spawnObj?.x ?? 768;
+    const startY = spawnObj?.y ?? 870;
+
     const initialProfile = CHARACTER_PROFILES[0];
     this.player = new Player(this, startX, startY, initialProfile.name, initialProfile.key);
+    this.player.setDepth(startY);
 
-    // Add collision between player and all 62 modular blockers
+    // Add colliders between Player and Blockers
     for (const blocker of this.blockers) {
       this.physics.add.collider(this.player, blocker);
     }
 
-    // 7. Spawn Autonomous Walking NPCs
+    // 5. Spawn Autonomous Walking NPCs
     this.npcs = [];
     this.npcsGroup = this.physics.add.group();
 
@@ -373,47 +359,48 @@ export class SchoolMapScene extends Phaser.Scene {
     this.physics.add.collider(this.npcsGroup, this.blockers);
     this.physics.add.collider(this.player, this.npcsGroup);
 
-    // 8. Setup Interactive Triggers from data.interactions
+    // 6. Setup Interactive Triggers
     this.triggers = [];
-    if (objectsData?.interactions) {
-      for (const inter of objectsData.interactions) {
-        const key = inter.label.trim().toLowerCase();
-        const config = INTERACTION_CONFIGS[key];
+    const interactObjects = map.getObjectLayer('Interact')?.objects ?? [];
+    for (const obj of interactObjects) {
+      if (!obj.width || !obj.height || obj.x === undefined || obj.y === undefined) continue;
 
-        const triggerInfo: InteractiveTrigger = config
-          ? {
-              ...config,
-              name: config.name || inter.label,
-            }
-          : {
-              id: `trigger-${key.replace(/\s+/g, '-')}`,
-              name: inter.label,
-              type: 'building_entrance',
-              promptText: `Tekan [E] atau Ketuk untuk membuka ${inter.label}`,
-              data: {
-                title: inter.label,
-                desc: `Fasilitas ${inter.label} di lingkungan SMP Al-Ittihadiyah.`,
-              },
-            };
+      const key = obj.name.trim().toLowerCase();
+      const config = INTERACTION_CONFIGS[key];
 
-        const zone = this.add.zone(inter.x, inter.y, inter.width, inter.height);
-        this.physics.add.existing(zone, true);
-        this.triggers.push({ zone, info: triggerInfo });
-      }
+      const triggerInfo: InteractiveTrigger = config
+        ? {
+            ...config,
+            name: config.name || obj.name,
+          }
+        : {
+            id: `trigger-${key.replace(/\s+/g, '-')}`,
+            name: obj.name,
+            type: 'building_entrance',
+            promptText: `Tekan [E] atau Ketuk untuk membuka ${obj.name}`,
+            data: {
+              title: obj.name,
+              desc: `Fasilitas ${obj.name} di lingkungan SMP Al-Ittihadiyah.`,
+            },
+          };
+
+      const zone = this.add.zone(obj.x + obj.width / 2, obj.y + obj.height / 2, obj.width, obj.height);
+      this.physics.add.existing(zone, true);
+      this.triggers.push({ zone, info: triggerInfo });
     }
 
-    // 9. Setup Camera Tracking (Smooth follow with 2048 x 1536 bounds)
+    // 7. Setup Camera Tracking (Smooth follow with 1536 x 1024 bounds)
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-    this.cameras.main.setZoom(1.15);
+    this.cameras.main.setZoom(1.35);
     this.cameras.main.setRoundPixels(true);
 
-    // 10. Input & Event Listeners
+    // 8. Input & Event Listeners
     this.inputManager = new InputManager(this);
     this.setupKeyboardShortcuts();
     this.setupReactEventBridge();
 
-    // 11. Notify React Layer
+    // 9. Notify React Layer
     this.game.events.emit('scene:ready', {
       zoneName: this.lastZoneName,
       playerX: this.player.x,
@@ -450,7 +437,7 @@ export class SchoolMapScene extends Phaser.Scene {
     this.debugGraphics.clear();
 
     if (this.isDebugVisible) {
-      // 62 Modular Collision Boxes in Red
+      // Collision Boxes in Red
       this.debugGraphics.lineStyle(2, 0xff0044, 0.85);
       for (const blocker of this.blockers) {
         const bounds = blocker.getBounds();
@@ -539,9 +526,13 @@ export class SchoolMapScene extends Phaser.Scene {
     const movementVector = this.inputManager.getMovementVector();
     const movementState = this.player.updateMovement(movementVector);
 
+    // Dynamic depth sorting: characters with higher Y render in front
+    this.player.setDepth(this.player.y);
+
     // 3. Update all Autonomous Walking NPCs
     for (const npc of this.npcs) {
       npc.updateNPC(delta);
+      npc.setDepth(npc.y);
     }
 
     // 4. Proximity Check: First check nearby NPC, then map interaction zones
@@ -586,7 +577,7 @@ export class SchoolMapScene extends Phaser.Scene {
       this.game.events.emit('town:interaction-prompt', nearTrigger);
     }
 
-    // 5. Update zone name based on player coordinates in 2048 x 1536 world
+    // 5. Update zone name based on player coordinates in 1536 x 1024 campus
     const zoneName = this.determineCurrentZone(this.player.x, this.player.y);
     if (zoneName !== this.lastZoneName) {
       this.lastZoneName = zoneName;
@@ -600,16 +591,20 @@ export class SchoolMapScene extends Phaser.Scene {
   }
 
   private determineCurrentZone(x: number, y: number): string {
-    if (y > 1300) return 'Gerbang Utama SMP Al-Ittihadiyah';
-    if (x < 800 && y > 1100) return 'Area Musala & Kantin Sekolah';
-    if (x > 1200 && y > 1100) return 'Area UKS Clinic & Gazebo Taman';
-    if (x >= 750 && x <= 1300 && y >= 650 && y <= 950) return 'Lapangan Utama & Tiang Bendera';
-    if (y < 450 && x >= 700 && x <= 1350) return 'Pelataran Gedung Utama (TU & Kepsek)';
-    if (x < 600 && y < 500) return 'Sayap Barat: Lab Komputer';
-    if (x > 1450 && y < 500) return 'Sayap Timur: Perpustakaan';
-    if (x < 600 && y >= 500 && y <= 1000) return 'Sayap Barat: Koridor Kelas 7 & 8';
-    if (x > 1450 && y >= 500 && y <= 1000) return 'Sayap Timur: Ruang Guru & Kelas 9';
-    return 'Kampus Asri SMP Al-Ittihadiyah';
+    if (y > 850) return 'Gerbang Utama & Pos Keamanan';
+    if (y > 640 && x < 550) return 'Area Musala & Kantin Sekolah';
+    if (y > 640 && x >= 550 && x <= 950) return 'Lapangan Olahraga & Futsal';
+    if (y > 640 && x > 950) return 'Area UKS & Gazebo Taman';
+    if (y >= 470 && y <= 640 && x >= 450 && x <= 1100) return 'Pondok Pesantren As Salaam';
+    if (y >= 470 && y <= 640 && x < 450) return 'Ruang Guru & Bimbingan Konseling';
+    if (y >= 470 && y <= 640 && x > 1100) return 'Perpustakaan Literasi & E-Library';
+    if (y >= 260 && y < 470 && x >= 450 && x <= 1100) return 'Pelataran Upacara & Tiang Bendera';
+    if (y >= 260 && y < 470 && x < 450) return 'Koridor Kelas IX';
+    if (y >= 260 && y < 470 && x > 1100) return 'Laboratorium Komputer & Informatika';
+    if (y < 260 && x >= 450 && x <= 1100) return 'Kantor & Gedung Pusat Administrasi';
+    if (y < 260 && x < 450) return 'Koridor Kelas VII';
+    if (y < 260 && x > 1100) return 'Koridor Kelas VIII';
+    return 'Kampus Asri SMP Terpadu Al-Ittihadiyah';
   }
 
   shutdown(): void {
