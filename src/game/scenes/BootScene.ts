@@ -90,14 +90,12 @@ export class BootScene extends Phaser.Scene {
 
     // Character Spritesheets (4x4 = 16 frames, 64x64 each)
     const characters = [
-      { key: 'char_teacher', path: '/assets/game/characters/guru_spritesheet.png' },
-      { key: 'char_guru_wanita', path: '/assets/game/characters/guru_wanita_spritesheet.png' },
-      { key: 'char_student', path: '/assets/game/characters/siswa_spritesheet.png' },
-      { key: 'char_siswi_hijab', path: '/assets/game/characters/siswi_hijab_spritesheet.png' },
-      { key: 'char_satpam', path: '/assets/game/characters/satpam_spritesheet.png' },
       { key: 'char_farhan', path: '/assets/game/characters/farhan_spritesheet.png' },
       { key: 'char_pak_dafa', path: '/assets/game/characters/pak_dafa_spritesheet.png' },
       { key: 'char_septi', path: '/assets/game/characters/septi_spritesheet.png' },
+      { key: 'char_satpam', path: '/assets/game/characters/satpam_spritesheet.png' },
+      { key: 'char_student', path: '/assets/game/characters/siswa_spritesheet.png' },
+      { key: 'char_siswi_hijab', path: '/assets/game/characters/siswi_hijab_spritesheet.png' },
     ];
 
     characters.forEach(char => {
@@ -124,14 +122,12 @@ export class BootScene extends Phaser.Scene {
 
   private createAllCharacterAnimations(): void {
     const characterKeys = [
-      'char_teacher',
-      'char_guru_wanita',
-      'char_student',
-      'char_siswi_hijab',
-      'char_satpam',
       'char_farhan',
       'char_pak_dafa',
       'char_septi',
+      'char_satpam',
+      'char_student',
+      'char_siswi_hijab',
     ];
 
     characterKeys.forEach(charKey => {

@@ -4,8 +4,8 @@ import { PlayerMovementState } from '@/lib/game/types';
 export class Player extends Phaser.Physics.Arcade.Sprite {
   public characterId: string;
   public characterName: string;
-  public characterKey: string = 'char_teacher';
-  public roleTitle: string = 'Guru Pendidik (PID)';
+  public characterKey: string = 'char_farhan';
+  public roleTitle: string = 'Kepala Sekolah';
   public baseSpeed: number = 175;
   public sprintMultiplier: number = 1.6;
 
@@ -13,7 +13,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private roleTag: Phaser.GameObjects.Text;
   private currentDirection: 'up' | 'down' | 'left' | 'right' = 'down';
 
-  constructor(scene: Phaser.Scene, x: number, y: number, name: string = 'Warga Baru', initialKey: string = 'char_teacher') {
+  constructor(scene: Phaser.Scene, x: number, y: number, name: string = 'Farhan Sopian Sahid', initialKey: string = 'char_farhan') {
     super(scene, x, y, initialKey, 0);
 
     this.characterId = 'local-player';
@@ -40,7 +40,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }).setOrigin(0.5, 0.5).setDepth(100);
 
     // Role badge
-    this.roleTag = scene.add.text(x, y - 28, 'Guru Pendidik (PID)', {
+    this.roleTag = scene.add.text(x, y - 28, 'Kepala Sekolah', {
       fontFamily: 'Outfit, Inter, sans-serif',
       fontSize: '9px',
       color: '#38bdf8',

@@ -58,9 +58,9 @@ export class ClassroomScene extends Phaser.Scene {
   public inputManager!: InputManager;
   private currentClassroomId: ClassroomId = 'VII';
   private returnPos: { x: number; y: number } = { x: 268, y: 289 };
-  private savedCharKey: string = 'char_teacher';
-  private savedCharName: string = 'Warga Baru';
-  private savedCharRole: string = 'Guru Pendidik (PID)';
+  private savedCharKey: string = 'char_farhan';
+  private savedCharName: string = 'Farhan Sopian Sahid';
+  private savedCharRole: string = 'Kepala Sekolah';
 
   private blockers: Phaser.GameObjects.Rectangle[] = [];
   private deskSprites: Phaser.GameObjects.Sprite[] = [];
@@ -272,17 +272,16 @@ export class ClassroomScene extends Phaser.Scene {
   private setupKeyboardShortcuts(): void {
     if (!this.input.keyboard) return;
 
-    const numCodes = [
+    const allNumCodes = [
       Phaser.Input.Keyboard.KeyCodes.ONE,
       Phaser.Input.Keyboard.KeyCodes.TWO,
       Phaser.Input.Keyboard.KeyCodes.THREE,
       Phaser.Input.Keyboard.KeyCodes.FOUR,
       Phaser.Input.Keyboard.KeyCodes.FIVE,
       Phaser.Input.Keyboard.KeyCodes.SIX,
-      Phaser.Input.Keyboard.KeyCodes.SEVEN,
-      Phaser.Input.Keyboard.KeyCodes.EIGHT,
     ];
 
+    const numCodes = allNumCodes.slice(0, CHARACTER_PROFILES.length);
     this.numericKeys = numCodes.map(code => this.input.keyboard!.addKey(code));
   }
 

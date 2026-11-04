@@ -190,12 +190,12 @@ const INTERACTION_CONFIGS: Record<string, InteractionObjectConfig> = {
   },
 };
 
-// 5 Autonomous Walking NPCs configured for 1536 x 1024 Campus
+// 6 Autonomous Walking NPCs configured for 1536 x 1024 Campus
 const WALKING_NPC_CONFIGS: NPCConfig[] = [
   {
     id: 'npc-satpam',
-    name: 'Pak Joko',
-    role: 'Satpam Sekolah',
+    name: 'Pak Asep',
+    role: 'Keamanan Sekolah',
     characterKey: 'char_satpam',
     avatarUrl: '/assets/game/characters/avatars/pak_joko.png',
     speed: 55,
@@ -206,32 +206,14 @@ const WALKING_NPC_CONFIGS: NPCConfig[] = [
       { x: 768, y: 840, waitTime: 2500 },
     ],
     dialogue: {
-      greeting: 'Pak Joko menyapa Anda dengan senyum ramah di pos gerbang sekolah:',
+      greeting: 'Pak Asep menyapa Anda dengan senyum ramah di pos gerbang sekolah:',
       quote: '“Selamat pagi! Tetap jaga ketertiban, parkir kendaraan rapi di tempatnya, dan jangan lupa selalu santun kepada bapak/ibu guru ya!”',
     },
   },
   {
-    id: 'npc-guru-siti',
-    name: 'Bu Guru Siti',
-    role: 'Guru BK / Konselor',
-    characterKey: 'char_guru_wanita',
-    avatarUrl: '/assets/game/characters/avatars/bu_guru_siti.png',
-    speed: 60,
-    waypoints: [
-      { x: 768, y: 650, waitTime: 3000 },
-      { x: 450, y: 650, waitTime: 3500 },
-      { x: 1080, y: 650, waitTime: 3500 },
-      { x: 768, y: 650, waitTime: 2500 },
-    ],
-    dialogue: {
-      greeting: 'Bu Guru Siti menyapa Anda dengan hangat di koridor sekolah:',
-      quote: '“Halo ananda! Semangat terus belajarnya ya. Jika ada kendala belajar atau butuh teman konsultasi, pintu ruang BK selalu terbuka untuk kalian.”',
-    },
-  },
-  {
-    id: 'npc-rian',
-    name: 'Rian Pratama',
-    role: 'Siswa Kelas 8',
+    id: 'npc-sonaji',
+    name: 'Sonaji',
+    role: 'Siswa Kelas 9B',
     characterKey: 'char_student',
     avatarUrl: '/assets/game/characters/avatars/rian_pratama.png',
     speed: 70,
@@ -242,14 +224,14 @@ const WALKING_NPC_CONFIGS: NPCConfig[] = [
       { x: 768, y: 265, waitTime: 2500 },
     ],
     dialogue: {
-      greeting: 'Rian melambaikan tangan saat sedang berjalan di lorong kelas:',
-      quote: '“Eh halo! Tadi habis istirahat jajan bakwan di kantin. Nanti sehabis pelajaran ada kerja kelompok sains di lab komputer, gabung yuk!”',
+      greeting: 'Sonaji melambaikan tangan saat sedang berjalan di lorong kelas:',
+      quote: '“Eh halo! Nanti sehabis pelajaran ada kerja kelompok proyek kelas 9B di perpustakaan atau lab, gabung yuk!”',
     },
   },
   {
-    id: 'npc-aisyah',
-    name: 'Aisyah Putri',
-    role: 'Siswi Teladan SMP',
+    id: 'npc-ajeng',
+    name: 'Ajeng',
+    role: 'Siswi Kelas 9A',
     characterKey: 'char_siswi_hijab',
     avatarUrl: '/assets/game/characters/avatars/aisyah_putri.png',
     speed: 65,
@@ -260,26 +242,8 @@ const WALKING_NPC_CONFIGS: NPCConfig[] = [
       { x: 1250, y: 630, waitTime: 2500 },
     ],
     dialogue: {
-      greeting: 'Aisyah tersenyum santun sambil membawa buku pelajaran kurikulum:',
-      quote: '“Assalamu’alaikum! Saya baru saja dari perpustakaan meminjam referensi materi baru. Nanti siang jangan lupa sholat berjamaah di musala ya.”',
-    },
-  },
-  {
-    id: 'npc-dedi',
-    name: 'Dedi Santoso',
-    role: 'Siswa Ekskul Olahraga',
-    characterKey: 'char_student',
-    avatarUrl: '/assets/game/characters/avatars/rian_pratama.png',
-    speed: 80,
-    waypoints: [
-      { x: 600, y: 685, waitTime: 1200 },
-      { x: 800, y: 685, waitTime: 1200 },
-      { x: 800, y: 800, waitTime: 1200 },
-      { x: 600, y: 800, waitTime: 1200 },
-    ],
-    dialogue: {
-      greeting: 'Dedi menyapa Anda sambil pemanasan jogging di lapangan:',
-      quote: '“Ayo lari keliling lapangan! Badan sehat bikin kita makin fokus belajar. Nanti sore ada sparing futsal antar kelas lho!”',
+      greeting: 'Ajeng tersenyum santun sambil membawa buku pelajaran kurikulum merdeka:',
+      quote: '“Assalamu’alaikum! Saya baru saja dari perpustakaan meminjam referensi materi ujian kelas 9A. Nanti siang jangan lupa sholat berjamaah ya.”',
     },
   },
   {
@@ -303,7 +267,7 @@ const WALKING_NPC_CONFIGS: NPCConfig[] = [
   {
     id: 'npc-pak-dafa',
     name: 'Pak Dafa',
-    role: 'Guru IT & Multimedia',
+    role: 'Guru Informatika',
     characterKey: 'char_pak_dafa',
     avatarUrl: '/assets/game/characters/avatars/pak_dafa.png',
     speed: 55,
@@ -320,8 +284,8 @@ const WALKING_NPC_CONFIGS: NPCConfig[] = [
   },
   {
     id: 'npc-septi',
-    name: 'Septi Nur Aeni',
-    role: 'Staf Tata Usaha',
+    name: 'Bu Septi',
+    role: 'Guru B. Indonesia',
     characterKey: 'char_septi',
     avatarUrl: '/assets/game/characters/avatars/septi_nur_aeni.png',
     speed: 58,
@@ -332,8 +296,8 @@ const WALKING_NPC_CONFIGS: NPCConfig[] = [
       { x: 380, y: 590, waitTime: 2500 },
     ],
     dialogue: {
-      greeting: 'Septi Nur Aeni tersenyum hangat menyapa Anda sambil membawa agenda kegiatan sekolah:',
-      quote: '“Assalamu’alaikum! Butuh informasi administrasi, presensi siswa, atau agenda sekolah? Jangan ragu hubungi kami di kantor tata usaha ya!”',
+      greeting: 'Bu Septi tersenyum hangat menyapa Anda sambil membawa buku bahan ajar:',
+      quote: '“Assalamu’alaikum! Mari tingkatkan literasi membaca dan penguasaan bahasa Indonesia dengan penuh semangat ya ananda!”',
     },
   },
 ];
@@ -518,18 +482,17 @@ export class SchoolMapScene extends Phaser.Scene {
   private setupKeyboardShortcuts(): void {
     if (!this.input.keyboard) return;
 
-    // Keys 1 to 8 for instant character switching
-    const numCodes = [
+    // Keys 1 to 6 for instant character switching
+    const allNumCodes = [
       Phaser.Input.Keyboard.KeyCodes.ONE,
       Phaser.Input.Keyboard.KeyCodes.TWO,
       Phaser.Input.Keyboard.KeyCodes.THREE,
       Phaser.Input.Keyboard.KeyCodes.FOUR,
       Phaser.Input.Keyboard.KeyCodes.FIVE,
       Phaser.Input.Keyboard.KeyCodes.SIX,
-      Phaser.Input.Keyboard.KeyCodes.SEVEN,
-      Phaser.Input.Keyboard.KeyCodes.EIGHT,
     ];
 
+    const numCodes = allNumCodes.slice(0, CHARACTER_PROFILES.length);
     this.numericKeys = numCodes.map(code => this.input.keyboard!.addKey(code));
 
     // F3 for Collision Debug visualization
