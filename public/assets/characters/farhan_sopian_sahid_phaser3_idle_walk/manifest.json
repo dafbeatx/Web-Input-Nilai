@@ -1,0 +1,53 @@
+{
+  "name": "Farhan Sopian Sahid",
+  "role": "Kepala Sekolah",
+  "engine": "Phaser 3",
+  "format": "PNG RGBA",
+  "frame_width": 64,
+  "frame_height": 64,
+  "directions": [
+    "down",
+    "right",
+    "left",
+    "up"
+  ],
+  "animations": {
+    "idle": 16,
+    "walk": 16
+  },
+  "total_frames": 32,
+  "files": [
+    "idle_down_1.png",
+    "idle_down_2.png",
+    "idle_down_3.png",
+    "idle_down_4.png",
+    "idle_left_1.png",
+    "idle_left_2.png",
+    "idle_left_3.png",
+    "idle_left_4.png",
+    "idle_right_1.png",
+    "idle_right_2.png",
+    "idle_right_3.png",
+    "idle_right_4.png",
+    "idle_up_1.png",
+    "idle_up_2.png",
+    "idle_up_3.png",
+    "idle_up_4.png",
+    "walk_down_1.png",
+    "walk_down_2.png",
+    "walk_down_3.png",
+    "walk_down_4.png",
+    "walk_left_1.png",
+    "walk_left_2.png",
+    "walk_left_3.png",
+    "walk_left_4.png",
+    "walk_right_1.png",
+    "walk_right_2.png",
+    "walk_right_3.png",
+    "walk_right_4.png",
+    "walk_up_1.png",
+    "walk_up_2.png",
+    "walk_up_3.png",
+    "walk_up_4.png"
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "character": "Septi Nur Aeni",
+  "role": "Karakter staf/guru sekolah",
+  "format": "PNG RGBA transparent",
+  "frame_size": [
+    64,
+    64
+  ],
+  "animations": {
+    "idle": {
+      "down": [
+        "frames/septi_idle_down_1.png",
+        "frames/septi_idle_down_2.png",
+        "frames/septi_idle_down_3.png",
+        "frames/septi_idle_down_4.png"
+      ],
+      "left": [
+        "frames/septi_idle_left_1.png",
+        "frames/septi_idle_left_2.png",
+        "frames/septi_idle_left_3.png",
+        "frames/septi_idle_left_4.png"
+      ],
+      "right": [
+        "frames/septi_idle_right_1.png",
+        "frames/septi_idle_right_2.png",
+        "frames/septi_idle_right_3.png",
+        "frames/septi_idle_right_4.png"
+      ],
+      "up": [
+        "frames/septi_idle_up_1.png",
+        "frames/septi_idle_up_2.png",
+        "frames/septi_idle_up_3.png",
+        "frames/septi_idle_up_4.png"
+      ]
+    },
+    "walk": {
+      "down": [
+        "frames/septi_walk_down_1.png",
+        "frames/septi_walk_down_2.png",
+        "frames/septi_walk_down_3.png",
+        "frames/septi_walk_down_4.png"
+      ],
+      "left": [
+        "frames/septi_walk_left_1.png",
+        "frames/septi_walk_left_2.png",
+        "frames/septi_walk_left_3.png",
+        "frames/septi_walk_left_4.png"
+      ],
+      "right": [
+        "frames/septi_walk_right_1.png",
+        "frames/septi_walk_right_2.png",
+        "frames/septi_walk_right_3.png",
+        "frames/septi_walk_right_4.png"
+      ],
+      "up": [
+        "frames/septi_walk_up_1.png",
+        "frames/septi_walk_up_2.png",
+        "frames/septi_walk_up_3.png",
+        "frames/septi_walk_up_4.png"
+      ]
+    }
+  },
+  "source_layout": "4 columns x 8 rows; rows 1-4 idle, rows 5-8 walk",
+  "directions": [
+    "down",
+    "left",
+    "right",
+    "up"
+  ],
+  "note": "Generated sprite frames normalized to a common 64x64 canvas; review animation timing and hitbox in Phaser."
+}

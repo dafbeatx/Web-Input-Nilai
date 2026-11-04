@@ -276,6 +276,60 @@ const WALKING_NPC_CONFIGS: NPCConfig[] = [
       quote: '“Ayo lari keliling lapangan! Badan sehat bikin kita makin fokus belajar. Nanti sore ada sparing futsal antar kelas lho!”',
     },
   },
+  {
+    id: 'npc-farhan',
+    name: 'Farhan Sopian Sahid',
+    role: 'Kepala Sekolah',
+    characterKey: 'char_farhan',
+    avatarUrl: '/assets/game/characters/avatars/farhan_sopian_sahid.png',
+    speed: 50,
+    waypoints: [
+      { x: 768, y: 340, waitTime: 4000 },
+      { x: 650, y: 340, waitTime: 3000 },
+      { x: 880, y: 340, waitTime: 3000 },
+      { x: 768, y: 400, waitTime: 3500 },
+    ],
+    dialogue: {
+      greeting: 'Bapak Farhan Sopian Sahid (Kepala Sekolah) menyapa Anda dengan senyum berwibawa di halaman utama:',
+      quote: '“Selamat datang di SMP Terpadu Al-Ittihadiyah! Jadikan setiap hari di sekolah sebagai langkah meraih prestasi, budi pekerti luhur, dan penguasaan sains teknologi.”',
+    },
+  },
+  {
+    id: 'npc-pak-dafa',
+    name: 'Pak Dafa',
+    role: 'Guru IT & Multimedia',
+    characterKey: 'char_pak_dafa',
+    avatarUrl: '/assets/game/characters/avatars/pak_dafa.png',
+    speed: 55,
+    waypoints: [
+      { x: 1120, y: 440, waitTime: 3500 },
+      { x: 1120, y: 570, waitTime: 3000 },
+      { x: 1220, y: 570, waitTime: 2500 },
+      { x: 1120, y: 440, waitTime: 2500 },
+    ],
+    dialogue: {
+      greeting: 'Pak Dafa menyapa Anda dengan ramah di selasar Laboratorium Komputer:',
+      quote: '“Halo! Lab komputer multimedia dan sistem smart school sudah aktif. Siap belajar coding, eksplorasi AI, dan simulasi interaktif hari ini?”',
+    },
+  },
+  {
+    id: 'npc-septi',
+    name: 'Septi Nur Aeni',
+    role: 'Staf Tata Usaha',
+    characterKey: 'char_septi',
+    avatarUrl: '/assets/game/characters/avatars/septi_nur_aeni.png',
+    speed: 58,
+    waypoints: [
+      { x: 380, y: 590, waitTime: 3000 },
+      { x: 380, y: 730, waitTime: 3500 },
+      { x: 480, y: 730, waitTime: 2500 },
+      { x: 380, y: 590, waitTime: 2500 },
+    ],
+    dialogue: {
+      greeting: 'Septi Nur Aeni tersenyum hangat menyapa Anda sambil membawa agenda kegiatan sekolah:',
+      quote: '“Assalamu’alaikum! Butuh informasi administrasi, presensi siswa, atau agenda sekolah? Jangan ragu hubungi kami di kantor tata usaha ya!”',
+    },
+  },
 ];
 
 export class SchoolMapScene extends Phaser.Scene {
@@ -411,13 +465,16 @@ export class SchoolMapScene extends Phaser.Scene {
   private setupKeyboardShortcuts(): void {
     if (!this.input.keyboard) return;
 
-    // Keys 1 to 5 for instant character switching
+    // Keys 1 to 8 for instant character switching
     const numCodes = [
       Phaser.Input.Keyboard.KeyCodes.ONE,
       Phaser.Input.Keyboard.KeyCodes.TWO,
       Phaser.Input.Keyboard.KeyCodes.THREE,
       Phaser.Input.Keyboard.KeyCodes.FOUR,
       Phaser.Input.Keyboard.KeyCodes.FIVE,
+      Phaser.Input.Keyboard.KeyCodes.SIX,
+      Phaser.Input.Keyboard.KeyCodes.SEVEN,
+      Phaser.Input.Keyboard.KeyCodes.EIGHT,
     ];
 
     this.numericKeys = numCodes.map(code => this.input.keyboard!.addKey(code));
