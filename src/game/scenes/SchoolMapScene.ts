@@ -314,6 +314,9 @@ export class SchoolMapScene extends Phaser.Scene {
     this.physics.add.collider(this.npcsGroup, this.blockers);
     this.physics.add.collider(this.player, this.npcsGroup);
 
+    // Initial sync: hide NPC duplicate if player uses that same character
+    this.syncNPCVisibilityWithPlayer();
+
     // 6. Setup Interactive Triggers
     this.triggers = [];
     const interactObjects = map.getObjectLayer('Interact')?.objects ?? [];
@@ -344,7 +347,7 @@ export class SchoolMapScene extends Phaser.Scene {
       this.triggers.push({ zone, info: triggerInfo });
     }
 
-    // 6b. Setup Door Entry Markers for Classrooms (Floating Glowing Arrow Pads)
+    // 6b. Setup Door Entry Markers for Classrooms
     const classroomDoors = [
       { x: 268, y: 289, label: 'Kelas VII' },
       { x: 1308, y: 289, label: 'Kelas VIII' },
@@ -352,16 +355,16 @@ export class SchoolMapScene extends Phaser.Scene {
     ];
 
     for (const door of classroomDoors) {
-      if (this.textures.exists('marker_door_arrow')) {
-        const marker = this.add.image(door.x, door.y + 2, 'marker_door_arrow');
-        marker.setOrigin(0.5, 0.7);
-        marker.setScale(0.48);
+      if (this.textures.exists('door_marker')) {
+        const marker = this.add.image(door.x, door.y - 12, 'door_marker');
+        marker.setOrigin(0.5, 0.5);
+        marker.setScale(0.24);
         marker.setDepth(door.y + 1);
 
         this.tweens.add({
           targets: marker,
-          y: door.y - 4,
-          duration: 850,
+          y: door.y - 18,
+          duration: 900,
           yoyo: true,
           repeat: -1,
           ease: 'Sine.easeInOut',
@@ -391,7 +394,7 @@ export class SchoolMapScene extends Phaser.Scene {
   private setupKeyboardShortcuts(): void {
     if (!this.input.keyboard) return;
 
-    // Keys 1 to 6 for instant character switching
+    // Keys 1 to 8 for instant character switching
     const allNumCodes = [
       Phaser.Input.Keyboard.KeyCodes.ONE,
       Phaser.Input.Keyboard.KeyCodes.TWO,
@@ -399,6 +402,8 @@ export class SchoolMapScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.FOUR,
       Phaser.Input.Keyboard.KeyCodes.FIVE,
       Phaser.Input.Keyboard.KeyCodes.SIX,
+      Phaser.Input.Keyboard.KeyCodes.SEVEN,
+      Phaser.Input.Keyboard.KeyCodes.EIGHT,
     ];
 
     const numCodes = allNumCodes.slice(0, CHARACTER_PROFILES.length);
@@ -461,6 +466,7 @@ export class SchoolMapScene extends Phaser.Scene {
     // Character switch from React HUD modal
     this.game.events.on('player:change-character', (data: { key: string; name: string; role: string }) => {
       this.player.switchCharacter(data.key, data.name, data.role);
+      this.syncNPCVisibilityWithPlayer();
     });
 
     // Enter classroom scene requested from React HUD modal or direct interact
@@ -498,12 +504,13 @@ export class SchoolMapScene extends Phaser.Scene {
   update(time: number, delta: number): void {
     if (!this.player || !this.inputManager) return;
 
-    // 1. Process 1-5 keys for character switching
+    // 1. Process 1-8 keys for character switching
     this.numericKeys.forEach((key, idx) => {
       if (Phaser.Input.Keyboard.JustDown(key)) {
         const profile = CHARACTER_PROFILES[idx];
         if (profile && profile.key !== this.player.characterKey) {
           this.player.switchCharacter(profile.key, profile.name, profile.role);
+          this.syncNPCVisibilityWithPlayer();
           this.game.events.emit('scene:character-selected', profile);
         }
       }
@@ -536,6 +543,7 @@ export class SchoolMapScene extends Phaser.Scene {
             this.studentNpcs[i].applyConfig(newStudentConfigs[i]);
           }
         }
+        this.syncNPCVisibilityWithPlayer();
 
         this.game.events.emit('town:notification', {
           text: 'Pergantian Jam Istirahat (30 Menit): 10 siswa baru beraktivitas di halaman kampus!',
@@ -547,11 +555,13 @@ export class SchoolMapScene extends Phaser.Scene {
       }
     }
 
-    // 4. Proximity Check: First check nearby NPC, then map interaction zones
+    // 4. Proximity Check: First check nearby NPC (ignoring hidden/inactive ones)
     let nearTrigger: InteractiveTrigger | null = null;
     let nearNPC: NPC | null = null;
 
     for (const npc of this.npcs) {
+      if (!npc.visible || !npc.active) continue;
+
       const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y);
       if (dist < 52) {
         nearNPC = npc;
@@ -617,6 +627,24 @@ export class SchoolMapScene extends Phaser.Scene {
     if (y < 260 && x < 450) return 'Koridor Kelas VII';
     if (y < 260 && x > 1100) return 'Koridor Kelas VIII';
     return 'Kampus Asri SMP Terpadu Al-Ittihadiyah';
+  }
+
+  /**
+   * Automatically synchronizes NPC visibility so that the scene never spawns
+   * or displays an NPC duplicate of the character currently controlled by the player.
+   */
+  private syncNPCVisibilityWithPlayer(): void {
+    if (!this.player) return;
+    const playerKey = this.player.characterKey;
+    const playerName = this.player.characterName.trim().toLowerCase();
+
+    for (const npc of this.npcs) {
+      const isDuplicate =
+        npc.characterKey === playerKey ||
+        npc.npcName.trim().toLowerCase() === playerName;
+
+      npc.setNPCVisibility(!isDuplicate);
+    }
   }
 
   private enterClassroom(classroomId: 'VII' | 'VIII' | 'IX'): void {

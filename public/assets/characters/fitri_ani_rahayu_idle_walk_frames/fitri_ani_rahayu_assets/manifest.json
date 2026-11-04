@@ -1,0 +1,65 @@
+{
+  "name": "Fitri Ani Rahayu",
+  "role": "Karakter staf/guru sekolah",
+  "format": "PNG RGBA transparent",
+  "frameSize": {
+    "width": 64,
+    "height": 64
+  },
+  "frameCount": 32,
+  "animations": {
+    "idle": {
+      "down": [
+        "idle/down/fitri_idle_down_1.png",
+        "idle/down/fitri_idle_down_2.png",
+        "idle/down/fitri_idle_down_3.png",
+        "idle/down/fitri_idle_down_4.png"
+      ],
+      "left": [
+        "idle/left/fitri_idle_left_1.png",
+        "idle/left/fitri_idle_left_2.png",
+        "idle/left/fitri_idle_left_3.png",
+        "idle/left/fitri_idle_left_4.png"
+      ],
+      "right": [
+        "idle/right/fitri_idle_right_1.png",
+        "idle/right/fitri_idle_right_2.png",
+        "idle/right/fitri_idle_right_3.png",
+        "idle/right/fitri_idle_right_4.png"
+      ],
+      "up": [
+        "idle/up/fitri_idle_up_1.png",
+        "idle/up/fitri_idle_up_2.png",
+        "idle/up/fitri_idle_up_3.png",
+        "idle/up/fitri_idle_up_4.png"
+      ]
+    },
+    "walk": {
+      "down": [
+        "walk/down/fitri_walk_down_1.png",
+        "walk/down/fitri_walk_down_2.png",
+        "walk/down/fitri_walk_down_3.png",
+        "walk/down/fitri_walk_down_4.png"
+      ],
+      "left": [
+        "walk/left/fitri_walk_left_1.png",
+        "walk/left/fitri_walk_left_2.png",
+        "walk/left/fitri_walk_left_3.png",
+        "walk/left/fitri_walk_left_4.png"
+      ],
+      "right": [
+        "walk/right/fitri_walk_right_1.png",
+        "walk/right/fitri_walk_right_2.png",
+        "walk/right/fitri_walk_right_3.png",
+        "walk/right/fitri_walk_right_4.png"
+      ],
+      "up": [
+        "walk/up/fitri_walk_up_1.png",
+        "walk/up/fitri_walk_up_2.png",
+        "walk/up/fitri_walk_up_3.png",
+        "walk/up/fitri_walk_up_4.png"
+      ]
+    }
+  },
+  "sheetLayout": "Source 4 columns x 8 rows; rows 1-4 idle (down,left,right,up), rows 5-8 walk (down,left,right,up)."
+}

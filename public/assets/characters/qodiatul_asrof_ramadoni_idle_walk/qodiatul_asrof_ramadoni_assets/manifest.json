@@ -1,0 +1,64 @@
+{
+  "name": "Qodiatul Asrof Ramadoni",
+  "role": "Operator Sekolah",
+  "engine": "Phaser 3",
+  "frameSize": {
+    "width": 64,
+    "height": 64
+  },
+  "animations": {
+    "idle": {
+      "down": [
+        "qodiatul_idle_down_1.png",
+        "qodiatul_idle_down_2.png",
+        "qodiatul_idle_down_3.png",
+        "qodiatul_idle_down_4.png"
+      ],
+      "left": [
+        "qodiatul_idle_left_1.png",
+        "qodiatul_idle_left_2.png",
+        "qodiatul_idle_left_3.png",
+        "qodiatul_idle_left_4.png"
+      ],
+      "right": [
+        "qodiatul_idle_right_1.png",
+        "qodiatul_idle_right_2.png",
+        "qodiatul_idle_right_3.png",
+        "qodiatul_idle_right_4.png"
+      ],
+      "up": [
+        "qodiatul_idle_up_1.png",
+        "qodiatul_idle_up_2.png",
+        "qodiatul_idle_up_3.png",
+        "qodiatul_idle_up_4.png"
+      ]
+    },
+    "walk": {
+      "down": [
+        "qodiatul_walk_down_1.png",
+        "qodiatul_walk_down_2.png",
+        "qodiatul_walk_down_3.png",
+        "qodiatul_walk_down_4.png"
+      ],
+      "left": [
+        "qodiatul_walk_left_1.png",
+        "qodiatul_walk_left_2.png",
+        "qodiatul_walk_left_3.png",
+        "qodiatul_walk_left_4.png"
+      ],
+      "right": [
+        "qodiatul_walk_right_1.png",
+        "qodiatul_walk_right_2.png",
+        "qodiatul_walk_right_3.png",
+        "qodiatul_walk_right_4.png"
+      ],
+      "up": [
+        "qodiatul_walk_up_1.png",
+        "qodiatul_walk_up_2.png",
+        "qodiatul_walk_up_3.png",
+        "qodiatul_walk_up_4.png"
+      ]
+    }
+  },
+  "notes": "Each PNG is an individual 64x64 RGBA frame. Rows 1-4 in the source are idle directions; rows 5-8 are walk directions."
+}

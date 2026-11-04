@@ -9,7 +9,6 @@ export interface ClassroomConfig {
   id: ClassroomId;
   title: string;
   gradeLabel: string;
-  boardType: 'whiteboard' | 'blackboard';
   teacherTitle: string;
   desc: string;
   exteriorDoor: { x: number; y: number };
@@ -20,7 +19,6 @@ export const CLASSROOM_CONFIGS: Record<ClassroomId, ClassroomConfig> = {
     id: 'VII',
     title: 'Ruang Kelas 7 (Fase D)',
     gradeLabel: 'Kelas VII',
-    boardType: 'whiteboard',
     teacherTitle: 'Wali Kelas VII',
     desc: 'Ruang kelas pembelajaran peserta didik baru tingkat 7 dengan modul pengenalan lingkungan dan adaptasi kurikulum merdeka.',
     exteriorDoor: { x: 268, y: 289 },
@@ -29,7 +27,6 @@ export const CLASSROOM_CONFIGS: Record<ClassroomId, ClassroomConfig> = {
     id: 'VIII',
     title: 'Ruang Kelas 8',
     gradeLabel: 'Kelas VIII',
-    boardType: 'blackboard',
     teacherTitle: 'Wali Kelas VIII',
     desc: 'Ruang kelas 8 fokus pada penguatan materi inti, proyek sains interaktif, dan kolaborasi kelompok P5.',
     exteriorDoor: { x: 1308, y: 289 },
@@ -38,7 +35,6 @@ export const CLASSROOM_CONFIGS: Record<ClassroomId, ClassroomConfig> = {
     id: 'IX',
     title: 'Ruang Kelas 9 (Fase Kelulusan)',
     gradeLabel: 'Kelas IX',
-    boardType: 'whiteboard',
     teacherTitle: 'Wali Kelas IX',
     desc: 'Ruang kelas tingkat akhir pendalaman materi asesmen sumatif akhir, bimbingan minat bakat, dan persiapan kelulusan.',
     exteriorDoor: { x: 259, y: 509 },
@@ -63,10 +59,9 @@ export class ClassroomScene extends Phaser.Scene {
   private savedCharRole: string = 'Kepala Sekolah';
 
   private blockers: Phaser.GameObjects.Rectangle[] = [];
-  private deskSprites: Phaser.GameObjects.Sprite[] = [];
+  private exitMarkerContainer?: Phaser.GameObjects.Container;
   private isNearExit: boolean = false;
   private isExiting: boolean = false;
-  private exitMarkerPad?: Phaser.GameObjects.Image;
   private numericKeys: Phaser.Input.Keyboard.Key[] = [];
 
   constructor() {
@@ -92,82 +87,78 @@ export class ClassroomScene extends Phaser.Scene {
   }
 
   create(): void {
-    const roomWidth = 640;
-    const roomHeight = 448;
+    // Exact dimensions of classroom_interior_background.png
+    const roomWidth = 1672;
+    const roomHeight = 941;
     this.physics.world.setBounds(0, 0, roomWidth, roomHeight);
 
     const config = CLASSROOM_CONFIGS[this.currentClassroomId];
 
-    // 1. Room Background (Walls, Floor, Windows, Trim)
+    // 1. Single Integrated Background (Walls, Floor, Windows, Blackboard, Desks, Trim)
     const bg = this.add.image(roomWidth / 2, roomHeight / 2, 'classroom_bg');
     bg.setOrigin(0.5, 0.5);
     bg.setDepth(0);
 
-    // 2. Class specific blackboard / whiteboard customization
-    if (config.boardType === 'blackboard' && this.textures.exists('blackboard_green')) {
-      const board = this.add.image(320, 155, 'blackboard_green');
-      board.setOrigin(0.5, 0.5);
-      board.setDepth(2);
-    }
-
-    // 3. Wall & Boundary Physics Blockers (Player cannot walk through walls)
+    // 2. Invisible Physics Collision Footprints
     this.blockers = [];
 
-    // Top wall + teaching area top bound
-    this.createStaticBlocker(320, 80, 640, 160);
-    // Left wall with windows
-    this.createStaticBlocker(24, 224, 48, 448);
-    // Right wall with windows
-    this.createStaticBlocker(616, 224, 48, 448);
-    // Bottom wall left segment (leaving doorway at 346..398 open)
-    this.createStaticBlocker(173, 436, 346, 24);
+    // Top wall & blackboard area (y: 0 to 340)
+    this.createStaticBlocker(836, 170, 1672, 340);
+
+    // Left wall with decorative windows (x: 0 to 130)
+    this.createStaticBlocker(65, 470, 130, 941);
+
+    // Right wall with windows (x: 1540 to 1672)
+    this.createStaticBlocker(1606, 470, 132, 941);
+
+    // Bottom wall left segment (leaving exit doorway at x: 720..950 open)
+    this.createStaticBlocker(425, 905, 590, 72);
+
     // Bottom wall right segment
-    this.createStaticBlocker(519, 436, 242, 24);
+    this.createStaticBlocker(1245, 905, 590, 72);
 
-    // Fixed Props Collision (Teacher Desk, Bookshelf)
     // Teacher Desk at top left
-    this.createStaticBlocker(175, 175, 96, 44);
-    if (this.textures.exists('desk_teacher_unit')) {
-      const teacherDesk = this.add.sprite(175, 175, 'desk_teacher_unit');
-      teacherDesk.setOrigin(0.5, 0.5);
-      teacherDesk.setDepth(175);
-    }
+    this.createStaticBlocker(540, 390, 200, 80);
 
-    // Bookshelf at top right
-    this.createStaticBlocker(538, 170, 56, 46);
+    // Bookshelf & Storage at top right
+    this.createStaticBlocker(1330, 380, 140, 90);
 
-    // 4. 2.5D Depth-Sorted Student Desks (3 Columns x 3 Rows)
-    this.deskSprites = [];
-    const deskColumns = [160, 315, 470];
-    const deskRows = [240, 305, 370];
+    // Student Desks (3 Columns x 3 Rows)
+    const deskColumns = [490, 830, 1170];
+    const deskRows = [510, 615, 720];
 
     deskRows.forEach(rowY => {
       deskColumns.forEach(colX => {
-        // Physical footprint blocker (desk + chairs)
-        this.createStaticBlocker(colX, rowY - 2, 94, 38);
-
-        // Visual sprite layered with 2.5D Y-depth sorting
-        if (this.textures.exists('desk_student_pair')) {
-          const desk = this.add.sprite(colX, rowY, 'desk_student_pair');
-          desk.setOrigin(0.5, 0.5);
-          desk.setDepth(rowY);
-          this.deskSprites.push(desk);
-        }
+        // Invisible footprint blocker for desk and chairs
+        this.createStaticBlocker(colX, rowY, 200, 75);
       });
     });
 
-    // 5. Exit Door Marker at the Bottom (centered at x = 372 doorway)
-    if (this.textures.exists('marker_door_pad')) {
-      this.exitMarkerPad = this.add.image(372, 436, 'marker_door_pad');
-      this.exitMarkerPad.setOrigin(0.5, 0.5);
-      this.exitMarkerPad.setScale(0.55);
-      this.exitMarkerPad.setDepth(5);
+    // 3. Exit Door Interaction Marker Overlay (Separated from background)
+    if (this.textures.exists('door_marker')) {
+      this.exitMarkerContainer = this.add.container(836, 830);
+      this.exitMarkerContainer.setDepth(20);
+      this.exitMarkerContainer.setVisible(false);
 
-      // Subtle breathing pulse for exit pad
+      const markerSprite = this.add.image(0, 0, 'door_marker');
+      markerSprite.setOrigin(0.5, 0.5);
+      markerSprite.setScale(0.7);
+
+      const markerLabel = this.add.text(0, -6, 'Keluar Kelas', {
+        fontFamily: 'Outfit, Inter, sans-serif',
+        fontSize: '13px',
+        color: '#ffffff',
+        stroke: '#0f172a',
+        strokeThickness: 3,
+        align: 'center',
+      }).setOrigin(0.5, 0.5);
+
+      this.exitMarkerContainer.add([markerSprite, markerLabel]);
+
+      // Subtle breathing pulse for exit marker
       this.tweens.add({
-        targets: this.exitMarkerPad,
-        alpha: { from: 0.8, to: 1 },
-        scaleX: { from: 0.53, to: 0.57 },
+        targets: this.exitMarkerContainer,
+        y: 824,
         duration: 900,
         yoyo: true,
         repeat: -1,
@@ -175,35 +166,36 @@ export class ClassroomScene extends Phaser.Scene {
       });
     }
 
-    // 6. Spawn Player inside the classroom (facing UP toward the blackboard)
-    this.player = new Player(this, 372, 380, this.savedCharName, this.savedCharKey);
+    // 4. Spawn Player inside the classroom (facing UP toward blackboard)
+    this.player = new Player(this, 836, 780, this.savedCharName, this.savedCharKey);
     this.player.setRoleTitle(this.savedCharRole);
     this.player.setFacingDirection('up');
+    this.player.setDepth(780);
 
     // Add Collisions between Player and All Static Room Blockers
     for (const blocker of this.blockers) {
       this.physics.add.collider(this.player, blocker);
     }
 
-    // 7. Input Controller Setup
+    // 5. Input Controller Setup
     this.inputManager = new InputManager(this);
 
-    // 8. Camera & Viewport Setup
+    // 6. Camera & Viewport Setup (Scale-to-fit with smooth follow)
     this.cameras.main.setBounds(0, 0, roomWidth, roomHeight);
-    this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
-    this.cameras.main.setZoom(1.35);
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.cameras.main.setZoom(1.05);
     this.cameras.main.fadeIn(250, 0, 0, 0);
 
-    // 9. Floating Room Indicator Badge
+    // 7. Floating Room Indicator Badge
     this.createRoomHeaderUI(config);
 
-    // 10. React Event Bridge Integration
+    // 8. React Event Bridge Integration
     this.setupReactEventBridge();
 
-    // 11. Numeric hotkeys 1-8 for character switching
+    // 9. Numeric hotkeys 1-8 for character switching
     this.setupKeyboardShortcuts();
 
-    // Notify React HUD of the current classroom zone
+    // 10. Notify React Layer
     this.game.events.emit('scene:ready', { zoneName: config.title });
     this.game.events.emit('town:zone-change', config.title);
   }
@@ -216,18 +208,19 @@ export class ClassroomScene extends Phaser.Scene {
   }
 
   private createRoomHeaderUI(config: ClassroomConfig): void {
-    const banner = this.add.container(320, 24);
+    const banner = this.add.container(836, 32);
     banner.setDepth(999);
+    banner.setScrollFactor(0); // Pin to top of screen
 
     const bgRect = this.add.graphics();
-    bgRect.fillStyle(0x0f172a, 0.85);
+    bgRect.fillStyle(0x0f172a, 0.88);
     bgRect.lineStyle(1.5, 0x38bdf8, 0.8);
-    bgRect.fillRoundedRect(-140, -14, 280, 28, 10);
-    bgRect.strokeRoundedRect(-140, -14, 280, 28, 10);
+    bgRect.fillRoundedRect(-150, -15, 300, 30, 10);
+    bgRect.strokeRoundedRect(-150, -15, 300, 30, 10);
 
     const label = this.add.text(0, 0, `🏫 ${config.title}`, {
       fontFamily: 'Outfit, Inter, sans-serif',
-      fontSize: '12px',
+      fontSize: '13px',
       color: '#ffffff',
       stroke: '#0284c7',
       strokeThickness: 2,
@@ -279,6 +272,8 @@ export class ClassroomScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.FOUR,
       Phaser.Input.Keyboard.KeyCodes.FIVE,
       Phaser.Input.Keyboard.KeyCodes.SIX,
+      Phaser.Input.Keyboard.KeyCodes.SEVEN,
+      Phaser.Input.Keyboard.KeyCodes.EIGHT,
     ];
 
     const numCodes = allNumCodes.slice(0, CHARACTER_PROFILES.length);
@@ -328,14 +323,14 @@ export class ClassroomScene extends Phaser.Scene {
     // 3. 2.5D Depth Sorting: Higher Y renders in front
     this.player.setDepth(this.player.y);
 
-    // 4. Proximity check to bottom exit door (doorway center: x=372, y=436)
-    const exitX = 372;
-    const exitY = 436;
-    const distToExit = Phaser.Math.Distance.Between(this.player.x, this.player.y, exitX, exitY);
+    // 4. Proximity check to bottom exit doorway (centered at x = 836, doorway y > 760)
+    const isAtDoorway = Math.abs(this.player.x - 836) < 125 && this.player.y > 760;
 
-    if (distToExit < 38) {
+    if (isAtDoorway) {
       if (!this.isNearExit) {
         this.isNearExit = true;
+        this.exitMarkerContainer?.setVisible(true);
+
         const prompt: InteractiveTrigger = {
           id: 'trigger-exit-classroom',
           name: 'Pintu Keluar',
@@ -347,6 +342,7 @@ export class ClassroomScene extends Phaser.Scene {
     } else {
       if (this.isNearExit) {
         this.isNearExit = false;
+        this.exitMarkerContainer?.setVisible(false);
         this.game.events.emit('town:interaction-prompt', null);
       }
     }

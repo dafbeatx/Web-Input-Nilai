@@ -126,7 +126,33 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     this.setIdleFrame();
   }
 
+  /**
+   * Toggle NPC visibility and physics body state.
+   * Used to automatically hide the NPC when the player is currently using that character.
+   */
+  public setNPCVisibility(visible: boolean): void {
+    this.setVisible(visible);
+    this.setActive(visible);
+
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    if (body) {
+      body.enable = visible;
+      if (!visible) {
+        this.setVelocity(0, 0);
+      }
+    }
+
+    if (this.nameTag) {
+      this.nameTag.setVisible(visible);
+    }
+    if (this.roleTag) {
+      this.roleTag.setVisible(visible);
+    }
+  }
+
   public updateNPC(delta: number): void {
+    if (!this.visible || !this.active) return;
+
     if (this.isTalking) {
       this.setVelocity(0, 0);
       return;

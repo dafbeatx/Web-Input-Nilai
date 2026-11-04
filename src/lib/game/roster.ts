@@ -85,6 +85,42 @@ export const TEACHER_CONFIGS: NPCConfig[] = [
       quote: '“Assalamu’alaikum! Mari tingkatkan literasi membaca dan penguasaan bahasa Indonesia dengan penuh semangat ya ananda!”',
     },
   },
+  {
+    id: 'npc-qodi',
+    name: 'Pa Qodi',
+    role: 'Operator Sekolah',
+    characterKey: 'char_pa_qodi',
+    avatarUrl: '/assets/game/characters/avatars/pa_qodi.png',
+    speed: 55,
+    waypoints: [
+      { x: 470, y: 75, waitTime: 3500 },
+      { x: 515, y: 75, waitTime: 3000 },
+      { x: 515, y: 130, waitTime: 3000 },
+      { x: 470, y: 130, waitTime: 2500 },
+    ],
+    dialogue: {
+      greeting: 'Pa Qodi menyapa Anda di depan ruang administrasi dan server data:',
+      quote: '“Halo! Data pokok pendidikan, sinkronisasi raport, dan akun smart school semua peserta didik sudah up to date. Semangat belajar ya!”',
+    },
+  },
+  {
+    id: 'npc-fitri',
+    name: 'Bu Fitri',
+    role: 'Guru Matematika',
+    characterKey: 'char_bu_fitri',
+    avatarUrl: '/assets/game/characters/avatars/bu_fitri.png',
+    speed: 55,
+    waypoints: [
+      { x: 920, y: 665, waitTime: 3500 },
+      { x: 1020, y: 665, waitTime: 3000 },
+      { x: 1020, y: 685, waitTime: 3000 },
+      { x: 920, y: 685, waitTime: 2500 },
+    ],
+    dialogue: {
+      greeting: 'Bu Fitri menyapa Anda dengan senyum ramah sambil memegang modul numerasi:',
+      quote: '“Assalamu’alaikum! Jangan takut dengan matematika ya. Jika dipahami langkah demi langkah, matematika itu seru dan melatih logika kita!”',
+    },
+  },
 ];
 
 // ═════════════════════════════════════════════════════════════════════════════

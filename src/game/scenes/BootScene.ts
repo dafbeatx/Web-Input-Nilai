@@ -69,13 +69,15 @@ export class BootScene extends Phaser.Scene {
     this.load.image('tile_sidewalk', '/assets/game/tilesets/tile_sidewalk.png');
     this.load.image('tile_crosswalk', '/assets/game/tilesets/tile_crosswalk.png');
 
-    // Classroom Interior & Interactive Markers (classroom_design_package)
-    this.load.image('classroom_bg', '/assets/classroom_interior/classroom_interior_clean.png');
-    this.load.image('desk_student_pair', '/assets/classroom_interior/student_desk_pair.png');
-    this.load.image('desk_teacher_unit', '/assets/classroom_interior/teacher_desk_unit.png');
-    this.load.image('marker_door_arrow', '/assets/classroom_interior/door_marker_arrow.png');
-    this.load.image('marker_door_pad', '/assets/classroom_interior/door_marker_pad.png');
-    this.load.image('blackboard_green', '/assets/classroom_interior/blackboard_green.png');
+    // Single Classroom Background + Interactive Door Marker (classroom_single_background_plus_marker)
+    this.load.image(
+      'classroom_bg',
+      '/assets/classroom_single_background_plus_marker/classroom_interior_background.png'
+    );
+    this.load.image(
+      'door_marker',
+      '/assets/classroom_single_background_plus_marker/door_interaction_marker.png'
+    );
 
     // Buildings
     this.load.image('building_school', '/assets/game/buildings/building_school.png');
@@ -98,6 +100,8 @@ export class BootScene extends Phaser.Scene {
       { key: 'char_siswi_hijab', path: '/assets/game/characters/siswi_hijab_spritesheet.png' },
       { key: 'char_guru_pria', path: '/assets/game/characters/guru_spritesheet.png' },
       { key: 'char_guru_wanita', path: '/assets/game/characters/guru_wanita_spritesheet.png' },
+      { key: 'char_pa_qodi', path: '/assets/game/characters/pa_qodi_spritesheet.png' },
+      { key: 'char_bu_fitri', path: '/assets/game/characters/bu_fitri_spritesheet.png' },
     ];
 
     characters.forEach(char => {
@@ -132,6 +136,8 @@ export class BootScene extends Phaser.Scene {
       'char_siswi_hijab',
       'char_guru_pria',
       'char_guru_wanita',
+      'char_pa_qodi',
+      'char_bu_fitri',
     ];
 
     characterKeys.forEach(charKey => {
