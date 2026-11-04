@@ -22,6 +22,7 @@ import {
   ChevronDown,
   User,
   Check,
+  Wrench,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -181,6 +182,16 @@ export default function GameHUD({
               <span className="hidden lg:inline text-[11px]">Smart Board</span>
             </button>
           </div>
+
+          {/* Map Collision Editor Button */}
+          <Link
+            href="/game/editor"
+            className="p-2 bg-slate-900/90 hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 rounded-xl border border-slate-700/80 backdrop-blur-md shadow-lg transition-all flex items-center gap-1.5"
+            title="Buka Visual Collision Editor"
+          >
+            <Wrench size={15} />
+            <span className="hidden xl:inline text-[11px] font-bold">Editor Peta</span>
+          </Link>
 
           {/* Fullscreen Button */}
           <button
