@@ -21,6 +21,7 @@ import {
   Search,
   MousePointer,
   Square,
+  Download,
 } from 'lucide-react';
 
 interface MapObjectProperty {
@@ -178,14 +179,45 @@ export default function GameMapEditorPage() {
       });
 
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Gagal menyimpan');
+      if (!res.ok) throw new Error(result.error || 'Gagal menyimpan perubahan peta');
 
-      showToast('✅ Berhasil disimpan ke school_map.json!', 'success');
+      showToast(result.message || '✅ Peta berhasil disimpan ke Cloud Database & File System!', 'success');
     } catch (err) {
       console.error(err);
-      showToast('Gagal menyimpan file peta', 'error');
+      const msg = err instanceof Error ? err.message : 'Gagal menyimpan file peta';
+      showToast(`Gagal menyimpan: ${msg}`, 'error');
     } finally {
       setSaving(false);
+    }
+  }, [mapData, showToast]);
+
+  // 2b. Download Map JSON
+  const handleDownloadJSON = useCallback(() => {
+    if (!mapData) return;
+    try {
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(mapData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', 'school_map.json');
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('📥 Berkas school_map.json berhasil diunduh!', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal mengunduh berkas JSON peta', 'error');
+    }
+  }, [mapData, showToast]);
+
+  // 2c. Copy Map JSON to Clipboard
+  const handleCopyJSON = useCallback(async () => {
+    if (!mapData) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(mapData, null, 2));
+      showToast('📋 JSON peta berhasil disalin ke clipboard!', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal menyalin JSON ke clipboard', 'error');
     }
   }, [mapData, showToast]);
 
@@ -590,21 +622,45 @@ export default function GameMapEditorPage() {
           {/* Grid Toggle */}
           <button
             onClick={() => setShowGrid(prev => !prev)}
-            className={`p-2 rounded-xl text-xs font-bold border transition-all ${
+            className={`min-h-[44px] min-w-[44px] p-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center ${
               showGrid
                 ? 'bg-cyan-950 border-cyan-500/50 text-cyan-400'
                 : 'bg-slate-800 border-slate-700/80 text-slate-400 hover:text-slate-200'
             }`}
             title="Toggle Grid 32x32 Tile"
+            aria-label="Toggle Grid 32x32 Tile"
           >
             <Grid size={16} />
+          </button>
+
+          {/* Unduh JSON */}
+          <button
+            onClick={handleDownloadJSON}
+            className="min-h-[44px] flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700/80 hover:border-slate-600 text-slate-200 font-semibold text-xs rounded-xl shadow transition-all active:scale-95"
+            title="Unduh file school_map.json"
+            aria-label="Unduh file school_map.json"
+          >
+            <Download size={15} />
+            <span className="hidden sm:inline">Unduh JSON</span>
+          </button>
+
+          {/* Salin JSON */}
+          <button
+            onClick={handleCopyJSON}
+            className="min-h-[44px] flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700/80 hover:border-slate-600 text-slate-200 font-semibold text-xs rounded-xl shadow transition-all active:scale-95"
+            title="Salin JSON peta ke clipboard"
+            aria-label="Salin JSON peta ke clipboard"
+          >
+            <Copy size={15} />
+            <span className="hidden sm:inline">Salin</span>
           </button>
 
           {/* Save Button */}
           <button
             onClick={handleSaveMap}
             disabled={saving}
-            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-950/40 transition-all active:scale-95"
+            className="min-h-[44px] flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-950/40 transition-all active:scale-95"
+            aria-label="Simpan Peta ke Cloud Database"
           >
             <Save size={15} />
             <span>{saving ? 'Menyimpan...' : 'Simpan Peta'}</span>
