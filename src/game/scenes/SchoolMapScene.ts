@@ -3,6 +3,11 @@ import { Player } from '../entities/Player';
 import { NPC, NPCConfig } from '../entities/NPC';
 import { InputManager } from '../input/InputManager';
 import { InteractiveTrigger, CHARACTER_PROFILES } from '@/lib/game/types';
+import {
+  TEACHER_CONFIGS,
+  getActiveStudentNPCConfigs,
+  getCurrentShiftIndex,
+} from '@/lib/game/roster';
 
 interface InteractionObjectConfig {
   id: string;
@@ -190,118 +195,6 @@ const INTERACTION_CONFIGS: Record<string, InteractionObjectConfig> = {
   },
 };
 
-// 6 Autonomous Walking NPCs configured for 1536 x 1024 Campus
-const WALKING_NPC_CONFIGS: NPCConfig[] = [
-  {
-    id: 'npc-satpam',
-    name: 'Pak Asep',
-    role: 'Keamanan Sekolah',
-    characterKey: 'char_satpam',
-    avatarUrl: '/assets/game/characters/avatars/pak_joko.png',
-    speed: 55,
-    waypoints: [
-      { x: 768, y: 880, waitTime: 3000 },
-      { x: 680, y: 880, waitTime: 3500 },
-      { x: 860, y: 880, waitTime: 3500 },
-      { x: 768, y: 840, waitTime: 2500 },
-    ],
-    dialogue: {
-      greeting: 'Pak Asep menyapa Anda dengan senyum ramah di pos gerbang sekolah:',
-      quote: '“Selamat pagi! Tetap jaga ketertiban, parkir kendaraan rapi di tempatnya, dan jangan lupa selalu santun kepada bapak/ibu guru ya!”',
-    },
-  },
-  {
-    id: 'npc-sonaji',
-    name: 'Sonaji',
-    role: 'Siswa Kelas 9B',
-    characterKey: 'char_student',
-    avatarUrl: '/assets/game/characters/avatars/rian_pratama.png',
-    speed: 70,
-    waypoints: [
-      { x: 768, y: 265, waitTime: 3000 },
-      { x: 450, y: 265, waitTime: 3000 },
-      { x: 1080, y: 265, waitTime: 3000 },
-      { x: 768, y: 265, waitTime: 2500 },
-    ],
-    dialogue: {
-      greeting: 'Sonaji melambaikan tangan saat sedang berjalan di lorong kelas:',
-      quote: '“Eh halo! Nanti sehabis pelajaran ada kerja kelompok proyek kelas 9B di perpustakaan atau lab, gabung yuk!”',
-    },
-  },
-  {
-    id: 'npc-ajeng',
-    name: 'Ajeng',
-    role: 'Siswi Kelas 9A',
-    characterKey: 'char_siswi_hijab',
-    avatarUrl: '/assets/game/characters/avatars/aisyah_putri.png',
-    speed: 65,
-    waypoints: [
-      { x: 1250, y: 485, waitTime: 3500 },
-      { x: 1250, y: 630, waitTime: 3000 },
-      { x: 1350, y: 820, waitTime: 3000 },
-      { x: 1250, y: 630, waitTime: 2500 },
-    ],
-    dialogue: {
-      greeting: 'Ajeng tersenyum santun sambil membawa buku pelajaran kurikulum merdeka:',
-      quote: '“Assalamu’alaikum! Saya baru saja dari perpustakaan meminjam referensi materi ujian kelas 9A. Nanti siang jangan lupa sholat berjamaah ya.”',
-    },
-  },
-  {
-    id: 'npc-farhan',
-    name: 'Farhan Sopian Sahid',
-    role: 'Kepala Sekolah',
-    characterKey: 'char_farhan',
-    avatarUrl: '/assets/game/characters/avatars/farhan_sopian_sahid.png',
-    speed: 50,
-    waypoints: [
-      { x: 768, y: 340, waitTime: 4000 },
-      { x: 650, y: 340, waitTime: 3000 },
-      { x: 880, y: 340, waitTime: 3000 },
-      { x: 768, y: 400, waitTime: 3500 },
-    ],
-    dialogue: {
-      greeting: 'Bapak Farhan Sopian Sahid (Kepala Sekolah) menyapa Anda dengan senyum berwibawa di halaman utama:',
-      quote: '“Selamat datang di SMP Terpadu Al-Ittihadiyah! Jadikan setiap hari di sekolah sebagai langkah meraih prestasi, budi pekerti luhur, dan penguasaan sains teknologi.”',
-    },
-  },
-  {
-    id: 'npc-pak-dafa',
-    name: 'Pak Dafa',
-    role: 'Guru Informatika',
-    characterKey: 'char_pak_dafa',
-    avatarUrl: '/assets/game/characters/avatars/pak_dafa.png',
-    speed: 55,
-    waypoints: [
-      { x: 1120, y: 440, waitTime: 3500 },
-      { x: 1120, y: 570, waitTime: 3000 },
-      { x: 1220, y: 570, waitTime: 2500 },
-      { x: 1120, y: 440, waitTime: 2500 },
-    ],
-    dialogue: {
-      greeting: 'Pak Dafa menyapa Anda dengan ramah di selasar Laboratorium Komputer:',
-      quote: '“Halo! Lab komputer multimedia dan sistem smart school sudah aktif. Siap belajar coding, eksplorasi AI, dan simulasi interaktif hari ini?”',
-    },
-  },
-  {
-    id: 'npc-septi',
-    name: 'Bu Septi',
-    role: 'Guru B. Indonesia',
-    characterKey: 'char_septi',
-    avatarUrl: '/assets/game/characters/avatars/septi_nur_aeni.png',
-    speed: 58,
-    waypoints: [
-      { x: 380, y: 590, waitTime: 3000 },
-      { x: 380, y: 730, waitTime: 3500 },
-      { x: 480, y: 730, waitTime: 2500 },
-      { x: 380, y: 590, waitTime: 2500 },
-    ],
-    dialogue: {
-      greeting: 'Bu Septi tersenyum hangat menyapa Anda sambil membawa buku bahan ajar:',
-      quote: '“Assalamu’alaikum! Mari tingkatkan literasi membaca dan penguasaan bahasa Indonesia dengan penuh semangat ya ananda!”',
-    },
-  },
-];
-
 export interface SchoolMapSceneInitData {
   returnPos?: { x: number; y: number };
   characterKey?: string;
@@ -320,6 +213,9 @@ export class SchoolMapScene extends Phaser.Scene {
 
   // Walking NPC Fleet
   private npcs: NPC[] = [];
+  private studentNpcs: NPC[] = [];
+  private currentShiftIndex: number = 0;
+  private shiftCheckTimer: number = 0;
   private npcsGroup!: Phaser.Physics.Arcade.Group;
   private activeTalkingNPC: NPC | null = null;
 
@@ -393,15 +289,28 @@ export class SchoolMapScene extends Phaser.Scene {
 
     // 5. Spawn Autonomous Walking NPCs
     this.npcs = [];
+    this.studentNpcs = [];
     this.npcsGroup = this.physics.add.group();
 
-    for (const npcConfig of WALKING_NPC_CONFIGS) {
-      const npc = new NPC(this, npcConfig);
+    // 5a. Spawn School Staff & Teachers (Pak Asep, Farhan Sopian Sahid, Pak Dafa, Bu Septi)
+    for (const teacherConfig of TEACHER_CONFIGS) {
+      const npc = new NPC(this, teacherConfig);
       this.npcs.push(npc);
       this.npcsGroup.add(npc);
     }
 
-    // Add colliders for NPCs
+    // 5b. Spawn 10 Active Outdoor Students (Max 10, rotates every 30 minutes)
+    this.currentShiftIndex = getCurrentShiftIndex();
+    const studentConfigs = getActiveStudentNPCConfigs(this.currentShiftIndex);
+
+    for (const stdConfig of studentConfigs) {
+      const npc = new NPC(this, stdConfig);
+      this.npcs.push(npc);
+      this.studentNpcs.push(npc);
+      this.npcsGroup.add(npc);
+    }
+
+    // Add colliders between NPCs and map collision obstacles & player
     this.physics.add.collider(this.npcsGroup, this.blockers);
     this.physics.add.collider(this.player, this.npcsGroup);
 
@@ -611,6 +520,31 @@ export class SchoolMapScene extends Phaser.Scene {
     for (const npc of this.npcs) {
       npc.updateNPC(delta);
       npc.setDepth(npc.y);
+    }
+
+    // 3b. 30-Minute Shift Rotation Check for Outdoor Students (Enforcing max 10 students)
+    this.shiftCheckTimer += delta;
+    if (this.shiftCheckTimer >= 5000) {
+      this.shiftCheckTimer = 0;
+      const newShiftIndex = getCurrentShiftIndex();
+      if (newShiftIndex !== this.currentShiftIndex) {
+        this.currentShiftIndex = newShiftIndex;
+        const newStudentConfigs = getActiveStudentNPCConfigs(this.currentShiftIndex);
+
+        for (let i = 0; i < this.studentNpcs.length; i++) {
+          if (newStudentConfigs[i]) {
+            this.studentNpcs[i].applyConfig(newStudentConfigs[i]);
+          }
+        }
+
+        this.game.events.emit('town:notification', {
+          text: 'Pergantian Jam Istirahat (30 Menit): 10 siswa baru beraktivitas di halaman kampus!',
+        });
+        this.game.events.emit('town:student-shift', {
+          activeCount: this.studentNpcs.length,
+          shiftIndex: this.currentShiftIndex,
+        });
+      }
     }
 
     // 4. Proximity Check: First check nearby NPC, then map interaction zones

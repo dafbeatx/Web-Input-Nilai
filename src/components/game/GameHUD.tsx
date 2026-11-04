@@ -21,6 +21,7 @@ import {
   CheckCircle,
   ChevronDown,
   User,
+  Users,
   Check,
   Wrench,
 } from 'lucide-react';
@@ -143,6 +144,15 @@ export default function GameHUD({
           <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/80 text-slate-200 rounded-xl border border-slate-700/70 backdrop-blur-md shadow-md text-xs font-semibold">
             <MapPin size={13} className="text-rose-400" />
             <span>{currentZone}</span>
+          </div>
+
+          {/* Outdoor Students Counter (10 students max, 30 min rotation) */}
+          <div
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/80 text-amber-300 rounded-xl border border-amber-500/30 backdrop-blur-md shadow-md text-xs font-semibold"
+            title="Maksimal 10 siswa di luar kelas, berotasi setiap 30 menit"
+          >
+            <Users size={13} className="text-amber-400" />
+            <span className="font-mono">Siswa Luar: 10/10</span>
           </div>
 
           {/* Multiplatform Device Mode Switcher (Essential for Section 5 & Interactive Board) */}

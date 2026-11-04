@@ -96,6 +96,8 @@ export class BootScene extends Phaser.Scene {
       { key: 'char_satpam', path: '/assets/game/characters/satpam_spritesheet.png' },
       { key: 'char_student', path: '/assets/game/characters/siswa_spritesheet.png' },
       { key: 'char_siswi_hijab', path: '/assets/game/characters/siswi_hijab_spritesheet.png' },
+      { key: 'char_guru_pria', path: '/assets/game/characters/guru_spritesheet.png' },
+      { key: 'char_guru_wanita', path: '/assets/game/characters/guru_wanita_spritesheet.png' },
     ];
 
     characters.forEach(char => {
@@ -128,6 +130,8 @@ export class BootScene extends Phaser.Scene {
       'char_satpam',
       'char_student',
       'char_siswi_hijab',
+      'char_guru_pria',
+      'char_guru_wanita',
     ];
 
     characterKeys.forEach(charKey => {
