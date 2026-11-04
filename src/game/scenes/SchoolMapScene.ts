@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { Player } from '../entities/Player';
-import { NPC, NPCConfig } from '../entities/NPC';
+import { NPC } from '../entities/NPC';
 import { InputManager } from '../input/InputManager';
 import { InteractiveTrigger, CHARACTER_PROFILES } from '@/lib/game/types';
 import {
