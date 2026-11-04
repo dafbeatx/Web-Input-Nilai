@@ -52,7 +52,7 @@ export async function GET() {
         const content = fs.readFileSync(MAP_PATH_1, 'utf-8');
         return NextResponse.json(JSON.parse(content));
       }
-    } catch (_) {}
+    } catch {}
     return NextResponse.json({ error: 'Gagal membaca data peta' }, { status: 500 });
   }
 }
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
           dbSuccess = true;
           dbErrorMsg = '';
         }
-      } catch (_) {}
+      } catch {}
     }
 
     // 2. Best-effort write to local filesystem (works in local dev, skipped in serverless read-only)
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
       if (fs.existsSync(dir2)) {
         fs.writeFileSync(MAP_PATH_2, formattedContent, 'utf-8');
       }
-    } catch (_fsErr: unknown) {
+    } catch {
       console.info('[POST /api/game/map] Filesystem write tidak tersedia (read-only/serverless).');
     }
 
