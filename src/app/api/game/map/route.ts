@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,30 +65,61 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Format data peta tidak valid: layers wajib berupa array' }, { status: 400 });
     }
 
-    // 1. Save to Supabase Cloud Database (Persistent across serverless, Vercel, Docker, & local)
-    let dbSuccess = false;
-    try {
-      const { error: dbErr } = await supabaseAdmin
-        .from('gm_behavior_settings')
-        .upsert(
-          {
-            class_name: 'GAME_MAP_SCHOOL',
-            academic_year: 'CONFIG',
-            reasons: updatedMap,
-          },
-          { onConflict: 'class_name,academic_year' }
-        );
+    const hasServiceKey = !!(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
 
-      if (dbErr) {
-        console.warn('[POST /api/game/map] Database upsert warning:', dbErr.message);
-      } else {
-        dbSuccess = true;
+    // 1. Save to Supabase Cloud Database (requires SUPABASE_SERVICE_ROLE_KEY to bypass RLS)
+    let dbSuccess = false;
+    let dbErrorMsg = '';
+    if (hasServiceKey) {
+      try {
+        const { error: dbErr } = await supabaseAdmin
+          .from('gm_behavior_settings')
+          .upsert(
+            {
+              class_name: 'GAME_MAP_SCHOOL',
+              academic_year: 'CONFIG',
+              reasons: updatedMap,
+            },
+            { onConflict: 'class_name,academic_year' }
+          );
+
+        if (dbErr) {
+          dbErrorMsg = dbErr.message;
+          console.warn('[POST /api/game/map] Database upsert error:', dbErr.code, dbErr.message, dbErr.details);
+        } else {
+          dbSuccess = true;
+        }
+      } catch (dbEx) {
+        dbErrorMsg = dbEx instanceof Error ? dbEx.message : String(dbEx);
+        console.warn('[POST /api/game/map] Database exception:', dbEx);
       }
-    } catch (dbEx) {
-      console.warn('[POST /api/game/map] Database exception:', dbEx);
+    } else {
+      dbErrorMsg = 'SUPABASE_SERVICE_ROLE_KEY tidak dikonfigurasi di environment ini';
+      console.warn('[POST /api/game/map]', dbErrorMsg);
     }
 
-    // 2. Best-effort write to local filesystem (works in local dev, gracefully caught in serverless read-only)
+    // 1b. Fallback: Try with authenticated session cookie client if admin client couldn't write
+    if (!dbSuccess) {
+      try {
+        const serverClient = await createServerClient();
+        const { error: cookieDbErr } = await serverClient
+          .from('gm_behavior_settings')
+          .upsert(
+            {
+              class_name: 'GAME_MAP_SCHOOL',
+              academic_year: 'CONFIG',
+              reasons: updatedMap,
+            },
+            { onConflict: 'class_name,academic_year' }
+          );
+        if (!cookieDbErr) {
+          dbSuccess = true;
+          dbErrorMsg = '';
+        }
+      } catch (_) {}
+    }
+
+    // 2. Best-effort write to local filesystem (works in local dev, skipped in serverless read-only)
     let fsSuccess = false;
     try {
       const formattedContent = JSON.stringify(updatedMap, null, 2);
@@ -98,21 +130,31 @@ export async function POST(req: NextRequest) {
       if (fs.existsSync(dir2)) {
         fs.writeFileSync(MAP_PATH_2, formattedContent, 'utf-8');
       }
-    } catch (fsErr: unknown) {
-      console.info('[POST /api/game/map] Filesystem write skipped or read-only, cloud database persistence used.');
+    } catch (_fsErr: unknown) {
+      console.info('[POST /api/game/map] Filesystem write tidak tersedia (read-only/serverless).');
     }
 
+    // 3. If both fail: return 200 with embedded map data so editor can offer a local download fallback
     if (!dbSuccess && !fsSuccess) {
+      console.error('[POST /api/game/map] Both DB and FS writes failed. DB error:', dbErrorMsg);
       return NextResponse.json(
-        { error: 'Gagal menyimpan perubahan peta ke database maupun filesystem' },
-        { status: 500 }
+        {
+          success: false,
+          warning: true,
+          message: 'Peta tidak dapat disimpan ke server. Unduh dan simpan file JSON secara manual.',
+          dbError: dbErrorMsg,
+          mapData: updatedMap,
+          timestamp: new Date().toISOString(),
+        },
+        // Return 200 so the editor can still handle the response gracefully
+        { status: 200 }
       );
     }
 
     return NextResponse.json({
       success: true,
       message: dbSuccess
-        ? 'Peta sekolah dan collider berhasil disimpan ke Cloud Database & File System!'
+        ? 'Peta sekolah dan collider berhasil disimpan ke Cloud Database!'
         : 'Peta sekolah berhasil disimpan ke file lokal!',
       storage: { db: dbSuccess, filesystem: fsSuccess },
       timestamp: new Date().toISOString(),

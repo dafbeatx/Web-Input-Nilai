@@ -172,6 +172,12 @@ export default function GameMapEditorPage() {
     if (!mapData) return;
     try {
       setSaving(true);
+
+      // Always save draft to browser storage first
+      try {
+        localStorage.setItem('school_map_draft', JSON.stringify(mapData));
+      } catch (_) {}
+
       const res = await fetch('/api/game/map', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -179,9 +185,29 @@ export default function GameMapEditorPage() {
       });
 
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Gagal menyimpan perubahan peta');
 
-      showToast(result.message || '✅ Peta berhasil disimpan ke Cloud Database & File System!', 'success');
+      if (!res.ok) {
+        throw new Error(result.error || 'Gagal menyimpan perubahan peta');
+      }
+
+      // Server saved successfully
+      if (result.success && !result.warning) {
+        showToast(result.message || '✅ Peta berhasil disimpan ke Cloud Database!', 'success');
+        return;
+      }
+
+      // Server is read-only / service role key missing in Vercel — auto-trigger download fallback
+      if (result.warning) {
+        showToast('⚠️ Server read-only: Berkas school_map.json diunduh otomatis ke komputer.', 'success');
+        const dataToSave = result.mapData ?? mapData;
+        const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(dataToSave, null, 2));
+        const a = document.createElement('a');
+        a.setAttribute('href', dataStr);
+        a.setAttribute('download', 'school_map.json');
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
     } catch (err) {
       console.error(err);
       const msg = err instanceof Error ? err.message : 'Gagal menyimpan file peta';
