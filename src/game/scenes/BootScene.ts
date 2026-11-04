@@ -71,6 +71,15 @@ export class BootScene extends Phaser.Scene {
         frameHeight: 64,
       });
     });
+
+    // Aisyah Putri Individual Per-Frame Textures
+    const aisyahDirs = ['down', 'left', 'right', 'up'];
+    aisyahDirs.forEach(dir => {
+      for (let i = 1; i <= 4; i++) {
+        const frameKey = `aisyah_${dir}_${i}`;
+        this.load.image(frameKey, `/assets/game/characters/aisyah_putri_perframe/${frameKey}.png`);
+      }
+    });
   }
 
   create(): void {
