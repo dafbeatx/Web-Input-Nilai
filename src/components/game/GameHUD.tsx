@@ -223,15 +223,27 @@ export default function GameHUD({
 
             {/* Modal Header */}
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
-                {activeModalTrigger.type === 'shop' && <ShoppingBag size={24} />}
-                {activeModalTrigger.type === 'building_entrance' && <School size={24} />}
-                {activeModalTrigger.type === 'interactive_board' && <Tv size={24} />}
-                {activeModalTrigger.type === 'npc' && <Building size={24} />}
+              <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 overflow-hidden">
+                {typeof activeModalTrigger.data?.avatarUrl === 'string' ? (
+                  <img
+                    src={activeModalTrigger.data.avatarUrl as string}
+                    alt={activeModalTrigger.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <>
+                    {activeModalTrigger.type === 'shop' && <ShoppingBag size={24} />}
+                    {activeModalTrigger.type === 'building_entrance' && <School size={24} />}
+                    {activeModalTrigger.type === 'interactive_board' && <Tv size={24} />}
+                    {activeModalTrigger.type === 'npc' && <Building size={24} />}
+                  </>
+                )}
               </div>
               <div>
                 <span className="text-[10px] font-black tracking-widest text-indigo-400 uppercase">
-                  Fasilitas Kota Nusantara
+                  {typeof activeModalTrigger.data?.role === 'string'
+                    ? (activeModalTrigger.data.role as string)
+                    : 'SMP Terpadu Al-Ittihadiyah'}
                 </span>
                 <h3 className="text-lg font-black tracking-tight">{activeModalTrigger.name}</h3>
               </div>

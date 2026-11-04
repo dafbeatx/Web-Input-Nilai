@@ -93,6 +93,12 @@ export default function GameContainer() {
     setWalletBalance(prev => Math.max(0, prev - item.price));
   }, []);
 
+  // Close Modal & notify game scene
+  const handleCloseModal = useCallback(() => {
+    setActiveModalTrigger(null);
+    gameRef.current?.events.emit('modal:closed');
+  }, []);
+
   return (
     <div className="relative w-full h-dvh bg-slate-950 overflow-hidden select-none">
       {/* Phaser Canvas Root Mount Container */}
@@ -109,7 +115,7 @@ export default function GameContainer() {
         currentZone={currentZone}
         nearTrigger={nearTrigger}
         activeModalTrigger={activeModalTrigger}
-        onCloseModal={() => setActiveModalTrigger(null)}
+        onCloseModal={handleCloseModal}
         walletBalance={walletBalance}
         onBuyItem={handleBuyItem}
         currentCharacter={currentCharacter}

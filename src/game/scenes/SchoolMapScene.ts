@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { Player } from '../entities/Player';
+import { NPC, NPCConfig } from '../entities/NPC';
 import { InputManager } from '../input/InputManager';
 import { InteractiveTrigger, CHARACTER_PROFILES } from '@/lib/game/types';
 
@@ -155,6 +156,99 @@ const INTERACTION_CONFIGS: Record<string, InteractionObjectConfig> = {
   },
 };
 
+const WALKING_NPC_CONFIGS: NPCConfig[] = [
+  {
+    id: 'npc-satpam',
+    name: 'Pak Joko',
+    role: 'Satpam Sekolah',
+    characterKey: 'char_satpam',
+    avatarUrl: '/assets/game/characters/avatars/pak_joko.png',
+    speed: 55,
+    waypoints: [
+      { x: 768, y: 890, waitTime: 3000 },
+      { x: 670, y: 890, waitTime: 3500 },
+      { x: 860, y: 890, waitTime: 2500 },
+      { x: 768, y: 830, waitTime: 3000 },
+    ],
+    dialogue: {
+      greeting: 'Pak Joko menyapa Anda dengan senyum ramah di pos penjagaan gerbang:',
+      quote: '“Selamat pagi! Tetap jaga ketertiban, parkir kendaraan rapi di tempatnya, dan jangan lupa selalu santun kepada bapak/ibu guru ya!”',
+    },
+  },
+  {
+    id: 'npc-guru-siti',
+    name: 'Bu Guru Siti',
+    role: 'Guru BK / Konselor',
+    characterKey: 'char_guru_wanita',
+    avatarUrl: '/assets/game/characters/avatars/bu_guru_siti.png',
+    speed: 60,
+    waypoints: [
+      { x: 340, y: 360, waitTime: 3500 },
+      { x: 550, y: 360, waitTime: 2500 },
+      { x: 768, y: 300, waitTime: 3000 },
+      { x: 550, y: 360, waitTime: 2500 },
+    ],
+    dialogue: {
+      greeting: 'Bu Guru Siti menyapa Anda dengan hangat di koridor sekolah:',
+      quote: '“Halo ananda! Semangat terus belajarnya ya. Jika ada kendala belajar atau butuh teman konsultasi, pintu ruang BK selalu terbuka untuk kalian.”',
+    },
+  },
+  {
+    id: 'npc-rian',
+    name: 'Rian Pratama',
+    role: 'Siswa Kelas 8',
+    characterKey: 'char_student',
+    avatarUrl: '/assets/game/characters/avatars/rian_pratama.png',
+    speed: 70,
+    waypoints: [
+      { x: 270, y: 720, waitTime: 3000 },
+      { x: 270, y: 550, waitTime: 2500 },
+      { x: 380, y: 550, waitTime: 3000 },
+      { x: 380, y: 720, waitTime: 2500 },
+    ],
+    dialogue: {
+      greeting: 'Rian melambaikan tangan saat sedang berjalan di lorong:',
+      quote: '“Eh halo! Tadi habis istirahat jajan bakwan di kantin. Nanti sehabis pelajaran ada kerja kelompok sains di lab komputer, gabung yuk!”',
+    },
+  },
+  {
+    id: 'npc-aisyah',
+    name: 'Aisyah Putri',
+    role: 'Siswi Teladan SMP',
+    characterKey: 'char_siswi_hijab',
+    avatarUrl: '/assets/game/characters/avatars/aisyah_putri.png',
+    speed: 65,
+    waypoints: [
+      { x: 1260, y: 760, waitTime: 3500 },
+      { x: 1260, y: 520, waitTime: 2500 },
+      { x: 1260, y: 350, waitTime: 3000 },
+      { x: 1260, y: 210, waitTime: 4000 },
+    ],
+    dialogue: {
+      greeting: 'Aisyah tersenyum santun sambil membawa buku pelajaran kurikulum:',
+      quote: '“Assalamu’alaikum! Saya baru saja dari perpustakaan meminjam referensi materi baru. Nanti siang jangan lupa sholat berjamaah di musala ya.”',
+    },
+  },
+  {
+    id: 'npc-dedi',
+    name: 'Dedi Santoso',
+    role: 'Siswa Ekskul Olahraga',
+    characterKey: 'char_student',
+    avatarUrl: '/assets/game/characters/avatars/rian_pratama.png',
+    speed: 80,
+    waypoints: [
+      { x: 600, y: 660, waitTime: 1500 },
+      { x: 920, y: 660, waitTime: 1500 },
+      { x: 920, y: 720, waitTime: 1500 },
+      { x: 600, y: 720, waitTime: 1500 },
+    ],
+    dialogue: {
+      greeting: 'Dedi menyapa Anda sambil pemanasan jogging di lapangan:',
+      quote: '“Ayo lari keliling lapangan! Badan sehat bikin kita makin fokus belajar. Nanti sore ada sparing futsal antar kelas lho!”',
+    },
+  },
+];
+
 export class SchoolMapScene extends Phaser.Scene {
   public player!: Player;
   public inputManager!: InputManager;
@@ -163,6 +257,11 @@ export class SchoolMapScene extends Phaser.Scene {
     zone: Phaser.GameObjects.Zone;
     info: InteractiveTrigger;
   }> = [];
+
+  // Walking NPC Fleet
+  private npcs: NPC[] = [];
+  private npcsGroup!: Phaser.Physics.Arcade.Group;
+  private activeTalkingNPC: NPC | null = null;
 
   private currentNearTrigger: InteractiveTrigger | null = null;
   private lastZoneName: string = 'Gerbang Utama SMP Al-Ittihadiyah';
@@ -176,7 +275,7 @@ export class SchoolMapScene extends Phaser.Scene {
   }
 
   create(): void {
-    // 1. Create Tilemap from preloaded JSON & Atlas
+    // 1. Create Tilemap from preloaded JSON & Atlas (map_sekolah_revisi_bundle)
     const map = this.make.tilemap({ key: 'school_map' });
     const tileset = map.addTilesetImage('school_atlas', 'school_atlas', 32, 32, 0, 0);
 
@@ -219,7 +318,21 @@ export class SchoolMapScene extends Phaser.Scene {
       this.blockers.push(blocker);
     }
 
-    // 6. Setup Interactive Triggers
+    // 6. Spawn Autonomous Walking NPCs
+    this.npcs = [];
+    this.npcsGroup = this.physics.add.group();
+
+    for (const npcConfig of WALKING_NPC_CONFIGS) {
+      const npc = new NPC(this, npcConfig);
+      this.npcs.push(npc);
+      this.npcsGroup.add(npc);
+    }
+
+    // Add colliders for NPCs
+    this.physics.add.collider(this.npcsGroup, this.blockers);
+    this.physics.add.collider(this.player, this.npcsGroup);
+
+    // 7. Setup Interactive Triggers
     const interactObjects = map.getObjectLayer('Interact')?.objects ?? [];
     for (const obj of interactObjects) {
       if (!obj.width || !obj.height || obj.x === undefined || obj.y === undefined) continue;
@@ -250,7 +363,7 @@ export class SchoolMapScene extends Phaser.Scene {
       this.triggers.push({ zone, info: triggerInfo });
     }
 
-    // 7. Add School Gate Exit to City
+    // 8. Add School Gate Exit to City
     const exitZone = this.add.zone(768, 1010, 180, 36);
     this.physics.add.existing(exitZone, true);
     this.triggers.push({
@@ -268,18 +381,18 @@ export class SchoolMapScene extends Phaser.Scene {
       },
     });
 
-    // 8. Setup Camera Tracking
+    // 9. Setup Camera Tracking
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.setZoom(1.2);
     this.cameras.main.setRoundPixels(true);
 
-    // 9. Input & Event Listeners
+    // 10. Input & Event Listeners
     this.inputManager = new InputManager(this);
     this.setupKeyboardShortcuts();
     this.setupReactEventBridge();
 
-    // 10. Notify React Layer
+    // 11. Notify React Layer
     this.game.events.emit('scene:ready', {
       zoneName: this.lastZoneName,
       playerX: this.player.x,
@@ -327,6 +440,13 @@ export class SchoolMapScene extends Phaser.Scene {
         const bounds = t.zone.getBounds();
         this.debugGraphics.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
       }
+
+      // Show NPC collision debug
+      this.debugGraphics.lineStyle(2, 0x00d4ff, 0.9);
+      for (const npc of this.npcs) {
+        const bounds = npc.getBounds();
+        this.debugGraphics.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
+      }
     }
   }
 
@@ -351,6 +471,14 @@ export class SchoolMapScene extends Phaser.Scene {
       this.player.switchCharacter(data.key, data.name, data.role);
     });
 
+    // Modal closed: resume patrol for talking NPC
+    this.game.events.on('modal:closed', () => {
+      if (this.activeTalkingNPC) {
+        this.activeTalkingNPC.resumePatrol();
+        this.activeTalkingNPC = null;
+      }
+    });
+
     // When interact trigger is fired (via keyboard 'E' or touch button)
     this.inputManager.onInteract(() => {
       if (this.currentNearTrigger) {
@@ -360,12 +488,17 @@ export class SchoolMapScene extends Phaser.Scene {
           return;
         }
 
+        // If talking to an NPC, face target
+        if (this.activeTalkingNPC) {
+          this.activeTalkingNPC.faceTarget(this.player.x, this.player.y);
+        }
+
         this.game.events.emit('town:open-modal', this.currentNearTrigger);
       }
     });
   }
 
-  update(): void {
+  update(time: number, delta: number): void {
     if (!this.player || !this.inputManager) return;
 
     // 1. Process 1-5 keys for character switching
@@ -384,28 +517,61 @@ export class SchoolMapScene extends Phaser.Scene {
     const movementVector = this.inputManager.getMovementVector();
     const movementState = this.player.updateMovement(movementVector);
 
-    // 3. Check trigger overlaps
+    // 3. Update all Autonomous Walking NPCs
+    for (const npc of this.npcs) {
+      npc.updateNPC(delta);
+    }
+
+    // 4. Proximity Check: First check nearby NPC, then map triggers
     let nearTrigger: InteractiveTrigger | null = null;
-    for (const t of this.triggers) {
-      if (this.physics.overlap(this.player, t.zone)) {
-        nearTrigger = t.info;
+    let nearNPC: NPC | null = null;
+
+    for (const npc of this.npcs) {
+      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y);
+      if (dist < 52) {
+        nearNPC = npc;
+        nearTrigger = {
+          id: npc.npcId,
+          name: npc.npcName,
+          type: 'npc',
+          promptText: `Tekan [E] atau Ketuk untuk bicara dengan ${npc.npcName}`,
+          data: {
+            title: npc.npcName,
+            role: npc.npcRole,
+            desc: npc.dialogue.greeting,
+            quote: npc.dialogue.quote,
+            avatarUrl: npc.avatarUrl,
+          },
+        };
         break;
       }
     }
+
+    // If not near NPC, check map facility triggers
+    if (!nearTrigger) {
+      for (const t of this.triggers) {
+        if (this.physics.overlap(this.player, t.zone)) {
+          nearTrigger = t.info;
+          break;
+        }
+      }
+    }
+
+    this.activeTalkingNPC = nearNPC;
 
     if (nearTrigger?.id !== this.currentNearTrigger?.id) {
       this.currentNearTrigger = nearTrigger;
       this.game.events.emit('town:interaction-prompt', nearTrigger);
     }
 
-    // 4. Update zone name based on player coordinates
+    // 5. Update zone name based on player coordinates
     const zoneName = this.determineCurrentZone(this.player.x, this.player.y);
     if (zoneName !== this.lastZoneName) {
       this.lastZoneName = zoneName;
       this.game.events.emit('town:zone-change', zoneName);
     }
 
-    // 5. Broadcast movement state to HUD
+    // 6. Broadcast movement state to HUD
     if (movementState.isMoving) {
       this.game.events.emit('town:player-update', movementState);
     }
@@ -435,10 +601,15 @@ export class SchoolMapScene extends Phaser.Scene {
     this.game.events.off('input:sprint');
     this.game.events.off('input:interact');
     this.game.events.off('player:change-character');
+    this.game.events.off('modal:closed');
+
+    for (const npc of this.npcs) {
+      npc.destroy();
+    }
+    this.npcs = [];
 
     if (this.debugGraphics) {
       this.debugGraphics.destroy();
     }
   }
 }
-
