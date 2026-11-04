@@ -28,7 +28,13 @@ export async function GET() {
       .select('*', { count: 'exact', head: true })
       .eq('is_deleted', false);
 
-    const isFullyInSync = (accountsCount || 0) === (behaviorsCount || 0) && (accountsCount || 0) > 0;
+    const { count: smartAbsensiCount } = await supabaseAdmin
+      .from('students')
+      .select('*', { count: 'exact', head: true });
+
+    const isFullyInSync = (accountsCount || 0) === (behaviorsCount || 0) && 
+      (accountsCount || 0) > 0 &&
+      (smartAbsensiCount !== null ? (smartAbsensiCount || 0) >= (behaviorsCount || 0) : true);
 
     return NextResponse.json({
       success: true,
@@ -36,6 +42,7 @@ export async function GET() {
         accountsCount: accountsCount || 0,
         behaviorsCount: behaviorsCount || 0,
         scoresCount: scoresCount || 0,
+        smartAbsensiCount: smartAbsensiCount || 0,
         isFullyInSync
       }
     });

@@ -8,6 +8,8 @@ export interface SyncResult {
   newlyCreatedAccounts: number;
   newlyCreatedBehaviors: number;
   syncedAvatars: number;
+  syncedToSmartAbsensi: number;
+  syncedFromSmartAbsensi: number;
   classesCount: number;
   classes: string[];
   message: string;
@@ -117,9 +119,29 @@ export async function syncAllStudentData(): Promise<SyncResult> {
   let newlyCreatedBehaviors = 0;
   let newlyCreatedAccounts = 0;
   let syncedAvatars = 0;
+  let syncedFromSmartAbsensi = 0;
+  let syncedToSmartAbsensi = 0;
 
   // -------------------------------------------------------------
-  // STEP A: Reconcile orphaned score records into gm_behaviors
+  // STEP 0: Fetch Smart Absensi students (students table)
+  // -------------------------------------------------------------
+  const { data: smartData, error: smartErr } = await supabaseAdmin
+    .from('students')
+    .select('*');
+
+  if (smartErr) {
+    console.warn('[syncAllStudentData] Peringatan: Gagal membaca tabel students (Smart Absensi):', smartErr.message);
+  }
+
+  const smartMap = new Map<string, unknown>();
+  for (const sm of (smartData || [])) {
+    if (!sm.full_name?.trim()) continue;
+    const k = makeKey(sm.full_name, sm.class_name, sm.academic_year);
+    smartMap.set(k, sm);
+  }
+
+  // -------------------------------------------------------------
+  // STEP A: Reconcile Smart Absensi & orphaned scores into gm_behaviors
   // -------------------------------------------------------------
   const behaviorsToInsert: Array<{
     student_name: string;
@@ -129,6 +151,29 @@ export async function syncAllStudentData(): Promise<SyncResult> {
     behavior_logs: unknown[];
   }> = [];
 
+  // A.1 Import students from Smart Absensi if not present in gm_behaviors
+  for (const sm of (smartData || [])) {
+    if (!sm.full_name?.trim()) continue;
+    const cls = (sm.class_name || 'Tanpa Kelas').trim();
+    const yr = (sm.academic_year || '2026/2027').trim();
+    const k = makeKey(sm.full_name, cls, yr);
+
+    if (!behaviorMap.has(k)) {
+      const newBeh = {
+        student_name: sm.full_name.trim(),
+        class_name: cls,
+        academic_year: yr,
+        total_points: 100, // Standard baseline
+        behavior_logs: []
+      };
+      behaviorsToInsert.push(newBeh);
+      behaviorMap.set(k, newBeh);
+      newlyCreatedBehaviors++;
+      syncedFromSmartAbsensi++;
+    }
+  }
+
+  // A.2 Reconcile orphaned score records
   for (const s of (sData || [])) {
     const session = s.gm_sessions as unknown as { class_name?: string; academic_year?: string } | null;
     if (!session?.class_name) continue;
@@ -253,6 +298,52 @@ export async function syncAllStudentData(): Promise<SyncResult> {
     }
   }
 
+  // -------------------------------------------------------------
+  // STEP D: Reconcile GradeMaster into Smart Absensi (students table)
+  // -------------------------------------------------------------
+  const smartToInsert: Array<{
+    id: string;
+    full_name: string;
+    class_name: string;
+    academic_year: string;
+    card_status: string;
+    attendance_rate: number;
+    created_at: string;
+    updated_at: string;
+  }> = [];
+
+  for (const [k, b] of behaviorMap.entries()) {
+    if (!smartMap.has(k)) {
+      const cleanCls = (b.class_name || 'kelas').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const stdId = `std_${cleanCls}_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`;
+      smartToInsert.push({
+        id: stdId,
+        full_name: b.student_name.trim(),
+        class_name: b.class_name.trim(),
+        academic_year: b.academic_year || '2026/2027',
+        card_status: 'ACTIVE',
+        attendance_rate: 100,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      smartMap.set(k, true);
+    }
+  }
+
+  if (smartToInsert.length > 0) {
+    for (let i = 0; i < smartToInsert.length; i += 50) {
+      const chunk = smartToInsert.slice(i, i + 50);
+      const { error: insSmartErr } = await supabaseAdmin
+        .from('students')
+        .insert(chunk);
+      if (insSmartErr) {
+        console.error('[syncAllStudentData] Gagal insert ke Smart Absensi students:', insSmartErr);
+      } else {
+        syncedToSmartAbsensi += chunk.length;
+      }
+    }
+  }
+
   // Calculate distinct classes
   const classesSet = new Set<string>();
   for (const b of behaviorMap.values()) {
@@ -271,12 +362,15 @@ export async function syncAllStudentData(): Promise<SyncResult> {
     newlyCreatedAccounts,
     newlyCreatedBehaviors,
     syncedAvatars,
+    syncedToSmartAbsensi,
+    syncedFromSmartAbsensi,
     classesCount: classes.length,
     classes,
     message: `Sinkronisasi berhasil! Total ${totalMasterStudents} siswa terdaftar di ${classes.length} kelas. ` +
+      (syncedToSmartAbsensi > 0 ? `${syncedToSmartAbsensi} siswa disinkronkan ke Smart Absensi. ` : 'Smart Absensi selaras. ') +
+      (syncedFromSmartAbsensi > 0 ? `${syncedFromSmartAbsensi} siswa diimpor dari Smart Absensi. ` : '') +
       (newlyCreatedAccounts > 0 ? `${newlyCreatedAccounts} akun siswa baru berhasil dibuatkan. ` : 'Semua akun sudah lengkap. ') +
-      (newlyCreatedBehaviors > 0 ? `${newlyCreatedBehaviors} siswa dari riwayat nilai berhasil diintegrasikan ke Pusat Data. ` : '') +
-      `Semua data poin, rapor, nilai, dan sandi siswa yang sudah ada tetap aman 100%.`
+      `Semua data poin, rapor, nilai, kehadiran, dan sandi siswa yang sudah ada tetap aman 100%.`
   };
 }
 

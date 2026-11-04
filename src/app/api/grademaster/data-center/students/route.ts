@@ -264,6 +264,18 @@ export async function PUT(req: NextRequest) {
         .ilike('name', oldName.trim());
     }
 
+    // 4. Update in Smart Absensi (students table)
+    await supabaseAdmin
+      .from('students')
+      .update({
+        full_name: newName.trim(),
+        class_name: newClassName.trim(),
+        academic_year: year,
+        updated_at: new Date().toISOString()
+      })
+      .ilike('full_name', oldName.trim())
+      .eq('class_name', oldClassName.trim());
+
     return NextResponse.json({
       success: true,
       message: `Data siswa ${oldName} berhasil diperbarui menjadi ${newName} (${newClassName}) secara tersinkronisasi.`
@@ -280,38 +292,124 @@ export async function DELETE(req: NextRequest) {
     if (!adminSession) return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
 
     const body = await req.json();
-    const { name, action } = body; // action = 'soft_delete' or 'hard_delete'
+    const { name, className, action } = body; // action = 'soft_delete' or 'hard_delete'
 
     if (!name) return NextResponse.json({ error: 'Nama wajib diisi' }, { status: 400 });
 
     const trimmedName = name.trim();
+    const trimmedClass = className?.trim();
 
-    // 1. Delete from gm_student_accounts (case-insensitive)
-    await supabaseAdmin
-      .from('gm_student_accounts')
-      .delete()
-      .ilike('student_name', trimmedName);
-
-    // 2. Delete from gm_behaviors (case-insensitive) so student does not resurrect
-    await supabaseAdmin
-      .from('gm_behaviors')
-      .delete()
-      .ilike('student_name', trimmedName);
-
-    // 3. Delete or soft-delete from gm_students
     if (action === 'hard_delete') {
-      await supabaseAdmin
-        .from('gm_students')
+      // 1. Delete from gm_student_accounts
+      let accQ = supabaseAdmin
+        .from('gm_student_accounts')
         .delete()
-        .ilike('name', trimmedName);
-    } else {
-      await supabaseAdmin
-        .from('gm_students')
-        .update({ is_deleted: true })
-        .ilike('name', trimmedName);
-    }
+        .ilike('student_name', trimmedName);
+      if (trimmedClass) accQ = accQ.eq('class_name', trimmedClass);
+      await accQ;
 
-    return NextResponse.json({ success: true, message: `Siswa ${trimmedName} berhasil dihapus.` });
+      // 2. Delete from gm_behaviors (cascades to gm_behavior_logs)
+      let behQ = supabaseAdmin
+        .from('gm_behaviors')
+        .delete()
+        .ilike('student_name', trimmedName);
+      if (trimmedClass) behQ = behQ.eq('class_name', trimmedClass);
+      await behQ;
+
+      // 3. Delete from gm_students (cascades to answers & remedial attempts)
+      if (trimmedClass) {
+        const { data: classSessions } = await supabaseAdmin
+          .from('gm_sessions')
+          .select('id, student_list')
+          .eq('class_name', trimmedClass);
+
+        if (classSessions && classSessions.length > 0) {
+          const sessionIds = classSessions.map(s => s.id);
+          await supabaseAdmin
+            .from('gm_students')
+            .delete()
+            .ilike('name', trimmedName)
+            .in('session_id', sessionIds);
+
+          // Remove student name from session student_list
+          for (const s of classSessions) {
+            if (Array.isArray(s.student_list)) {
+              const currentList = s.student_list as string[];
+              const updatedList = currentList.filter(n => n.trim().toLowerCase() !== trimmedName.toLowerCase());
+              if (updatedList.length !== currentList.length) {
+                await supabaseAdmin
+                  .from('gm_sessions')
+                  .update({ student_list: updatedList })
+                  .eq('id', s.id);
+              }
+            }
+          }
+        } else {
+          await supabaseAdmin
+            .from('gm_students')
+            .delete()
+            .ilike('name', trimmedName);
+        }
+      } else {
+        await supabaseAdmin
+          .from('gm_students')
+          .delete()
+          .ilike('name', trimmedName);
+      }
+
+      // 4. Delete from gm_attendance
+      let attQ = supabaseAdmin
+        .from('gm_attendance')
+        .delete()
+        .ilike('student_name', trimmedName);
+      if (trimmedClass) attQ = attQ.eq('class_name', trimmedClass);
+      await attQ;
+
+      // 5. Delete from Smart Absensi (students table)
+      let smartQ = supabaseAdmin
+        .from('students')
+        .delete()
+        .ilike('full_name', trimmedName);
+      if (trimmedClass) smartQ = smartQ.eq('class_name', trimmedClass);
+      await smartQ;
+
+      return NextResponse.json({
+        success: true,
+        message: `Siswa ${trimmedName}${trimmedClass ? ` (${trimmedClass})` : ''} berhasil dihapus permanen dari GradeMaster dan Smart Absensi.`
+      });
+    } else {
+      // Soft Delete: Keep account and behavior intact, only hide exam scores
+      if (trimmedClass) {
+        const { data: classSessions } = await supabaseAdmin
+          .from('gm_sessions')
+          .select('id')
+          .eq('class_name', trimmedClass);
+
+        if (classSessions && classSessions.length > 0) {
+          const sessionIds = classSessions.map(s => s.id);
+          await supabaseAdmin
+            .from('gm_students')
+            .update({ is_deleted: true })
+            .ilike('name', trimmedName)
+            .in('session_id', sessionIds);
+        } else {
+          await supabaseAdmin
+            .from('gm_students')
+            .update({ is_deleted: true })
+            .ilike('name', trimmedName);
+        }
+      } else {
+        await supabaseAdmin
+          .from('gm_students')
+          .update({ is_deleted: true })
+          .ilike('name', trimmedName);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Nilai siswa ${trimmedName} berhasil disembunyikan dari dashboard rapor.`
+      });
+    }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: msg }, { status: 500 });
@@ -418,6 +516,31 @@ export async function POST(req: NextRequest) {
       if (upsertError) {
         console.error('[POST Data Center Students] Upsert behavior error:', upsertError);
         throw upsertError;
+      }
+
+      // Upsert into Smart Absensi (students table)
+      try {
+        const cleanCls = className.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const smartId = `std_${cleanCls}_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+        const { data: existingSmart } = await supabaseAdmin
+          .from('students')
+          .select('id')
+          .ilike('full_name', studentName)
+          .eq('class_name', className)
+          .maybeSingle();
+
+        if (!existingSmart) {
+          await supabaseAdmin.from('students').insert({
+            id: smartId,
+            full_name: studentName,
+            class_name: className,
+            academic_year: year,
+            card_status: 'ACTIVE',
+            attendance_rate: 100
+          });
+        }
+      } catch (smartInsertErr) {
+        console.warn('[POST Data Center Students] Gagal sinkron ke Smart Absensi:', smartInsertErr);
       }
 
       added++;

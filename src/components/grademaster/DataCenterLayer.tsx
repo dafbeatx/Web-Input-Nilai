@@ -82,7 +82,14 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
   const [downloadingBehaviorId, setDownloadingBehaviorId] = useState<string | null>(null);
   const [deletingStudentKey, setDeletingStudentKey] = useState<string | null>(null);
   const [isSyncingAll, setIsSyncingAll] = useState(false);
-  const [syncStats, setSyncStats] = useState<{ accountsCount: number; behaviorsCount: number; isFullyInSync: boolean } | null>(null);
+  const [syncStats, setSyncStats] = useState<{ accountsCount: number; behaviorsCount: number; smartAbsensiCount?: number; isFullyInSync: boolean } | null>(null);
+  const [deleteStudentModal, setDeleteStudentModal] = useState<{
+    isOpen: boolean;
+    student: StudentData | null;
+  }>({
+    isOpen: false,
+    student: null
+  });
   const isAnyActionActive = isLoading || isSubmitting || isSyncingAll || isDownloadingClassAcademicPdf || isDownloadingClassBehaviorPdf || downloadingAcademicId !== null || downloadingBehaviorId !== null || deletingStudentKey !== null;
 
   // Signature Upload Modal State
@@ -485,8 +492,7 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
     }
   };
 
-  const handleDeleteStudent = async (name: string, className: string) => {
-    if (!window.confirm(`Hapus ${name} dari sistem?\nOpsi ini akan menyembunyikan nilai dari dashboard (Soft Delete).`)) return;
+  const executeDeleteStudent = async (name: string, className: string, action: 'soft_delete' | 'hard_delete') => {
     const studentKey = `${name}_${className}`;
     setDeletingStudentKey(studentKey);
     setIsSubmitting(true);
@@ -494,15 +500,15 @@ export default function DataCenterLayer({ onBack }: DataCenterLayerProps) {
       const res = await fetch('/api/grademaster/data-center/students', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, className, action: 'soft_delete' })
+        body: JSON.stringify({ name, className, action })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error(data.error || 'Gagal memproses penghapusan data siswa');
       setToast({ message: data.message, type: 'success' });
-      fetchStudents();
-      checkSyncStatus();
+      setDeleteStudentModal({ isOpen: false, student: null });
+      await Promise.all([fetchStudents(), checkSyncStatus()]);
     } catch (err: any) {
-      setToast({ message: err.message, type: 'error' });
+      setToast({ message: err.message || 'Gagal memproses penghapusan data siswa', type: 'error' });
     } finally {
       setIsSubmitting(false);
       setDeletingStudentKey(null);
@@ -1317,15 +1323,15 @@ const matchesYear = s.academicYear === academicYear;
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Pilih Tahun Ajaran Aktif</h2>
               {syncStats && (
-                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border transition-colors ${
                   syncStats.isFullyInSync 
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60' 
                     : 'bg-amber-50 text-amber-700 border-amber-200/60'
                 }`}>
-                  <CheckCircle2 size={12} className={syncStats.isFullyInSync ? 'text-emerald-500' : 'text-amber-500'} />
+                  <CheckCircle2 size={13} className={syncStats.isFullyInSync ? 'text-emerald-500' : 'text-amber-500'} />
                   {syncStats.isFullyInSync 
-                    ? `Data 100% Sinkron (${syncStats.behaviorsCount} Siswa Terdaftar)` 
-                    : `Sinkronisasi Diperlukan (${syncStats.accountsCount}/${syncStats.behaviorsCount} Akun)`}
+                    ? `Data & Smart Absensi 100% Sinkron (${syncStats.behaviorsCount} Siswa)` 
+                    : `Sinkronisasi Diperlukan (${syncStats.accountsCount} Akun / ${syncStats.smartAbsensiCount ?? syncStats.behaviorsCount} Smart Absensi)`}
                 </span>
               )}
             </div>
@@ -1510,10 +1516,10 @@ const matchesYear = s.academicYear === academicYear;
                                {downloadingBehaviorId === s.id ? <Loader2 size={18} className="animate-spin" /> : <AlertTriangle size={18} />}
                              </button>
                            <button 
-                             onClick={() => handleDeleteStudent(s.name, s.className)}
+                             onClick={() => setDeleteStudentModal({ isOpen: true, student: s })}
                              disabled={isAnyActionActive}
                              className="p-2 bg-error/10 text-error hover:bg-error hover:text-white rounded-lg transition-colors active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                             title="Hapus Siswa (Keluar/Pindah)"
+                             title="Hapus atau Sembunyikan Siswa"
                            >
                              {deletingStudentKey === `${s.name}_${s.className}` ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                            </button>
@@ -1582,6 +1588,141 @@ const matchesYear = s.academicYear === academicYear;
                   </button>
                </div>
              </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete / Hide Student Modal */}
+      {deleteStudentModal.isOpen && deleteStudentModal.student && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-student-dialog-title"
+        >
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" 
+            onClick={() => { if (!isSubmitting) setDeleteStudentModal({ isOpen: false, student: null }); }} 
+          />
+          <div className="bg-white rounded-3xl p-6 sm:p-7 w-full max-w-lg relative z-10 border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-200 text-left">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200/60 flex items-center justify-center text-rose-600">
+                  <Trash2 size={20} />
+                </div>
+                <div>
+                  <h3 id="delete-student-dialog-title" className="text-base font-bold text-slate-900 leading-tight">
+                    Kelola / Hapus Data Siswa
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Pilih opsi penghapusan yang sesuai kebutuhan sekolah
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setDeleteStudentModal({ isOpen: false, student: null })}
+                disabled={isSubmitting}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                aria-label="Tutup dialog"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Student Preview Card */}
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 mb-5">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-sm font-bold text-slate-900 truncate">
+                  {deleteStudentModal.student.name}
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200/60 whitespace-nowrap">
+                  Kelas {deleteStudentModal.student.className}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-600 mt-2">
+                <div>Tahun Ajaran: <strong className="text-slate-800">{deleteStudentModal.student.academicYear}</strong></div>
+                <div>Nilai Ujian: <strong className="text-slate-800">{deleteStudentModal.student.scores.length} data</strong></div>
+                <div>Poin Sikap: <strong className="text-slate-800">{deleteStudentModal.student.behaviorPoints} poin</strong></div>
+              </div>
+            </div>
+
+            {/* Deletion Options */}
+            <div className="space-y-3.5 mb-6">
+              {/* Option A: Soft Delete */}
+              <div className="border border-amber-200 bg-amber-50/50 rounded-2xl p-4 hover:bg-amber-50 transition-colors">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold text-amber-900 block">
+                      1. Sembunyikan Nilai (Soft Delete)
+                    </span>
+                    <p className="text-[11px] text-amber-800/80 leading-relaxed">
+                      Menyembunyikan riwayat nilai dari dashboard rapor. Akun portal siswa dan catatan poin sikap <strong>tetap tersimpan</strong> di basis data.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => executeDeleteStudent(deleteStudentModal.student!.name, deleteStudentModal.student!.className, 'soft_delete')}
+                    disabled={isSubmitting}
+                    className="min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 active:scale-95 transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {isSubmitting && deletingStudentKey === `${deleteStudentModal.student.name}_${deleteStudentModal.student.className}` ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : null}
+                    Sembunyikan Nilai
+                  </button>
+                </div>
+              </div>
+
+              {/* Option B: Hard Delete (Permanent) */}
+              <div className="border border-rose-200 bg-rose-50/50 rounded-2xl p-4 hover:bg-rose-50 transition-colors">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold text-rose-900 flex items-center gap-1.5">
+                      2. Hapus Permanen (Hard Delete)
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-rose-600 text-white tracking-wider">Permanen</span>
+                    </span>
+                    <p className="text-[11px] text-rose-800/80 leading-relaxed">
+                      Menghapus data siswa secara menyeluruh dari <strong>GradeMaster dan Smart Absensi</strong>: akun portal login, seluruh nilai ujian, poin sikap, kehadiran, serta daftar sesi. <strong>Data yang dihapus tidak dapat dipulihkan.</strong>
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Yakin ingin MENGHAPUS PERMANEN siswa "${deleteStudentModal.student!.name}" dari GradeMaster dan Smart Absensi?\nTindakan ini tidak dapat dibatalkan.`)) {
+                        executeDeleteStudent(deleteStudentModal.student!.name, deleteStudentModal.student!.className, 'hard_delete');
+                      }
+                    }}
+                    disabled={isSubmitting}
+                    className="min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 active:scale-95 transition-all shadow-sm shadow-rose-600/20 flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {isSubmitting && deletingStudentKey === `${deleteStudentModal.student.name}_${deleteStudentModal.student.className}` ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Trash2 size={14} />
+                    )}
+                    Hapus Permanen
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setDeleteStudentModal({ isOpen: false, student: null })}
+                disabled={isSubmitting}
+                className="min-h-[44px] px-5 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                Batal
+              </button>
+            </div>
           </div>
         </div>
       )}
