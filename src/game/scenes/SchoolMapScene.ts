@@ -97,11 +97,11 @@ const INTERACTION_CONFIGS: Record<string, InteractionObjectConfig> = {
   ruang_guru: {
     id: 'trigger-ruang-guru',
     name: 'Ruang Guru & Bimbingan Konseling (BK)',
-    type: 'npc',
-    promptText: 'Tekan [E] atau Ketuk untuk konsultasi di Ruang Guru',
+    type: 'building_entrance',
+    promptText: 'Tekan [E] atau Ketuk untuk masuk ke Ruang Guru',
     data: {
-      title: 'Ruang Kerja Guru & Konseling Siswa',
-      desc: 'Tempat berkonsultasi dengan wali kelas, guru mata pelajaran, dan konselor BK untuk bimbingan akademik maupun pengembangan diri.',
+      title: 'Ruang Kerja Guru & Staf SMP Terpadu Al-Ittihadiyah',
+      desc: 'Fasilitas kerja dewan guru terpadu dengan area kerja guru pria, guru wanita, perangkat arsip, dan ruang bimbingan siswa.',
     },
   },
   ponpes_as_salaam: {
@@ -347,14 +347,15 @@ export class SchoolMapScene extends Phaser.Scene {
       this.triggers.push({ zone, info: triggerInfo });
     }
 
-    // 6b. Setup Door Entry Markers for Classrooms
-    const classroomDoors = [
+    // 6b. Setup Door Entry Markers for Classrooms & Ruang Guru
+    const schoolDoors = [
       { x: 268, y: 289, label: 'Kelas VII' },
       { x: 1308, y: 289, label: 'Kelas VIII' },
       { x: 259, y: 509, label: 'Kelas IX' },
+      { x: 250, y: 615, label: 'Ruang Guru' },
     ];
 
-    for (const door of classroomDoors) {
+    for (const door of schoolDoors) {
       if (this.textures.exists('door_marker')) {
         const marker = this.add.image(door.x, door.y - 12, 'door_marker');
         marker.setOrigin(0.5, 0.5);
@@ -474,6 +475,11 @@ export class SchoolMapScene extends Phaser.Scene {
       this.enterClassroom(data.classroomId);
     });
 
+    // Enter Ruang Guru scene requested from React HUD modal or direct interact
+    this.game.events.on('scene:enter-ruang-guru', () => {
+      this.enterRuangGuru();
+    });
+
     // Modal closed: resume patrol for talking NPC
     this.game.events.on('modal:closed', () => {
       if (this.activeTalkingNPC) {
@@ -488,6 +494,12 @@ export class SchoolMapScene extends Phaser.Scene {
         // Special case: Exit to Town
         if (this.currentNearTrigger.id === 'trigger-exit-to-town') {
           this.scene.start('MainTownScene');
+          return;
+        }
+
+        // Special case: Enter Ruang Guru
+        if (this.currentNearTrigger.id === 'trigger-ruang-guru') {
+          this.enterRuangGuru();
           return;
         }
 
@@ -663,6 +675,21 @@ export class SchoolMapScene extends Phaser.Scene {
     });
   }
 
+  private enterRuangGuru(): void {
+    // Clear prompt immediately
+    this.game.events.emit('town:interaction-prompt', null);
+
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.start('RuangGuruScene', {
+        returnPos: { x: this.player.x, y: this.player.y },
+        characterKey: this.player.characterKey,
+        characterName: this.player.characterName,
+        characterRole: this.player.roleTitle || 'Siswa',
+      });
+    });
+  }
+
   shutdown(): void {
     this.inputManager?.destroy();
     this.game.events.off('input:joystick');
@@ -670,6 +697,7 @@ export class SchoolMapScene extends Phaser.Scene {
     this.game.events.off('input:interact');
     this.game.events.off('player:change-character');
     this.game.events.off('scene:enter-classroom');
+    this.game.events.off('scene:enter-ruang-guru');
     this.game.events.off('modal:closed');
 
     for (const npc of this.npcs) {

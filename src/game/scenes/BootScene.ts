@@ -79,6 +79,16 @@ export class BootScene extends Phaser.Scene {
       '/assets/classroom_single_background_plus_marker/door_interaction_marker.png'
     );
 
+    // Ruang Guru Interior & Marker (ruang_guru_design_package)
+    this.load.image(
+      'ruang_guru_bg',
+      '/assets/ruang_guru_design_package/assets/ruang_guru_background.png'
+    );
+    this.load.image(
+      'ruang_guru_door_marker',
+      '/assets/ruang_guru_design_package/assets/door_interaction_marker.png'
+    );
+
     // Buildings
     this.load.image('building_school', '/assets/game/buildings/building_school.png');
     this.load.image('building_warung', '/assets/game/buildings/building_warung.png');

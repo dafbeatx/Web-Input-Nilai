@@ -1,0 +1,14 @@
+{
+  "room": "Ruang Guru SMP Terpadu Al-Ittihadiyah",
+  "background": "assets/ruang_guru_background.png",
+  "interaction_marker": "assets/door_interaction_marker.png",
+  "background_dimensions": [
+    1774,
+    887
+  ],
+  "marker_dimensions": [
+    240,
+    160
+  ],
+  "integration": "single background plus separate door interaction overlay"
+}
