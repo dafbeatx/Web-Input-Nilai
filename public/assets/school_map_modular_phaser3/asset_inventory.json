@@ -1,0 +1,273 @@
+{
+  "tileset": "public/assets/tilesets/ground_tileset.png",
+  "buildings": {
+    "main_building": {
+      "key": "main_building",
+      "file": "buildings/main_building.png",
+      "width": 444,
+      "height": 199
+    },
+    "school_gate": {
+      "key": "school_gate",
+      "file": "buildings/school_gate.png",
+      "width": 233,
+      "height": 125
+    },
+    "computer_lab": {
+      "key": "computer_lab",
+      "file": "buildings/computer_lab.png",
+      "width": 239,
+      "height": 121
+    },
+    "library": {
+      "key": "library",
+      "file": "buildings/library.png",
+      "width": 231,
+      "height": 121
+    },
+    "teachers_room": {
+      "key": "teachers_room",
+      "file": "buildings/teachers_room.png",
+      "width": 220,
+      "height": 121
+    },
+    "classroom_vii": {
+      "key": "classroom_vii",
+      "file": "buildings/classroom_vii.png",
+      "width": 235,
+      "height": 133
+    },
+    "classroom_viii": {
+      "key": "classroom_viii",
+      "file": "buildings/classroom_viii.png",
+      "width": 249,
+      "height": 118
+    },
+    "classroom_ix": {
+      "key": "classroom_ix",
+      "file": "buildings/classroom_ix.png",
+      "width": 228,
+      "height": 118
+    },
+    "mosque": {
+      "key": "mosque",
+      "file": "buildings/mosque.png",
+      "width": 181,
+      "height": 188
+    },
+    "canteen": {
+      "key": "canteen",
+      "file": "buildings/canteen.png",
+      "width": 211,
+      "height": 140
+    },
+    "uks_clinic": {
+      "key": "uks_clinic",
+      "file": "buildings/uks_clinic.png",
+      "width": 174,
+      "height": 139
+    },
+    "gazebo": {
+      "key": "gazebo",
+      "file": "buildings/gazebo.png",
+      "width": 125,
+      "height": 138
+    }
+  },
+  "props": {
+    "tree_round_a": {
+      "key": "tree_round_a",
+      "file": "props/tree_round_a.png",
+      "width": 101,
+      "height": 94
+    },
+    "tree_round_b": {
+      "key": "tree_round_b",
+      "file": "props/tree_round_b.png",
+      "width": 111,
+      "height": 93
+    },
+    "tree_round_c": {
+      "key": "tree_round_c",
+      "file": "props/tree_round_c.png",
+      "width": 109,
+      "height": 92
+    },
+    "tree_conifer": {
+      "key": "tree_conifer",
+      "file": "props/tree_conifer.png",
+      "width": 37,
+      "height": 89
+    },
+    "bench_long": {
+      "key": "bench_long",
+      "file": "props/bench_long.png",
+      "width": 87,
+      "height": 42
+    },
+    "bench_short": {
+      "key": "bench_short",
+      "file": "props/bench_short.png",
+      "width": 73,
+      "height": 53
+    },
+    "table_wood": {
+      "key": "table_wood",
+      "file": "props/table_wood.png",
+      "width": 94,
+      "height": 46
+    },
+    "trash_green": {
+      "key": "trash_green",
+      "file": "props/trash_green.png",
+      "width": 50,
+      "height": 43
+    },
+    "trash_gray": {
+      "key": "trash_gray",
+      "file": "props/trash_gray.png",
+      "width": 49,
+      "height": 63
+    },
+    "notice_board_small": {
+      "key": "notice_board_small",
+      "file": "props/notice_board_small.png",
+      "width": 72,
+      "height": 64
+    },
+    "flower_bush": {
+      "key": "flower_bush",
+      "file": "props/flower_bush.png",
+      "width": 41,
+      "height": 50
+    },
+    "trash_can_small": {
+      "key": "trash_can_small",
+      "file": "props/trash_can_small.png",
+      "width": 29,
+      "height": 50
+    },
+    "chair_bench": {
+      "key": "chair_bench",
+      "file": "props/chair_bench.png",
+      "width": 74,
+      "height": 59
+    },
+    "bookshelf": {
+      "key": "bookshelf",
+      "file": "props/bookshelf.png",
+      "width": 66,
+      "height": 79
+    },
+    "whiteboard": {
+      "key": "whiteboard",
+      "file": "props/whiteboard.png",
+      "width": 77,
+      "height": 84
+    },
+    "display_shelf": {
+      "key": "display_shelf",
+      "file": "props/display_shelf.png",
+      "width": 86,
+      "height": 84
+    },
+    "garden_bench": {
+      "key": "garden_bench",
+      "file": "props/garden_bench.png",
+      "width": 67,
+      "height": 54
+    },
+    "potted_plant": {
+      "key": "potted_plant",
+      "file": "props/potted_plant.png",
+      "width": 64,
+      "height": 64
+    },
+    "flagpole": {
+      "key": "flagpole",
+      "file": "props/flagpole.png",
+      "width": 109,
+      "height": 128
+    },
+    "street_lamp_a": {
+      "key": "street_lamp_a",
+      "file": "props/street_lamp_a.png",
+      "width": 72,
+      "height": 126
+    },
+    "street_lamp_b": {
+      "key": "street_lamp_b",
+      "file": "props/street_lamp_b.png",
+      "width": 99,
+      "height": 96
+    },
+    "bulletin_board": {
+      "key": "bulletin_board",
+      "file": "props/bulletin_board.png",
+      "width": 94,
+      "height": 100
+    },
+    "school_sign": {
+      "key": "school_sign",
+      "file": "props/school_sign.png",
+      "width": 64,
+      "height": 74
+    },
+    "flower_pot_a": {
+      "key": "flower_pot_a",
+      "file": "props/flower_pot_a.png",
+      "width": 27,
+      "height": 44
+    },
+    "flower_pot_b": {
+      "key": "flower_pot_b",
+      "file": "props/flower_pot_b.png",
+      "width": 32,
+      "height": 42
+    },
+    "shrub_green_a": {
+      "key": "shrub_green_a",
+      "file": "props/shrub_green_a.png",
+      "width": 62,
+      "height": 53
+    },
+    "shrub_green_b": {
+      "key": "shrub_green_b",
+      "file": "props/shrub_green_b.png",
+      "width": 69,
+      "height": 53
+    },
+    "shrub_yellow": {
+      "key": "shrub_yellow",
+      "file": "props/shrub_yellow.png",
+      "width": 71,
+      "height": 52
+    },
+    "shrub_pink": {
+      "key": "shrub_pink",
+      "file": "props/shrub_pink.png",
+      "width": 59,
+      "height": 36
+    },
+    "shrub_white": {
+      "key": "shrub_white",
+      "file": "props/shrub_white.png",
+      "width": 69,
+      "height": 52
+    },
+    "rock_small": {
+      "key": "rock_small",
+      "file": "props/rock_small.png",
+      "width": 42,
+      "height": 52
+    },
+    "sports_court": {
+      "key": "sports_court",
+      "file": "props/sports_court.png",
+      "width": 640,
+      "height": 384
+    }
+  },
+  "map": "public/assets/maps/school_ground.json",
+  "layout": "public/assets/maps/school_objects.json"
+}

@@ -35,6 +35,29 @@ export class BootScene extends Phaser.Scene {
     // -------------------------------------------------------------
     // LOAD HIGH-FIDELITY ASSETS FROM /assets/game/
     // -------------------------------------------------------------
+    // Modular School Map & Objects (school_map_modular_phaser3)
+    this.load.tilemapTiledJSON('school-ground', '/assets/maps/school_ground.json');
+    this.load.image('ground-tiles', '/assets/tilesets/ground_tileset.png');
+    this.load.json('school-objects', '/assets/maps/school_objects.json');
+
+    // 12 Modular Buildings
+    const modularBuildings = [
+      'main_building', 'school_gate', 'computer_lab', 'library', 'teachers_room',
+      'classroom_vii', 'classroom_viii', 'classroom_ix', 'mosque', 'canteen', 'uks_clinic', 'gazebo'
+    ];
+    modularBuildings.forEach(b => this.load.image(b, `/assets/buildings/${b}.png`));
+
+    // 32 Modular Props
+    const modularProps = [
+      'tree_round_a', 'tree_round_b', 'tree_round_c', 'tree_conifer', 'bench_long', 'bench_short',
+      'table_wood', 'trash_green', 'trash_gray', 'notice_board_small', 'flower_bush', 'trash_can_small',
+      'chair_bench', 'bookshelf', 'whiteboard', 'display_shelf', 'garden_bench', 'potted_plant',
+      'flagpole', 'street_lamp_a', 'street_lamp_b', 'bulletin_board', 'school_sign', 'flower_pot_a',
+      'flower_pot_b', 'shrub_green_a', 'shrub_green_b', 'shrub_yellow', 'shrub_pink', 'shrub_white',
+      'rock_small', 'sports_court'
+    ];
+    modularProps.forEach(p => this.load.image(p, `/assets/props/${p}.png`));
+
     // Tilemap & Atlas (SMP Terpadu Al-Ittihadiyah)
     this.load.tilemapTiledJSON('school_map', '/assets/maps/school_map.json');
     this.load.image('school_atlas', '/assets/maps/school_atlas.png');

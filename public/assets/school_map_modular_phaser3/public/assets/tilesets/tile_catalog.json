@@ -1,0 +1,254 @@
+[
+  {
+    "id": 0,
+    "gid": 1,
+    "name": "grass_plain",
+    "x": 0,
+    "y": 0,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 1,
+    "gid": 2,
+    "name": "grass_detail",
+    "x": 32,
+    "y": 0,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 2,
+    "gid": 3,
+    "name": "grass_flowers_pink",
+    "x": 64,
+    "y": 0,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 3,
+    "gid": 4,
+    "name": "grass_flowers_yellow",
+    "x": 96,
+    "y": 0,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 4,
+    "gid": 5,
+    "name": "grass_mixed",
+    "x": 128,
+    "y": 0,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 5,
+    "gid": 6,
+    "name": "sand_light",
+    "x": 160,
+    "y": 0,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 6,
+    "gid": 7,
+    "name": "dirt",
+    "x": 192,
+    "y": 0,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 7,
+    "gid": 8,
+    "name": "grass_speckle",
+    "x": 0,
+    "y": 32,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 8,
+    "gid": 9,
+    "name": "grass_bright",
+    "x": 32,
+    "y": 32,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 9,
+    "gid": 10,
+    "name": "paving_stone_a",
+    "x": 64,
+    "y": 32,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 10,
+    "gid": 11,
+    "name": "paving_stone_b",
+    "x": 96,
+    "y": 32,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 11,
+    "gid": 12,
+    "name": "paving_stone_c",
+    "x": 128,
+    "y": 32,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 12,
+    "gid": 13,
+    "name": "paving_beige_a",
+    "x": 160,
+    "y": 32,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 13,
+    "gid": 14,
+    "name": "paving_beige_b",
+    "x": 192,
+    "y": 32,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 14,
+    "gid": 15,
+    "name": "stone_path_a",
+    "x": 0,
+    "y": 64,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 15,
+    "gid": 16,
+    "name": "stone_path_b",
+    "x": 32,
+    "y": 64,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 16,
+    "gid": 17,
+    "name": "cobble_a",
+    "x": 64,
+    "y": 64,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 17,
+    "gid": 18,
+    "name": "cobble_b",
+    "x": 96,
+    "y": 64,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 18,
+    "gid": 19,
+    "name": "tile_beige_a",
+    "x": 128,
+    "y": 64,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 19,
+    "gid": 20,
+    "name": "tile_beige_b",
+    "x": 160,
+    "y": 64,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 20,
+    "gid": 21,
+    "name": "tile_concrete",
+    "x": 192,
+    "y": 64,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 21,
+    "gid": 22,
+    "name": "road_asphalt",
+    "x": 0,
+    "y": 96,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 22,
+    "gid": 23,
+    "name": "road_asphalt_alt",
+    "x": 32,
+    "y": 96,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 23,
+    "gid": 24,
+    "name": "road_edge_horizontal",
+    "x": 64,
+    "y": 96,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 24,
+    "gid": 25,
+    "name": "road_center_dash",
+    "x": 96,
+    "y": 96,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 25,
+    "gid": 26,
+    "name": "road_crosswalk",
+    "x": 128,
+    "y": 96,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 26,
+    "gid": 27,
+    "name": "road_sidewalk",
+    "x": 160,
+    "y": 96,
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": 27,
+    "gid": 28,
+    "name": "road_curb",
+    "x": 192,
+    "y": 96,
+    "width": 32,
+    "height": 32
+  }
+]

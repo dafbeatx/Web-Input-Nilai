@@ -1,0 +1,1091 @@
+{
+  "world": {
+    "width": 2048,
+    "height": 1536,
+    "tileWidth": 32,
+    "tileHeight": 32,
+    "columns": 64,
+    "rows": 48
+  },
+  "buildings": [
+    {
+      "name": "main_building",
+      "key": "main_building",
+      "file": "/assets/buildings/main_building.png",
+      "x": 1024,
+      "y": 280,
+      "width": 444,
+      "height": 199,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "computer_lab",
+      "key": "computer_lab",
+      "file": "/assets/buildings/computer_lab.png",
+      "x": 300,
+      "y": 310,
+      "width": 239,
+      "height": 121,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "library",
+      "key": "library",
+      "file": "/assets/buildings/library.png",
+      "x": 1748,
+      "y": 310,
+      "width": 231,
+      "height": 121,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "teachers_room",
+      "key": "teachers_room",
+      "file": "/assets/buildings/teachers_room.png",
+      "x": 1748,
+      "y": 620,
+      "width": 220,
+      "height": 121,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "classroom_vii",
+      "key": "classroom_vii",
+      "file": "/assets/buildings/classroom_vii.png",
+      "x": 300,
+      "y": 620,
+      "width": 235,
+      "height": 133,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "classroom_viii",
+      "key": "classroom_viii",
+      "file": "/assets/buildings/classroom_viii.png",
+      "x": 300,
+      "y": 870,
+      "width": 249,
+      "height": 118,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "classroom_ix",
+      "key": "classroom_ix",
+      "file": "/assets/buildings/classroom_ix.png",
+      "x": 1748,
+      "y": 870,
+      "width": 228,
+      "height": 118,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "mosque",
+      "key": "mosque",
+      "file": "/assets/buildings/mosque.png",
+      "x": 250,
+      "y": 1260,
+      "width": 181,
+      "height": 188,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "canteen",
+      "key": "canteen",
+      "file": "/assets/buildings/canteen.png",
+      "x": 650,
+      "y": 1245,
+      "width": 211,
+      "height": 140,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "uks_clinic",
+      "key": "uks_clinic",
+      "file": "/assets/buildings/uks_clinic.png",
+      "x": 1420,
+      "y": 1245,
+      "width": 174,
+      "height": 139,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "gazebo",
+      "key": "gazebo",
+      "file": "/assets/buildings/gazebo.png",
+      "x": 1790,
+      "y": 1250,
+      "width": 125,
+      "height": 138,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "school_gate",
+      "key": "school_gate",
+      "file": "/assets/buildings/school_gate.png",
+      "x": 1024,
+      "y": 1450,
+      "width": 233,
+      "height": 125,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    }
+  ],
+  "props": [
+    {
+      "name": "flagpole",
+      "key": "flagpole",
+      "file": "/assets/props/flagpole.png",
+      "x": 1024,
+      "y": 720,
+      "width": 87,
+      "height": 102,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "street_lamp_a",
+      "key": "street_lamp_a",
+      "file": "/assets/props/street_lamp_a.png",
+      "x": 820,
+      "y": 690,
+      "width": 42,
+      "height": 73,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "street_lamp_b",
+      "key": "street_lamp_b",
+      "file": "/assets/props/street_lamp_b.png",
+      "x": 1230,
+      "y": 690,
+      "width": 57,
+      "height": 56,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "tree_round_a",
+      "key": "tree_round_a",
+      "file": "/assets/props/tree_round_a.png",
+      "x": 180,
+      "y": 500,
+      "width": 73,
+      "height": 68,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "tree_round_b",
+      "key": "tree_round_b",
+      "file": "/assets/props/tree_round_b.png",
+      "x": 550,
+      "y": 500,
+      "width": 80,
+      "height": 67,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "tree_round_c",
+      "key": "tree_round_c",
+      "file": "/assets/props/tree_round_c.png",
+      "x": 1490,
+      "y": 500,
+      "width": 78,
+      "height": 66,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "tree_conifer",
+      "key": "tree_conifer",
+      "file": "/assets/props/tree_conifer.png",
+      "x": 1850,
+      "y": 500,
+      "width": 27,
+      "height": 64,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "tree_round_b",
+      "key": "tree_round_b",
+      "file": "/assets/props/tree_round_b.png",
+      "x": 180,
+      "y": 980,
+      "width": 80,
+      "height": 67,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "tree_round_a",
+      "key": "tree_round_a",
+      "file": "/assets/props/tree_round_a.png",
+      "x": 560,
+      "y": 1050,
+      "width": 73,
+      "height": 68,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "tree_round_c",
+      "key": "tree_round_c",
+      "file": "/assets/props/tree_round_c.png",
+      "x": 1490,
+      "y": 1040,
+      "width": 78,
+      "height": 66,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "tree_round_b",
+      "key": "tree_round_b",
+      "file": "/assets/props/tree_round_b.png",
+      "x": 1860,
+      "y": 1040,
+      "width": 80,
+      "height": 67,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "tree_conifer",
+      "key": "tree_conifer",
+      "file": "/assets/props/tree_conifer.png",
+      "x": 340,
+      "y": 1405,
+      "width": 27,
+      "height": 64,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "tree_round_a",
+      "key": "tree_round_a",
+      "file": "/assets/props/tree_round_a.png",
+      "x": 700,
+      "y": 1405,
+      "width": 73,
+      "height": 68,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "tree_round_c",
+      "key": "tree_round_c",
+      "file": "/assets/props/tree_round_c.png",
+      "x": 1360,
+      "y": 1405,
+      "width": 78,
+      "height": 66,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "tree_round_b",
+      "key": "tree_round_b",
+      "file": "/assets/props/tree_round_b.png",
+      "x": 1700,
+      "y": 1405,
+      "width": 80,
+      "height": 67,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "bench_long",
+      "key": "bench_long",
+      "file": "/assets/props/bench_long.png",
+      "x": 760,
+      "y": 610,
+      "width": 50,
+      "height": 24,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "bench_long",
+      "key": "bench_long",
+      "file": "/assets/props/bench_long.png",
+      "x": 1285,
+      "y": 610,
+      "width": 50,
+      "height": 24,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "bench_long",
+      "key": "bench_long",
+      "file": "/assets/props/bench_long.png",
+      "x": 760,
+      "y": 815,
+      "width": 50,
+      "height": 24,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "bench_long",
+      "key": "bench_long",
+      "file": "/assets/props/bench_long.png",
+      "x": 1285,
+      "y": 815,
+      "width": 50,
+      "height": 24,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "shrub_pink",
+      "key": "shrub_pink",
+      "file": "/assets/props/shrub_pink.png",
+      "x": 420,
+      "y": 1140,
+      "width": 47,
+      "height": 29,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "shrub_pink",
+      "key": "shrub_pink",
+      "file": "/assets/props/shrub_pink.png",
+      "x": 520,
+      "y": 1140,
+      "width": 47,
+      "height": 29,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "shrub_pink",
+      "key": "shrub_pink",
+      "file": "/assets/props/shrub_pink.png",
+      "x": 1540,
+      "y": 1140,
+      "width": 47,
+      "height": 29,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "flower_bush",
+      "key": "flower_bush",
+      "file": "/assets/props/flower_bush.png",
+      "x": 430,
+      "y": 720,
+      "width": 29,
+      "height": 35,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "flower_bush",
+      "key": "flower_bush",
+      "file": "/assets/props/flower_bush.png",
+      "x": 1610,
+      "y": 720,
+      "width": 29,
+      "height": 35,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "flower_bush",
+      "key": "flower_bush",
+      "file": "/assets/props/flower_bush.png",
+      "x": 1024,
+      "y": 1110,
+      "width": 29,
+      "height": 35,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "bulletin_board",
+      "key": "bulletin_board",
+      "file": "/assets/props/bulletin_board.png",
+      "x": 1120,
+      "y": 540,
+      "width": 58,
+      "height": 62,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "notice_board_small",
+      "key": "notice_board_small",
+      "file": "/assets/props/notice_board_small.png",
+      "x": 910,
+      "y": 460,
+      "width": 43,
+      "height": 38,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": true
+    },
+    {
+      "name": "sports_court",
+      "key": "sports_court",
+      "file": "/assets/props/sports_court.png",
+      "x": 1024,
+      "y": 1110,
+      "width": 429,
+      "height": 257,
+      "originX": 0.5,
+      "originY": 1.0,
+      "depth": "y",
+      "collision": false
+    }
+  ],
+  "spawn": {
+    "x": 1024,
+    "y": 1385
+  },
+  "notes": [
+    "Ground is a reusable Tiled tileset; the school is not a flattened background image.",
+    "Each building is a separate transparent PNG object with bottom-center origin and Y-based depth sorting.",
+    "Collision rectangles are independent from artwork and block building wall/footprint areas, not the roof pixels.",
+    "Door interaction rectangles are separate. Connect each target to an interior scene when interiors are implemented.",
+    "Props are independent objects; small collision bodies should be limited to tree trunks or furniture bases."
+  ],
+  "collision": [
+    {
+      "name": "main_building_back_footprint",
+      "x": 1024,
+      "y": 232,
+      "width": 364.08,
+      "height": 18
+    },
+    {
+      "name": "main_building_front_left_wall",
+      "x": 920.98,
+      "y": 262,
+      "width": 158.04,
+      "height": 18
+    },
+    {
+      "name": "main_building_front_right_wall",
+      "x": 1127.02,
+      "y": 262,
+      "width": 158.04,
+      "height": 18
+    },
+    {
+      "name": "computer_lab_back_footprint",
+      "x": 300,
+      "y": 262,
+      "width": 195.98,
+      "height": 18
+    },
+    {
+      "name": "computer_lab_front_left_wall",
+      "x": 239.005,
+      "y": 292,
+      "width": 73.99,
+      "height": 18
+    },
+    {
+      "name": "computer_lab_front_right_wall",
+      "x": 360.995,
+      "y": 292,
+      "width": 73.99,
+      "height": 18
+    },
+    {
+      "name": "library_back_footprint",
+      "x": 1748,
+      "y": 262,
+      "width": 189.42,
+      "height": 18
+    },
+    {
+      "name": "library_front_left_wall",
+      "x": 1688.645,
+      "y": 292,
+      "width": 70.71,
+      "height": 18
+    },
+    {
+      "name": "library_front_right_wall",
+      "x": 1807.355,
+      "y": 292,
+      "width": 70.71,
+      "height": 18
+    },
+    {
+      "name": "teachers_room_back_footprint",
+      "x": 1748,
+      "y": 572,
+      "width": 180.39999999999998,
+      "height": 18
+    },
+    {
+      "name": "teachers_room_front_left_wall",
+      "x": 1690.8999999999999,
+      "y": 602,
+      "width": 66.19999999999999,
+      "height": 18
+    },
+    {
+      "name": "teachers_room_front_right_wall",
+      "x": 1805.1000000000001,
+      "y": 602,
+      "width": 66.19999999999999,
+      "height": 18
+    },
+    {
+      "name": "classroom_vii_back_footprint",
+      "x": 300,
+      "y": 572,
+      "width": 192.7,
+      "height": 18
+    },
+    {
+      "name": "classroom_vii_front_left_wall",
+      "x": 239.825,
+      "y": 602,
+      "width": 72.35,
+      "height": 18
+    },
+    {
+      "name": "classroom_vii_front_right_wall",
+      "x": 360.175,
+      "y": 602,
+      "width": 72.35,
+      "height": 18
+    },
+    {
+      "name": "classroom_viii_back_footprint",
+      "x": 300,
+      "y": 822,
+      "width": 204.17999999999998,
+      "height": 18
+    },
+    {
+      "name": "classroom_viii_front_left_wall",
+      "x": 236.955,
+      "y": 852,
+      "width": 78.08999999999999,
+      "height": 18
+    },
+    {
+      "name": "classroom_viii_front_right_wall",
+      "x": 363.04499999999996,
+      "y": 852,
+      "width": 78.08999999999999,
+      "height": 18
+    },
+    {
+      "name": "classroom_ix_back_footprint",
+      "x": 1748,
+      "y": 822,
+      "width": 186.95999999999998,
+      "height": 18
+    },
+    {
+      "name": "classroom_ix_front_left_wall",
+      "x": 1689.26,
+      "y": 852,
+      "width": 69.47999999999999,
+      "height": 18
+    },
+    {
+      "name": "classroom_ix_front_right_wall",
+      "x": 1806.74,
+      "y": 852,
+      "width": 69.47999999999999,
+      "height": 18
+    },
+    {
+      "name": "mosque_back_footprint",
+      "x": 250,
+      "y": 1212,
+      "width": 148.42,
+      "height": 18
+    },
+    {
+      "name": "mosque_front_left_wall",
+      "x": 200.895,
+      "y": 1242,
+      "width": 50.209999999999994,
+      "height": 18
+    },
+    {
+      "name": "mosque_front_right_wall",
+      "x": 299.10499999999996,
+      "y": 1242,
+      "width": 50.209999999999994,
+      "height": 18
+    },
+    {
+      "name": "canteen_back_footprint",
+      "x": 650,
+      "y": 1197,
+      "width": 173.01999999999998,
+      "height": 18
+    },
+    {
+      "name": "canteen_front_left_wall",
+      "x": 594.745,
+      "y": 1227,
+      "width": 62.50999999999999,
+      "height": 18
+    },
+    {
+      "name": "canteen_front_right_wall",
+      "x": 705.255,
+      "y": 1227,
+      "width": 62.50999999999999,
+      "height": 18
+    },
+    {
+      "name": "uks_clinic_back_footprint",
+      "x": 1420,
+      "y": 1197,
+      "width": 142.67999999999998,
+      "height": 18
+    },
+    {
+      "name": "uks_clinic_front_left_wall",
+      "x": 1372.3300000000002,
+      "y": 1227,
+      "width": 47.33999999999999,
+      "height": 18
+    },
+    {
+      "name": "uks_clinic_front_right_wall",
+      "x": 1467.6699999999998,
+      "y": 1227,
+      "width": 47.33999999999999,
+      "height": 18
+    },
+    {
+      "name": "gazebo_back_footprint",
+      "x": 1790,
+      "y": 1202,
+      "width": 101,
+      "height": 18
+    },
+    {
+      "name": "gazebo_front_left_wall",
+      "x": 1752.75,
+      "y": 1232,
+      "width": 26.5,
+      "height": 18
+    },
+    {
+      "name": "gazebo_front_right_wall",
+      "x": 1827.25,
+      "y": 1232,
+      "width": 26.5,
+      "height": 18
+    },
+    {
+      "name": "gate_left_post",
+      "x": 933.13,
+      "y": 1432,
+      "width": 37.28,
+      "height": 36
+    },
+    {
+      "name": "gate_right_post",
+      "x": 1114.87,
+      "y": 1432,
+      "width": 37.28,
+      "height": 36
+    },
+    {
+      "name": "flagpole_base",
+      "x": 1024,
+      "y": 714.0,
+      "width": 15,
+      "height": 12
+    },
+    {
+      "name": "street_lamp_a_base",
+      "x": 820,
+      "y": 684.0,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "name": "street_lamp_b_base",
+      "x": 1230,
+      "y": 684.0,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "name": "tree_round_a_base",
+      "x": 180,
+      "y": 494.0,
+      "width": 13,
+      "height": 12
+    },
+    {
+      "name": "tree_round_b_base",
+      "x": 550,
+      "y": 494.0,
+      "width": 14,
+      "height": 12
+    },
+    {
+      "name": "tree_round_c_base",
+      "x": 1490,
+      "y": 494.0,
+      "width": 14,
+      "height": 12
+    },
+    {
+      "name": "tree_conifer_base",
+      "x": 1850,
+      "y": 494.0,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "name": "tree_round_b_base",
+      "x": 180,
+      "y": 974.0,
+      "width": 14,
+      "height": 12
+    },
+    {
+      "name": "tree_round_a_base",
+      "x": 560,
+      "y": 1044.0,
+      "width": 13,
+      "height": 12
+    },
+    {
+      "name": "tree_round_c_base",
+      "x": 1490,
+      "y": 1034.0,
+      "width": 14,
+      "height": 12
+    },
+    {
+      "name": "tree_round_b_base",
+      "x": 1860,
+      "y": 1034.0,
+      "width": 14,
+      "height": 12
+    },
+    {
+      "name": "tree_conifer_base",
+      "x": 340,
+      "y": 1399.0,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "name": "tree_round_a_base",
+      "x": 700,
+      "y": 1399.0,
+      "width": 13,
+      "height": 12
+    },
+    {
+      "name": "tree_round_c_base",
+      "x": 1360,
+      "y": 1399.0,
+      "width": 14,
+      "height": 12
+    },
+    {
+      "name": "tree_round_b_base",
+      "x": 1700,
+      "y": 1399.0,
+      "width": 14,
+      "height": 12
+    },
+    {
+      "name": "bench_long_base",
+      "x": 760,
+      "y": 604.0,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "name": "bench_long_base",
+      "x": 1285,
+      "y": 604.0,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "name": "bench_long_base",
+      "x": 760,
+      "y": 809.0,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "name": "bench_long_base",
+      "x": 1285,
+      "y": 809.0,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "name": "shrub_pink_base",
+      "x": 420,
+      "y": 1134.0,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "name": "shrub_pink_base",
+      "x": 520,
+      "y": 1134.0,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "name": "shrub_pink_base",
+      "x": 1540,
+      "y": 1134.0,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "name": "flower_bush_base",
+      "x": 430,
+      "y": 714.0,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "name": "flower_bush_base",
+      "x": 1610,
+      "y": 714.0,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "name": "flower_bush_base",
+      "x": 1024,
+      "y": 1104.0,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "name": "bulletin_board_base",
+      "x": 1120,
+      "y": 534.0,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "name": "notice_board_small_base",
+      "x": 910,
+      "y": 454.0,
+      "width": 12,
+      "height": 12
+    }
+  ],
+  "interactions": [
+    {
+      "label": "Main Building",
+      "x": 1024,
+      "y": 275,
+      "width": 46,
+      "height": 34,
+      "action": "enter_interior",
+      "target": "main_building_interior"
+    },
+    {
+      "label": "Computer Lab",
+      "x": 300,
+      "y": 305,
+      "width": 46,
+      "height": 34,
+      "action": "enter_interior",
+      "target": "computer_lab_interior"
+    },
+    {
+      "label": "Library",
+      "x": 1748,
+      "y": 305,
+      "width": 46,
+      "height": 34,
+      "action": "enter_interior",
+      "target": "library_interior"
+    },
+    {
+      "label": "Teachers Room",
+      "x": 1748,
+      "y": 615,
+      "width": 46,
+      "height": 34,
+      "action": "enter_interior",
+      "target": "teachers_room_interior"
+    },
+    {
+      "label": "Classroom Vii",
+      "x": 300,
+      "y": 615,
+      "width": 46,
+      "height": 34,
+      "action": "enter_interior",
+      "target": "classroom_vii_interior"
+    },
+    {
+      "label": "Classroom Viii",
+      "x": 300,
+      "y": 865,
+      "width": 46,
+      "height": 34,
+      "action": "enter_interior",
+      "target": "classroom_viii_interior"
+    },
+    {
+      "label": "Classroom Ix",
+      "x": 1748,
+      "y": 865,
+      "width": 46,
+      "height": 34,
+      "action": "enter_interior",
+      "target": "classroom_ix_interior"
+    },
+    {
+      "label": "Mosque",
+      "x": 250,
+      "y": 1255,
+      "width": 46,
+      "height": 34,
+      "action": "enter_interior",
+      "target": "mosque_interior"
+    },
+    {
+      "label": "Canteen",
+      "x": 650,
+      "y": 1240,
+      "width": 46,
+      "height": 34,
+      "action": "enter_interior",
+      "target": "canteen_interior"
+    },
+    {
+      "label": "Uks Clinic",
+      "x": 1420,
+      "y": 1240,
+      "width": 46,
+      "height": 34,
+      "action": "enter_interior",
+      "target": "uks_clinic_interior"
+    },
+    {
+      "label": "Gazebo",
+      "x": 1790,
+      "y": 1245,
+      "width": 46,
+      "height": 34,
+      "action": "enter_interior",
+      "target": "gazebo_interior"
+    },
+    {
+      "label": "Gerbang Sekolah",
+      "x": 1024,
+      "y": 1444,
+      "width": 90,
+      "height": 50,
+      "action": "enter_campus",
+      "target": ""
+    }
+  ]
+}
