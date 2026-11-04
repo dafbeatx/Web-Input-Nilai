@@ -99,6 +99,11 @@ export default function GameContainer() {
     gameRef.current?.events.emit('modal:closed');
   }, []);
 
+  // Enter Classroom Transition Handler
+  const handleEnterClassroom = useCallback((classroomId: 'VII' | 'VIII' | 'IX') => {
+    gameRef.current?.events.emit('scene:enter-classroom', { classroomId });
+  }, []);
+
   return (
     <div className="relative w-full h-dvh bg-slate-950 overflow-hidden select-none">
       {/* Phaser Canvas Root Mount Container */}
@@ -120,6 +125,7 @@ export default function GameContainer() {
         onBuyItem={handleBuyItem}
         currentCharacter={currentCharacter}
         onSelectCharacter={handleSelectCharacter}
+        onEnterClassroom={handleEnterClassroom}
       />
 
       {/* Multiplatform Virtual Controls (Adaptive to Android / Smart Board / Desktop) */}

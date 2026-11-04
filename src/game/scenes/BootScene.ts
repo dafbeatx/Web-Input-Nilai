@@ -69,6 +69,14 @@ export class BootScene extends Phaser.Scene {
     this.load.image('tile_sidewalk', '/assets/game/tilesets/tile_sidewalk.png');
     this.load.image('tile_crosswalk', '/assets/game/tilesets/tile_crosswalk.png');
 
+    // Classroom Interior & Interactive Markers (classroom_design_package)
+    this.load.image('classroom_bg', '/assets/classroom_interior/classroom_interior_clean.png');
+    this.load.image('desk_student_pair', '/assets/classroom_interior/student_desk_pair.png');
+    this.load.image('desk_teacher_unit', '/assets/classroom_interior/teacher_desk_unit.png');
+    this.load.image('marker_door_arrow', '/assets/classroom_interior/door_marker_arrow.png');
+    this.load.image('marker_door_pad', '/assets/classroom_interior/door_marker_pad.png');
+    this.load.image('blackboard_green', '/assets/classroom_interior/blackboard_green.png');
+
     // Buildings
     this.load.image('building_school', '/assets/game/buildings/building_school.png');
     this.load.image('building_warung', '/assets/game/buildings/building_warung.png');

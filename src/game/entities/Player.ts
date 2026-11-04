@@ -5,6 +5,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public characterId: string;
   public characterName: string;
   public characterKey: string = 'char_teacher';
+  public roleTitle: string = 'Guru Pendidik (PID)';
   public baseSpeed: number = 175;
   public sprintMultiplier: number = 1.6;
 
@@ -129,12 +130,31 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setRoleTitle(newRole);
   }
 
+  public setFacingDirection(direction: 'up' | 'down' | 'left' | 'right'): void {
+    this.currentDirection = direction;
+    switch (direction) {
+      case 'down':
+        this.setFrame(0);
+        break;
+      case 'left':
+        this.setFrame(4);
+        break;
+      case 'right':
+        this.setFrame(8);
+        break;
+      case 'up':
+        this.setFrame(12);
+        break;
+    }
+  }
+
   public setCharacterName(newName: string): void {
     this.characterName = newName;
     this.nameTag.setText(newName);
   }
 
   public setRoleTitle(newRole: string): void {
+    this.roleTitle = newRole;
     this.roleTag.setText(newRole);
   }
 

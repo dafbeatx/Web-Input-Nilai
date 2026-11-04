@@ -18,10 +18,12 @@ const INTERACTION_CONFIGS: Record<string, InteractionObjectConfig> = {
     id: 'trigger-kelas-7',
     name: 'Ruang Kelas 7 (Fase D)',
     type: 'building_entrance',
-    promptText: 'Tekan [E] atau Ketuk untuk masuk ke Kelas 7',
+    promptText: 'Tekan [E] atau Ketuk untuk Masuk Kelas VII',
     data: {
       title: 'Ruang Kelas 7 SMP',
       desc: 'Ruang kelas pembelajaran peserta didik baru tingkat 7 dengan modul pengenalan lingkungan sekolah dan adaptasi kurikulum.',
+      isClassroom: true,
+      classroomId: 'VII',
     },
   },
   gedung_utama: {
@@ -38,10 +40,12 @@ const INTERACTION_CONFIGS: Record<string, InteractionObjectConfig> = {
     id: 'trigger-kelas-8',
     name: 'Ruang Kelas 8',
     type: 'building_entrance',
-    promptText: 'Tekan [E] atau Ketuk untuk masuk ke Kelas 8',
+    promptText: 'Tekan [E] atau Ketuk untuk Masuk Kelas VIII',
     data: {
       title: 'Ruang Kelas 8 SMP',
       desc: 'Ruang kelas 8 fokus pada penguatan materi inti, proyek sains interaktif, dan kolaborasi kelompok P5.',
+      isClassroom: true,
+      classroomId: 'VIII',
     },
   },
 
@@ -50,10 +54,12 @@ const INTERACTION_CONFIGS: Record<string, InteractionObjectConfig> = {
     id: 'trigger-kelas-9',
     name: 'Ruang Kelas 9 (Fase Kelulusan)',
     type: 'building_entrance',
-    promptText: 'Tekan [E] atau Ketuk untuk masuk ke Kelas 9',
+    promptText: 'Tekan [E] atau Ketuk untuk Masuk Kelas IX',
     data: {
       title: 'Ruang Kelas 9 SMP',
       desc: 'Ruang kelas tingkat akhir pendalaman materi ujian kelulusan, asesmen sumatif akhir, dan bimbingan karir jenjang SMA/SMK.',
+      isClassroom: true,
+      classroomId: 'IX',
     },
   },
   tiang_bendera: {
@@ -332,6 +338,13 @@ const WALKING_NPC_CONFIGS: NPCConfig[] = [
   },
 ];
 
+export interface SchoolMapSceneInitData {
+  returnPos?: { x: number; y: number };
+  characterKey?: string;
+  characterName?: string;
+  characterRole?: string;
+}
+
 export class SchoolMapScene extends Phaser.Scene {
   public player!: Player;
   public inputManager!: InputManager;
@@ -352,9 +365,14 @@ export class SchoolMapScene extends Phaser.Scene {
   private isDebugVisible: boolean = false;
   private numericKeys: Phaser.Input.Keyboard.Key[] = [];
   private f3Key?: Phaser.Input.Keyboard.Key;
+  private initData?: SchoolMapSceneInitData;
 
   constructor() {
     super({ key: 'SchoolMapScene' });
+  }
+
+  init(data?: SchoolMapSceneInitData): void {
+    this.initData = data;
   }
 
   create(): void {
@@ -385,14 +403,24 @@ export class SchoolMapScene extends Phaser.Scene {
       this.blockers.push(blocker);
     }
 
-    // 4. Resolve Player Spawn Point
+    // 4. Resolve Player Spawn Point (or restore exterior door return position)
     const spawnObj = map.getObjectLayer('Spawn')?.objects?.find(o => o.name === 'player_spawn');
-    const startX = spawnObj?.x ?? 768;
-    const startY = spawnObj?.y ?? 870;
+    const startX = this.initData?.returnPos ? this.initData.returnPos.x : (spawnObj?.x ?? 768);
+    const startY = this.initData?.returnPos ? (this.initData.returnPos.y + 24) : (spawnObj?.y ?? 870);
 
-    const initialProfile = CHARACTER_PROFILES[0];
-    this.player = new Player(this, startX, startY, initialProfile.name, initialProfile.key);
+    const initialProfile = this.initData?.characterKey
+      ? (CHARACTER_PROFILES.find(p => p.key === this.initData!.characterKey) || CHARACTER_PROFILES[0])
+      : CHARACTER_PROFILES[0];
+    const charName = this.initData?.characterName || initialProfile.name;
+    const charRole = this.initData?.characterRole || initialProfile.role;
+
+    this.player = new Player(this, startX, startY, charName, initialProfile.key);
+    this.player.setRoleTitle(charRole);
     this.player.setDepth(startY);
+
+    if (this.initData?.returnPos) {
+      this.player.setFacingDirection('down');
+    }
 
     // Add colliders between Player and Blockers
     for (const blocker of this.blockers) {
@@ -441,6 +469,31 @@ export class SchoolMapScene extends Phaser.Scene {
       const zone = this.add.zone(obj.x + obj.width / 2, obj.y + obj.height / 2, obj.width, obj.height);
       this.physics.add.existing(zone, true);
       this.triggers.push({ zone, info: triggerInfo });
+    }
+
+    // 6b. Setup Door Entry Markers for Classrooms (Floating Glowing Arrow Pads)
+    const classroomDoors = [
+      { x: 268, y: 289, label: 'Kelas VII' },
+      { x: 1308, y: 289, label: 'Kelas VIII' },
+      { x: 259, y: 509, label: 'Kelas IX' },
+    ];
+
+    for (const door of classroomDoors) {
+      if (this.textures.exists('marker_door_arrow')) {
+        const marker = this.add.image(door.x, door.y + 2, 'marker_door_arrow');
+        marker.setOrigin(0.5, 0.7);
+        marker.setScale(0.48);
+        marker.setDepth(door.y + 1);
+
+        this.tweens.add({
+          targets: marker,
+          y: door.y - 4,
+          duration: 850,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+      }
     }
 
     // 7. Setup Camera Tracking (Smooth follow with 1536 x 1024 bounds)
@@ -536,6 +589,11 @@ export class SchoolMapScene extends Phaser.Scene {
     // Character switch from React HUD modal
     this.game.events.on('player:change-character', (data: { key: string; name: string; role: string }) => {
       this.player.switchCharacter(data.key, data.name, data.role);
+    });
+
+    // Enter classroom scene requested from React HUD modal or direct interact
+    this.game.events.on('scene:enter-classroom', (data: { classroomId: 'VII' | 'VIII' | 'IX' }) => {
+      this.enterClassroom(data.classroomId);
     });
 
     // Modal closed: resume patrol for talking NPC
@@ -664,12 +722,29 @@ export class SchoolMapScene extends Phaser.Scene {
     return 'Kampus Asri SMP Terpadu Al-Ittihadiyah';
   }
 
+  private enterClassroom(classroomId: 'VII' | 'VIII' | 'IX'): void {
+    // Clear prompt immediately
+    this.game.events.emit('town:interaction-prompt', null);
+
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.start('ClassroomScene', {
+        classroomId,
+        returnPos: { x: this.player.x, y: this.player.y },
+        characterKey: this.player.characterKey,
+        characterName: this.player.characterName,
+        characterRole: this.player.roleTitle || 'Siswa',
+      });
+    });
+  }
+
   shutdown(): void {
     this.inputManager?.destroy();
     this.game.events.off('input:joystick');
     this.game.events.off('input:sprint');
     this.game.events.off('input:interact');
     this.game.events.off('player:change-character');
+    this.game.events.off('scene:enter-classroom');
     this.game.events.off('modal:closed');
 
     for (const npc of this.npcs) {

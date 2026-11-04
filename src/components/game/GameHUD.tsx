@@ -43,6 +43,7 @@ interface GameHUDProps {
   onBuyItem: (item: { name: string; price: number }) => void;
   currentCharacter?: CharacterProfile;
   onSelectCharacter?: (char: CharacterProfile) => void;
+  onEnterClassroom?: (classroomId: 'VII' | 'VIII' | 'IX') => void;
 }
 
 export default function GameHUD({
@@ -56,6 +57,7 @@ export default function GameHUD({
   onBuyItem,
   currentCharacter = CHARACTER_PROFILES[0],
   onSelectCharacter,
+  onEnterClassroom,
 }: GameHUDProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
@@ -301,7 +303,48 @@ export default function GameHUD({
               </div>
             )}
 
-            {activeModalTrigger.type === 'building_entrance' && (
+            {activeModalTrigger.type === 'building_entrance' && Boolean(activeModalTrigger.data?.isClassroom) && (
+              <div className="space-y-4">
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  {typeof activeModalTrigger.data?.desc === 'string'
+                    ? activeModalTrigger.data.desc
+                    : 'Ruang pembelajaran aktif Kurikulum Merdeka SMP Terpadu Al-Ittihadiyah.'}
+                </p>
+                <div className="p-3.5 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl text-xs space-y-2 text-slate-300">
+                  <p className="font-bold text-cyan-300 flex items-center gap-1.5">
+                    <School size={15} />
+                    <span>Konfigurasi Interior Kelas:</span>
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+                    <p>• 9 Meja Belajar Ganda</p>
+                    <p>• Meja Guru & Stasiun IT</p>
+                    <p>• Navigasi Bebas Lorong 2.5D</p>
+                    <p>• Papan Tulis & Lambang Garuda</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                  <button
+                    onClick={onCloseModal}
+                    className="min-h-[48px] px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold rounded-xl transition-all shadow cursor-pointer active:scale-95"
+                  >
+                    ✕ Batal
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (onEnterClassroom && typeof activeModalTrigger.data?.classroomId === 'string') {
+                        onEnterClassroom(activeModalTrigger.data.classroomId as 'VII' | 'VIII' | 'IX');
+                      }
+                      onCloseModal();
+                    }}
+                    className="min-h-[48px] px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white text-xs font-black rounded-xl transition-all shadow-lg flex items-center gap-2 cursor-pointer ring-2 ring-emerald-400/30"
+                  >
+                    <span>✓ Masuk ke Kelas</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeModalTrigger.type === 'building_entrance' && !activeModalTrigger.data?.isClassroom && (
               <div className="space-y-4">
                 <p className="text-sm text-slate-300 leading-relaxed">
                   {typeof activeModalTrigger.data?.desc === 'string'

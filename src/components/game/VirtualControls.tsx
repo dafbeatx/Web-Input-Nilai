@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import VirtualJoystick from './VirtualJoystick';
 import { DeviceMode, InteractiveTrigger } from '@/lib/game/types';
-import { Zap, Hand, ChevronUp } from 'lucide-react';
+import { Zap, Hand, ChevronUp, LogIn, LogOut } from 'lucide-react';
 
 interface VirtualControlsProps {
   deviceMode: DeviceMode;
@@ -116,19 +116,42 @@ export default function VirtualControls({
             </button>
           </div>
 
-          {/* Interact Button */}
-          <button
-            onClick={onInteractClick}
-            className={`rounded-2xl flex flex-col items-center justify-center font-black shadow-2xl border transition-all active:scale-90 touch-none ${interactBtnSize} ${
-              nearTrigger
-                ? 'bg-gradient-to-br from-indigo-500 to-indigo-700 border-indigo-300 text-white animate-pulse ring-4 ring-indigo-400/40 shadow-[0_0_24px_rgba(99,102,241,0.5)]'
-                : 'bg-slate-900/70 border-slate-700 text-slate-400 hover:bg-slate-850'
-            }`}
-            title="Interaksi (E / Spasi)"
-          >
-            <Hand size={isBoard ? 30 : 22} />
-            <span className="text-[10px] font-black tracking-wider uppercase mt-0.5">Aksi [E]</span>
-          </button>
+          {/* Interact Button (Adaptive Masuk / Keluar / Aksi) */}
+          {(() => {
+            const isExit = nearTrigger?.id === 'trigger-exit-classroom';
+            const isClassroom = Boolean(nearTrigger?.data?.isClassroom);
+
+            let btnStyle = 'bg-slate-900/70 border-slate-700 text-slate-400 hover:bg-slate-850';
+            let labelText = 'Aksi [E]';
+
+            if (isExit) {
+              btnStyle = 'bg-gradient-to-br from-amber-600 to-rose-600 border-amber-300 text-white animate-pulse ring-4 ring-amber-400/40 shadow-[0_0_24px_rgba(245,158,11,0.5)]';
+              labelText = 'Keluar [E]';
+            } else if (isClassroom) {
+              btnStyle = 'bg-gradient-to-br from-emerald-600 to-teal-700 border-emerald-300 text-white animate-pulse ring-4 ring-emerald-400/40 shadow-[0_0_24px_rgba(16,185,129,0.5)]';
+              labelText = 'Masuk [E]';
+            } else if (nearTrigger) {
+              btnStyle = 'bg-gradient-to-br from-indigo-500 to-indigo-700 border-indigo-300 text-white animate-pulse ring-4 ring-indigo-400/40 shadow-[0_0_24px_rgba(99,102,241,0.5)]';
+              labelText = 'Aksi [E]';
+            }
+
+            return (
+              <button
+                onClick={onInteractClick}
+                className={`rounded-2xl flex flex-col items-center justify-center font-black shadow-2xl border transition-all active:scale-90 touch-none min-w-[56px] min-h-[56px] ${interactBtnSize} ${btnStyle}`}
+                title={isExit ? 'Keluar Kelas (E)' : isClassroom ? 'Masuk Kelas (E)' : 'Interaksi (E / Spasi)'}
+              >
+                {isExit ? (
+                  <LogOut size={isBoard ? 30 : 22} />
+                ) : isClassroom ? (
+                  <LogIn size={isBoard ? 30 : 22} />
+                ) : (
+                  <Hand size={isBoard ? 30 : 22} />
+                )}
+                <span className="text-[10px] font-black tracking-wider uppercase mt-0.5">{labelText}</span>
+              </button>
+            );
+          })()}
         </div>
       </div>
     </div>
