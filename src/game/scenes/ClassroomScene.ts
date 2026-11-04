@@ -304,7 +304,7 @@ export class ClassroomScene extends Phaser.Scene {
     });
   }
 
-  update(_time: number, _delta: number): void {
+  update(): void {
     if (!this.player || !this.inputManager || this.isExiting) return;
 
     // 1. Numeric keys for character switcher
