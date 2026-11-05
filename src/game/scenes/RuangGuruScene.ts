@@ -23,6 +23,7 @@ export class RuangGuruScene extends Phaser.Scene {
   private exitMarkerContainer?: Phaser.GameObjects.Container;
   private isNearExit: boolean = false;
   private isExiting: boolean = false;
+  private canExit: boolean = false;
   private numericKeys: Phaser.Input.Keyboard.Key[] = [];
   private currentDeviceMode: DeviceMode = 'desktop';
 
@@ -38,6 +39,7 @@ export class RuangGuruScene extends Phaser.Scene {
 
     this.isExiting = false;
     this.isNearExit = false;
+    this.canExit = false;
   }
 
   create(): void {
@@ -70,31 +72,31 @@ export class RuangGuruScene extends Phaser.Scene {
     this.createStaticBlocker(1350, 845, 770, 84);
 
     // Center dividing partition (Sekat pemisah area guru pria & wanita)
-    this.createStaticBlocker(887, 300, 24, 160);
+    this.createStaticBlocker(887, 265, 24, 90);
 
     // Central equipment area (2 unit printer & meja layanan)
-    this.createStaticBlocker(887, 445, 96, 68);
+    this.createStaticBlocker(887, 455, 120, 60);
 
     // Central lower lounge & sofa area (Area bersama)
-    this.createStaticBlocker(887, 615, 230, 86);
+    this.createStaticBlocker(887, 665, 280, 120);
 
     // Left Side Desks — Area Guru Pria (3 cluster meja kerja & tumpukan buku)
-    this.createStaticBlocker(400, 295, 260, 78);
-    this.createStaticBlocker(400, 485, 260, 78);
-    this.createStaticBlocker(400, 675, 260, 78);
+    this.createStaticBlocker(390, 295, 240, 60);
+    this.createStaticBlocker(390, 485, 240, 60);
+    this.createStaticBlocker(390, 675, 240, 60);
 
     // Right Side Desks — Area Guru Wanita (3 cluster meja kerja & tumpukan buku)
-    this.createStaticBlocker(1374, 295, 260, 78);
-    this.createStaticBlocker(1374, 485, 260, 78);
-    this.createStaticBlocker(1374, 675, 260, 78);
+    this.createStaticBlocker(1380, 295, 240, 60);
+    this.createStaticBlocker(1380, 485, 240, 60);
+    this.createStaticBlocker(1380, 675, 240, 60);
 
     // Perimeter Bookcases & Storage Cabinets
-    this.createStaticBlocker(115, 345, 68, 210);
-    this.createStaticBlocker(1659, 345, 68, 210);
+    this.createStaticBlocker(105, 345, 60, 200);
+    this.createStaticBlocker(1669, 345, 60, 200);
 
     // 3. Exit Door Interaction Marker Overlay (Separated from background at x = 887 doorway)
     if (this.textures.exists('ruang_guru_door_marker')) {
-      this.exitMarkerContainer = this.add.container(887, 755);
+      this.exitMarkerContainer = this.add.container(887, 775);
       this.exitMarkerContainer.setDepth(20);
       this.exitMarkerContainer.setVisible(false);
 
@@ -116,7 +118,7 @@ export class RuangGuruScene extends Phaser.Scene {
       // Subtle breathing pulse for exit pad
       this.tweens.add({
         targets: this.exitMarkerContainer,
-        y: 750,
+        y: 770,
         duration: 900,
         yoyo: true,
         repeat: -1,
@@ -124,19 +126,31 @@ export class RuangGuruScene extends Phaser.Scene {
       });
     }
 
-    // 4. Spawn Player inside Ruang Guru (facing UP into the room)
-    this.player = new Player(this, 887, 720, this.savedCharName, this.savedCharKey);
+    // 4. Spawn Player inside Ruang Guru in the open bottom entrance aisle (facing UP into the room)
+    this.player = new Player(this, 887, 765, this.savedCharName, this.savedCharKey);
     this.player.setRoleTitle(this.savedCharRole);
     this.player.setFacingDirection('up');
-    this.player.setDepth(720);
+    this.player.setDepth(765);
 
     // Add Collisions between Player and All Static Room Blockers
     for (const blocker of this.blockers) {
       this.physics.add.collider(this.player, blocker);
     }
 
-    // 5. Input Controller Setup
+    // 5. Input Controller Setup & Keyboard Reset
     this.inputManager = new InputManager(this);
+    this.inputManager.reset();
+
+    if (this.input.keyboard) {
+      this.input.keyboard.resetKeys();
+      this.input.keyboard.enabled = true;
+    }
+
+    // Grace period before player can interact with the exit doorway to prevent input carryover
+    this.canExit = false;
+    this.time.delayedCall(600, () => {
+      this.canExit = true;
+    });
 
     // 6. Camera & Viewport Setup with Adaptive Responsive Follow
     this.cameras.main.setBounds(0, 0, roomWidth, roomHeight);
@@ -262,7 +276,7 @@ export class RuangGuruScene extends Phaser.Scene {
 
     // Handle user pressing E or tapping action button
     this.inputManager.onInteract(() => {
-      if (this.isNearExit && !this.isExiting) {
+      if (this.isNearExit && !this.isExiting && this.canExit) {
         this.exitRuangGuru();
       }
     });
@@ -287,7 +301,7 @@ export class RuangGuruScene extends Phaser.Scene {
   }
 
   private exitRuangGuru(): void {
-    if (this.isExiting) return;
+    if (this.isExiting || !this.canExit) return;
     this.isExiting = true;
 
     // Clear prompt immediately to prevent double firing
@@ -329,8 +343,8 @@ export class RuangGuruScene extends Phaser.Scene {
     // 3. 2.5D Depth Sorting: Higher Y renders in front
     this.player.setDepth(this.player.y);
 
-    // 4. Proximity check to bottom exit doorway (centered at x = 887, doorway y > 690)
-    const isAtDoorway = Math.abs(this.player.x - 887) < 115 && this.player.y > 690;
+    // 4. Proximity check to bottom exit doorway (centered at x = 887, doorway y >= 785)
+    const isAtDoorway = Math.abs(this.player.x - 887) < 85 && this.player.y >= 785;
 
     if (isAtDoorway) {
       if (!this.isNearExit) {
@@ -355,6 +369,7 @@ export class RuangGuruScene extends Phaser.Scene {
   }
 
   shutdown(): void {
+    this.inputManager?.destroy();
     this.scale.off('resize');
     this.game.events.off('device:mode-change');
     this.game.events.off('input:joystick');

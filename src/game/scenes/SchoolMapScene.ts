@@ -381,6 +381,11 @@ export class SchoolMapScene extends Phaser.Scene {
 
     // 8. Input & Event Listeners
     this.inputManager = new InputManager(this);
+    this.inputManager.reset();
+    if (this.input.keyboard) {
+      this.input.keyboard.resetKeys();
+      this.input.keyboard.enabled = true;
+    }
     this.setupKeyboardShortcuts();
     this.setupReactEventBridge();
 

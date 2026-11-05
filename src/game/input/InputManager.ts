@@ -109,6 +109,16 @@ export class InputManager {
     return { x: dx, y: dy, isSprinting, isInteracting };
   }
 
+  public reset(): void {
+    this.virtualX = 0;
+    this.virtualY = 0;
+    this.virtualSprint = false;
+    this.virtualInteract = false;
+    if (this.scene.input.keyboard) {
+      this.scene.input.keyboard.resetKeys();
+    }
+  }
+
   public destroy(): void {
     this.onInteractCallbacks = [];
   }

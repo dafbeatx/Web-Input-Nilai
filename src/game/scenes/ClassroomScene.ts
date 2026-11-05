@@ -63,6 +63,7 @@ export class ClassroomScene extends Phaser.Scene {
   private exitMarkerContainer?: Phaser.GameObjects.Container;
   private isNearExit: boolean = false;
   private isExiting: boolean = false;
+  private canExit: boolean = false;
   private numericKeys: Phaser.Input.Keyboard.Key[] = [];
   private currentDeviceMode: DeviceMode = 'desktop';
 
@@ -86,6 +87,7 @@ export class ClassroomScene extends Phaser.Scene {
 
     this.isExiting = false;
     this.isNearExit = false;
+    this.canExit = false;
   }
 
   create(): void {
@@ -179,8 +181,20 @@ export class ClassroomScene extends Phaser.Scene {
       this.physics.add.collider(this.player, blocker);
     }
 
-    // 5. Input Controller Setup
+    // 5. Input Controller Setup & Keyboard Reset
     this.inputManager = new InputManager(this);
+    this.inputManager.reset();
+
+    if (this.input.keyboard) {
+      this.input.keyboard.resetKeys();
+      this.input.keyboard.enabled = true;
+    }
+
+    // Grace period before player can interact with the exit doorway to prevent input carryover
+    this.canExit = false;
+    this.time.delayedCall(600, () => {
+      this.canExit = true;
+    });
 
     // 6. Camera & Viewport Setup with Adaptive Responsive Follow
     this.cameras.main.setBounds(0, 0, roomWidth, roomHeight);
@@ -305,7 +319,7 @@ export class ClassroomScene extends Phaser.Scene {
 
     // Handle user pressing E or tapping action button
     this.inputManager.onInteract(() => {
-      if (this.isNearExit && !this.isExiting) {
+      if (this.isNearExit && !this.isExiting && this.canExit) {
         this.exitClassroom();
       }
     });
@@ -330,7 +344,7 @@ export class ClassroomScene extends Phaser.Scene {
   }
 
   private exitClassroom(): void {
-    if (this.isExiting) return;
+    if (this.isExiting || !this.canExit) return;
     this.isExiting = true;
 
     // Clear prompt immediately to prevent double firing
@@ -372,8 +386,8 @@ export class ClassroomScene extends Phaser.Scene {
     // 3. 2.5D Depth Sorting: Higher Y renders in front
     this.player.setDepth(this.player.y);
 
-    // 4. Proximity check to bottom exit doorway (centered at x = 836, doorway y > 760)
-    const isAtDoorway = Math.abs(this.player.x - 836) < 125 && this.player.y > 760;
+    // 4. Proximity check to bottom exit doorway (centered at x = 836, doorway y >= 830)
+    const isAtDoorway = Math.abs(this.player.x - 836) < 125 && this.player.y >= 830;
 
     if (isAtDoorway) {
       if (!this.isNearExit) {
@@ -398,6 +412,7 @@ export class ClassroomScene extends Phaser.Scene {
   }
 
   shutdown(): void {
+    this.inputManager?.destroy();
     this.scale.off('resize');
     this.game.events.off('device:mode-change');
     this.game.events.off('input:joystick');
