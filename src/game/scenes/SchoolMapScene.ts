@@ -480,6 +480,17 @@ export class SchoolMapScene extends Phaser.Scene {
       this.enterRuangGuru();
     });
 
+    // Adaptive zoom on device mode change
+    this.game.events.on('device:mode-change', (mode: string) => {
+      if (mode === 'interactive_board') {
+        this.cameras.main.setZoom(1.20);
+      } else if (mode === 'android') {
+        this.cameras.main.setZoom(1.50);
+      } else {
+        this.cameras.main.setZoom(1.35);
+      }
+    });
+
     // Modal closed: resume patrol for talking NPC
     this.game.events.on('modal:closed', () => {
       if (this.activeTalkingNPC) {
@@ -698,6 +709,7 @@ export class SchoolMapScene extends Phaser.Scene {
     this.game.events.off('player:change-character');
     this.game.events.off('scene:enter-classroom');
     this.game.events.off('scene:enter-ruang-guru');
+    this.game.events.off('device:mode-change');
     this.game.events.off('modal:closed');
 
     for (const npc of this.npcs) {

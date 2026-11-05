@@ -22,6 +22,7 @@ export default function GameContainer() {
   const handleDeviceModeChange = (newMode: DeviceMode) => {
     setDeviceMode(newMode);
     saveDeviceMode(newMode);
+    gameRef.current?.events.emit('device:mode-change', newMode);
   };
 
   const handleSelectCharacter = useCallback((char: CharacterProfile) => {
@@ -44,6 +45,7 @@ export default function GameContainer() {
     // Listen to Game Events
     game.events.on('scene:ready', (data: { zoneName: string }) => {
       if (data?.zoneName) setCurrentZone(data.zoneName);
+      game.events.emit('device:mode-change', deviceMode);
     });
 
     game.events.on('town:zone-change', (zoneName: string) => {

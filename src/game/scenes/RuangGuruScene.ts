@@ -1,7 +1,8 @@
 import * as Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { InputManager } from '../input/InputManager';
-import { InteractiveTrigger, CHARACTER_PROFILES } from '@/lib/game/types';
+import { InteractiveTrigger, CHARACTER_PROFILES, DeviceMode } from '@/lib/game/types';
+import { detectDeviceMode } from '@/lib/game/deviceDetector';
 
 export interface RuangGuruSceneInitData {
   returnPos?: { x: number; y: number };
@@ -23,6 +24,7 @@ export class RuangGuruScene extends Phaser.Scene {
   private isNearExit: boolean = false;
   private isExiting: boolean = false;
   private numericKeys: Phaser.Input.Keyboard.Key[] = [];
+  private currentDeviceMode: DeviceMode = 'desktop';
 
   constructor() {
     super({ key: 'RuangGuruScene' });
@@ -136,11 +138,19 @@ export class RuangGuruScene extends Phaser.Scene {
     // 5. Input Controller Setup
     this.inputManager = new InputManager(this);
 
-    // 6. Camera & Viewport Setup (Scale-to-fit with smooth follow)
+    // 6. Camera & Viewport Setup with Adaptive Responsive Follow
     this.cameras.main.setBounds(0, 0, roomWidth, roomHeight);
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-    this.cameras.main.setZoom(1.05);
+    this.cameras.main.startFollow(this.player, true, 0.09, 0.09);
     this.cameras.main.fadeIn(250, 0, 0, 0);
+
+    // Apply adaptive viewport scaling for PID / Desktop / Mobile
+    this.applyAdaptiveViewport();
+
+    // Listen for resize and device mode switch events
+    this.scale.on('resize', () => this.applyAdaptiveViewport());
+    this.game.events.on('device:mode-change', (mode: DeviceMode) => {
+      this.applyAdaptiveViewport(mode);
+    });
 
     // 7. Floating Room Header Badge
     this.createRoomHeaderUI();
@@ -155,6 +165,45 @@ export class RuangGuruScene extends Phaser.Scene {
     const roomTitle = 'Ruang Kerja Guru & Staf SMP Terpadu Al-Ittihadiyah';
     this.game.events.emit('scene:ready', { zoneName: roomTitle });
     this.game.events.emit('town:zone-change', roomTitle);
+  }
+
+  /**
+   * Adaptive viewport & character scaling for PID (Smart Board), Desktop, and Mobile
+   */
+  private applyAdaptiveViewport(mode?: DeviceMode): void {
+    if (mode) {
+      this.currentDeviceMode = mode;
+    } else {
+      this.currentDeviceMode = detectDeviceMode();
+    }
+
+    let targetZoom = 1.40;
+    let charScale = 1.25;
+
+    switch (this.currentDeviceMode) {
+      case 'interactive_board':
+        // PID / Smart Board (65-86" screen): Balanced overview, visible across classroom
+        targetZoom = 1.25;
+        charScale = 1.35;
+        break;
+      case 'android':
+        // Mobile / Touchscreen: Closer zoom so thumbs don't obstruct character
+        targetZoom = 1.70;
+        charScale = 1.35;
+        break;
+      case 'desktop':
+      default:
+        // Desktop / Laptop: Crisp RPG focal zoom
+        targetZoom = 1.40;
+        charScale = 1.25;
+        break;
+    }
+
+    if (this.player) {
+      this.player.setScaleMultiplier(charScale);
+    }
+
+    this.cameras.main.setZoom(targetZoom);
   }
 
   private createStaticBlocker(x: number, y: number, width: number, height: number): void {
@@ -306,6 +355,8 @@ export class RuangGuruScene extends Phaser.Scene {
   }
 
   shutdown(): void {
+    this.scale.off('resize');
+    this.game.events.off('device:mode-change');
     this.game.events.off('input:joystick');
     this.game.events.off('input:sprint');
     this.game.events.off('input:interact');

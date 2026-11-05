@@ -102,9 +102,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       }
     }
 
-    // Keep nameplate and role tag attached smoothly to player
-    this.nameTag.setPosition(this.x, this.y - 40);
-    this.roleTag.setPosition(this.x, this.y - 28);
+    // Keep nameplate and role tag attached smoothly to player with proportional offset
+    const scale = this.scaleY || 1;
+    this.nameTag.setPosition(this.x, this.y - 42 * scale);
+    this.roleTag.setPosition(this.x, this.y - 29 * scale);
 
     // Depth sorting based on Y position for 2.5D layering
     this.setDepth(this.y);
@@ -128,6 +129,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setTexture(newKey, 0);
     this.setCharacterName(newName);
     this.setRoleTitle(newRole);
+  }
+
+  /**
+   * Adjust sprite visual scale and reposition floating nametag & role badge proportionally
+   */
+  public setScaleMultiplier(scale: number): void {
+    this.setScale(scale);
+    const tagOffsetName = 42 * scale;
+    const tagOffsetRole = 29 * scale;
+    if (this.nameTag) {
+      this.nameTag.setPosition(this.x, this.y - tagOffsetName);
+      this.nameTag.setFontSize(`${Math.round(11 * Math.min(scale, 1.25))}px`);
+    }
+    if (this.roleTag) {
+      this.roleTag.setPosition(this.x, this.y - tagOffsetRole);
+      this.roleTag.setFontSize(`${Math.round(9 * Math.min(scale, 1.25))}px`);
+    }
   }
 
   public setFacingDirection(direction: 'up' | 'down' | 'left' | 'right'): void {

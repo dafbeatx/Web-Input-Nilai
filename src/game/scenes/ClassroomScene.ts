@@ -1,7 +1,8 @@
 import * as Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { InputManager } from '../input/InputManager';
-import { InteractiveTrigger, CHARACTER_PROFILES } from '@/lib/game/types';
+import { InteractiveTrigger, CHARACTER_PROFILES, DeviceMode } from '@/lib/game/types';
+import { detectDeviceMode } from '@/lib/game/deviceDetector';
 
 export type ClassroomId = 'VII' | 'VIII' | 'IX';
 
@@ -63,6 +64,7 @@ export class ClassroomScene extends Phaser.Scene {
   private isNearExit: boolean = false;
   private isExiting: boolean = false;
   private numericKeys: Phaser.Input.Keyboard.Key[] = [];
+  private currentDeviceMode: DeviceMode = 'desktop';
 
   constructor() {
     super({ key: 'ClassroomScene' });
@@ -118,19 +120,19 @@ export class ClassroomScene extends Phaser.Scene {
     this.createStaticBlocker(1245, 905, 590, 72);
 
     // Teacher Desk at top left
-    this.createStaticBlocker(540, 390, 200, 80);
+    this.createStaticBlocker(540, 390, 190, 65);
 
     // Bookshelf & Storage at top right
-    this.createStaticBlocker(1330, 380, 140, 90);
+    this.createStaticBlocker(1330, 380, 130, 75);
 
-    // Student Desks (3 Columns x 3 Rows)
+    // Student Desks (3 Columns x 3 Rows with comfortable walking aisles)
     const deskColumns = [490, 830, 1170];
-    const deskRows = [510, 615, 720];
+    const deskRows = [495, 600, 705];
 
     deskRows.forEach(rowY => {
       deskColumns.forEach(colX => {
         // Invisible footprint blocker for desk and chairs
-        this.createStaticBlocker(colX, rowY, 200, 75);
+        this.createStaticBlocker(colX, rowY, 190, 48);
       });
     });
 
@@ -180,11 +182,19 @@ export class ClassroomScene extends Phaser.Scene {
     // 5. Input Controller Setup
     this.inputManager = new InputManager(this);
 
-    // 6. Camera & Viewport Setup (Scale-to-fit with smooth follow)
+    // 6. Camera & Viewport Setup with Adaptive Responsive Follow
     this.cameras.main.setBounds(0, 0, roomWidth, roomHeight);
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-    this.cameras.main.setZoom(1.05);
+    this.cameras.main.startFollow(this.player, true, 0.09, 0.09);
     this.cameras.main.fadeIn(250, 0, 0, 0);
+
+    // Apply adaptive viewport scaling for PID / Desktop / Mobile
+    this.applyAdaptiveViewport();
+
+    // Listen for resize and device mode switch events
+    this.scale.on('resize', () => this.applyAdaptiveViewport());
+    this.game.events.on('device:mode-change', (mode: DeviceMode) => {
+      this.applyAdaptiveViewport(mode);
+    });
 
     // 7. Floating Room Indicator Badge
     this.createRoomHeaderUI(config);
@@ -198,6 +208,45 @@ export class ClassroomScene extends Phaser.Scene {
     // 10. Notify React Layer
     this.game.events.emit('scene:ready', { zoneName: config.title });
     this.game.events.emit('town:zone-change', config.title);
+  }
+
+  /**
+   * Adaptive viewport & character scaling for PID (Smart Board), Desktop, and Mobile
+   */
+  private applyAdaptiveViewport(mode?: DeviceMode): void {
+    if (mode) {
+      this.currentDeviceMode = mode;
+    } else {
+      this.currentDeviceMode = detectDeviceMode();
+    }
+
+    let targetZoom = 1.45;
+    let charScale = 1.25;
+
+    switch (this.currentDeviceMode) {
+      case 'interactive_board':
+        // PID / Smart Board (65-86" screen): Balanced overview, visible across classroom
+        targetZoom = 1.28;
+        charScale = 1.35;
+        break;
+      case 'android':
+        // Mobile / Touchscreen: Closer zoom so thumbs don't obstruct character
+        targetZoom = 1.75;
+        charScale = 1.35;
+        break;
+      case 'desktop':
+      default:
+        // Desktop / Laptop: Crisp RPG focal zoom
+        targetZoom = 1.45;
+        charScale = 1.25;
+        break;
+    }
+
+    if (this.player) {
+      this.player.setScaleMultiplier(charScale);
+    }
+
+    this.cameras.main.setZoom(targetZoom);
   }
 
   private createStaticBlocker(x: number, y: number, width: number, height: number): void {
@@ -349,6 +398,8 @@ export class ClassroomScene extends Phaser.Scene {
   }
 
   shutdown(): void {
+    this.scale.off('resize');
+    this.game.events.off('device:mode-change');
     this.game.events.off('input:joystick');
     this.game.events.off('input:sprint');
     this.game.events.off('input:interact');
