@@ -15,6 +15,13 @@ export class MainTownScene extends Phaser.Scene {
   private currentNearTrigger: InteractiveTrigger | null = null;
   private lastZoneName: string = 'Jl. Merdeka (Pusat Kota)';
 
+  private boundHandlers: {
+    joystick?: (data: { x: number; y: number }) => void;
+    sprint?: (isSprinting: boolean) => void;
+    interact?: () => void;
+    changeChar?: (data: { key: string; name: string; role: string }) => void;
+  } = {};
+
   constructor() {
     super({ key: 'MainTownScene' });
   }
@@ -239,21 +246,25 @@ export class MainTownScene extends Phaser.Scene {
 
   private setupReactEventBridge(): void {
     // Listen for virtual joystick & button inputs sent from React VirtualControls
-    this.game.events.on('input:joystick', (data: { x: number; y: number }) => {
-      this.inputManager.setVirtualMovement(data.x, data.y);
-    });
+    this.boundHandlers.joystick = (data: { x: number; y: number }) => {
+      this.inputManager?.setVirtualMovement(data.x, data.y);
+    };
+    this.game.events.on('input:joystick', this.boundHandlers.joystick);
 
-    this.game.events.on('input:sprint', (isSprinting: boolean) => {
-      this.inputManager.setVirtualSprint(isSprinting);
-    });
+    this.boundHandlers.sprint = (isSprinting: boolean) => {
+      this.inputManager?.setVirtualSprint(isSprinting);
+    };
+    this.game.events.on('input:sprint', this.boundHandlers.sprint);
 
-    this.game.events.on('input:interact', () => {
-      this.inputManager.triggerVirtualInteract();
-    });
+    this.boundHandlers.interact = () => {
+      this.inputManager?.triggerVirtualInteract();
+    };
+    this.game.events.on('input:interact', this.boundHandlers.interact);
 
-    this.game.events.on('player:change-character', (data: { key: string; name: string; role: string }) => {
-      this.player.switchCharacter(data.key, data.name, data.role);
-    });
+    this.boundHandlers.changeChar = (data: { key: string; name: string; role: string }) => {
+      this.player?.switchCharacter(data.key, data.name, data.role);
+    };
+    this.game.events.on('player:change-character', this.boundHandlers.changeChar);
 
     // When interact is triggered (keyboard or touch), open modal if near trigger
     this.inputManager.onInteract(() => {
@@ -315,9 +326,10 @@ export class MainTownScene extends Phaser.Scene {
 
   shutdown(): void {
     this.inputManager?.destroy();
-    this.game.events.off('input:joystick');
-    this.game.events.off('input:sprint');
-    this.game.events.off('input:interact');
-    this.game.events.off('player:change-character');
+    if (this.boundHandlers.joystick) this.game.events.off('input:joystick', this.boundHandlers.joystick);
+    if (this.boundHandlers.sprint) this.game.events.off('input:sprint', this.boundHandlers.sprint);
+    if (this.boundHandlers.interact) this.game.events.off('input:interact', this.boundHandlers.interact);
+    if (this.boundHandlers.changeChar) this.game.events.off('player:change-character', this.boundHandlers.changeChar);
+    this.boundHandlers = {};
   }
 }

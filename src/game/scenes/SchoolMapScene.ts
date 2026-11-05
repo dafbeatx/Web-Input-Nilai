@@ -227,6 +227,18 @@ export class SchoolMapScene extends Phaser.Scene {
   private f3Key?: Phaser.Input.Keyboard.Key;
   private initData?: SchoolMapSceneInitData;
 
+  // Bound handler references for clean event removal
+  private boundHandlers: {
+    joystick?: (data: { x: number; y: number }) => void;
+    sprint?: (isSprinting: boolean) => void;
+    interact?: () => void;
+    changeChar?: (data: { key: string; name: string; role: string }) => void;
+    enterClassroom?: (data: { classroomId: 'VII' | 'VIII' | 'IX' }) => void;
+    enterRuangGuru?: () => void;
+    deviceMode?: (mode: string) => void;
+    modalClosed?: () => void;
+  } = {};
+
   constructor() {
     super({ key: 'SchoolMapScene' });
   }
@@ -455,38 +467,46 @@ export class SchoolMapScene extends Phaser.Scene {
 
   private setupReactEventBridge(): void {
     // Virtual joystick input from touch screen (Android / PID)
-    this.game.events.on('input:joystick', (data: { x: number; y: number }) => {
-      this.inputManager.setVirtualMovement(data.x, data.y);
-    });
+    this.boundHandlers.joystick = (data: { x: number; y: number }) => {
+      this.inputManager?.setVirtualMovement(data.x, data.y);
+    };
+    this.game.events.on('input:joystick', this.boundHandlers.joystick);
 
     // Sprint button toggle
-    this.game.events.on('input:sprint', (isSprinting: boolean) => {
-      this.inputManager.setVirtualSprint(isSprinting);
-    });
+    this.boundHandlers.sprint = (isSprinting: boolean) => {
+      this.inputManager?.setVirtualSprint(isSprinting);
+    };
+    this.game.events.on('input:sprint', this.boundHandlers.sprint);
 
     // Interact action button
-    this.game.events.on('input:interact', () => {
-      this.inputManager.triggerVirtualInteract();
-    });
+    this.boundHandlers.interact = () => {
+      this.inputManager?.triggerVirtualInteract();
+    };
+    this.game.events.on('input:interact', this.boundHandlers.interact);
 
     // Character switch from React HUD modal
-    this.game.events.on('player:change-character', (data: { key: string; name: string; role: string }) => {
+    this.boundHandlers.changeChar = (data: { key: string; name: string; role: string }) => {
+      if (!this.player) return;
       this.player.switchCharacter(data.key, data.name, data.role);
       this.syncNPCVisibilityWithPlayer();
-    });
+    };
+    this.game.events.on('player:change-character', this.boundHandlers.changeChar);
 
     // Enter classroom scene requested from React HUD modal or direct interact
-    this.game.events.on('scene:enter-classroom', (data: { classroomId: 'VII' | 'VIII' | 'IX' }) => {
+    this.boundHandlers.enterClassroom = (data: { classroomId: 'VII' | 'VIII' | 'IX' }) => {
       this.enterClassroom(data.classroomId);
-    });
+    };
+    this.game.events.on('scene:enter-classroom', this.boundHandlers.enterClassroom);
 
     // Enter Ruang Guru scene requested from React HUD modal or direct interact
-    this.game.events.on('scene:enter-ruang-guru', () => {
+    this.boundHandlers.enterRuangGuru = () => {
       this.enterRuangGuru();
-    });
+    };
+    this.game.events.on('scene:enter-ruang-guru', this.boundHandlers.enterRuangGuru);
 
     // Adaptive zoom on device mode change
-    this.game.events.on('device:mode-change', (mode: string) => {
+    this.boundHandlers.deviceMode = (mode: string) => {
+      if (!this.cameras?.main) return;
       if (mode === 'interactive_board') {
         this.cameras.main.setZoom(1.20);
       } else if (mode === 'android') {
@@ -494,15 +514,17 @@ export class SchoolMapScene extends Phaser.Scene {
       } else {
         this.cameras.main.setZoom(1.35);
       }
-    });
+    };
+    this.game.events.on('device:mode-change', this.boundHandlers.deviceMode);
 
     // Modal closed: resume patrol for talking NPC
-    this.game.events.on('modal:closed', () => {
+    this.boundHandlers.modalClosed = () => {
       if (this.activeTalkingNPC) {
         this.activeTalkingNPC.resumePatrol();
         this.activeTalkingNPC = null;
       }
-    });
+    };
+    this.game.events.on('modal:closed', this.boundHandlers.modalClosed);
 
     // When interact trigger is fired (via keyboard 'E' or touch button)
     this.inputManager.onInteract(() => {
@@ -676,6 +698,8 @@ export class SchoolMapScene extends Phaser.Scene {
   }
 
   private enterClassroom(classroomId: 'VII' | 'VIII' | 'IX'): void {
+    if (!this.cameras?.main || !this.player) return;
+
     // Clear prompt immediately
     this.game.events.emit('town:interaction-prompt', null);
 
@@ -692,6 +716,8 @@ export class SchoolMapScene extends Phaser.Scene {
   }
 
   private enterRuangGuru(): void {
+    if (!this.cameras?.main || !this.player) return;
+
     // Clear prompt immediately
     this.game.events.emit('town:interaction-prompt', null);
 
@@ -708,14 +734,16 @@ export class SchoolMapScene extends Phaser.Scene {
 
   shutdown(): void {
     this.inputManager?.destroy();
-    this.game.events.off('input:joystick');
-    this.game.events.off('input:sprint');
-    this.game.events.off('input:interact');
-    this.game.events.off('player:change-character');
-    this.game.events.off('scene:enter-classroom');
-    this.game.events.off('scene:enter-ruang-guru');
-    this.game.events.off('device:mode-change');
-    this.game.events.off('modal:closed');
+
+    if (this.boundHandlers.joystick) this.game.events.off('input:joystick', this.boundHandlers.joystick);
+    if (this.boundHandlers.sprint) this.game.events.off('input:sprint', this.boundHandlers.sprint);
+    if (this.boundHandlers.interact) this.game.events.off('input:interact', this.boundHandlers.interact);
+    if (this.boundHandlers.changeChar) this.game.events.off('player:change-character', this.boundHandlers.changeChar);
+    if (this.boundHandlers.enterClassroom) this.game.events.off('scene:enter-classroom', this.boundHandlers.enterClassroom);
+    if (this.boundHandlers.enterRuangGuru) this.game.events.off('scene:enter-ruang-guru', this.boundHandlers.enterRuangGuru);
+    if (this.boundHandlers.deviceMode) this.game.events.off('device:mode-change', this.boundHandlers.deviceMode);
+    if (this.boundHandlers.modalClosed) this.game.events.off('modal:closed', this.boundHandlers.modalClosed);
+    this.boundHandlers = {};
 
     for (const npc of this.npcs) {
       npc.destroy();

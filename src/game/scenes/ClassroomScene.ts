@@ -67,6 +67,16 @@ export class ClassroomScene extends Phaser.Scene {
   private numericKeys: Phaser.Input.Keyboard.Key[] = [];
   private currentDeviceMode: DeviceMode = 'desktop';
 
+  // Bound handler references for clean event removal
+  private boundHandlers: {
+    joystick?: (data: { x: number; y: number }) => void;
+    sprint?: (isSprinting: boolean) => void;
+    interact?: () => void;
+    changeChar?: (data: { key: string; name: string; role: string }) => void;
+    deviceMode?: (mode: DeviceMode) => void;
+    resize?: () => void;
+  } = {};
+
   constructor() {
     super({ key: 'ClassroomScene' });
   }
@@ -205,10 +215,13 @@ export class ClassroomScene extends Phaser.Scene {
     this.applyAdaptiveViewport();
 
     // Listen for resize and device mode switch events
-    this.scale.on('resize', () => this.applyAdaptiveViewport());
-    this.game.events.on('device:mode-change', (mode: DeviceMode) => {
+    this.boundHandlers.resize = () => this.applyAdaptiveViewport();
+    this.scale.on('resize', this.boundHandlers.resize);
+
+    this.boundHandlers.deviceMode = (mode: DeviceMode) => {
       this.applyAdaptiveViewport(mode);
-    });
+    };
+    this.game.events.on('device:mode-change', this.boundHandlers.deviceMode);
 
     // 7. Floating Room Indicator Badge
     this.createRoomHeaderUI(config);
@@ -260,7 +273,9 @@ export class ClassroomScene extends Phaser.Scene {
       this.player.setScaleMultiplier(charScale);
     }
 
-    this.cameras.main.setZoom(targetZoom);
+    if (this.cameras?.main) {
+      this.cameras.main.setZoom(targetZoom);
+    }
   }
 
   private createStaticBlocker(x: number, y: number, width: number, height: number): void {
@@ -295,27 +310,31 @@ export class ClassroomScene extends Phaser.Scene {
 
   private setupReactEventBridge(): void {
     // Virtual joystick from touch devices
-    this.game.events.on('input:joystick', (data: { x: number; y: number }) => {
-      this.inputManager.setVirtualMovement(data.x, data.y);
-    });
+    this.boundHandlers.joystick = (data: { x: number; y: number }) => {
+      this.inputManager?.setVirtualMovement(data.x, data.y);
+    };
+    this.game.events.on('input:joystick', this.boundHandlers.joystick);
 
     // Sprint toggle
-    this.game.events.on('input:sprint', (isSprinting: boolean) => {
-      this.inputManager.setVirtualSprint(isSprinting);
-    });
+    this.boundHandlers.sprint = (isSprinting: boolean) => {
+      this.inputManager?.setVirtualSprint(isSprinting);
+    };
+    this.game.events.on('input:sprint', this.boundHandlers.sprint);
 
     // Interact button (pressing E or tapping virtual button)
-    this.game.events.on('input:interact', () => {
-      this.inputManager.triggerVirtualInteract();
-    });
+    this.boundHandlers.interact = () => {
+      this.inputManager?.triggerVirtualInteract();
+    };
+    this.game.events.on('input:interact', this.boundHandlers.interact);
 
     // Character switch from HUD modal
-    this.game.events.on('player:change-character', (data: { key: string; name: string; role: string }) => {
+    this.boundHandlers.changeChar = (data: { key: string; name: string; role: string }) => {
       this.savedCharKey = data.key;
       this.savedCharName = data.name;
       this.savedCharRole = data.role;
-      this.player.switchCharacter(data.key, data.name, data.role);
-    });
+      this.player?.switchCharacter(data.key, data.name, data.role);
+    };
+    this.game.events.on('player:change-character', this.boundHandlers.changeChar);
 
     // Handle user pressing E or tapping action button
     this.inputManager.onInteract(() => {
@@ -344,7 +363,7 @@ export class ClassroomScene extends Phaser.Scene {
   }
 
   private exitClassroom(): void {
-    if (this.isExiting || !this.canExit) return;
+    if (this.isExiting || !this.canExit || !this.cameras?.main) return;
     this.isExiting = true;
 
     // Clear prompt immediately to prevent double firing
@@ -355,8 +374,8 @@ export class ClassroomScene extends Phaser.Scene {
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('SchoolMapScene', {
         returnPos: this.returnPos,
-        characterKey: this.player.characterKey,
-        characterName: this.player.characterName,
+        characterKey: this.player?.characterKey,
+        characterName: this.player?.characterName,
         characterRole: this.savedCharRole,
       });
     });
@@ -413,12 +432,13 @@ export class ClassroomScene extends Phaser.Scene {
 
   shutdown(): void {
     this.inputManager?.destroy();
-    this.scale.off('resize');
-    this.game.events.off('device:mode-change');
-    this.game.events.off('input:joystick');
-    this.game.events.off('input:sprint');
-    this.game.events.off('input:interact');
-    this.game.events.off('player:change-character');
+    if (this.boundHandlers.resize) this.scale.off('resize', this.boundHandlers.resize);
+    if (this.boundHandlers.deviceMode) this.game.events.off('device:mode-change', this.boundHandlers.deviceMode);
+    if (this.boundHandlers.joystick) this.game.events.off('input:joystick', this.boundHandlers.joystick);
+    if (this.boundHandlers.sprint) this.game.events.off('input:sprint', this.boundHandlers.sprint);
+    if (this.boundHandlers.interact) this.game.events.off('input:interact', this.boundHandlers.interact);
+    if (this.boundHandlers.changeChar) this.game.events.off('player:change-character', this.boundHandlers.changeChar);
+    this.boundHandlers = {};
     this.game.events.emit('town:interaction-prompt', null);
   }
 }
