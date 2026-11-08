@@ -13,6 +13,12 @@ export default function GameContainer() {
   const gameRef = useRef<Phaser.Game | null>(null);
 
   const [deviceMode, setDeviceMode] = useState<DeviceMode>(() => detectDeviceMode());
+  const deviceModeRef = useRef<DeviceMode>(deviceMode);
+
+  useEffect(() => {
+    deviceModeRef.current = deviceMode;
+  }, [deviceMode]);
+
   const [currentZone, setCurrentZone] = useState<string>('Pusat Kota Nusantara');
   const [nearTrigger, setNearTrigger] = useState<InteractiveTrigger | null>(null);
   const [activeModalTrigger, setActiveModalTrigger] = useState<InteractiveTrigger | null>(null);
@@ -21,6 +27,7 @@ export default function GameContainer() {
 
   const handleDeviceModeChange = (newMode: DeviceMode) => {
     setDeviceMode(newMode);
+    deviceModeRef.current = newMode;
     saveDeviceMode(newMode);
     gameRef.current?.events.emit('device:mode-change', newMode);
   };
@@ -45,7 +52,7 @@ export default function GameContainer() {
     // Listen to Game Events
     game.events.on('scene:ready', (data: { zoneName: string }) => {
       if (data?.zoneName) setCurrentZone(data.zoneName);
-      game.events.emit('device:mode-change', deviceMode);
+      game.events.emit('device:mode-change', deviceModeRef.current);
     });
 
     game.events.on('town:zone-change', (zoneName: string) => {

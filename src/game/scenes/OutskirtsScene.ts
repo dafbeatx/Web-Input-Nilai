@@ -185,7 +185,7 @@ export class OutskirtsScene extends Phaser.Scene {
       duration: 900,
     });
 
-    const signText = this.add.text(70, gateY - 45, '← Kampus SMP', {
+    this.add.text(70, gateY - 45, '← Kampus SMP', {
       fontFamily: 'Outfit, Inter, sans-serif',
       fontSize: '11px',
       color: '#fef08a',
