@@ -61,7 +61,6 @@ export class BootScene extends Phaser.Scene {
     // Tilemap & Atlas (SMP Terpadu Al-Ittihadiyah)
     // Loads live cloud database / dynamic map from API route with timestamp cache-buster
     this.load.tilemapTiledJSON('school_map', `/api/game/map?t=${Date.now()}`);
-    this.load.tilemapTiledJSON('outskirts_map', `/api/game/map?map=outskirts&t=${Date.now()}`);
     this.load.image('school_atlas', '/assets/maps/school_atlas.png');
 
     // Tilesets
@@ -101,56 +100,6 @@ export class BootScene extends Phaser.Scene {
     this.load.image('prop_board', '/assets/game/props/prop_smart_board.png');
     this.load.image('prop_lamp', '/assets/game/props/prop_street_lamp.png');
 
-    // -------------------------------------------------------------
-    // PIXEL CRAWLER ADVENTURE EXPANSION (Kawasan Agrowisata P5)
-    // -------------------------------------------------------------
-    // Cohesive High-Fidelity Landscape Atlas (2048x1536)
-    this.load.image('outskirts_atlas', '/assets/game/pixel_crawler/outskirts_atlas.png');
-
-    // Pixel Crawler Ground Tiles (64x64)
-    this.load.image('tile_crawler_grass', '/assets/game/pixel_crawler/extracted/tile_crawler_grass.png');
-    this.load.image('tile_crawler_dirt', '/assets/game/pixel_crawler/extracted/tile_crawler_dirt.png');
-    this.load.image('tile_crawler_stone', '/assets/game/pixel_crawler/extracted/tile_crawler_stone.png');
-    this.load.image('tile_crawler_wood', '/assets/game/pixel_crawler/extracted/tile_crawler_wood.png');
-    this.load.image('tile_crawler_water', '/assets/game/pixel_crawler/extracted/tile_crawler_water.png');
-
-    // Pixel Crawler Props & Trees
-    this.load.image('tree_oak_l', '/assets/game/pixel_crawler/extracted/tree_oak_l.png');
-    this.load.image('tree_oak_m', '/assets/game/pixel_crawler/extracted/tree_oak_m.png');
-    this.load.image('tree_pine_m', '/assets/game/pixel_crawler/extracted/tree_pine_m.png');
-    this.load.image('tree_pine_s', '/assets/game/pixel_crawler/extracted/tree_pine_s.png');
-    this.load.image('farm_barn', '/assets/game/pixel_crawler/extracted/farm_barn.png');
-    this.load.image('farm_scarecrow', '/assets/game/pixel_crawler/extracted/farm_scarecrow.png');
-    this.load.image('farm_crops', '/assets/game/pixel_crawler/extracted/farm_crops.png');
-    this.load.image('farm_haystack', '/assets/game/pixel_crawler/extracted/farm_haystack.png');
-    this.load.image('farm_water_well', '/assets/game/pixel_crawler/extracted/farm_water_well.png');
-    this.load.image('farm_crates', '/assets/game/pixel_crawler/extracted/farm_crates.png');
-    this.load.image('farm_barrel', '/assets/game/pixel_crawler/extracted/farm_barrel.png');
-    this.load.image('veg_bush_large', '/assets/game/pixel_crawler/extracted/veg_bush_large.png');
-    this.load.image('veg_bush_flowers', '/assets/game/pixel_crawler/extracted/veg_bush_flowers.png');
-    this.load.image('veg_shrub', '/assets/game/pixel_crawler/extracted/veg_shrub.png');
-    this.load.image('veg_flowers', '/assets/game/pixel_crawler/extracted/veg_flowers.png');
-    this.load.image('rock_large', '/assets/game/pixel_crawler/extracted/rock_large.png');
-    this.load.image('rock_mossy', '/assets/game/pixel_crawler/extracted/rock_mossy.png');
-    this.load.image('furn_picnic_table', '/assets/game/pixel_crawler/extracted/furn_picnic_table.png');
-
-    // Pixel Crawler Workstations
-    this.load.image('station_workbench', '/assets/game/pixel_crawler/extracted/station_workbench.png');
-    this.load.image('station_cooking', '/assets/game/pixel_crawler/extracted/station_cooking.png');
-    this.load.image('station_furnace', '/assets/game/pixel_crawler/extracted/station_furnace.png');
-    this.load.image('station_alchemy', '/assets/game/pixel_crawler/extracted/station_alchemy.png');
-    this.load.image('station_anvil', '/assets/game/pixel_crawler/extracted/station_anvil.png');
-
-    // Animated Station Spritesheets
-    this.load.spritesheet('station_bonfire_wood', '/assets/game/pixel_crawler/stations/bonfire_sheet.png', {
-      frameWidth: 32,
-      frameHeight: 32,
-    });
-    this.load.spritesheet('station_fire_flame', '/assets/game/pixel_crawler/stations/fire_sheet.png', {
-      frameWidth: 32,
-      frameHeight: 48,
-    });
-
     // Character Spritesheets (4x4 = 16 frames, 64x64 each)
     const characters = [
       { key: 'char_farhan', path: '/assets/game/characters/farhan_spritesheet.png' },
@@ -184,19 +133,7 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     this.createAllCharacterAnimations();
-    this.createEnvironmentAnimations();
     this.scene.start('SchoolMapScene');
-  }
-
-  private createEnvironmentAnimations(): void {
-    if (!this.anims.exists('fire_burn')) {
-      this.anims.create({
-        key: 'fire_burn',
-        frames: this.anims.generateFrameNumbers('station_fire_flame', { frames: [0, 1, 2, 3] }),
-        frameRate: 6,
-        repeat: -1,
-      });
-    }
   }
 
   private createAllCharacterAnimations(): void {

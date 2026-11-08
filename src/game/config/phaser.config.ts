@@ -4,7 +4,6 @@ import { SchoolMapScene } from '../scenes/SchoolMapScene';
 import { MainTownScene } from '../scenes/MainTownScene';
 import { ClassroomScene } from '../scenes/ClassroomScene';
 import { RuangGuruScene } from '../scenes/RuangGuruScene';
-import { OutskirtsScene } from '../scenes/OutskirtsScene';
 
 export function createPhaserConfig(parentElement: HTMLElement): Phaser.Types.Core.GameConfig {
   return {
@@ -26,7 +25,7 @@ export function createPhaserConfig(parentElement: HTMLElement): Phaser.Types.Cor
         debug: false,
       },
     },
-    scene: [BootScene, SchoolMapScene, MainTownScene, ClassroomScene, RuangGuruScene, OutskirtsScene],
+    scene: [BootScene, SchoolMapScene, MainTownScene, ClassroomScene, RuangGuruScene],
     fps: {
       target: 60,
       forceSetTimeOut: true,

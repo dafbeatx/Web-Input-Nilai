@@ -118,11 +118,6 @@ export default function GameContainer() {
     gameRef.current?.events.emit('scene:enter-ruang-guru');
   }, []);
 
-  // Enter Outskirts (Kawasan Agrowisata P5) Transition Handler
-  const handleEnterOutskirts = useCallback(() => {
-    gameRef.current?.events.emit('scene:enter-outskirts');
-  }, []);
-
   return (
     <div className="relative w-full h-dvh bg-slate-950 overflow-hidden select-none">
       {/* Phaser Canvas Root Mount Container */}
@@ -146,7 +141,6 @@ export default function GameContainer() {
         onSelectCharacter={handleSelectCharacter}
         onEnterClassroom={handleEnterClassroom}
         onEnterRuangGuru={handleEnterRuangGuru}
-        onEnterOutskirts={handleEnterOutskirts}
       />
 
       {/* Multiplatform Virtual Controls (Adaptive to Android / Smart Board / Desktop) */}

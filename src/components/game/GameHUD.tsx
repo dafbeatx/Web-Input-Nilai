@@ -46,7 +46,6 @@ interface GameHUDProps {
   onSelectCharacter?: (char: CharacterProfile) => void;
   onEnterClassroom?: (classroomId: 'VII' | 'VIII' | 'IX') => void;
   onEnterRuangGuru?: () => void;
-  onEnterOutskirts?: () => void;
 }
 
 export default function GameHUD({
@@ -62,7 +61,6 @@ export default function GameHUD({
   onSelectCharacter,
   onEnterClassroom,
   onEnterRuangGuru,
-  onEnterOutskirts,
 }: GameHUDProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
@@ -201,13 +199,7 @@ export default function GameHUD({
 
           {/* Map Collision Editor Button */}
           <Link
-            href={
-              currentZone?.toLowerCase().includes('agrowisata') ||
-              currentZone?.toLowerCase().includes('p5') ||
-              currentZone?.toLowerCase().includes('kawasan')
-                ? '/game/editor?map=outskirts'
-                : '/game/editor?map=school'
-            }
+            href="/game/editor"
             className="p-2 bg-slate-900/90 hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 rounded-xl border border-slate-700/80 backdrop-blur-md shadow-lg transition-all flex items-center gap-1.5"
             title="Buka Visual Collision Editor"
           >
@@ -387,24 +379,18 @@ export default function GameHUD({
                 <div className="flex justify-end gap-2 pt-2">
                   <button
                     onClick={() => {
-                      if (activeModalTrigger.id === 'trigger-exit-to-outskirts') {
-                        onEnterOutskirts?.();
-                      } else if (activeModalTrigger.id === 'trigger-ruang-guru') {
+                      if (activeModalTrigger.id === 'trigger-ruang-guru') {
                         onEnterRuangGuru?.();
                       }
                       onCloseModal();
                     }}
                     className={`px-5 py-2.5 text-white text-xs font-bold rounded-xl transition-all shadow-md ${
-                      activeModalTrigger.id === 'trigger-exit-to-outskirts'
-                        ? 'bg-emerald-600 hover:bg-emerald-500 ring-2 ring-emerald-400/30'
-                        : activeModalTrigger.id === 'trigger-ruang-guru'
+                      activeModalTrigger.id === 'trigger-ruang-guru'
                         ? 'bg-blue-600 hover:bg-blue-500 ring-2 ring-blue-400/30'
                         : 'bg-indigo-600 hover:bg-indigo-500'
                     }`}
                   >
-                    {activeModalTrigger.id === 'trigger-exit-to-outskirts'
-                      ? 'Jelajahi Kawasan Agrowisata P5 →'
-                      : activeModalTrigger.id === 'trigger-ruang-guru'
+                    {activeModalTrigger.id === 'trigger-ruang-guru'
                       ? 'Masuk ke Ruang Guru →'
                       : 'Tutup / Masuk Fasilitas'}
                   </button>

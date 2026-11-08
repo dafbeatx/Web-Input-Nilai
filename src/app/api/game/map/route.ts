@@ -10,7 +10,6 @@ export const revalidate = 0;
 
 const MAP_PATH_1 = path.join(process.cwd(), 'public', 'assets', 'maps', 'school_map.json');
 const MAP_PATH_2 = path.join(process.cwd(), 'public', 'assets', 'game', 'maps', 'school_map.json');
-const OUTSKIRTS_MAP_PATH = path.join(process.cwd(), 'public', 'assets', 'maps', 'outskirts_map.json');
 
 const NO_CACHE_HEADERS = {
   'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
@@ -33,25 +32,18 @@ async function getAvailableSupabaseClients(): Promise<SupabaseClient[]> {
   return clients;
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const url = new URL(req.url);
-    const mapKey = url.searchParams.get('map') || 'school';
-    const isOutskirts = mapKey === 'outskirts';
-
-    const settingKey = isOutskirts ? 'game_outskirts_map' : 'game_school_map';
-    const className = isOutskirts ? 'GAME_MAP_OUTSKIRTS' : 'GAME_MAP_SCHOOL';
-    const fallbackPath = isOutskirts ? OUTSKIRTS_MAP_PATH : MAP_PATH_1;
-
     const clients = await getAvailableSupabaseClients();
 
-    // 1. Primary Cloud Storage: system_settings
+    // 1. Primary Cloud Storage: system_settings (key: 'game_school_map')
+    // Works across ALL environments (accessible with publishable & service_role key)
     for (const client of clients) {
       try {
         const { data, error } = await client
           .from('system_settings')
           .select('value')
-          .eq('key', settingKey)
+          .eq('key', 'game_school_map')
           .maybeSingle();
 
         if (!error && data?.value) {
@@ -63,13 +55,13 @@ export async function GET(req: NextRequest) {
       } catch {}
     }
 
-    // 2. Secondary Cloud Storage: gm_behavior_settings
+    // 2. Secondary Cloud Storage: gm_behavior_settings (class_name: 'GAME_MAP_SCHOOL')
     for (const client of clients) {
       try {
         const { data: cloudConfig, error: cloudErr } = await client
           .from('gm_behavior_settings')
           .select('reasons')
-          .eq('class_name', className)
+          .eq('class_name', 'GAME_MAP_SCHOOL')
           .eq('academic_year', 'CONFIG')
           .maybeSingle();
 
@@ -83,8 +75,8 @@ export async function GET(req: NextRequest) {
     }
 
     // 3. Fallback to local file system
-    if (fs.existsSync(fallbackPath)) {
-      const content = fs.readFileSync(fallbackPath, 'utf-8');
+    if (fs.existsSync(MAP_PATH_1)) {
+      const content = fs.readFileSync(MAP_PATH_1, 'utf-8');
       const data = JSON.parse(content);
       return NextResponse.json(data, { headers: NO_CACHE_HEADERS });
     }
@@ -92,6 +84,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Berkas peta tidak ditemukan' }, { status: 404, headers: NO_CACHE_HEADERS });
   } catch (error) {
     console.error('API Error [GET /api/game/map]:', error);
+    try {
+      if (fs.existsSync(MAP_PATH_1)) {
+        const content = fs.readFileSync(MAP_PATH_1, 'utf-8');
+        return NextResponse.json(JSON.parse(content), { headers: NO_CACHE_HEADERS });
+      }
+    } catch {}
     return NextResponse.json({ error: 'Gagal membaca data peta' }, { status: 500, headers: NO_CACHE_HEADERS });
   }
 }
@@ -107,27 +105,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const url = new URL(req.url);
-    const mapKey = updatedMap.mapKey || updatedMap.mapId || url.searchParams.get('map') || 'school';
-    const isOutskirts = mapKey === 'outskirts';
-
-    const settingKey = isOutskirts ? 'game_outskirts_map' : 'game_school_map';
-    const className = isOutskirts ? 'GAME_MAP_OUTSKIRTS' : 'GAME_MAP_SCHOOL';
-    const targetFilePath = isOutskirts ? OUTSKIRTS_MAP_PATH : MAP_PATH_1;
-
     const clients = await getAvailableSupabaseClients();
     const mapJsonString = JSON.stringify(updatedMap);
 
-    // 1. Primary Save: system_settings table
+    // 1. Primary Save: system_settings table (key: 'game_school_map')
     let sysSaved = false;
     for (const client of clients) {
       try {
         const { error } = await client.from('system_settings').upsert({
-          key: settingKey,
+          key: 'game_school_map',
           value: mapJsonString,
-          description: isOutskirts
-            ? 'Peta Kawasan Agrowisata P5 (collision, interact, spawn layers)'
-            : 'Peta virtual campus SMP Al-Ittihadiyah (collision, interact, spawn layers)',
+          description: 'Peta virtual campus SMP Al-Ittihadiyah (collision, interact, spawn layers)',
         });
         if (!error) {
           sysSaved = true;
@@ -144,7 +132,7 @@ export async function POST(req: NextRequest) {
           .from('gm_behavior_settings')
           .upsert(
             {
-              class_name: className,
+              class_name: 'GAME_MAP_SCHOOL',
               academic_year: 'CONFIG',
               reasons: updatedMap,
             },
@@ -157,18 +145,16 @@ export async function POST(req: NextRequest) {
       } catch {}
     }
 
-    // 3. Best-effort write to local filesystem
+    // 3. Best-effort write to local filesystem (works in local dev, skipped in serverless read-only)
     let fsSuccess = false;
     try {
       const formattedContent = JSON.stringify(updatedMap, null, 2);
-      fs.writeFileSync(targetFilePath, formattedContent, 'utf-8');
+      fs.writeFileSync(MAP_PATH_1, formattedContent, 'utf-8');
       fsSuccess = true;
 
-      if (!isOutskirts) {
-        const dir2 = path.dirname(MAP_PATH_2);
-        if (fs.existsSync(dir2)) {
-          fs.writeFileSync(MAP_PATH_2, formattedContent, 'utf-8');
-        }
+      const dir2 = path.dirname(MAP_PATH_2);
+      if (fs.existsSync(dir2)) {
+        fs.writeFileSync(MAP_PATH_2, formattedContent, 'utf-8');
       }
     } catch {
       console.info('[POST /api/game/map] Filesystem write tidak tersedia (read-only/serverless).');
