@@ -14,24 +14,6 @@ export interface StudentProfileData {
 // ═════════════════════════════════════════════════════════════════════════════
 export const TEACHER_CONFIGS: NPCConfig[] = [
   {
-    id: 'npc-satpam',
-    name: 'Pak Asep',
-    role: 'Keamanan Sekolah',
-    characterKey: 'char_satpam',
-    avatarUrl: '/assets/game/characters/avatars/pak_joko.png',
-    speed: 55,
-    waypoints: [
-      { x: 730, y: 860, waitTime: 3000 },
-      { x: 790, y: 860, waitTime: 3500 },
-      { x: 790, y: 910, waitTime: 3000 },
-      { x: 730, y: 910, waitTime: 2500 },
-    ],
-    dialogue: {
-      greeting: 'Pak Asep menyapa Anda dengan senyum ramah di pos gerbang sekolah:',
-      quote: '“Selamat pagi! Tetap jaga ketertiban, parkir kendaraan rapi di tempatnya, dan jangan lupa selalu santun kepada bapak/ibu guru ya!”',
-    },
-  },
-  {
     id: 'npc-farhan',
     name: 'Farhan Sopian Sahid',
     role: 'Kepala Sekolah',

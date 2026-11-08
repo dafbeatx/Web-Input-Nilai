@@ -98,16 +98,6 @@ export const CHARACTER_PROFILES: CharacterProfile[] = [
     tag: 'Guru',
   },
   {
-    id: 'satpam_asep',
-    key: 'char_satpam',
-    name: 'Pak Asep',
-    role: 'Keamanan Sekolah',
-    description: 'Petugas keamanan berseragam cokelat dinas dan topi pet yang sigap menjaga ketertiban sekolah.',
-    avatarBg: 'bg-amber-700',
-    avatarUrl: '/assets/game/characters/avatars/pak_joko.png',
-    tag: 'Staf',
-  },
-  {
     id: 'siswa_rian',
     key: 'char_student',
     name: 'Rian Pratama',

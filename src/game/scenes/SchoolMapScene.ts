@@ -304,7 +304,7 @@ export class SchoolMapScene extends Phaser.Scene {
     this.studentNpcs = [];
     this.npcsGroup = this.physics.add.group();
 
-    // 5a. Spawn School Staff & Teachers (Pak Asep, Farhan Sopian Sahid, Pak Dafa, Bu Septi)
+    // 5a. Spawn School Staff & Teachers (Farhan Sopian Sahid, Pak Dafa, Bu Septi)
     for (const teacherConfig of TEACHER_CONFIGS) {
       const npc = new NPC(this, teacherConfig);
       this.npcs.push(npc);
