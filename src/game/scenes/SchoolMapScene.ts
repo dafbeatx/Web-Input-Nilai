@@ -193,6 +193,17 @@ const INTERACTION_CONFIGS: Record<string, InteractionObjectConfig> = {
       action: 'travel_to_town',
     },
   },
+  jalur_agrowisata: {
+    id: 'trigger-exit-to-outskirts',
+    name: 'Gerbang Kawasan Agrowisata & Petualangan P5',
+    type: 'building_entrance',
+    promptText: 'Tekan [E] atau Ketuk untuk ke Kawasan Agrowisata & Petualangan P5',
+    data: {
+      title: 'Gerbang Agrowisata & Hutan Penelitian Terpadu P5',
+      desc: 'Melangkah ke kawasan agrowisata terpadu di samping sekolah: kebun sayur organik, bumi perkemahan pramuka, danau air tawar, bengkel kriya, dan sentra kuliner nusantara.',
+      action: 'travel_to_outskirts',
+    },
+  },
 };
 
 export interface SchoolMapSceneInitData {
@@ -235,6 +246,7 @@ export class SchoolMapScene extends Phaser.Scene {
     changeChar?: (data: { key: string; name: string; role: string }) => void;
     enterClassroom?: (data: { classroomId: 'VII' | 'VIII' | 'IX' }) => void;
     enterRuangGuru?: () => void;
+    enterOutskirts?: () => void;
     deviceMode?: (mode: string) => void;
     modalClosed?: () => void;
   } = {};
@@ -385,6 +397,42 @@ export class SchoolMapScene extends Phaser.Scene {
       }
     }
 
+    // 6c. Setup East Gateway to Kawasan Agrowisata & Petualangan P5 (OutskirtsScene)
+    const outskirtsGateX = 1470;
+    const outskirtsGateY = 760;
+
+    if (this.textures.exists('door_marker')) {
+      const gateMarker = this.add.image(outskirtsGateX, outskirtsGateY - 12, 'door_marker');
+      gateMarker.setOrigin(0.5, 0.5);
+      gateMarker.setScale(0.28);
+      gateMarker.setDepth(outskirtsGateY + 1);
+
+      this.tweens.add({
+        targets: gateMarker,
+        y: outskirtsGateY - 20,
+        duration: 900,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    }
+
+    this.add.text(outskirtsGateX, outskirtsGateY + 22, 'Kawasan Agrowisata P5 →', {
+      fontFamily: 'Outfit, Inter, sans-serif',
+      fontSize: '10px',
+      color: '#fef08a',
+      stroke: '#0f172a',
+      strokeThickness: 3,
+      fontStyle: 'bold',
+    }).setOrigin(0.5, 0.5).setDepth(outskirtsGateY + 2);
+
+    const outskirtsZone = this.add.zone(outskirtsGateX, outskirtsGateY, 84, 84);
+    this.physics.add.existing(outskirtsZone, true);
+    this.triggers.push({
+      zone: outskirtsZone,
+      info: INTERACTION_CONFIGS.jalur_agrowisata,
+    });
+
     // 7. Setup Camera Tracking (Smooth follow with 1536 x 1024 bounds)
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
@@ -504,6 +552,12 @@ export class SchoolMapScene extends Phaser.Scene {
     };
     this.game.events.on('scene:enter-ruang-guru', this.boundHandlers.enterRuangGuru);
 
+    // Enter Outskirts scene requested from React HUD modal or direct interact
+    this.boundHandlers.enterOutskirts = () => {
+      this.enterOutskirts();
+    };
+    this.game.events.on('scene:enter-outskirts', this.boundHandlers.enterOutskirts);
+
     // Adaptive zoom on device mode change
     this.boundHandlers.deviceMode = (mode: string) => {
       if (!this.cameras?.main) return;
@@ -538,6 +592,12 @@ export class SchoolMapScene extends Phaser.Scene {
         // Special case: Enter Ruang Guru
         if (this.currentNearTrigger.id === 'trigger-ruang-guru') {
           this.enterRuangGuru();
+          return;
+        }
+
+        // Special case: Exit to Outskirts (Kawasan Agrowisata & Petualangan P5)
+        if (this.currentNearTrigger.id === 'trigger-exit-to-outskirts') {
+          this.enterOutskirts();
           return;
         }
 
@@ -732,6 +792,22 @@ export class SchoolMapScene extends Phaser.Scene {
     });
   }
 
+  public enterOutskirts(): void {
+    if (!this.cameras?.main || !this.player) return;
+
+    this.game.events.emit('town:interaction-prompt', null);
+
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.start('OutskirtsScene', {
+        returnPos: { x: 120, y: 768 },
+        characterKey: this.player.characterKey,
+        characterName: this.player.characterName,
+        characterRole: this.player.roleTitle || 'Siswa',
+      });
+    });
+  }
+
   shutdown(): void {
     this.inputManager?.destroy();
 
@@ -741,6 +817,7 @@ export class SchoolMapScene extends Phaser.Scene {
     if (this.boundHandlers.changeChar) this.game.events.off('player:change-character', this.boundHandlers.changeChar);
     if (this.boundHandlers.enterClassroom) this.game.events.off('scene:enter-classroom', this.boundHandlers.enterClassroom);
     if (this.boundHandlers.enterRuangGuru) this.game.events.off('scene:enter-ruang-guru', this.boundHandlers.enterRuangGuru);
+    if (this.boundHandlers.enterOutskirts) this.game.events.off('scene:enter-outskirts', this.boundHandlers.enterOutskirts);
     if (this.boundHandlers.deviceMode) this.game.events.off('device:mode-change', this.boundHandlers.deviceMode);
     if (this.boundHandlers.modalClosed) this.game.events.off('modal:closed', this.boundHandlers.modalClosed);
     this.boundHandlers = {};

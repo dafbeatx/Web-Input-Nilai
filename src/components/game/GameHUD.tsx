@@ -45,6 +45,8 @@ interface GameHUDProps {
   currentCharacter?: CharacterProfile;
   onSelectCharacter?: (char: CharacterProfile) => void;
   onEnterClassroom?: (classroomId: 'VII' | 'VIII' | 'IX') => void;
+  onEnterRuangGuru?: () => void;
+  onEnterOutskirts?: () => void;
 }
 
 export default function GameHUD({
@@ -59,6 +61,8 @@ export default function GameHUD({
   currentCharacter = CHARACTER_PROFILES[0],
   onSelectCharacter,
   onEnterClassroom,
+  onEnterRuangGuru,
+  onEnterOutskirts,
 }: GameHUDProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
@@ -376,10 +380,27 @@ export default function GameHUD({
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <button
-                    onClick={onCloseModal}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all shadow-md"
+                    onClick={() => {
+                      if (activeModalTrigger.id === 'trigger-exit-to-outskirts') {
+                        onEnterOutskirts?.();
+                      } else if (activeModalTrigger.id === 'trigger-ruang-guru') {
+                        onEnterRuangGuru?.();
+                      }
+                      onCloseModal();
+                    }}
+                    className={`px-5 py-2.5 text-white text-xs font-bold rounded-xl transition-all shadow-md ${
+                      activeModalTrigger.id === 'trigger-exit-to-outskirts'
+                        ? 'bg-emerald-600 hover:bg-emerald-500 ring-2 ring-emerald-400/30'
+                        : activeModalTrigger.id === 'trigger-ruang-guru'
+                        ? 'bg-blue-600 hover:bg-blue-500 ring-2 ring-blue-400/30'
+                        : 'bg-indigo-600 hover:bg-indigo-500'
+                    }`}
                   >
-                    Masuk Fasilitas
+                    {activeModalTrigger.id === 'trigger-exit-to-outskirts'
+                      ? 'Jelajahi Kawasan Agrowisata P5 →'
+                      : activeModalTrigger.id === 'trigger-ruang-guru'
+                      ? 'Masuk ke Ruang Guru →'
+                      : 'Tutup / Masuk Fasilitas'}
                   </button>
                 </div>
               </div>
