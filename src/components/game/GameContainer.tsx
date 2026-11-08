@@ -102,6 +102,11 @@ export default function GameContainer() {
     setWalletBalance(prev => Math.max(0, prev - item.price));
   }, []);
 
+  // Quiz / Learning Reward Handler
+  const handleAddReward = useCallback((amount: number) => {
+    setWalletBalance(prev => prev + amount);
+  }, []);
+
   // Close Modal & notify game scene
   const handleCloseModal = useCallback(() => {
     setActiveModalTrigger(null);
@@ -137,6 +142,7 @@ export default function GameContainer() {
         onCloseModal={handleCloseModal}
         walletBalance={walletBalance}
         onBuyItem={handleBuyItem}
+        onAddReward={handleAddReward}
         currentCharacter={currentCharacter}
         onSelectCharacter={handleSelectCharacter}
         onEnterClassroom={handleEnterClassroom}

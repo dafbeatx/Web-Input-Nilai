@@ -47,7 +47,7 @@ export interface RemotePlayerSyncData extends PlayerMovementState {
 export interface InteractiveTrigger {
   id: string;
   name: string;
-  type: 'building_entrance' | 'shop' | 'npc' | 'interactive_board' | 'seating';
+  type: 'building_entrance' | 'shop' | 'npc' | 'interactive_board' | 'seating' | 'lesson' | 'quiz';
   promptText: string;
   x?: number;
   y?: number;
