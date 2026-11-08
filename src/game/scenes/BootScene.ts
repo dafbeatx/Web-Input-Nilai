@@ -103,6 +103,9 @@ export class BootScene extends Phaser.Scene {
     // -------------------------------------------------------------
     // PIXEL CRAWLER ADVENTURE EXPANSION (Kawasan Agrowisata P5)
     // -------------------------------------------------------------
+    // Cohesive High-Fidelity Landscape Atlas (2048x1536)
+    this.load.image('outskirts_atlas', '/assets/game/pixel_crawler/outskirts_atlas.png');
+
     // Pixel Crawler Ground Tiles (64x64)
     this.load.image('tile_crawler_grass', '/assets/game/pixel_crawler/extracted/tile_crawler_grass.png');
     this.load.image('tile_crawler_dirt', '/assets/game/pixel_crawler/extracted/tile_crawler_dirt.png');

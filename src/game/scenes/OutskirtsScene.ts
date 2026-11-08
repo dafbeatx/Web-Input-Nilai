@@ -70,13 +70,15 @@ export class OutskirtsScene extends Phaser.Scene {
 
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
 
-    // 1. Build Layered Landscape Ground
-    this.createGround(worldWidth, worldHeight);
+    // 1. High-Fidelity Cohesive Landscape Background Atlas (Single unified pixel-art canvas)
+    const bg = this.add.image(0, 0, 'outskirts_atlas');
+    bg.setOrigin(0, 0);
+    bg.setDepth(0);
 
-    // 2. Build Environmental Props & Stations
-    this.createPropsAndStations();
+    // 2. Animated Elements & Dynamic Markers (Door pulse, Campfire flames)
+    this.createAnimatedDecor();
 
-    // 3. Build Colliders & Map Perimeter Bounds
+    // 3. Build Static Colliders & World Boundaries
     this.createObstacles(worldWidth, worldHeight);
 
     // 4. Create Interactive Zones
@@ -134,56 +136,21 @@ export class OutskirtsScene extends Phaser.Scene {
     this.game.events.emit('town:zone-change', this.lastZoneName);
   }
 
-  private createGround(worldWidth: number, worldHeight: number): void {
-    // 1. Base Lush Forest Grass across entire world
-    this.add.tileSprite(worldWidth / 2, worldHeight / 2, worldWidth, worldHeight, 'tile_crawler_grass').setDepth(0);
-
-    // 2. Tilled Agricultural Soil Zone (Kebun Sayur & Lahan Tani)
-    // Centered around x: 820, y: 430
-    this.add.tileSprite(820, 430, 800, 480, 'tile_crawler_dirt').setDepth(1);
-
-    // 3. Natural Conservation Lake (Kolam Air Tawar & Resapan Bioretensi)
-    // Centered around x: 680, y: 1240
-    this.add.tileSprite(680, 1240, 620, 360, 'tile_crawler_water').setDepth(1);
-
-    // 4. Wooden Deck Platform for Workshop & Eco-Lab (Timur-Utara)
-    // Centered around x: 1720, y: 400
-    this.add.tileSprite(1720, 400, 560, 340, 'tile_crawler_wood').setDepth(1);
-
-    // 5. Wooden Pier extending into the lake
-    this.add.tileSprite(680, 1100, 160, 64, 'tile_crawler_wood').setDepth(2);
-
-    // 6. Natural Cobblestone Trails
-    // Main East-West Highway connecting West gate to East workshop
-    this.add.tileSprite(worldWidth / 2, 768, worldWidth, 80, 'tile_crawler_stone').setDepth(2);
-
-    // North branch into Farm & Barn
-    this.add.tileSprite(1024, 560, 80, 360, 'tile_crawler_stone').setDepth(2);
-
-    // South branch to Campfire & Culinary Center
-    this.add.tileSprite(1550, 960, 80, 320, 'tile_crawler_stone').setDepth(2);
-
-    // South branch to Lake Pier
-    this.add.tileSprite(680, 960, 80, 320, 'tile_crawler_stone').setDepth(2);
-  }
-
-  private createPropsAndStations(): void {
+  private createAnimatedDecor(): void {
     // ═══════════════════════════════════════════════════════════
-    // A. WEST GATE: Connection back to SMP Al-Ittihadiyah
+    // A. WEST GATE: Glowing portal marker & signpost
     // ═══════════════════════════════════════════════════════════
     const gateY = 768;
-    this.add.image(60, gateY - 60, 'tree_oak_l').setDepth(gateY - 60);
-    this.add.image(60, gateY + 60, 'tree_oak_l').setDepth(gateY + 60);
-
-    // Direction Signpost & Glowing Door Marker
-    const marker = this.add.image(60, gateY, 'door_marker').setDepth(5).setScale(1.2);
-    this.tweens.add({
-      targets: marker,
-      alpha: { from: 0.55, to: 1.0 },
-      yoyo: true,
-      repeat: -1,
-      duration: 900,
-    });
+    if (this.textures.exists('door_marker')) {
+      const marker = this.add.image(60, gateY, 'door_marker').setDepth(5).setScale(1.2);
+      this.tweens.add({
+        targets: marker,
+        alpha: { from: 0.55, to: 1.0 },
+        yoyo: true,
+        repeat: -1,
+        duration: 900,
+      });
+    }
 
     this.add.text(70, gateY - 45, '← Kampus SMP', {
       fontFamily: 'Outfit, Inter, sans-serif',
@@ -195,119 +162,12 @@ export class OutskirtsScene extends Phaser.Scene {
     }).setDepth(gateY + 10);
 
     // ═══════════════════════════════════════════════════════════
-    // B. KAWASAN TANI & KEBUN SAYUR ORGANIK P5 (North-Center)
+    // B. CAMPFIRE: Animated Flickering Flame
     // ═══════════════════════════════════════════════════════════
-    // 1. Lumbung Pangan & Benih (Farm Barn)
-    this.add.image(950, 240, 'farm_barn').setDepth(240).setScale(1.25);
-
-    // 2. Scarecrow in middle of crop field
-    this.add.image(740, 420, 'farm_scarecrow').setDepth(420);
-
-    // 3. Crops & Garden Beds
-    const cropPositions = [
-      { x: 550, y: 320 }, { x: 630, y: 320 }, { x: 710, y: 320 },
-      { x: 550, y: 420 }, { x: 630, y: 420 },
-      { x: 550, y: 520 }, { x: 630, y: 520 }, { x: 710, y: 520 },
-      { x: 840, y: 480 }, { x: 920, y: 480 }, { x: 1000, y: 480 },
-      { x: 840, y: 560 }, { x: 920, y: 560 }, { x: 1000, y: 560 },
-    ];
-    cropPositions.forEach(pos => {
-      this.add.image(pos.x, pos.y, 'farm_crops').setDepth(pos.y);
-    });
-
-    // 4. Haystack, Crates, Barrels & Water Well
-    this.add.image(1120, 280, 'farm_haystack').setDepth(280);
-    this.add.image(1150, 360, 'farm_water_well').setDepth(360);
-    this.add.image(770, 270, 'farm_crates').setDepth(270);
-    this.add.image(810, 275, 'farm_barrel').setDepth(275);
-    this.add.image(1080, 480, 'farm_crates').setDepth(480);
-    this.add.image(1110, 520, 'farm_barrel').setDepth(520);
-
-    // ═══════════════════════════════════════════════════════════
-    // C. BENGKEL KRIYA & LABORATORIUM BIOFARMAKA (North-East)
-    // ═══════════════════════════════════════════════════════════
-    // 1. Laboratorium Herbal & Biofarmaka (Meja Alkimia)
-    this.add.image(1540, 360, 'station_alchemy').setDepth(360).setScale(1.15);
-
-    // 2. Bengkel Kriya & Pertukangan Kayu (Workbench)
-    this.add.image(1710, 360, 'station_workbench').setDepth(360).setScale(1.15);
-
-    // 3. Sentra Tempa & Pengelasan Logam (Furnace & Anvil)
-    this.add.image(1870, 350, 'station_furnace').setDepth(350).setScale(1.15);
-    this.add.image(1870, 430, 'station_anvil').setDepth(430).setScale(1.15);
-
-    // Picnic / Meeting Table on Wooden Deck
-    this.add.image(1620, 480, 'furn_picnic_table').setDepth(480);
-
-    // ═══════════════════════════════════════════════════════════
-    // D. BUMI PERKEMAHAN PRAMUKA & SENTRA KULINER (South-East)
-    // ═══════════════════════════════════════════════════════════
-    // 1. Campfire Ring + Animated Flickering Flame
-    this.add.sprite(1550, 1160, 'station_bonfire_wood', 0).setDepth(1160).setScale(1.25);
-    this.bonfireFlame = this.add.sprite(1550, 1148, 'station_fire_flame', 0).setDepth(1165).setScale(1.15);
+    this.bonfireFlame = this.add.sprite(1550, 1148, 'station_fire_flame', 0).setDepth(1165).setScale(1.2);
     if (this.anims.exists('fire_burn')) {
       this.bonfireFlame.play('fire_burn');
     }
-
-    // Wooden Picnic Tables & Camp Seats around fire
-    this.add.image(1440, 1160, 'furn_picnic_table').setDepth(1160);
-    this.add.image(1660, 1160, 'furn_picnic_table').setDepth(1160);
-
-    // 2. Dapur Alam Tradisional (Cooking Station)
-    this.add.image(1780, 1150, 'station_cooking').setDepth(1150).setScale(1.2);
-    this.add.image(1850, 1180, 'farm_barrel').setDepth(1180);
-    this.add.image(1875, 1175, 'farm_crates').setDepth(1175);
-
-    // ═══════════════════════════════════════════════════════════
-    // E. DANAU KONSERVASI & DERMAGA IKAN (South-West)
-    // ═══════════════════════════════════════════════════════════
-    // Lake Shore Decor: Mossy Boulders, Reeds & Water Lilies
-    const lakeDecor = [
-      { x: 420, y: 1120, key: 'rock_large' },
-      { x: 480, y: 1100, key: 'rock_mossy' },
-      { x: 940, y: 1150, key: 'rock_large' },
-      { x: 970, y: 1220, key: 'rock_mossy' },
-      { x: 920, y: 1380, key: 'rock_large' },
-      { x: 440, y: 1390, key: 'rock_large' },
-      { x: 520, y: 1410, key: 'rock_mossy' },
-      { x: 780, y: 1410, key: 'rock_large' },
-    ];
-    lakeDecor.forEach(d => {
-      this.add.image(d.x, d.y, d.key).setDepth(d.y);
-    });
-
-    // Picnic bench beside the lake pier
-    this.add.image(680, 1040, 'furn_picnic_table').setDepth(1040);
-
-    // ═══════════════════════════════════════════════════════════
-    // F. NATURAL VEGETATION, BUSHES & FLOWER CLUSTERS
-    // ═══════════════════════════════════════════════════════════
-    const vegPositions = [
-      // Along main trail
-      { x: 300, y: 720, key: 'veg_bush_large' },
-      { x: 450, y: 720, key: 'veg_bush_flowers' },
-      { x: 1200, y: 720, key: 'veg_bush_flowers' },
-      { x: 1350, y: 720, key: 'veg_bush_large' },
-      { x: 320, y: 820, key: 'veg_shrub' },
-      { x: 480, y: 820, key: 'veg_flowers' },
-      { x: 1220, y: 820, key: 'veg_shrub' },
-      { x: 1380, y: 820, key: 'veg_flowers' },
-
-      // Around farm
-      { x: 480, y: 220, key: 'veg_bush_flowers' },
-      { x: 740, y: 180, key: 'veg_flowers' },
-      { x: 1180, y: 220, key: 'veg_bush_large' },
-
-      // Around scout camp
-      { x: 1420, y: 1040, key: 'veg_bush_large' },
-      { x: 1680, y: 1040, key: 'veg_bush_flowers' },
-      { x: 1480, y: 1270, key: 'veg_shrub' },
-      { x: 1620, y: 1270, key: 'veg_flowers' },
-      { x: 1900, y: 1120, key: 'veg_bush_large' },
-    ];
-    vegPositions.forEach(v => {
-      this.add.image(v.x, v.y, v.key).setDepth(v.y);
-    });
   }
 
   private createObstacles(worldWidth: number, worldHeight: number): void {
@@ -321,74 +181,59 @@ export class OutskirtsScene extends Phaser.Scene {
       return blocker;
     };
 
-    // 1. NORTH PERIMETER FOREST
-    for (let x = 40; x < worldWidth; x += 110) {
-      this.add.image(x, 50, 'tree_pine_m').setDepth(50);
-      addBlocker(x, 60, 80, 30);
-    }
+    // 1. North Perimeter Barrier
+    addBlocker(worldWidth / 2, 45, worldWidth, 70);
 
-    // 2. SOUTH PERIMETER FOREST
-    for (let x = 40; x < worldWidth; x += 110) {
-      this.add.image(x, worldHeight - 50, 'tree_pine_m').setDepth(worldHeight - 50);
-      addBlocker(x, worldHeight - 40, 80, 30);
-    }
+    // 2. South Perimeter Barrier
+    addBlocker(worldWidth / 2, worldHeight - 35, worldWidth, 70);
 
-    // 3. EAST PERIMETER FOREST
-    for (let y = 100; y < worldHeight - 50; y += 120) {
-      this.add.image(worldWidth - 50, y, 'tree_oak_l').setDepth(y);
-      addBlocker(worldWidth - 40, y, 40, 70);
-    }
+    // 3. East Perimeter Barrier
+    addBlocker(worldWidth - 35, worldHeight / 2, 70, worldHeight);
 
-    // 4. WEST PERIMETER FOREST (with gap at y: 720..820 for Gate)
-    for (let y = 100; y < worldHeight - 50; y += 120) {
-      if (y >= 680 && y <= 840) continue; // leave gateway clear
-      this.add.image(40, y, 'tree_oak_l').setDepth(y);
-      addBlocker(35, y, 40, 70);
-    }
+    // 4. West Perimeter Barrier (with open gap at y: 710..830 for Gate)
+    addBlocker(25, 360, 50, 700);
+    addBlocker(25, 1180, 50, 680);
 
-    // 5. Farm Barn Collider
-    addBlocker(950, 245, 150, 70);
+    // 5. Farm Barn & Farm Water Well
+    addBlocker(950, 240, 170, 75);
+    addBlocker(1140, 360, 32, 24);
 
-    // 6. Farm Water Well Collider
-    addBlocker(1150, 370, 30, 24);
+    // 6. Workshop Stations (Alchemy, Workbench, Furnace, Anvil)
+    addBlocker(1540, 365, 75, 48); // Alchemy Table
+    addBlocker(1710, 365, 75, 48); // Workbench
+    addBlocker(1870, 345, 75, 52); // Furnace
+    addBlocker(1870, 435, 48, 30); // Anvil
+    addBlocker(1630, 490, 80, 40); // Picnic table
 
-    // 7. Workshop Stations Colliders
-    addBlocker(1540, 370, 70, 45); // Alchemy Table
-    addBlocker(1710, 370, 70, 45); // Workbench
-    addBlocker(1870, 360, 70, 50); // Furnace
-    addBlocker(1870, 440, 45, 30); // Anvil
-
-    // 8. Campfire & Cooking Station Colliders
+    // 7. Campfire & Cooking Station
     addBlocker(1550, 1165, 36, 26); // Bonfire
-    addBlocker(1780, 1160, 90, 55); // Cooking Station
+    addBlocker(1800, 1145, 85, 50); // Cooking Station
+    addBlocker(1420, 1160, 80, 40); // Picnic table left
+    addBlocker(1680, 1160, 80, 40); // Picnic table right
 
-    // 9. Lake Deep Water Barrier
-    // Left barrier of lake
-    addBlocker(400, 1260, 20, 300);
-    // Right barrier of lake
-    addBlocker(960, 1260, 20, 300);
-    // Bottom barrier of lake
-    addBlocker(680, 1420, 540, 20);
-    // Top-left lake bank
-    addBlocker(520, 1100, 220, 20);
-    // Top-right lake bank
-    addBlocker(840, 1100, 220, 20);
+    // 8. Danau Konservasi Deep Water Barrier (Leaves Pier open for walking!)
+    // Pier is located at x: 640..720, y: 1050..1160
+    // West half of lake
+    addBlocker(520, 1260, 240, 220);
+    // East half of lake
+    addBlocker(820, 1260, 220, 220);
+    // Bottom center of lake
+    addBlocker(680, 1370, 160, 80);
 
-    // 10. Grove of Trees separating campsite from lake
-    const interiorTrees = [
-      { x: 1100, y: 1050, key: 'tree_pine_m' },
-      { x: 1100, y: 1200, key: 'tree_pine_s' },
-      { x: 1100, y: 1350, key: 'tree_pine_m' },
-      { x: 1250, y: 1120, key: 'tree_oak_m' },
-      { x: 1250, y: 1280, key: 'tree_oak_m' },
-      { x: 1400, y: 400, key: 'tree_oak_l' },
-      { x: 1400, y: 550, key: 'tree_pine_m' },
-      { x: 380, y: 400, key: 'tree_oak_m' },
-      { x: 380, y: 550, key: 'tree_oak_l' },
+    // 9. Interior Tree Groves (Natural obstacles with soft footprints)
+    const groveBlockers = [
+      { x: 380, y: 440 },
+      { x: 360, y: 580 },
+      { x: 1380, y: 420 },
+      { x: 1390, y: 560 },
+      { x: 1100, y: 1040 },
+      { x: 1100, y: 1190 },
+      { x: 1100, y: 1340 },
+      { x: 1250, y: 1100 },
+      { x: 1250, y: 1260 },
     ];
-    interiorTrees.forEach(t => {
-      this.add.image(t.x, t.y, t.key).setDepth(t.y);
-      addBlocker(t.x, t.y + 30, 36, 20);
+    groveBlockers.forEach(g => {
+      addBlocker(g.x, g.y + 20, 40, 20);
     });
   }
 
@@ -440,7 +285,7 @@ export class OutskirtsScene extends Phaser.Scene {
       'trigger-outskirts-kebun',
       'Sentra Agrowisata & Kebun Sayur Organik P5',
       740,
-      420,
+      440,
       140,
       120,
       'interactive_board',
@@ -560,8 +405,8 @@ export class OutskirtsScene extends Phaser.Scene {
     addTrigger(
       'trigger-outskirts-dapur',
       'Dapur Alam Tradisional & Sentra Kuliner Nusantara',
-      1780,
-      1150,
+      1800,
+      1140,
       100,
       90,
       'shop',
@@ -578,13 +423,13 @@ export class OutskirtsScene extends Phaser.Scene {
       }
     );
 
-    // 9. Danau Konservasi & Kolam Budidaya Nila
+    // 9. Danau Konservasi & Kolam Budidaya Nila (Dermaga Pancing)
     addTrigger(
       'trigger-outskirts-danau',
       'Dermaga Danau Konservasi & Kolam Nila',
       680,
       1090,
-      140,
+      120,
       80,
       'interactive_board',
       'Tekan [E] atau Ketuk untuk Menikmati Danau Konservasi',
@@ -605,7 +450,7 @@ export class OutskirtsScene extends Phaser.Scene {
     this.npcsGroup = this.physics.add.group();
 
     const outskirtsNPCConfigs: NPCConfig[] = [
-      // 1. Kang Dedi - Ketua Poktan Agrowisata
+      // 1. Kang Dedi - Ketua Poktan Agrowisata (Patrolling along farm trail)
       {
         id: 'npc-kang-dedi',
         name: 'Kang Dedi',
@@ -614,10 +459,10 @@ export class OutskirtsScene extends Phaser.Scene {
         avatarUrl: '/assets/game/characters/farhan_spritesheet.png',
         speed: 55,
         waypoints: [
-          { x: 740, y: 350, waitTime: 3500 },
-          { x: 920, y: 350, waitTime: 3000 },
-          { x: 920, y: 520, waitTime: 3500 },
-          { x: 620, y: 520, waitTime: 3000 },
+          { x: 880, y: 620, waitTime: 3500 },
+          { x: 920, y: 480, waitTime: 3000 },
+          { x: 950, y: 350, waitTime: 3500 },
+          { x: 740, y: 440, waitTime: 3000 },
         ],
         dialogue: {
           greeting: 'Sampurasun! Selamat datang di Kebun Edukasi Al-Ittihadiyah.',
@@ -625,7 +470,7 @@ export class OutskirtsScene extends Phaser.Scene {
         },
       },
 
-      // 2. Kak Bima - Instruktur Pramuka Penggalang
+      // 2. Kak Bima - Instruktur Pramuka Penggalang (Patrolling around campfire clearing)
       {
         id: 'npc-kak-bima',
         name: 'Kak Bima',
@@ -634,9 +479,9 @@ export class OutskirtsScene extends Phaser.Scene {
         avatarUrl: '/assets/game/characters/guru_spritesheet.png',
         speed: 50,
         waypoints: [
-          { x: 1470, y: 1160, waitTime: 4000 },
+          { x: 1450, y: 1160, waitTime: 4000 },
           { x: 1550, y: 1220, waitTime: 3000 },
-          { x: 1630, y: 1160, waitTime: 4000 },
+          { x: 1650, y: 1160, waitTime: 4000 },
           { x: 1550, y: 1100, waitTime: 3000 },
         ],
         dialogue: {
@@ -645,7 +490,7 @@ export class OutskirtsScene extends Phaser.Scene {
         },
       },
 
-      // 3. Ustadz Falak - Peneliti Biofarmaka & Falakiyah
+      // 3. Ustadz Falak - Peneliti Biofarmaka & Falakiyah (At Workshop deck)
       {
         id: 'npc-ustadz-falak',
         name: 'Ustadz Falak',
@@ -654,8 +499,8 @@ export class OutskirtsScene extends Phaser.Scene {
         avatarUrl: '/assets/game/characters/pa_qodi_spritesheet.png',
         speed: 45,
         waypoints: [
-          { x: 1540, y: 440, waitTime: 5000 },
-          { x: 1600, y: 440, waitTime: 4000 },
+          { x: 1540, y: 430, waitTime: 5000 },
+          { x: 1620, y: 430, waitTime: 4000 },
         ],
         dialogue: {
           greeting: "Assalamu'alaikum wr. wb. Selamat datang di lab alam hayati.",
@@ -663,7 +508,7 @@ export class OutskirtsScene extends Phaser.Scene {
         },
       },
 
-      // 4. Mbah Sastro - Empu Kriya Tradisional
+      // 4. Mbah Sastro - Empu Kriya Tradisional (At Workshop deck)
       {
         id: 'npc-mbah-sastro',
         name: 'Mbah Sastro',
@@ -672,8 +517,8 @@ export class OutskirtsScene extends Phaser.Scene {
         avatarUrl: '/assets/game/characters/pak_dafa_spritesheet.png',
         speed: 45,
         waypoints: [
-          { x: 1710, y: 440, waitTime: 5000 },
-          { x: 1770, y: 440, waitTime: 4000 },
+          { x: 1710, y: 430, waitTime: 5000 },
+          { x: 1780, y: 430, waitTime: 4000 },
         ],
         dialogue: {
           greeting: 'Monggo pinarak, mari belajar merawat perkakas dan kayu.',
