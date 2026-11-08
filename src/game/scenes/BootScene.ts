@@ -61,6 +61,7 @@ export class BootScene extends Phaser.Scene {
     // Tilemap & Atlas (SMP Terpadu Al-Ittihadiyah)
     // Loads live cloud database / dynamic map from API route with timestamp cache-buster
     this.load.tilemapTiledJSON('school_map', `/api/game/map?t=${Date.now()}`);
+    this.load.tilemapTiledJSON('outskirts_map', `/api/game/map?map=outskirts&t=${Date.now()}`);
     this.load.image('school_atlas', '/assets/maps/school_atlas.png');
 
     // Tilesets

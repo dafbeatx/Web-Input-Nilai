@@ -201,7 +201,13 @@ export default function GameHUD({
 
           {/* Map Collision Editor Button */}
           <Link
-            href="/game/editor"
+            href={
+              currentZone?.toLowerCase().includes('agrowisata') ||
+              currentZone?.toLowerCase().includes('p5') ||
+              currentZone?.toLowerCase().includes('kawasan')
+                ? '/game/editor?map=outskirts'
+                : '/game/editor?map=school'
+            }
             className="p-2 bg-slate-900/90 hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 rounded-xl border border-slate-700/80 backdrop-blur-md shadow-lg transition-all flex items-center gap-1.5"
             title="Buka Visual Collision Editor"
           >

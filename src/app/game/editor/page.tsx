@@ -72,18 +72,69 @@ interface TiledMapData {
 type EditorTool = 'select' | 'draw_collision' | 'draw_interact';
 type ResizeHandle = 'nw' | 'ne' | 'se' | 'sw' | 'n' | 's' | 'e' | 'w';
 
-const MAP_WIDTH = 1536;
-const MAP_HEIGHT = 1024;
+export type MapKey = 'school' | 'outskirts';
+
+export interface MapPreset {
+  key: MapKey;
+  label: string;
+  badge: string;
+  subtitle: string;
+  width: number;
+  height: number;
+  atlasUrl: string;
+  initialZoom: number;
+}
+
+export const MAP_PRESETS: Record<MapKey, MapPreset> = {
+  school: {
+    key: 'school',
+    label: 'Kampus SMP',
+    badge: 'SMP Terpadu Al-Ittihadiyah',
+    subtitle: '1536 × 1024 px',
+    width: 1536,
+    height: 1024,
+    atlasUrl: '/assets/maps/school_atlas.png',
+    initialZoom: 0.8,
+  },
+  outskirts: {
+    key: 'outskirts',
+    label: 'Agrowisata P5',
+    badge: 'Kawasan Agrowisata & Petualangan P5',
+    subtitle: '2048 × 1536 px',
+    width: 2048,
+    height: 1536,
+    atlasUrl: '/assets/game/pixel_crawler/outskirts_atlas.png',
+    initialZoom: 0.65,
+  },
+};
 
 export default function GameMapEditorPage() {
+  const [selectedMapKey, setSelectedMapKey] = useState<MapKey>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('map') === 'outskirts') return 'outskirts';
+    }
+    return 'school';
+  });
   const [mapData, setMapData] = useState<TiledMapData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
+  const currentPreset = MAP_PRESETS[selectedMapKey];
+  const currentMapWidth = currentPreset.width;
+  const currentMapHeight = currentPreset.height;
+  const currentAtlasUrl = currentPreset.atlasUrl;
+
   // Editor viewport & interaction state
   const [activeTool, setActiveTool] = useState<EditorTool>('select');
-  const [zoom, setZoom] = useState<number>(0.8);
+  const [zoom, setZoom] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('map') === 'outskirts') return MAP_PRESETS.outskirts.initialZoom;
+    }
+    return MAP_PRESETS.school.initialZoom;
+  });
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 40, y: 30 });
   const [cursorCoord, setCursorCoord] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
@@ -129,10 +180,13 @@ export default function GameMapEditorPage() {
     mapDataRef.current = mapData;
   }, [mapData]);
 
-  const loadMapFromServer = useCallback(async (showNotification = false) => {
+  const loadMapFromServer = useCallback(async (targetMapKey?: MapKey, showNotification = false) => {
+    const mapKey = targetMapKey || selectedMapKey;
     try {
-      setLoading(true);
-      const res = await fetch(`/api/game/map?t=${Date.now()}`, {
+      if (showNotification) {
+        setLoading(true);
+      }
+      const res = await fetch(`/api/game/map?map=${mapKey}&t=${Date.now()}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache',
@@ -144,17 +198,17 @@ export default function GameMapEditorPage() {
       setMapData(data);
       mapDataRef.current = data;
       try {
-        localStorage.setItem('school_map_draft', JSON.stringify(data));
-      } catch (_) {}
+        localStorage.setItem(`${mapKey}_map_draft`, JSON.stringify(data));
+      } catch {}
       if (showNotification) {
         const collCount = data.layers?.find(l => l.name === 'Collision')?.objects?.length ?? 0;
         const interactCount = data.layers?.find(l => l.name === 'Interact')?.objects?.length ?? 0;
-        showToast(`🔄 Peta tersinkron: ${collCount} collider, ${interactCount} zona!`, 'success');
+        showToast(`🔄 Peta ${MAP_PRESETS[mapKey].label} tersinkron: ${collCount} collider, ${interactCount} zona!`, 'success');
       }
     } catch (err) {
       console.error(err);
       try {
-        const savedDraft = localStorage.getItem('school_map_draft');
+        const savedDraft = localStorage.getItem(`${mapKey}_map_draft`);
         if (savedDraft) {
           const parsedDraft: TiledMapData = JSON.parse(savedDraft);
           setMapData(parsedDraft);
@@ -162,17 +216,77 @@ export default function GameMapEditorPage() {
           showToast('⚠️ Gagal terhubung ke server. Menggunakan draf lokal browser.', 'error');
           return;
         }
-      } catch (_) {}
-      showToast('Gagal memuat data peta school_map.json', 'error');
+      } catch {}
+      showToast(`Gagal memuat data peta ${mapKey}_map.json`, 'error');
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [selectedMapKey, showToast]);
 
-  // 1. Fetch Map Data on component mount
+  // 1. Initial Map Data fetch on mount
   useEffect(() => {
-    loadMapFromServer(false);
-  }, [loadMapFromServer]);
+    let ignore = false;
+    async function fetchInitialMap() {
+      try {
+        const res = await fetch(`/api/game/map?map=${selectedMapKey}&t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+          },
+        });
+        if (!res.ok) throw new Error('Gagal memuat peta dari server');
+        const data: TiledMapData = await res.json();
+        if (!ignore) {
+          setMapData(data);
+          mapDataRef.current = data;
+          try {
+            localStorage.setItem(`${selectedMapKey}_map_draft`, JSON.stringify(data));
+          } catch {}
+          setLoading(false);
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error(err);
+          try {
+            const savedDraft = localStorage.getItem(`${selectedMapKey}_map_draft`);
+            if (savedDraft) {
+              const parsedDraft: TiledMapData = JSON.parse(savedDraft);
+              setMapData(parsedDraft);
+              mapDataRef.current = parsedDraft;
+              setLoading(false);
+              return;
+            }
+          } catch {}
+          setLoading(false);
+        }
+      }
+    }
+    fetchInitialMap();
+    return () => {
+      ignore = true;
+    };
+  }, [selectedMapKey]);
+
+  // 1b. Switch Active Map
+  const handleSwitchMap = useCallback((newMapKey: MapKey) => {
+    if (newMapKey === selectedMapKey) return;
+    if (mapDataRef.current) {
+      try {
+        localStorage.setItem(`${selectedMapKey}_map_draft`, JSON.stringify(mapDataRef.current));
+      } catch {}
+    }
+    setSelectedMapKey(newMapKey);
+    setSelectedObjectId(null);
+    setZoom(MAP_PRESETS[newMapKey].initialZoom);
+    setPan({ x: 40, y: 30 });
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('map', newMapKey);
+      window.history.replaceState(null, '', url.toString());
+    }
+    loadMapFromServer(newMapKey, true);
+  }, [selectedMapKey, loadMapFromServer]);
 
   // Helper getters
   const collisionLayer = mapData?.layers.find(l => l.name === 'Collision');
@@ -199,17 +313,20 @@ export default function GameMapEditorPage() {
 
       // Always save draft to browser storage first
       try {
-        localStorage.setItem('school_map_draft', JSON.stringify(dataToSave));
-        localStorage.setItem('school_map_draft_time', Date.now().toString());
-      } catch (_) {}
+        localStorage.setItem(`${selectedMapKey}_map_draft`, JSON.stringify(dataToSave));
+        localStorage.setItem(`${selectedMapKey}_map_draft_time`, Date.now().toString());
+      } catch {}
 
-      const res = await fetch('/api/game/map', {
+      const res = await fetch(`/api/game/map?map=${selectedMapKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
         },
-        body: JSON.stringify(dataToSave),
+        body: JSON.stringify({
+          ...dataToSave,
+          mapKey: selectedMapKey,
+        }),
       });
 
       const result = await res.json();
@@ -223,7 +340,7 @@ export default function GameMapEditorPage() {
         const collCount = dataToSave.layers.find(l => l.name === 'Collision')?.objects?.length ?? 0;
         const interactCount = dataToSave.layers.find(l => l.name === 'Interact')?.objects?.length ?? 0;
         showToast(
-          result.message || `✅ Peta berhasil disimpan! (${collCount} collider, ${interactCount} zona)`,
+          result.message || `✅ Peta ${currentPreset.label} berhasil disimpan! (${collCount} collider, ${interactCount} zona)`,
           'success'
         );
         return;
@@ -231,12 +348,12 @@ export default function GameMapEditorPage() {
 
       // Server is read-only / service role key missing in Vercel — auto-trigger download fallback
       if (result.warning) {
-        showToast('⚠️ Server read-only: Berkas school_map.json diunduh otomatis ke komputer.', 'success');
+        showToast(`⚠️ Server read-only: Berkas ${selectedMapKey}_map.json diunduh otomatis ke komputer.`, 'success');
         const fallbackData = result.mapData ?? dataToSave;
         const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(fallbackData, null, 2));
         const a = document.createElement('a');
         a.setAttribute('href', dataStr);
-        a.setAttribute('download', 'school_map.json');
+        a.setAttribute('download', `${selectedMapKey}_map.json`);
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -248,7 +365,7 @@ export default function GameMapEditorPage() {
     } finally {
       setSaving(false);
     }
-  }, [mapData, showToast]);
+  }, [mapData, selectedMapKey, currentPreset.label, showToast]);
 
   // 2b. Download Map JSON
   const handleDownloadJSON = useCallback(() => {
@@ -257,16 +374,16 @@ export default function GameMapEditorPage() {
       const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(mapData, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute('href', dataStr);
-      downloadAnchor.setAttribute('download', 'school_map.json');
+      downloadAnchor.setAttribute('download', `${selectedMapKey}_map.json`);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
-      showToast('📥 Berkas school_map.json berhasil diunduh!', 'success');
+      showToast(`📥 Berkas ${selectedMapKey}_map.json berhasil diunduh!`, 'success');
     } catch (err) {
       console.error(err);
       showToast('Gagal mengunduh berkas JSON peta', 'error');
     }
-  }, [mapData, showToast]);
+  }, [mapData, selectedMapKey, showToast]);
 
   // 2c. Copy Map JSON to Clipboard
   const handleCopyJSON = useCallback(async () => {
@@ -286,8 +403,8 @@ export default function GameMapEditorPage() {
     const rect = mapCanvasRef.current.getBoundingClientRect();
     const rawX = (e.clientX - rect.left) / zoom;
     const rawY = (e.clientY - rect.top) / zoom;
-    const clampedX = Math.round(Math.max(0, Math.min(MAP_WIDTH, rawX)));
-    const clampedY = Math.round(Math.max(0, Math.min(MAP_HEIGHT, rawY)));
+    const clampedX = Math.round(Math.max(0, Math.min(currentMapWidth, rawX)));
+    const clampedY = Math.round(Math.max(0, Math.min(currentMapHeight, rawY)));
     return { x: clampedX, y: clampedY };
   };
 
@@ -344,8 +461,8 @@ export default function GameMapEditorPage() {
 
     // Dragging selected object
     if (isDraggingObject && selectedObject && mapData) {
-      const newX = Math.max(0, Math.min(MAP_WIDTH - selectedObject.object.width, Math.round(pos.x - dragOffset.x)));
-      const newY = Math.max(0, Math.min(MAP_HEIGHT - selectedObject.object.height, Math.round(pos.y - dragOffset.y)));
+      const newX = Math.max(0, Math.min(currentMapWidth - selectedObject.object.width, Math.round(pos.x - dragOffset.x)));
+      const newY = Math.max(0, Math.min(currentMapHeight - selectedObject.object.height, Math.round(pos.y - dragOffset.y)));
 
       updateObjectInState(selectedObject.object.id, { x: newX, y: newY });
       return;
@@ -502,8 +619,8 @@ export default function GameMapEditorPage() {
         ...obj,
         id: newId,
         name: `${obj.name} (Salinan)`,
-        x: Math.min(MAP_WIDTH - obj.width, obj.x + 24),
-        y: Math.min(MAP_HEIGHT - obj.height, obj.y + 24),
+        x: Math.min(currentMapWidth - obj.width, obj.x + 24),
+        y: Math.min(currentMapHeight - obj.height, obj.y + 24),
       };
       duplicatedName = duplicatedObj.name;
 
@@ -527,7 +644,7 @@ export default function GameMapEditorPage() {
     if (duplicatedName) {
       showToast(`Objek disalin: ${duplicatedName}`, 'success');
     }
-  }, [showToast]);
+  }, [currentMapHeight, currentMapWidth, showToast]);
 
   // Keyboard shortcut listener (Delete, Esc, Ctrl+S)
   const saveMapRef = useRef(handleSaveMap);
@@ -584,7 +701,7 @@ export default function GameMapEditorPage() {
       <div className="w-full h-dvh bg-slate-950 flex flex-col items-center justify-center text-white">
         <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
         <h2 className="text-lg font-black tracking-tight font-outfit">Memuat Visual Map Editor...</h2>
-        <p className="text-xs text-slate-400 mt-1">Mengambil koordinat school_map.json</p>
+        <p className="text-xs text-slate-400 mt-1">Mengambil koordinat data peta ({currentPreset.badge})</p>
       </div>
     );
   }
@@ -595,7 +712,7 @@ export default function GameMapEditorPage() {
           TOP TOOLBAR / HEADER
          ═══════════════════════════════════════════════════════════ */}
       <header className="h-14 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between gap-3 z-30 shrink-0">
-        {/* Left: Brand & Return */}
+        {/* Left: Brand, Map Switcher & Return */}
         <div className="flex items-center gap-3">
           <Link
             href="/game"
@@ -605,12 +722,38 @@ export default function GameMapEditorPage() {
             <ArrowLeft size={14} />
             <span className="hidden sm:inline">Ke Game</span>
           </Link>
+
           <div className="h-5 w-[1px] bg-slate-800" />
+
+          {/* Map Selector Tabs */}
+          <div className="flex items-center bg-slate-950/80 border border-slate-800 rounded-xl p-0.5">
+            {(['school', 'outskirts'] as const).map(key => {
+              const preset = MAP_PRESETS[key];
+              const isActive = selectedMapKey === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => handleSwitchMap(key)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    isActive
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                  }`}
+                  title={`Buka peta ${preset.badge} (${preset.subtitle})`}
+                >
+                  <span>{key === 'school' ? '🏫' : '🌾'}</span>
+                  <span className="hidden sm:inline">{preset.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
           <div>
             <h1 className="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
               <span>Visual Collision Editor</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-950 border border-indigo-500/40 text-indigo-400 font-mono">
-                SMP Al-Ittihadiyah
+                {currentPreset.badge}
               </span>
             </h1>
             <div className="flex items-center gap-2 mt-0.5">
@@ -692,7 +835,7 @@ export default function GameMapEditorPage() {
             </button>
             <button
               onClick={() => {
-                setZoom(0.85);
+                setZoom(currentPreset.initialZoom);
                 setPan({ x: 40, y: 30 });
               }}
               className="p-1.5 hover:text-white border-l border-slate-700"
@@ -718,7 +861,7 @@ export default function GameMapEditorPage() {
 
           {/* Sinkronkan dari Server */}
           <button
-            onClick={() => loadMapFromServer(true)}
+            onClick={() => loadMapFromServer(selectedMapKey, true)}
             className="min-h-[44px] flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700/80 hover:border-slate-600 text-slate-200 font-semibold text-xs rounded-xl shadow transition-all active:scale-95"
             title="Muat ulang data terbaru langsung dari Cloud Database / Server"
             aria-label="Sinkronkan peta dari server"
@@ -813,16 +956,16 @@ export default function GameMapEditorPage() {
             className="absolute origin-top-left transition-transform duration-75"
             style={{
               transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-              width: `${MAP_WIDTH}px`,
-              height: `${MAP_HEIGHT}px`,
+              width: `${currentMapWidth}px`,
+              height: `${currentMapHeight}px`,
             }}
           >
-            {/* Background School Map Atlas Image */}
+            {/* Background Map Atlas Image */}
             <img
-              src="/assets/maps/school_atlas.png"
-              alt="School Map Atlas"
-              width={MAP_WIDTH}
-              height={MAP_HEIGHT}
+              src={currentAtlasUrl}
+              alt={currentPreset.badge}
+              width={currentMapWidth}
+              height={currentMapHeight}
               draggable={false}
               className="absolute inset-0 pointer-events-none shadow-2xl rounded-sm"
             />

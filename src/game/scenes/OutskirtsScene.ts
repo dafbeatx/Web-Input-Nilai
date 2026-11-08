@@ -12,6 +12,263 @@ export interface OutskirtsSceneInitData {
   characterRole?: string;
 }
 
+const OUTSKIRTS_INTERACTION_CONFIGS: Record<string, Partial<InteractiveTrigger>> = {
+  gerbang_keluar_sekolah: {
+    id: 'trigger-exit-to-school',
+    name: 'Gerbang Barat Menuju Kampus SMP Al-Ittihadiyah',
+    type: 'building_entrance',
+    promptText: 'Tekan [E] atau Ketuk untuk Kembali ke Kampus SMP Al-Ittihadiyah',
+    data: {
+      title: 'Gerbang Kampus SMP Terpadu Al-Ittihadiyah',
+      desc: 'Melangkah kembali ke halaman utama kampus SMP Al-Ittihadiyah di samping Gazebo Literasi.',
+      action: 'return_to_school',
+    },
+  },
+  'trigger-exit-to-school': {
+    id: 'trigger-exit-to-school',
+    name: 'Gerbang Barat Menuju Kampus SMP Al-Ittihadiyah',
+    type: 'building_entrance',
+    promptText: 'Tekan [E] atau Ketuk untuk Kembali ke Kampus SMP Al-Ittihadiyah',
+    data: {
+      title: 'Gerbang Kampus SMP Terpadu Al-Ittihadiyah',
+      desc: 'Melangkah kembali ke halaman utama kampus SMP Al-Ittihadiyah di samping Gazebo Literasi.',
+      action: 'return_to_school',
+    },
+  },
+  kebun_organik_p5: {
+    id: 'trigger-outskirts-kebun',
+    name: 'Sentra Agrowisata & Kebun Sayur Organik P5',
+    type: 'interactive_board',
+    promptText: 'Tekan [E] atau Ketuk untuk Informasi Kebun Edukasi P5',
+    data: {
+      title: 'Sentra Pertanian Mandiri & Kebun Edukasi P5',
+      desc: 'Wahana pembelajaran agrikultur organik ramah lingkungan. Dikelola terpadu oleh santri dan guru pembimbing projek P5 SMP Terpadu Al-Ittihadiyah.',
+      features: [
+        'Budidaya Sayuran Organik Bebas Pestisida Kimia (Sawi, Kangkung, Cabai Rawit)',
+        'Siklus Pengolahan Pupuk Kompos Organik dari Sisa Bahan Kantin & Dedaunan',
+        'Sistem Irigasi Air Resapan Berkelanjutan & Pemeliharaan Tanah Subur',
+      ],
+    },
+  },
+  'trigger-outskirts-kebun': {
+    id: 'trigger-outskirts-kebun',
+    name: 'Sentra Agrowisata & Kebun Sayur Organik P5',
+    type: 'interactive_board',
+    promptText: 'Tekan [E] atau Ketuk untuk Informasi Kebun Edukasi P5',
+    data: {
+      title: 'Sentra Pertanian Mandiri & Kebun Edukasi P5',
+      desc: 'Wahana pembelajaran agrikultur organik ramah lingkungan. Dikelola terpadu oleh santri dan guru pembimbing projek P5 SMP Terpadu Al-Ittihadiyah.',
+      features: [
+        'Budidaya Sayuran Organik Bebas Pestisida Kimia (Sawi, Kangkung, Cabai Rawit)',
+        'Siklus Pengolahan Pupuk Kompos Organik dari Sisa Bahan Kantin & Dedaunan',
+        'Sistem Irigasi Air Resapan Berkelanjutan & Pemeliharaan Tanah Subur',
+      ],
+    },
+  },
+  lumbung_padi_barn: {
+    id: 'trigger-outskirts-barn',
+    name: 'Lumbung Pangan & Sentra Benih Mandiri',
+    type: 'interactive_board',
+    promptText: 'Tekan [E] atau Ketuk untuk Masuk ke Lumbung Pangan',
+    data: {
+      title: 'Lumbung Cadangan Pangan Al-Ittihadiyah',
+      desc: 'Fasilitas lumbung penyimpanan pasokan gabah, jagung hibrida, serta bank benih tanaman pangan unggul lokal.',
+      features: [
+        'Kapasitas Penyimpanan Cadangan Pangan Santri Mandiri',
+        'Bank Benih Unggul Sayuran dan Palawija Berkualitas',
+        'Pengeringan Alami Bebas Bahan Pengawet Sintetis',
+      ],
+    },
+  },
+  'trigger-outskirts-barn': {
+    id: 'trigger-outskirts-barn',
+    name: 'Lumbung Pangan & Sentra Benih Mandiri',
+    type: 'interactive_board',
+    promptText: 'Tekan [E] atau Ketuk untuk Masuk ke Lumbung Pangan',
+    data: {
+      title: 'Lumbung Cadangan Pangan Al-Ittihadiyah',
+      desc: 'Fasilitas lumbung penyimpanan pasokan gabah, jagung hibrida, serta bank benih tanaman pangan unggul lokal.',
+      features: [
+        'Kapasitas Penyimpanan Cadangan Pangan Santri Mandiri',
+        'Bank Benih Unggul Sayuran dan Palawija Berkualitas',
+        'Pengeringan Alami Bebas Bahan Pengawet Sintetis',
+      ],
+    },
+  },
+  meja_alkimia_herbal: {
+    id: 'trigger-outskirts-alchemy',
+    name: 'Laboratorium Biofarmaka & Herbal Alami (TOGA)',
+    type: 'interactive_board',
+    promptText: 'Tekan [E] atau Ketuk untuk Riset Tanaman Obat Biofarmaka',
+    data: {
+      title: 'Laboratorium Biofarmaka & Ekstrak Herbal Nusantara',
+      desc: 'Sentra riset siswa untuk mengeksplorasi tanaman obat keluarga (TOGA) dan pemanfaatan bahan herbal berkhasiat.',
+      features: [
+        'Destilasi Minyak Atsiri Sereh Wangi dan Minyak Kayu Putih Alami',
+        'Formulasi Minuman Herbal Tradisional Peningkat Daya Tahan Tubuh',
+        'Pembuatan Sabun Cuci Tangan Alami Ramah Lingkungan',
+      ],
+    },
+  },
+  'trigger-outskirts-alchemy': {
+    id: 'trigger-outskirts-alchemy',
+    name: 'Laboratorium Biofarmaka & Herbal Alami (TOGA)',
+    type: 'interactive_board',
+    promptText: 'Tekan [E] atau Ketuk untuk Riset Tanaman Obat Biofarmaka',
+    data: {
+      title: 'Laboratorium Biofarmaka & Ekstrak Herbal Nusantara',
+      desc: 'Sentra riset siswa untuk mengeksplorasi tanaman obat keluarga (TOGA) dan pemanfaatan bahan herbal berkhasiat.',
+      features: [
+        'Destilasi Minyak Atsiri Sereh Wangi dan Minyak Kayu Putih Alami',
+        'Formulasi Minuman Herbal Tradisional Peningkat Daya Tahan Tubuh',
+        'Pembuatan Sabun Cuci Tangan Alami Ramah Lingkungan',
+      ],
+    },
+  },
+  bengkel_kriya_workbench: {
+    id: 'trigger-outskirts-workbench',
+    name: 'Bengkel Kriya & Pertukangan Kayu',
+    type: 'interactive_board',
+    promptText: 'Tekan [E] atau Ketuk untuk Mengakses Bengkel Kriya',
+    data: {
+      title: 'Bengkel Kriya & Keterampilan Vokasional Kayu',
+      desc: 'Fasilitas pembinaan kecakapan hidup pertukangan, rancang bangun perabot sekolah, dan daur ulang limbah kayu ramah lingkungan.',
+      features: [
+        'Pelatihan Pertukangan Kayu & Pahat Geometris Tradisional',
+        'Perbaikan Mandiri Sarana Meja dan Kursi Kelas',
+        'Pembuatan Rak Vertikal Hidroponik & Kotak Semai Bibit',
+      ],
+    },
+  },
+  'trigger-outskirts-workbench': {
+    id: 'trigger-outskirts-workbench',
+    name: 'Bengkel Kriya & Pertukangan Kayu',
+    type: 'interactive_board',
+    promptText: 'Tekan [E] atau Ketuk untuk Mengakses Bengkel Kriya',
+    data: {
+      title: 'Bengkel Kriya & Keterampilan Vokasional Kayu',
+      desc: 'Fasilitas pembinaan kecakapan hidup pertukangan, rancang bangun perabot sekolah, dan daur ulang limbah kayu ramah lingkungan.',
+      features: [
+        'Pelatihan Pertukangan Kayu & Pahat Geometris Tradisional',
+        'Perbaikan Mandiri Sarana Meja dan Kursi Kelas',
+        'Pembuatan Rak Vertikal Hidroponik & Kotak Semai Bibit',
+      ],
+    },
+  },
+  sentra_tempa_anvil: {
+    id: 'trigger-outskirts-anvil',
+    name: 'Sentra Tempa & Perawatan Perkakas Tani',
+    type: 'interactive_board',
+    promptText: 'Tekan [E] atau Ketuk untuk Melihat Perkakas Pertanian',
+    data: {
+      title: 'Sentra Tempa & Perawatan Perkakas Pertanian',
+      desc: 'Pusat perawatan dan penempaan alat pertanian: mata cangkul, garpu tanah, arit rumput, dan gunting pangkas ranting.',
+    },
+  },
+  'trigger-outskirts-anvil': {
+    id: 'trigger-outskirts-anvil',
+    name: 'Sentra Tempa & Perawatan Perkakas Tani',
+    type: 'interactive_board',
+    promptText: 'Tekan [E] atau Ketuk untuk Melihat Perkakas Pertanian',
+    data: {
+      title: 'Sentra Tempa & Perawatan Perkakas Pertanian',
+      desc: 'Pusat perawatan dan penempaan alat pertanian: mata cangkul, garpu tanah, arit rumput, dan gunting pangkas ranting.',
+    },
+  },
+  lingkar_api_unggun: {
+    id: 'trigger-outskirts-bonfire',
+    name: 'Bumi Perkemahan Pramuka & Lingkar Api Unggun',
+    type: 'interactive_board',
+    promptText: 'Tekan [E] atau Ketuk untuk Bergabung di Api Unggun Pramuka',
+    data: {
+      title: 'Bumi Perkemahan Pramuka & Lingkar Api Unggun',
+      desc: 'Arena terbuka kepanduan Al-Ittihadiyah untuk melatih kemandirian, kekompakan tim, dan kecintaan pada pelestarian alam.',
+      features: [
+        'Kegiatan Renungan Malam & Pentas Seni Api Unggun',
+        'Latihan Baris-Berbaris, Pionering, dan Sandi Pramuka',
+        'Pengamatan Langit Malam & Falakiyah Menggunakan Teropong',
+      ],
+    },
+  },
+  'trigger-outskirts-bonfire': {
+    id: 'trigger-outskirts-bonfire',
+    name: 'Bumi Perkemahan Pramuka & Lingkar Api Unggun',
+    type: 'interactive_board',
+    promptText: 'Tekan [E] atau Ketuk untuk Bergabung di Api Unggun Pramuka',
+    data: {
+      title: 'Bumi Perkemahan Pramuka & Lingkar Api Unggun',
+      desc: 'Arena terbuka kepanduan Al-Ittihadiyah untuk melatih kemandirian, kekompakan tim, dan kecintaan pada pelestarian alam.',
+      features: [
+        'Kegiatan Renungan Malam & Pentas Seni Api Unggun',
+        'Latihan Baris-Berbaris, Pionering, dan Sandi Pramuka',
+        'Pengamatan Langit Malam & Falakiyah Menggunakan Teropong',
+      ],
+    },
+  },
+  dapur_alam_kuliner: {
+    id: 'trigger-outskirts-dapur',
+    name: 'Dapur Alam Tradisional & Sentra Kuliner Nusantara',
+    type: 'shop',
+    promptText: 'Tekan [E] atau Ketuk untuk Jajan di Dapur Alam',
+    data: {
+      shopName: 'Dapur Alam Bumi Perkemahan Al-Ittihadiyah',
+      items: [
+        { name: 'Nasi Liwet Kastrol Komplit', price: 12000, desc: 'Nasi gurih harum dengan ikan asin, tahu tempe, lalapan segar (+50 Energi)' },
+        { name: 'Jagung Bakar Madu Hutan', price: 5000, desc: 'Jagung manis panen kebun dibakar bumbu madu lezat (+20 Energi)' },
+        { name: 'Ubi Madu Cilembu Kukus', price: 4000, desc: 'Ubi manis legit hangat sumber karbohidrat sehat (+15 Energi)' },
+        { name: 'Wedang Jahe Serai Hangat', price: 4000, desc: 'Rebusan jahe merah dan serai menghangatkan badan di malam hari (+15 Energi)' },
+        { name: 'Air Kelapa Muda Segar', price: 7000, desc: 'Elektrolit alami menyegarkan badan setelah berkeliling kebun (+30 Energi)' },
+      ],
+    },
+  },
+  'trigger-outskirts-dapur': {
+    id: 'trigger-outskirts-dapur',
+    name: 'Dapur Alam Tradisional & Sentra Kuliner Nusantara',
+    type: 'shop',
+    promptText: 'Tekan [E] atau Ketuk untuk Jajan di Dapur Alam',
+    data: {
+      shopName: 'Dapur Alam Bumi Perkemahan Al-Ittihadiyah',
+      items: [
+        { name: 'Nasi Liwet Kastrol Komplit', price: 12000, desc: 'Nasi gurih harum dengan ikan asin, tahu tempe, lalapan segar (+50 Energi)' },
+        { name: 'Jagung Bakar Madu Hutan', price: 5000, desc: 'Jagung manis panen kebun dibakar bumbu madu lezat (+20 Energi)' },
+        { name: 'Ubi Madu Cilembu Kukus', price: 4000, desc: 'Ubi manis legit hangat sumber karbohidrat sehat (+15 Energi)' },
+        { name: 'Wedang Jahe Serai Hangat', price: 4000, desc: 'Rebusan jahe merah dan serai menghangatkan badan di malam hari (+15 Energi)' },
+        { name: 'Air Kelapa Muda Segar', price: 7000, desc: 'Elektrolit alami menyegarkan badan setelah berkeliling kebun (+30 Energi)' },
+      ],
+    },
+  },
+  dermaga_danau_nila: {
+    id: 'trigger-outskirts-danau',
+    name: 'Dermaga Danau Konservasi & Kolam Nila',
+    type: 'interactive_board',
+    promptText: 'Tekan [E] atau Ketuk untuk Menikmati Danau Konservasi',
+    data: {
+      title: 'Danau Konservasi Air Tawar & Kolam Ikan Nila',
+      desc: 'Ekosistem air terpadu penampung air hujan (bioretensi) sekaligus media budidaya perikanan air tawar ramah lingkungan.',
+      features: [
+        'Budidaya Ikan Nila Hitam, Nila Merah, dan Gurame',
+        'Kolam Resapan Alami untuk Pengendalian Erosi Tanah',
+        'Spot Observasi Keanekaragaman Hayati Perairan Tawar',
+      ],
+    },
+  },
+  'trigger-outskirts-danau': {
+    id: 'trigger-outskirts-danau',
+    name: 'Dermaga Danau Konservasi & Kolam Nila',
+    type: 'interactive_board',
+    promptText: 'Tekan [E] atau Ketuk untuk Menikmati Danau Konservasi',
+    data: {
+      title: 'Danau Konservasi Air Tawar & Kolam Ikan Nila',
+      desc: 'Ekosistem air terpadu penampung air hujan (bioretensi) sekaligus media budidaya perikanan air tawar ramah lingkungan.',
+      features: [
+        'Budidaya Ikan Nila Hitam, Nila Merah, dan Gurame',
+        'Kolam Resapan Alami untuk Pengendalian Erosi Tanah',
+        'Spot Observasi Keanekaragaman Hayati Perairan Tawar',
+      ],
+    },
+  },
+};
+
 export class OutskirtsScene extends Phaser.Scene {
   public player!: Player;
   public inputManager!: InputManager;
@@ -181,6 +438,24 @@ export class OutskirtsScene extends Phaser.Scene {
       return blocker;
     };
 
+    let map: Phaser.Tilemaps.Tilemap | null = null;
+    try {
+      if (this.cache.tilemap.has('outskirts_map')) {
+        map = this.make.tilemap({ key: 'outskirts_map' });
+      }
+    } catch (e) {
+      console.warn('Gagal memuat tilemap outskirts_map:', e);
+    }
+
+    const collisionObjects = map?.getObjectLayer('Collision')?.objects ?? [];
+    if (collisionObjects.length > 0) {
+      for (const obj of collisionObjects) {
+        if (!obj.width || !obj.height || obj.x === undefined || obj.y === undefined) continue;
+        addBlocker(obj.x + obj.width / 2, obj.y + obj.height / 2, obj.width, obj.height);
+      }
+      return;
+    }
+
     // 1. North Perimeter Barrier
     addBlocker(worldWidth / 2, 45, worldWidth, 70);
 
@@ -262,6 +537,48 @@ export class OutskirtsScene extends Phaser.Scene {
       this.physics.add.existing(zone, true);
       this.triggers.push({ zone, info });
     };
+
+    let map: Phaser.Tilemaps.Tilemap | null = null;
+    try {
+      if (this.cache.tilemap.has('outskirts_map')) {
+        map = this.make.tilemap({ key: 'outskirts_map' });
+      }
+    } catch (e) {
+      console.warn('Gagal memuat tilemap outskirts_map:', e);
+    }
+
+    const interactObjects = map?.getObjectLayer('Interact')?.objects ?? [];
+    if (interactObjects.length > 0) {
+      for (const obj of interactObjects) {
+        if (!obj.width || !obj.height || obj.x === undefined || obj.y === undefined) continue;
+        const key = obj.name.trim().toLowerCase();
+        const config = OUTSKIRTS_INTERACTION_CONFIGS[key] || OUTSKIRTS_INTERACTION_CONFIGS[obj.id.toString()];
+
+        const triggerInfo: InteractiveTrigger = config
+          ? {
+              id: config.id || `trigger-${key.replace(/\s+/g, '-')}`,
+              name: config.name || obj.name,
+              type: (config.type || 'interactive_board') as 'building_entrance' | 'shop' | 'npc' | 'interactive_board' | 'seating',
+              promptText: config.promptText || `Tekan [E] atau Ketuk untuk ${obj.name}`,
+              data: (config.data || { title: obj.name, desc: `Fasilitas di Kawasan Agrowisata & Petualangan P5.` }) as Record<string, unknown>,
+            }
+          : {
+              id: `trigger-${key.replace(/\s+/g, '-')}`,
+              name: obj.name,
+              type: 'interactive_board',
+              promptText: `Tekan [E] atau Ketuk untuk ${obj.name}`,
+              data: {
+                title: obj.name,
+                desc: `Fasilitas di Kawasan Agrowisata & Petualangan P5.`,
+              },
+            };
+
+        const zone = this.add.zone(obj.x + obj.width / 2, obj.y + obj.height / 2, obj.width, obj.height);
+        this.physics.add.existing(zone, true);
+        this.triggers.push({ zone, info: triggerInfo });
+      }
+      return;
+    }
 
     // 1. West Exit to School Campus
     addTrigger(

@@ -466,3 +466,4 @@ generateAtlas().catch(err => {
   console.error('Error generating atlas:', err);
   process.exit(1);
 });
+
