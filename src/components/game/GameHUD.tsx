@@ -2,9 +2,10 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { DeviceMode, InteractiveTrigger, CharacterProfile, CHARACTER_PROFILES } from '@/lib/game/types';
 import { DEFAULT_GAME_QUESTIONS, GameQuestion } from '@/lib/grademaster/services/game-questions.service';
+import type { ClassroomLessonData } from '@/game/scenes/ClassroomScene';
 import {
   Wallet,
   MapPin,
@@ -58,6 +59,322 @@ interface GameHUDProps {
   onEnterRuangGuru?: () => void;
 }
 
+function ClassroomLessonView({
+  trigger,
+  onClose,
+  onStartQuiz,
+}: {
+  trigger: InteractiveTrigger;
+  onClose: () => void;
+  onStartQuiz: (lessonData?: ClassroomLessonData, gradeLabel?: string) => void;
+}) {
+  const lessonData = trigger.data?.lesson as ClassroomLessonData | undefined;
+  const gradeLabel = typeof trigger.data?.gradeLabel === 'string' ? trigger.data.gradeLabel : 'Fase D';
+
+  return (
+    <div className="space-y-4">
+      <div className="p-4 bg-gradient-to-br from-indigo-950/60 to-slate-900 border border-indigo-500/30 rounded-2xl">
+        <div className="flex items-center gap-2 text-cyan-300 font-bold text-xs mb-1">
+          <GraduationCap size={16} />
+          <span>Kurikulum Merdeka • {gradeLabel}</span>
+        </div>
+        <h4 className="text-base font-black text-white">
+          {lessonData?.lessonTitle || trigger.name}
+        </h4>
+        <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+          {lessonData?.summary || 'Modul rangkuman materi pembelajaran inti untuk peserta didik.'}
+        </p>
+      </div>
+
+      <div className="space-y-2.5">
+        {lessonData?.keyPoints?.map((point, idx) => (
+          <div key={idx} className="p-3.5 bg-slate-800/80 rounded-2xl border border-slate-700/60 text-xs">
+            <p className="font-bold text-cyan-300 mb-1 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-md bg-cyan-950 border border-cyan-500/40 flex items-center justify-center text-[10px] text-cyan-300 font-mono flex-shrink-0">
+                {idx + 1}
+              </span>
+              <span>{point.title}</span>
+            </p>
+            <p className="text-slate-300 leading-relaxed pl-7">{point.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="pt-2 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p className="text-[11px] text-slate-400 text-center sm:text-left">
+          💡 Pahami materi di atas, lalu uji pemahamanmu di meja kuis untuk mendapatkan koin!
+        </p>
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="min-h-[44px] px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+          >
+            Tutup
+          </button>
+          <button
+            type="button"
+            onClick={() => onStartQuiz(lessonData, gradeLabel)}
+            className="min-h-[44px] px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black rounded-xl transition-all shadow-lg flex items-center gap-2 cursor-pointer active:scale-95"
+          >
+            <Sparkles size={15} />
+            <span>Mulai Kuis (+Hadiah Koin)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ClassroomQuizView({
+  trigger,
+  onAddReward,
+  onClose,
+}: {
+  trigger: InteractiveTrigger;
+  onAddReward?: (amount: number) => void;
+  onClose: () => void;
+}) {
+  const subject = (trigger.data?.subject as string) || 'Matematika';
+
+  const [quizQuestions, setQuizQuestions] = useState<GameQuestion[]>(() => {
+    let pool = DEFAULT_GAME_QUESTIONS.filter(
+      q => q.subject.toLowerCase() === subject.toLowerCase()
+    );
+    if (pool.length < 5) pool = DEFAULT_GAME_QUESTIONS;
+    return [...pool].sort(() => 0.5 - Math.random()).slice(0, 5);
+  });
+  const [currentQuestionIdx, setCurrentQuestionIdx] = useState<number>(0);
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [isAnswerSubmitted, setIsAnswerSubmitted] = useState<boolean>(false);
+  const [score, setScore] = useState<number>(0);
+  const [isQuizCompleted, setIsQuizCompleted] = useState<boolean>(false);
+  const [isRewardClaimed, setIsRewardClaimed] = useState<boolean>(false);
+
+  const handleRestartQuiz = () => {
+    let pool = DEFAULT_GAME_QUESTIONS.filter(
+      q => q.subject.toLowerCase() === subject.toLowerCase()
+    );
+    if (pool.length < 5) pool = DEFAULT_GAME_QUESTIONS;
+    const shuffled = [...pool].sort(() => 0.5 - Math.random()).slice(0, 5);
+    setQuizQuestions(shuffled);
+    setCurrentQuestionIdx(0);
+    setSelectedOption(null);
+    setIsAnswerSubmitted(false);
+    setScore(0);
+    setIsQuizCompleted(false);
+    setIsRewardClaimed(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      {quizQuestions.length === 0 ? (
+        <div className="py-8 text-center text-slate-400 text-xs">
+          Memuat bank soal kuis pembelajaran...
+        </div>
+      ) : isQuizCompleted ? (
+        /* Completion / Reward Screen */
+        <div className="text-center py-4 space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-3xl bg-amber-500/20 border-2 border-amber-400/50 flex items-center justify-center text-amber-400">
+            <Award size={36} />
+          </div>
+          <div>
+            <h4 className="text-xl font-black text-white">Kuis Pembelajaran Selesai!</h4>
+            <p className="text-xs text-slate-400 mt-1">
+              Evaluasi pemahaman materi mata pelajaran {subject}
+            </p>
+          </div>
+
+          <div className="p-4 bg-slate-800/80 border border-slate-700/80 rounded-2xl max-w-sm mx-auto flex items-center justify-around">
+            <div>
+              <p className="text-[10px] text-slate-400 uppercase font-black">Benar</p>
+              <p className="text-xl font-black text-emerald-400">{score} / {quizQuestions.length}</p>
+            </div>
+            <div className="h-8 w-px bg-slate-700" />
+            <div>
+              <p className="text-[10px] text-slate-400 uppercase font-black">Nilai</p>
+              <p className="text-xl font-black text-cyan-400">
+                {Math.round((score / quizQuestions.length) * 100)}
+              </p>
+            </div>
+            <div className="h-8 w-px bg-slate-700" />
+            <div>
+              <p className="text-[10px] text-slate-400 uppercase font-black">Hadiah Koin</p>
+              <p className="text-xl font-black text-amber-400">
+                Rp {(score * 2000).toLocaleString('id-ID')}
+              </p>
+            </div>
+          </div>
+
+          {score > 0 && (
+            <div className="pt-2">
+              {isRewardClaimed ? (
+                <div className="p-3 bg-emerald-950/60 border border-emerald-500/50 rounded-xl text-emerald-300 text-xs font-bold flex items-center justify-center gap-2">
+                  <CheckCircle2 size={16} />
+                  <span>Hadiah Rp {(score * 2000).toLocaleString('id-ID')} berhasil masuk ke dompet Anda!</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const rewardAmount = score * 2000;
+                    onAddReward?.(rewardAmount);
+                    setIsRewardClaimed(true);
+                  }}
+                  className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <Sparkles size={16} />
+                  <span>Klaim Hadiah Tunai Rp {(score * 2000).toLocaleString('id-ID')}</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <button
+              type="button"
+              onClick={handleRestartQuiz}
+              className="min-h-[44px] px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <RotateCcw size={14} />
+              <span>Ulangi Kuis</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="min-h-[44px] px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black rounded-xl transition-all shadow-md cursor-pointer"
+            >
+              Selesai & Kembali ke Kelas
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* Answering Screen */
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-400">
+              <span className="text-cyan-400">
+                Pertanyaan {currentQuestionIdx + 1} dari {quizQuestions.length}
+              </span>
+              <span className="text-amber-400 font-mono">
+                Skor Benar: {score}
+              </span>
+            </div>
+            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div
+                className="bg-cyan-500 h-full rounded-full transition-all duration-300"
+                style={{
+                  width: `${((currentQuestionIdx + 1) / quizQuestions.length) * 100}%`,
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="p-4 bg-slate-800/80 rounded-2xl border border-slate-700/70">
+            <p className="text-sm font-bold text-slate-100 leading-relaxed">
+              {quizQuestions[currentQuestionIdx]?.question}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            {quizQuestions[currentQuestionIdx]?.options.map((opt, optIdx) => {
+              const isSelected = selectedOption === optIdx;
+              const isCorrect = optIdx === quizQuestions[currentQuestionIdx].correct_index;
+
+              let buttonStyle = 'bg-slate-800/70 hover:bg-slate-800 border-slate-700/80 text-slate-200';
+              let pillStyle = 'bg-slate-700/80 text-slate-300';
+
+              if (isAnswerSubmitted) {
+                if (isCorrect) {
+                  buttonStyle = 'bg-emerald-950/80 border-emerald-500 text-emerald-100 shadow-md shadow-emerald-950/50';
+                  pillStyle = 'bg-emerald-600 text-white';
+                } else if (isSelected) {
+                  buttonStyle = 'bg-rose-950/80 border-rose-500 text-rose-100';
+                  pillStyle = 'bg-rose-600 text-white';
+                }
+              }
+
+              const optionLabels = ['A', 'B', 'C', 'D'];
+
+              return (
+                <button
+                  key={optIdx}
+                  type="button"
+                  disabled={isAnswerSubmitted}
+                  onClick={() => {
+                    setSelectedOption(optIdx);
+                    setIsAnswerSubmitted(true);
+                    if (optIdx === quizQuestions[currentQuestionIdx].correct_index) {
+                      setScore(prev => prev + 1);
+                    }
+                  }}
+                  className={`w-full min-h-[50px] p-3 text-left rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer disabled:cursor-default active:scale-[0.99] ${buttonStyle}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black flex-shrink-0 ${pillStyle}`}>
+                      {optionLabels[optIdx]}
+                    </span>
+                    <span className="text-xs sm:text-sm font-semibold">{opt}</span>
+                  </div>
+                  {isAnswerSubmitted && (
+                    <div className="flex-shrink-0">
+                      {isCorrect ? (
+                        <CheckCircle2 size={18} className="text-emerald-400" />
+                      ) : isSelected ? (
+                        <XCircle size={18} className="text-rose-400" />
+                      ) : null}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {isAnswerSubmitted && (
+            <div className="p-3.5 bg-indigo-950/50 border border-indigo-500/40 rounded-xl space-y-1 animate-in fade-in duration-200">
+              <p className="text-[11px] font-bold text-cyan-300 flex items-center gap-1.5">
+                <HelpCircle size={14} />
+                <span>Pembahasan Jawaban:</span>
+              </p>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                {quizQuestions[currentQuestionIdx]?.explanation ||
+                  (selectedOption === quizQuestions[currentQuestionIdx]?.correct_index
+                    ? 'Jawaban Anda tepat dan benar!'
+                    : 'Jawaban yang tepat adalah opsi ' +
+                      ['A', 'B', 'C', 'D'][quizQuestions[currentQuestionIdx].correct_index])}
+              </p>
+            </div>
+          )}
+
+          {isAnswerSubmitted && (
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (currentQuestionIdx < quizQuestions.length - 1) {
+                    setCurrentQuestionIdx(prev => prev + 1);
+                    setSelectedOption(null);
+                    setIsAnswerSubmitted(false);
+                  } else {
+                    setIsQuizCompleted(true);
+                  }
+                }}
+                className="min-h-[44px] px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer active:scale-95"
+              >
+                <span>
+                  {currentQuestionIdx < quizQuestions.length - 1
+                    ? 'Soal Selanjutnya →'
+                    : 'Lihat Hasil Kuis ✨'}
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function GameHUD({
   deviceMode,
   onDeviceModeChange,
@@ -77,39 +394,28 @@ export default function GameHUD({
   const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState<string | null>(null);
 
-  // WorkAdventure-style trigger transition & Quiz state
+  // WorkAdventure-style trigger transition
   const [overrideTrigger, setOverrideTrigger] = useState<InteractiveTrigger | null>(null);
   const currentModal = overrideTrigger || activeModalTrigger;
-
-  const [quizQuestions, setQuizQuestions] = useState<GameQuestion[]>([]);
-  const [currentQuestionIdx, setCurrentQuestionIdx] = useState<number>(0);
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [isAnswerSubmitted, setIsAnswerSubmitted] = useState<boolean>(false);
-  const [score, setScore] = useState<number>(0);
-  const [isQuizCompleted, setIsQuizCompleted] = useState<boolean>(false);
-  const [isRewardClaimed, setIsRewardClaimed] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (currentModal?.type === 'quiz') {
-      const subject = (currentModal.data?.subject as string) || 'Matematika';
-      let pool = DEFAULT_GAME_QUESTIONS.filter(
-        q => q.subject.toLowerCase() === subject.toLowerCase()
-      );
-      if (pool.length < 5) pool = DEFAULT_GAME_QUESTIONS;
-      const shuffled = [...pool].sort(() => 0.5 - Math.random()).slice(0, 5);
-      setQuizQuestions(shuffled);
-      setCurrentQuestionIdx(0);
-      setSelectedOption(null);
-      setIsAnswerSubmitted(false);
-      setScore(0);
-      setIsQuizCompleted(false);
-      setIsRewardClaimed(false);
-    }
-  }, [currentModal]);
 
   const handleModalClose = () => {
     setOverrideTrigger(null);
     onCloseModal();
+  };
+
+  const handleStartQuizFromLesson = (lessonData?: ClassroomLessonData, gradeLabel: string = 'Kelas') => {
+    const quizSubject = lessonData?.quizSubject || 'Matematika';
+    setOverrideTrigger({
+      id: `trigger-quiz-from-lesson-${Date.now()}`,
+      name: `Meja Belajar Siswa (${gradeLabel})`,
+      type: 'quiz',
+      promptText: 'Mulai Kuis Interaktif',
+      data: {
+        gradeLabel,
+        subject: quizSubject,
+        rewardPerQuestion: 2000,
+      },
+    });
   };
 
   const toggleFullscreen = () => {
@@ -345,291 +651,21 @@ export default function GameHUD({
             <div className="overflow-y-auto no-scrollbar flex-1 pr-1">
               {/* 1. LESSON / SMART BOARD VIEW */}
               {currentModal.type === 'lesson' && (
-                <div className="space-y-4">
-                  <div className="p-4 bg-gradient-to-br from-indigo-950/60 to-slate-900 border border-indigo-500/30 rounded-2xl">
-                    <div className="flex items-center gap-2 text-cyan-300 font-bold text-xs mb-1">
-                      <GraduationCap size={16} />
-                      <span>
-                        Kurikulum Merdeka • {typeof currentModal.data?.gradeLabel === 'string' ? currentModal.data.gradeLabel : 'Fase D'}
-                      </span>
-                    </div>
-                    <h4 className="text-base font-black text-white">
-                      {(currentModal.data?.lesson as any)?.lessonTitle || currentModal.name}
-                    </h4>
-                    <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                      {(currentModal.data?.lesson as any)?.summary || 'Modul rangkuman materi pembelajaran inti untuk peserta didik.'}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2.5">
-                    {Array.isArray((currentModal.data?.lesson as any)?.keyPoints) &&
-                      ((currentModal.data?.lesson as any).keyPoints as { title: string; desc: string }[]).map((point, idx) => (
-                        <div key={idx} className="p-3.5 bg-slate-800/80 rounded-2xl border border-slate-700/60 text-xs">
-                          <p className="font-bold text-cyan-300 mb-1 flex items-center gap-2">
-                            <span className="w-5 h-5 rounded-md bg-cyan-950 border border-cyan-500/40 flex items-center justify-center text-[10px] text-cyan-300 font-mono flex-shrink-0">
-                              {idx + 1}
-                            </span>
-                            <span>{point.title}</span>
-                          </p>
-                          <p className="text-slate-300 leading-relaxed pl-7">{point.desc}</p>
-                        </div>
-                      ))}
-                  </div>
-
-                  <div className="pt-2 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <p className="text-[11px] text-slate-400 text-center sm:text-left">
-                      💡 Pahami materi di atas, lalu uji pemahamanmu di meja kuis untuk mendapatkan koin!
-                    </p>
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                      <button
-                        onClick={handleModalClose}
-                        className="min-h-[44px] px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
-                      >
-                        Tutup
-                      </button>
-                      <button
-                        onClick={() => {
-                          const lessonData = currentModal.data?.lesson as any;
-                          const gradeLabel = (currentModal.data?.gradeLabel as string) || 'Kelas';
-                          const quizSubject = lessonData?.quizSubject || (currentModal.data?.subject as string) || 'Matematika';
-                          setOverrideTrigger({
-                            id: 'trigger-quiz-from-lesson',
-                            name: `Meja Belajar Siswa (${gradeLabel})`,
-                            type: 'quiz',
-                            promptText: 'Mulai Kuis Interaktif',
-                            data: {
-                              gradeLabel,
-                              subject: quizSubject,
-                              rewardPerQuestion: 2000,
-                            },
-                          });
-                        }}
-                        className="min-h-[44px] px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black rounded-xl transition-all shadow-lg flex items-center gap-2 cursor-pointer active:scale-95"
-                      >
-                        <Sparkles size={15} />
-                        <span>Mulai Kuis (+Hadiah Koin)</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <ClassroomLessonView
+                  trigger={currentModal}
+                  onClose={handleModalClose}
+                  onStartQuiz={handleStartQuizFromLesson}
+                />
               )}
 
               {/* 2. QUIZ INTERACTIVE VIEW */}
               {currentModal.type === 'quiz' && (
-                <div className="space-y-4">
-                  {quizQuestions.length === 0 ? (
-                    <div className="py-8 text-center text-slate-400 text-xs">
-                      Memuat bank soal kuis pembelajaran...
-                    </div>
-                  ) : isQuizCompleted ? (
-                    /* Completion / Reward Screen */
-                    <div className="text-center py-4 space-y-4">
-                      <div className="w-16 h-16 mx-auto rounded-3xl bg-amber-500/20 border-2 border-amber-400/50 flex items-center justify-center text-amber-400">
-                        <Award size={36} />
-                      </div>
-                      <div>
-                        <h4 className="text-xl font-black text-white">Kuis Pembelajaran Selesai!</h4>
-                        <p className="text-xs text-slate-400 mt-1">
-                          Evaluasi pemahaman materi mata pelajaran {(currentModal.data?.subject as string) || 'Umum'}
-                        </p>
-                      </div>
-
-                      <div className="p-4 bg-slate-800/80 border border-slate-700/80 rounded-2xl max-w-sm mx-auto flex items-center justify-around">
-                        <div>
-                          <p className="text-[10px] text-slate-400 uppercase font-black">Benar</p>
-                          <p className="text-xl font-black text-emerald-400">{score} / {quizQuestions.length}</p>
-                        </div>
-                        <div className="h-8 w-px bg-slate-700" />
-                        <div>
-                          <p className="text-[10px] text-slate-400 uppercase font-black">Nilai</p>
-                          <p className="text-xl font-black text-cyan-400">
-                            {Math.round((score / quizQuestions.length) * 100)}
-                          </p>
-                        </div>
-                        <div className="h-8 w-px bg-slate-700" />
-                        <div>
-                          <p className="text-[10px] text-slate-400 uppercase font-black">Hadiah Koin</p>
-                          <p className="text-xl font-black text-amber-400">
-                            Rp {(score * 2000).toLocaleString('id-ID')}
-                          </p>
-                        </div>
-                      </div>
-
-                      {score > 0 && (
-                        <div className="pt-2">
-                          {isRewardClaimed ? (
-                            <div className="p-3 bg-emerald-950/60 border border-emerald-500/50 rounded-xl text-emerald-300 text-xs font-bold flex items-center justify-center gap-2">
-                              <CheckCircle2 size={16} />
-                              <span>Hadiah Rp {(score * 2000).toLocaleString('id-ID')} berhasil masuk ke dompet Anda!</span>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                const rewardAmount = score * 2000;
-                                onAddReward?.(rewardAmount);
-                                setIsRewardClaimed(true);
-                              }}
-                              className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer active:scale-95"
-                            >
-                              <Sparkles size={16} />
-                              <span>Klaim Hadiah Tunai Rp {(score * 2000).toLocaleString('id-ID')}</span>
-                            </button>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-center gap-2 pt-2">
-                        <button
-                          onClick={() => {
-                            const subject = (currentModal.data?.subject as string) || 'Matematika';
-                            let pool = DEFAULT_GAME_QUESTIONS.filter(
-                              q => q.subject.toLowerCase() === subject.toLowerCase()
-                            );
-                            if (pool.length < 5) pool = DEFAULT_GAME_QUESTIONS;
-                            const shuffled = [...pool].sort(() => 0.5 - Math.random()).slice(0, 5);
-                            setQuizQuestions(shuffled);
-                            setCurrentQuestionIdx(0);
-                            setSelectedOption(null);
-                            setIsAnswerSubmitted(false);
-                            setScore(0);
-                            setIsQuizCompleted(false);
-                            setIsRewardClaimed(false);
-                          }}
-                          className="min-h-[44px] px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <RotateCcw size={14} />
-                          <span>Ulangi Kuis</span>
-                        </button>
-                        <button
-                          onClick={handleModalClose}
-                          className="min-h-[44px] px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black rounded-xl transition-all shadow-md cursor-pointer"
-                        >
-                          Selesai & Kembali ke Kelas
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Answering Screen */
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs font-bold text-slate-400">
-                          <span className="text-cyan-400">
-                            Pertanyaan {currentQuestionIdx + 1} dari {quizQuestions.length}
-                          </span>
-                          <span className="text-amber-400 font-mono">
-                            Skor Benar: {score}
-                          </span>
-                        </div>
-                        <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                          <div
-                            className="bg-cyan-500 h-full rounded-full transition-all duration-300"
-                            style={{
-                              width: `${((currentQuestionIdx + 1) / quizQuestions.length) * 100}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="p-4 bg-slate-800/80 rounded-2xl border border-slate-700/70">
-                        <p className="text-sm font-bold text-slate-100 leading-relaxed">
-                          {quizQuestions[currentQuestionIdx]?.question}
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        {quizQuestions[currentQuestionIdx]?.options.map((opt, optIdx) => {
-                          const isSelected = selectedOption === optIdx;
-                          const isCorrect = optIdx === quizQuestions[currentQuestionIdx].correct_index;
-
-                          let buttonStyle = 'bg-slate-800/70 hover:bg-slate-800 border-slate-700/80 text-slate-200';
-                          let pillStyle = 'bg-slate-700/80 text-slate-300';
-
-                          if (isAnswerSubmitted) {
-                            if (isCorrect) {
-                              buttonStyle = 'bg-emerald-950/80 border-emerald-500 text-emerald-100 shadow-md shadow-emerald-950/50';
-                              pillStyle = 'bg-emerald-600 text-white';
-                            } else if (isSelected) {
-                              buttonStyle = 'bg-rose-950/80 border-rose-500 text-rose-100';
-                              pillStyle = 'bg-rose-600 text-white';
-                            }
-                          }
-
-                          const optionLabels = ['A', 'B', 'C', 'D'];
-
-                          return (
-                            <button
-                              key={optIdx}
-                              disabled={isAnswerSubmitted}
-                              onClick={() => {
-                                setSelectedOption(optIdx);
-                                setIsAnswerSubmitted(true);
-                                if (optIdx === quizQuestions[currentQuestionIdx].correct_index) {
-                                  setScore(prev => prev + 1);
-                                }
-                              }}
-                              className={`w-full min-h-[50px] p-3 text-left rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer disabled:cursor-default active:scale-[0.99] ${buttonStyle}`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black flex-shrink-0 ${pillStyle}`}>
-                                  {optionLabels[optIdx]}
-                                </span>
-                                <span className="text-xs sm:text-sm font-semibold">{opt}</span>
-                              </div>
-                              {isAnswerSubmitted && (
-                                <div className="flex-shrink-0">
-                                  {isCorrect ? (
-                                    <CheckCircle2 size={18} className="text-emerald-400" />
-                                  ) : isSelected ? (
-                                    <XCircle size={18} className="text-rose-400" />
-                                  ) : null}
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {isAnswerSubmitted && (
-                        <div className="p-3.5 bg-indigo-950/50 border border-indigo-500/40 rounded-xl space-y-1 animate-in fade-in duration-200">
-                          <p className="text-[11px] font-bold text-cyan-300 flex items-center gap-1.5">
-                            <HelpCircle size={14} />
-                            <span>Pembahasan Jawaban:</span>
-                          </p>
-                          <p className="text-xs text-slate-300 leading-relaxed">
-                            {quizQuestions[currentQuestionIdx]?.explanation ||
-                              (selectedOption === quizQuestions[currentQuestionIdx]?.correct_index
-                                ? 'Jawaban Anda tepat dan benar!'
-                                : 'Jawaban yang tepat adalah opsi ' +
-                                  ['A', 'B', 'C', 'D'][quizQuestions[currentQuestionIdx].correct_index])}
-                          </p>
-                        </div>
-                      )}
-
-                      {isAnswerSubmitted && (
-                        <div className="flex justify-end pt-2">
-                          <button
-                            onClick={() => {
-                              if (currentQuestionIdx < quizQuestions.length - 1) {
-                                setCurrentQuestionIdx(prev => prev + 1);
-                                setSelectedOption(null);
-                                setIsAnswerSubmitted(false);
-                              } else {
-                                setIsQuizCompleted(true);
-                              }
-                            }}
-                            className="min-h-[44px] px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer active:scale-95"
-                          >
-                            <span>
-                              {currentQuestionIdx < quizQuestions.length - 1
-                                ? 'Soal Selanjutnya →'
-                                : 'Lihat Hasil Kuis ✨'}
-                            </span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <ClassroomQuizView
+                  key={currentModal.id}
+                  trigger={currentModal}
+                  onAddReward={onAddReward}
+                  onClose={handleModalClose}
+                />
               )}
 
               {/* 3. SHOP MODAL */}
