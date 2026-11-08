@@ -106,7 +106,8 @@ export class BootScene extends Phaser.Scene {
       { key: 'char_pak_dafa', path: '/assets/game/characters/pak_dafa_spritesheet.png' },
       { key: 'char_septi', path: '/assets/game/characters/septi_spritesheet.png' },
       { key: 'char_satpam', path: '/assets/game/characters/satpam_spritesheet.png' },
-      { key: 'char_student', path: '/assets/game/characters/siswa_spritesheet.png' },
+      { key: 'char_student', path: '/assets/game/characters/rian_pratama_spritesheet.png' },
+      { key: 'char_rian', path: '/assets/game/characters/rian_pratama_spritesheet.png' },
       { key: 'char_siswi_hijab', path: '/assets/game/characters/siswi_hijab_spritesheet.png' },
       { key: 'char_guru_pria', path: '/assets/game/characters/guru_spritesheet.png' },
       { key: 'char_guru_wanita', path: '/assets/game/characters/guru_wanita_spritesheet.png' },
@@ -129,6 +130,15 @@ export class BootScene extends Phaser.Scene {
         this.load.image(frameKey, `/assets/game/characters/aisyah_putri_perframe/${frameKey}.png`);
       }
     });
+
+    // Rian Pratama Individual Per-Frame Textures
+    const rianDirs = ['down', 'left', 'right', 'up'];
+    rianDirs.forEach(dir => {
+      for (let i = 1; i <= 4; i++) {
+        const frameKey = `rian_${dir}_${i}`;
+        this.load.image(frameKey, `/assets/game/characters/rian_pratama_perframe/${dir}/${frameKey}.png`);
+      }
+    });
   }
 
   create(): void {
@@ -143,6 +153,7 @@ export class BootScene extends Phaser.Scene {
       'char_septi',
       'char_satpam',
       'char_student',
+      'char_rian',
       'char_siswi_hijab',
       'char_guru_pria',
       'char_guru_wanita',

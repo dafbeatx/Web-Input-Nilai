@@ -271,12 +271,12 @@ export const STUDENT_BATCHES: StudentProfileData[][] = [
       quote: '“Di kelas 9 kami fokus penguatan materi dan bimbingan karir. Semoga ujian sumatif akhir berjalan lancar.”',
     },
     {
-      id: 'std-sonaji',
-      name: 'Sonaji',
+      id: 'std-rian',
+      name: 'Rian Pratama',
       role: 'Siswa Kelas 9B',
       grade: '9B',
       gender: 'L',
-      quote: '“Eh halo! Nanti sehabis jam pelajaran ada kerja kelompok proyek kelas 9B di lab multimedia, gabung yuk!”',
+      quote: '“Halo! Senang bertemu denganmu di SMP Terpadu Al-Ittihadiyah. Yuk rajin belajar dan berprestasi bersama!”',
     },
     {
       id: 'std-fairuz',
